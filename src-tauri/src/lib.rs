@@ -118,6 +118,13 @@ pub use hardware_logic_analyzer::{
     demodulate_physical_uart_cmd,
     evaluate_signal_integrity_cmd,
 };
+// 基于 eBPF / XDP 的内核级高性能 TCP 流线速分流与旁路直通引擎 (TASK-41)
+pub mod xdp_engine;
+pub use xdp_engine::{
+    evaluate_xdp_packet_cmd,
+    get_xdp_bypass_metrics_cmd,
+    mark_flow_bypassed_cmd,
+};
 
 use once_cell::sync::Lazy;
 use std::sync::{Arc, Mutex};
@@ -1920,7 +1927,10 @@ pub fn run() {
             get_can_bus_health_cmd,
             // 物理硬件逻辑分析仪原生采样位流驱动与纳秒电气级信号解调 (TASK-40)
             demodulate_physical_uart_cmd,
-            evaluate_signal_integrity_cmd
+            evaluate_signal_integrity_cmd,
+            get_xdp_bypass_metrics_cmd,
+            mark_flow_bypassed_cmd,
+            evaluate_xdp_packet_cmd
         ])
         .on_window_event(|_window, event| match event {
             tauri::WindowEvent::CloseRequested { .. } => {
