@@ -1,4 +1,4 @@
-pub mod sniffer;
+﻿pub mod sniffer;
 pub mod analyzer;
 pub mod forensics;
 pub mod hardware;
@@ -124,6 +124,13 @@ pub use xdp_engine::{
     evaluate_xdp_packet_cmd,
     get_xdp_bypass_metrics_cmd,
     mark_flow_bypassed_cmd,
+};
+// 基于 Glushkov 构造算法与位并行 (Bit-Parallel) 的 Hyperscan 风格高性能正则/多模式匹配引擎 (TASK-42)
+pub mod glushkov_engine;
+pub use glushkov_engine::{
+    get_glushkov_engine_metrics_cmd,
+    scan_payload_glushkov_cmd,
+    reset_glushkov_engine_metrics_cmd,
 };
 
 use once_cell::sync::Lazy;
@@ -1930,7 +1937,11 @@ pub fn run() {
             evaluate_signal_integrity_cmd,
             get_xdp_bypass_metrics_cmd,
             mark_flow_bypassed_cmd,
-            evaluate_xdp_packet_cmd
+            evaluate_xdp_packet_cmd,
+            // 基于 Glushkov 构造算法与位并行 (Bit-Parallel) 的 Hyperscan 风格高性能正则/多模式匹配 (TASK-42)
+            get_glushkov_engine_metrics_cmd,
+            scan_payload_glushkov_cmd,
+            reset_glushkov_engine_metrics_cmd
         ])
         .on_window_event(|_window, event| match event {
             tauri::WindowEvent::CloseRequested { .. } => {

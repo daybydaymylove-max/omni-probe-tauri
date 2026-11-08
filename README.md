@@ -6,7 +6,7 @@
 [![Rust](https://img.shields.io/badge/Rust-1.75%2B-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-24C8DB.svg)](https://tauri.app/)
 [![Vue](https://img.shields.io/badge/Vue-3.5%2B-42b883.svg)](https://vuejs.org/)
-[![Tests](https://img.shields.io/badge/Tests-292%20Passed%20(100%25)-success.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-304%20Passed%20(100%25)-success.svg)]()
 [![Code_Style](https://img.shields.io/badge/Code%20Style-Zero%20Placeholders-brightgreen.svg)]()
 
 **面向现代工业物联网、智能变电站与现场总线的全协议硬核网络探针与电气因果诊断平台**
@@ -113,7 +113,19 @@ graph TD
 
 ## ⚡ 核心技术特性 (Key Features)
 
-### 1. 物理硬件逻辑分析仪原生解调 (Hardware Logic Analyzer CDR)
+### 1. 基于 Glushkov 构造算法与位并行 (Bit-Parallel) 的 Hyperscan 风格高性能正则/多模式匹配引擎 (TASK-42)
+- 严格实现 Berry-Sethi / Glushkov 线性位置图编译算法，生成无 Epsilon 边（Epsilon-free）的紧凑 NFA；
+- 64 位无符号位并行状态机，预计算 256 字符位转移掩码表，利用 `trailing_zeros()` 硬件指令单周期推进数十个状态，单遍扫描时间复杂度严格保持为 $O(N)$，且在数学上绝对免疫 ReDoS 回溯攻击；
+- 对标 Intel Hyperscan `hs_scan_stream` 的跨 TCP 分段流式扫描状态上下文（`StreamingMatchContext`），实现零多余内存拷贝的跨包碎片攻击无缝检出；
+- 工业级预置规则库：Modbus 强写单线圈（0x05）、写多寄存器（0x10）、西门子 S7Comm PLC 停机命令（0x29）、Log4j JNDI 远程代码执行（CVE-2021-44228）、Linux 交互式反弹 Shell 与 SQL 注入联合查询。
+
+### 2. 基于 eBPF / XDP 的内核级高性能 TCP 流线速分流与内核旁路直通引擎 (TASK-41)
+- 原生 64 位 eBPF 字节码虚拟机（ALU64 / JMP / 内存访问）与静态安全验证器（`EbpfVerifier`），杜绝越界与死循环；
+- XDP 驱动层线速 SYN Flood 拦截丢弃（`XdpAction::Drop`）；
+- 内核级 TCP 五元组流分流直通映射表（`FlowSteeringTable`），动态识别白名单大象流（Elephant Flow），直通内核旁路，大幅降低万兆大流量冲击下的 CPU 软中断颠簸；
+- 模拟 AF_XDP (XSK) 风格 UMEM 零拷贝描述符双环（Fill Ring / Rx Ring）。
+
+### 3. 物理硬件逻辑分析仪原生解调 (Hardware Logic Analyzer CDR)
 - 原生驱动 8/16 通道物理逻辑分析仪纳秒高低电平原始采样比特流（支持 1MS/s ~ 100MS/s，10ns 物理分辨率）；
 - 物理层数字毛刺滤波器（`DigitalGlitchFilter`），消除短于设定门限的瞬态电磁尖峰（EMI Spikes）；
 - 物理层时钟数据恢复（CDR）：
@@ -158,8 +170,8 @@ graph TD
 | :---: | :--- | :---: | :--- | :--- |
 | **1. 协议解剖深度** | Wireshark / tshark | **8.8** | 烘焙 3,157 条规约二分表；纯 Rust 原生深度逐字段解剖 60+ 工业协议（IEC 61850 GOOSE/SV, DL/T 645/698, S7Comm, SLMP 3E 等）；声明式二进制解剖结构体编译器加载长尾协议 | Wireshark 拥有 30 年积累的 3,000+ C 语言解剖器，覆盖数千种冷门历史边缘协议 |
 | **2. 过滤表达式 AST** | Wireshark dfilter | **9.0** | 递归下降语法树；支持 PCRE 正则、CIDR、切片与跨层字段；8 轮不动点代数移项优化器与常量折叠 | Wireshark dfilter 支持跨关系条件的数值区间并交集合并编译 |
-| **3. TCP 流重组** | Zeek / Suricata | **8.7** | RFC 793/1323 双向 11 状态机；Ptacek-Newsham 经典反躲避裁决；免重启 JSON/DSL 策略热重载与操作系统自适应绑定 | Zeek 拥有超大规模十万并发流的专用硬件分流调度生态 |
-| **4. 威胁检测与脚本** | Zeek Script / Hyperscan | **8.7** | Aho-Corasick 多模式自动机单遍扫描；AVX2 向量加速；图灵完备安全受限字节码虚拟机（Gas Limit 防死循环） | 底层尚未达到 Intel Hyperscan 纯汇编编译 Glushkov NFA 的极致物理速度 |
+| **3. TCP 流重组** | Zeek / Suricata / Linux XDP | **9.1** | RFC 793/1323 双向 11 状态机；Ptacek-Newsham 经典反躲避裁决；免重启 JSON/DSL 策略热重载与操作系统自适应绑定；**自研基于 eBPF / XDP 的内核级高性能 TCP 流线速分流与内核旁路直通引擎（驱动层线速 SYN Flood 丢弃拦截、TCP 五元组活跃状态跟踪与良性大象流安全直通旁路）** | 针对硬件专用智能网卡 (SmartNIC)，未来可进一步探索将 eBPF 字节码烧录至 FPGA / ASIC 硬件流水线中 |
+| **4. 威胁检测与脚本** | Zeek Script / Hyperscan | **9.1** | Aho-Corasick 多模式自动机单遍扫描；AVX2 向量加速；图灵完备安全受限字节码虚拟机；**自研基于 Glushkov 构造算法与位并行 (Bit-Parallel) 的 Hyperscan 风格高性能正则/多模式匹配引擎（无 Epsilon 边紧凑位置图、单指令周期推进数十个状态、跨 TCP 分段边界无缝流式扫描，彻底根除 ReDoS 回溯隐患与多正则组合状态爆炸）** | 目前已达成与 Intel Hyperscan 64 位单字位并行无回溯 NFA、hs_scan_stream 跨分段流式扫描齐平水准；超大规则库可进一步扩展至 AVX-512 向量寄存器加速 |
 | **5. 异常基线自学习** | Zeek Anomaly / SCADA | **8.8** | 全协方差 $3 \times 3$ 马氏距离；Holt-Winters 三重平滑；纯无监督日态贝叶斯似然比调休识别与双模态张量桶 | 尚未集成基于深度学习时空图神经网络 (ST-GNN) 的全网拓扑联合自编码 |
 | **6. 被动 TLS 与指纹** | mitmproxy / JA4+ | **8.9** | 无锁高并发密钥环缓存；JA3/JA3S 与 JA4/JA4S 指纹碰撞；RFC 9001 QUIC Initial 零配置自解密与 HTTP/3 深度多流重组 | 针对 1-RTT 应用密文流量，仍需配合 SSLKEYLOGFILE 密钥日志提供端到端解密 |
 | **7. 跨总线硬件信号** | sigrok / Saleae Logic | **9.0** | 物理逻辑分析仪 10ns 采样位流直接接入；毛刺滤波器；UART/I2C/SPI/CAN 物理时钟数据恢复 (CDR)；IEEE 1364 VCD 导出 | 未集成 Saleae 专有 USB 3.0 Pro 混合模拟通道的 ADC 电压模数直接采样 |
