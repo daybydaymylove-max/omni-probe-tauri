@@ -1,0 +1,99 @@
+{
+  "version": "2.1",
+  "description": "Omni-Probe 动态协议指纹与业务数据字典库 - 支持端口匹配、载荷魔数、正则匹配及工业业务字段解码",
+  "port_rules": [
+    { "port": 502,   "proto": "MODBUS_TCP",     "note": "Modbus TCP - IEC 61158" },
+    { "port": 102,   "proto": "S7_COMM",         "note": "Siemens S7 - ISO-on-TCP" },
+    { "port": 44818, "proto": "ENIP",            "note": "EtherNet/IP - ODVA" },
+    { "port": 2222,  "proto": "ENIP",            "note": "EtherNet/IP - implicit I/O" },
+    { "port": 47808, "proto": "BACNET",          "note": "BACnet/IP - ASHRAE" },
+    { "port": 20000, "proto": "DNP3",            "note": "DNP3 - IEEE 1815" },
+    { "port": 4840,  "proto": "OPC-UA",          "note": "OPC Unified Architecture" },
+    { "port": 9600,  "proto": "OMRON-FINS",      "note": "Omron FINS over TCP" },
+    { "port": 789,   "proto": "MITSUBISHI-MC",   "note": "Mitsubishi MELSEC MC Protocol" },
+    { "port": 2404,  "proto": "IEC104",          "note": "IEC 60870-5-104 SCADA" },
+    { "port": 1883,  "proto": "MQTT",            "note": "MQTT v3.1/v5.0" },
+    { "port": 8883,  "proto": "MQTT-TLS",        "note": "MQTT over TLS" },
+    { "port": 5672,  "proto": "AMQP",            "note": "RabbitMQ / AMQP 0-9-1" },
+    { "port": 5683,  "proto": "COAP",            "note": "CoAP - RFC 7252" },
+    { "port": 5003,  "proto": "SL651_WATER",     "note": "水文规约 SL651-2014 遥测站通信端口" },
+    { "port": 6501,  "proto": "SL651_WATER",     "note": "水文规约 SL651-2014 (中国水利部)" },
+    { "port": 6502,  "proto": "SL651_WATER",     "note": "水文规约 SL651-2014 备用端口" },
+    { "port": 212,   "proto": "HJ212",           "note": "污染源在线监控规约 HJ 212-2017 (中国生态环境部)" },
+    { "port": 80,    "proto": "HTTP",            "note": "HTTP/1.1" },
+    { "port": 8080,  "proto": "HTTP",            "note": "HTTP 代理/备用端口" },
+    { "port": 443,   "proto": "TLS",             "note": "HTTPS" },
+    { "port": 8443,  "proto": "TLS",             "note": "HTTPS 备用端口" },
+    { "port": 53,    "proto": "DNS",             "note": "Domain Name System" },
+    { "port": 22,    "proto": "SSH",             "note": "SSH v2" },
+    { "port": 21,    "proto": "FTP",             "note": "FTP Control" },
+    { "port": 25,    "proto": "SMTP",            "note": "Simple Mail Transfer Protocol" },
+    { "port": 587,   "proto": "SMTP-SUBMISSION", "note": "SMTP Submission (RFC 6409)" },
+    { "port": 110,   "proto": "POP3",            "note": "Post Office Protocol 3" },
+    { "port": 143,   "proto": "IMAP",            "note": "Internet Message Access Protocol" },
+    { "port": 3306,  "proto": "MYSQL",           "note": "MySQL Database" },
+    { "port": 5432,  "proto": "POSTGRESQL",      "note": "PostgreSQL Database" },
+    { "port": 6379,  "proto": "REDIS",           "note": "Redis In-Memory Store" },
+    { "port": 27017, "proto": "MONGODB",         "note": "MongoDB Document Store" },
+    { "port": 5900,  "proto": "VNC",             "note": "Virtual Network Computing" },
+    { "port": 3389,  "proto": "RDP",             "note": "Remote Desktop Protocol" },
+    { "port": 161,   "proto": "SNMP",            "note": "Simple Network Management Protocol" },
+    { "port": 162,   "proto": "SNMP-TRAP",       "note": "SNMP Trap" },
+    { "port": 123,   "proto": "NTP",             "note": "Network Time Protocol" },
+    { "port": 67,    "proto": "DHCP",            "note": "DHCP Server" },
+    { "port": 68,    "proto": "DHCP",            "note": "DHCP Client" }
+  ],
+  "magic_rules": [
+    { "offset": 0, "bytes": "1603", "length": 2, "proto": "TLS_HANDSHAKE",    "note": "TLS Record Type=22 (0x16), Version>=3.0" },
+    { "offset": 0, "bytes": "1703", "length": 2, "proto": "TLS_APP_DATA",     "note": "TLS Record Type=23 (0x17)" },
+    { "offset": 0, "bytes": "1503", "length": 2, "proto": "TLS_ALERT",        "note": "TLS Record Type=21 (0x15)" },
+    { "offset": 0, "bytes": "7e7e", "length": 2, "proto": "SL651_WATER",      "note": "SL651 帧头 0x7E 0x7E" },
+    { "offset": 0, "bytes": "0300", "length": 2, "proto": "S7_COMM",          "note": "S7 TPKT Header" },
+    { "offset": 0, "bytes": "fe534d42", "length": 4, "proto": "SMB2",         "note": "SMB2 Protocol ID" },
+    { "offset": 0, "bytes": "ff534d42", "length": 4, "proto": "SMB1",         "note": "SMB1 Protocol ID" },
+    { "offset": 0, "bytes": "52464220", "length": 4, "proto": "VNC",          "note": "RFB Protocol magic (ASCII 'RFB ')" }
+  ],
+  "regex_rules": [
+    { "pattern": "^(GET|POST|PUT|DELETE|HEAD|OPTIONS|CONNECT|TRACE|PATCH) .+ HTTP/1\\.[01]", "proto": "HTTP_REQ",  "note": "HTTP 请求" },
+    { "pattern": "^HTTP/1\\.[01] \\d{3}",                                                     "proto": "HTTP_RES",  "note": "HTTP 响应" },
+    { "pattern": "^SSH-",                                                                       "proto": "SSH",       "note": "SSH 服务端 banner" },
+    { "pattern": "(?i)^(EHLO|HELO|MAIL FROM:|RCPT TO:|DATA|QUIT|AUTH|STARTTLS)",              "proto": "SMTP_CMD",  "note": "SMTP 命令" },
+    { "pattern": "(?i)^(USER|PASS|SYST|FEAT|PWD|CWD|QUIT|RETR|STOR) ",                       "proto": "FTP_CMD",   "note": "FTP 命令" },
+    { "pattern": "^(\\*[0-9]+|\\+[A-Za-z0-9_]+|-[A-Za-z0-9_]+)\\r\\n",                        "proto": "REDIS",     "note": "Redis RESP 命令与响应" },
+    { "pattern": "^##\\d{4}(ST=|CN=|QN=)",                                                    "proto": "HJ212",     "note": "HJ212 环保帧头" }
+  ],
+  "dissector_rules": {
+    "SL651_WATER": [
+      { "field": "center_address",     "offset": 2,  "length": 1, "data_type": "uint", "note": "中心站地址" },
+      { "field": "telemetry_station",  "offset": 3,  "length": 5, "data_type": "hex",  "note": "遥测站地址(BCD)" },
+      { "field": "password",           "offset": 8,  "length": 2, "data_type": "hex",  "note": "密码" },
+      { "field": "function_code",      "offset": 10, "length": 1, "data_type": "uint", "note": "功能码" },
+      { "field": "packet_length",      "offset": 11, "length": 2, "data_type": "uint", "note": "报文长度" }
+    ],
+    "MODBUS_TCP": [
+      { "field": "transaction_id",    "offset": 0, "length": 2, "data_type": "uint", "note": "事务元组标识符" },
+      { "field": "protocol_id",       "offset": 2, "length": 2, "data_type": "uint", "note": "协议标识符(0=Modbus)" },
+      { "field": "length",            "offset": 4, "length": 2, "data_type": "uint", "note": "后续字节长度" },
+      { "field": "unit_id",           "offset": 6, "length": 1, "data_type": "uint", "note": "从机单元地址" },
+      { "field": "function_code",     "offset": 7, "length": 1, "data_type": "uint", "note": "功能码" }
+    ],
+    "MODBUS_RTU": [
+      { "field": "slave_address",     "offset": 0, "length": 1, "data_type": "uint", "note": "从机地址" },
+      { "field": "function_code",     "offset": 1, "length": 1, "data_type": "uint", "note": "功能码" }
+    ],
+    "S7_COMM": [
+      { "field": "tpkt_version",      "offset": 0, "length": 1, "data_type": "uint", "note": "TPKT 版本" },
+      { "field": "tpkt_length",       "offset": 2, "length": 2, "data_type": "uint", "note": "TPKT 总长度" }
+    ],
+    "DNS_QUERY": [
+      { "field": "transaction_id",    "offset": 0, "length": 2, "data_type": "hex",  "note": "事务 ID" },
+      { "field": "flags",             "offset": 2, "length": 2, "data_type": "hex",  "note": "标志位" },
+      { "field": "questions",         "offset": 4, "length": 2, "data_type": "uint", "note": "问题数" }
+    ],
+    "DNS_RESP": [
+      { "field": "transaction_id",    "offset": 0, "length": 2, "data_type": "hex",  "note": "事务 ID" },
+      { "field": "flags",             "offset": 2, "length": 2, "data_type": "hex",  "note": "标志位" },
+      { "field": "answers",           "offset": 6, "length": 2, "data_type": "uint", "note": "回答数" }
+    ]
+  }
+}

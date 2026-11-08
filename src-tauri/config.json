@@ -1,0 +1,62 @@
+{
+  "servers": [
+    {
+      "host": "0.0.0.0",
+      "port": 8080,
+      "protocol": "tcp"
+    },
+    {
+      "host": "0.0.0.0",
+      "port": 5003,
+      "protocol": "tcp"
+    },
+    {
+      "host": "0.0.0.0",
+      "port": 502,
+      "protocol": "tcp"
+    },
+    {
+      "host": "0.0.0.0",
+      "port": 1883,
+      "protocol": "tcp"
+    },
+    {
+      "host": "0.0.0.0",
+      "port": 5003,
+      "protocol": "udp"
+    },
+    {
+      "host": "0.0.0.0",
+      "port": 8080,
+      "protocol": "udp"
+    }
+  ],
+  "active_probes": [],
+  "serial_probes": [],
+  "logging": {
+    "level": "INFO",
+    "file": "listener.log"
+  },
+  "data_storage": {
+    "mode": "file",
+    "file": "received_data.jsonl",
+    "pcap_file": "capture.pcap",
+    "enable_pcap": true
+  },
+  "tcp_framing_timeout": 0.05,
+  "enterprise_features": {
+    "fleet_management": {
+      "enabled": true,
+      "api_port": 9091
+    },
+    "threat_defense": {
+      "enabled": true,
+      "max_packets_per_sec": 50.0,
+      "auto_drop_connection": true
+    },
+    "cloud_streaming": {
+      "enabled": false,
+      "webhook_url": "http://127.0.0.1:9090/ingest"
+    }
+  }
+}

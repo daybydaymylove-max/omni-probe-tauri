@@ -1,0 +1,78 @@
+{
+  "version": "1.0",
+  "standard": "GB/T 37964-2019 / GB/T 35273-2020",
+  "description": "工业全能网络探针 - 数据脱敏清洗策略与遮蔽规则模板",
+  "policies": [
+    {
+      "id": "POLICY-STRICT-COMPLIANCE",
+      "name": "严格合规脱敏策略 (对外输出与司法导出专用)",
+      "description": "对所有身份证、手机号、银行卡执行标准星号遮蔽，国家秘密与商业标识直接阻断清除，私钥彻底置零",
+      "rules": [
+        {
+          "target_type": "ID_CARD",
+          "algorithm": "MASKING",
+          "params": {
+            "retain_prefix": 6,
+            "retain_suffix": 4,
+            "mask_char": "*"
+          }
+        },
+        {
+          "target_type": "MOBILE_PHONE",
+          "algorithm": "MASKING",
+          "params": {
+            "retain_prefix": 3,
+            "retain_suffix": 4,
+            "mask_char": "*"
+          }
+        },
+        {
+          "target_type": "BANK_CARD",
+          "algorithm": "MASKING",
+          "params": {
+            "retain_prefix": 6,
+            "retain_suffix": 4,
+            "mask_char": "*"
+          }
+        },
+        {
+          "target_type": "SECRET_MARKER",
+          "algorithm": "REPLACE",
+          "params": {
+            "replace_text": "[CONFIDENTIALITY_SCRUBBED]"
+          }
+        },
+        {
+          "target_type": "PRIVATE_KEY",
+          "algorithm": "ZERO_OUT",
+          "params": {
+            "replace_text": "[PRIVATE_KEY_PURGED]"
+          }
+        }
+      ]
+    },
+    {
+      "id": "POLICY-ANONYMIZE-RESEARCH",
+      "name": "研发测试脱敏策略 (保留数据格式与校验逻辑)",
+      "description": "采用确定性假名化（HMAC-SHA256 截断散列）保证相同输入产生相同脱敏值，支持测试关联分析",
+      "rules": [
+        {
+          "target_type": "ID_CARD",
+          "algorithm": "PSEUDONYMIZATION",
+          "params": {
+            "salt_key": "OMNI_PROBE_RESEARCH_SALT_2026",
+            "format_preserving": true
+          }
+        },
+        {
+          "target_type": "MOBILE_PHONE",
+          "algorithm": "PSEUDONYMIZATION",
+          "params": {
+            "salt_key": "OMNI_PROBE_RESEARCH_SALT_2026",
+            "format_preserving": true
+          }
+        }
+      ]
+    }
+  ]
+}

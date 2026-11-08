@@ -1,0 +1,90 @@
+{
+  "version": "1.0",
+  "standard": "国家保密局涉密信息系统安全保密测评标准",
+  "description": "工业全能网络探针 - 保密安全审查规则库（标密公文、违规外联与介质安全）",
+  "secret_markers": [
+    {
+      "level": "TOP_SECRET",
+      "marker": "绝密★",
+      "severity": "CRITICAL",
+      "description": "国家秘密最高等级，泄露会使国家安全和利益遭受特别严重的损害"
+    },
+    {
+      "level": "CONFIDENTIAL",
+      "marker": "机密★",
+      "severity": "HIGH",
+      "description": "重要的国家秘密，泄露会使国家安全和利益遭受严重的损害"
+    },
+    {
+      "level": "SECRET",
+      "marker": "秘密★",
+      "severity": "MEDIUM",
+      "description": "一般的国家秘密，泄露会使国家安全和利益遭受损害"
+    },
+    {
+      "level": "INTERNAL",
+      "marker": "内部文件★不予公开",
+      "severity": "MEDIUM",
+      "description": "企事业单位核心内部敏感情资与业务公文"
+    },
+    {
+      "level": "COMMERCIAL_SECRET",
+      "marker": "商业秘密★",
+      "severity": "MEDIUM",
+      "description": "组织专有不为公众所知悉的技术信息与经营信息"
+    }
+  ],
+  "document_signatures": [
+    {
+      "id": "SIG-RED-HEADER",
+      "name": "国家机关/企事业单位红头公文发文字号",
+      "pattern": "[\\u4e00-\\u9fa5]{2,10}(?:发|办发|委发|函|计发)\\[\\d{4}\\]\\d+号",
+      "severity": "HIGH",
+      "description": "标准党政公文发文字号排版格式（如：水利发[2026]12号）"
+    },
+    {
+      "id": "SIG-DRAFT-CONFIDENTIAL",
+      "name": "拟制期涉密文件标注",
+      "pattern": "(?:定密依据|知悉范围|解密时间|保密期限)[:：]\\s*(?:\\d+年|长期|公布前)",
+      "severity": "HIGH",
+      "description": "标密公文密级确认与保密期限法定元数据项"
+    }
+  ],
+  "illegal_egress_rules": [
+    {
+      "category": "COMMERCIAL_CLOUD_STORAGE",
+      "name": "商业公共网盘外联传输",
+      "domain_patterns": ["*.pan.baidu.com", "*.weiyun.com", "*.onedrive.live.com", "*.dropbox.com", "*.aliyundrive.com"],
+      "severity": "HIGH",
+      "description": "涉密网络向商业外部网盘违规上传或流转数据"
+    },
+    {
+      "category": "ANONYMOUS_PROXY_VPN",
+      "name": "匿名代理与翻墙跳板外联",
+      "domain_patterns": ["*.torproject.org", "*.nordvpn.com", "*.expressvpn.com", "*.v2ray.com", "*.shadowsocks.org"],
+      "severity": "CRITICAL",
+      "description": "违规连接跨境外联通道与隐匿代理网络"
+    },
+    {
+      "category": "UNAUTHORIZED_MAIL_RELAY",
+      "name": "非合规第三方公网邮箱传输",
+      "domain_patterns": ["*.mail.google.com", "*.outlook.com", "*.mail.yahoo.com"],
+      "severity": "MEDIUM",
+      "description": "涉密终端经由公网邮箱违规中转内部资料"
+    }
+  ],
+  "authorized_media_whitelist": [
+    {
+      "vid": "0951",
+      "pid": "1666",
+      "device_type": "AUTHORIZED_ENCRYPTED_USB",
+      "description": "单位定制专用硬件国密加密U盘 (Kingston DataTraveler)"
+    },
+    {
+      "vid": "0483",
+      "pid": "5740",
+      "device_type": "SECURITY_KEY_TOKEN",
+      "description": "国家密码管理局认证数字证书硬件 Key"
+    }
+  ]
+}

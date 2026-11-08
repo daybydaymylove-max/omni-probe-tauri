@@ -1,0 +1,59 @@
+[package]
+name = "omni-probe-tauri"
+version = "0.1.0"
+description = "A Tauri App"
+authors = ["you"]
+edition = "2021"
+build = "build.rs"
+
+[lib]
+name = "omni_probe_tauri_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = "0.4"
+once_cell = "1.21"
+sha2 = "0.10"
+sm3 = "0.4"
+hex = "0.4"
+aes-gcm = "0.10"
+aes = "0.8"
+chacha20poly1305 = "0.10"
+hkdf = "0.12"
+hmac = "0.12"
+pcap = "2.5.0"
+pnet = "0.35.0"
+pcap-file = "2.0.0"
+serialport = "4"
+# Sprint 1: Honeypot + Throttle 依赖
+tokio = { version = "1", features = ["full"] }
+# Sprint 1: DPI 正则引擎与多模式匹配
+regex = "1"
+aho-corasick = "1"
+# Sprint 2: 动态字典文件热监听
+notify = { version = "6", default-features = false, features = ["macos_fsevent"] }
+# Sprint 2: Cloud streaming HTTP 客户端
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+# 流量解密与 SSL Inspection: 纯 Rust X.509 证书生成
+rcgen = "0.13"
+flate2 = "1.0"
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.56.0"
+windows-sys = { version = "0.59", features = ["Win32_System_Threading", "Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_Security"] }
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[profile.dev]
+incremental = true
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

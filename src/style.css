@@ -1,0 +1,266 @@
+@import "tailwindcss";
+
+/* ============================================================= */
+/* 2026 苹果液态玻璃 (Apple Liquid Frosted Glass) 核心物理材质引擎 */
+/* 纯净白昼冰晶磨砂与 Win11 Mica 通透极光设计系统 */
+/* ============================================================= */
+
+:root {
+  --font-ui: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable", "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", Consolas, "Courier New", monospace;
+
+  /* 苹果 2026 白昼冰晶液态玻璃核心色盘 */
+  --bg-base: #F0F4F9;
+  --text-primary: #0F172A;
+  --text-secondary: #334155;
+  --text-muted: #64748B;
+  --border-subtle: rgba(255, 255, 255, 0.85);
+  --border-highlight: rgba(255, 255, 255, 0.98);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-ui);
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  overflow: hidden;
+  user-select: none;
+  transition: background-color 0.35s cubic-bezier(0.16, 1, 0.3, 1), color 0.35s ease;
+}
+
+/* ------------------------------------------------------------- */
+/* 动态液态环境极光 (Liquid Ambient Aurora Drift) */
+/* 底层流动光斑缓慢呼吸流动，在多层玻璃下折射出微妙通透感 */
+/* ------------------------------------------------------------- */
+.liquid-aurora-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 0%, #EEF5FC 0%, #E2ECF8 100%);
+}
+
+.aurora-blob-1 {
+  position: absolute;
+  top: -100px;
+  left: 10%;
+  width: 720px;
+  height: 720px;
+  border-radius: 9999px;
+  filter: blur(120px);
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(0, 242, 254, 0.28) 0%, rgba(79, 172, 254, 0.16) 45%, transparent 70%);
+  animation: aurora-drift-1 22s infinite ease-in-out;
+}
+
+.aurora-blob-2 {
+  position: absolute;
+  bottom: -80px;
+  right: 15%;
+  width: 680px;
+  height: 680px;
+  border-radius: 9999px;
+  filter: blur(120px);
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(192, 132, 252, 0.22) 0%, rgba(129, 140, 248, 0.14) 50%, transparent 70%);
+  animation: aurora-drift-2 26s infinite ease-in-out;
+}
+
+.aurora-blob-3 {
+  position: absolute;
+  top: 35%;
+  right: 5%;
+  width: 480px;
+  height: 480px;
+  border-radius: 9999px;
+  filter: blur(100px);
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.20) 0%, rgba(16, 185, 129, 0.08) 50%, transparent 70%);
+  animation: aurora-drift-3 18s infinite ease-in-out;
+}
+
+@keyframes aurora-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(60px, 35px) scale(1.08); }
+}
+
+@keyframes aurora-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-50px, -30px) scale(1.06); }
+}
+
+@keyframes aurora-drift-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(40px, -40px) scale(1.10); }
+}
+
+/* 微米级物理噪点层：赋予实体玻璃厚度质感与微磨砂漫反射 */
+.noise-layer {
+  position: absolute;
+  inset: 0;
+  opacity: 0.018;
+  pointer-events: none;
+  z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* ------------------------------------------------------------- */
+/* 2026 苹果液态玻璃核心表面 (Apple Liquid Glass Surfaces) */
+/* ------------------------------------------------------------- */
+.glass-surface,
+.glass-apple {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.82) 0%, rgba(248, 250, 252, 0.62) 100%) !important;
+  backdrop-filter: blur(48px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(48px) saturate(200%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 
+    0 16px 40px -12px rgba(100, 116, 139, 0.12),
+    inset 0 1.5px 1px 0 rgba(255, 255, 255, 1),
+    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.02) !important;
+  color: #0F172A !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 顶栏通栏液态玻璃材质 */
+.header-glass {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0%, rgba(248, 250, 252, 0.68) 100%) !important;
+  backdrop-filter: blur(52px) saturate(210%) !important;
+  -webkit-backdrop-filter: blur(52px) saturate(210%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.92) !important;
+  box-shadow: 0 4px 20px -6px rgba(100, 116, 139, 0.08) !important;
+}
+
+/* 苹果 Dock 侧边栏专属液态悬浮材质 (彻底杜绝深黑) */
+.dock-glass {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.86) 0%, rgba(248, 250, 252, 0.70) 100%) !important;
+  backdrop-filter: blur(52px) saturate(220%) !important;
+  -webkit-backdrop-filter: blur(52px) saturate(220%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.98) !important;
+  box-shadow: 
+    0 20px 48px -12px rgba(100, 116, 139, 0.14),
+    inset 0 2px 2px 0 rgba(255, 255, 255, 1) !important;
+}
+
+/* 悬浮磨砂胶囊 (Glass Pill / Liquid Dynamic Island) */
+.glass-pill {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.90) 0%, rgba(248, 250, 252, 0.72) 100%) !important;
+  backdrop-filter: blur(32px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(200%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 
+    0 4px 16px -2px rgba(100, 116, 139, 0.10),
+    inset 0 1px 0 0 rgba(255, 255, 255, 1) !important;
+  color: #1E293B !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.glass-pill:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.85) 100%) !important;
+  border-color: rgba(0, 242, 254, 0.50) !important;
+  box-shadow: 
+    0 8px 24px -4px rgba(0, 242, 254, 0.25),
+    inset 0 1px 0 0 rgba(255, 255, 255, 1) !important;
+  transform: translateY(-0.5px);
+}
+
+/* Display 大字号雕塑感 */
+.metric-display {
+  font-size: 2.75rem;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  background: linear-gradient(180deg, #0F172A 0%, #475569 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* 状态呼吸灯微发光脉冲 */
+@keyframes subtle-pulse {
+  0%, 100% { opacity: 0.95; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(1.08); }
+}
+.status-pulse {
+  animation: subtle-pulse 2.8s infinite ease-in-out;
+}
+
+/* 极细微米级滚动条 */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.55);
+}
+
+/* 动画过渡类 */
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.25s ease-out;
+}
+.slide-up-enter-from,
+.slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+/* ------------------------------------------------------------- */
+/* 全局自适应苹果白昼液态玻璃映射：彻底剔除黑白割裂 */
+/* ------------------------------------------------------------- */
+[class*="bg-black"],
+[class*="bg-slate-900"],
+[class*="bg-slate-950"],
+[class*="bg-gray-900"],
+[class*="bg-gray-950"],
+[class*="bg-[#0"],
+[class*="bg-[#1"] {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(248, 250, 252, 0.65) 100%) !important;
+  color: #0F172A !important;
+  border-color: rgba(255, 255, 255, 0.90) !important;
+  box-shadow: 
+    0 16px 36px -12px rgba(100, 116, 139, 0.10),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 1) !important;
+}
+
+[class*="border-white"] {
+  border-color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.text-white {
+  color: #0F172A !important;
+}
+
+.text-slate-100,
+.text-slate-200,
+.text-slate-300 {
+  color: #1E293B !important;
+}
+
+.text-slate-400 {
+  color: #475569 !important;
+}
+
+.text-slate-500 {
+  color: #64748B !important;
+}
+
+input {
+  color: #0F172A;
+}
+input::placeholder {
+  color: #94A3B8;
+}

@@ -1,0 +1,57 @@
+[
+  {
+    "protocol_id": "ABB_TOTALFLOW",
+    "protocol_name": "ABB Totalflow Protocol",
+    "vendor": "ABB",
+    "ports": [9999, 21],
+    "magic_hex": "55AA",
+    "magic_offset": 0,
+    "dangerous_function_codes": [5, 6, 9],
+    "function_code_offset": 4,
+    "summary_template": "ABB Totalflow 计量与流体监控报文 (载荷: {len} 字节)"
+  },
+  {
+    "protocol_id": "EMERSON_ROC",
+    "protocol_name": "Emerson ROC / ROC Plus Protocol",
+    "vendor": "Emerson Automation Solutions",
+    "ports": [4000, 4001],
+    "magic_hex": "02",
+    "magic_offset": 0,
+    "dangerous_function_codes": [4, 8, 17],
+    "function_code_offset": 3,
+    "summary_template": "Emerson ROC 远动控制器指令报文 (载荷: {len} 字节)"
+  },
+  {
+    "protocol_id": "FOXBORO_INFUSION",
+    "protocol_name": "Foxboro InFusion DCS Protocol",
+    "vendor": "Schneider Electric / Foxboro",
+    "ports": [18888, 18889],
+    "magic_hex": "4658",
+    "magic_offset": 0,
+    "dangerous_function_codes": [80, 81, 96],
+    "function_code_offset": 6,
+    "summary_template": "Foxboro InFusion DCS 站间通信报文 (载荷: {len} 字节)"
+  },
+  {
+    "protocol_id": "GE_SRTP",
+    "protocol_name": "GE Fanuc SRTP Protocol",
+    "vendor": "General Electric / Emerson GE",
+    "ports": [18245],
+    "magic_hex": "0200",
+    "magic_offset": 0,
+    "dangerous_function_codes": [4, 8, 14],
+    "function_code_offset": 4,
+    "summary_template": "GE Fanuc SRTP PLC 系统通信报文 (载荷: {len} 字节)"
+  },
+  {
+    "protocol_id": "PHOENIX_PROCONOS",
+    "protocol_name": "Phoenix Contact ProConOS Protocol",
+    "vendor": "Phoenix Contact",
+    "ports": [20547],
+    "magic_hex": "0111",
+    "magic_offset": 0,
+    "dangerous_function_codes": [1, 2, 16],
+    "function_code_offset": 2,
+    "summary_template": "Phoenix Contact ProConOS 控制指令报文 (载荷: {len} 字节)"
+  }
+]

@@ -1,0 +1,6 @@
+[target.'cfg(windows)']
+rustflags = [
+    "-C", "link-arg=/DELAYLOAD:comctl32.dll",
+    "-C", "link-arg=/DELAYLOAD:wpcap.dll",
+    "-C", "link-arg=/DELAYLOAD:Packet.dll",
+]
