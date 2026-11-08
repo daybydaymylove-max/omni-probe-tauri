@@ -48,4 +48,5 @@ logs/
 *.pcapng
 *.cap
 *.vcd
+dist-release/
 !src-tauri/src/rfc9001_initial_packet.hex
