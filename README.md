@@ -184,7 +184,7 @@ graph TD
 
 ```bash
 # 克隆代码仓库
-git clone https://github.com/daybydaymylove2009-max/omni-probe-tauri.git
+git clone https://github.com/daybydaymylove-max/omni-probe-tauri.git
 cd omni-probe-tauri
 
 # 安装前端依赖
