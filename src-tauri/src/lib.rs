@@ -140,6 +140,31 @@ pub use traceroute_engine::{
     get_self_ip_geo_cmd,
 };
 
+// Wi-Fi / 802.11 物理与链路层专业监测
+pub mod wifi_monitor;
+pub use wifi_monitor::{
+    get_wifi_telemetry_cmd,
+    reset_wifi_telemetry_cmd,
+};
+
+// IEEE 802.1Q / 802.1ad VLAN 与 QinQ 专业监测
+pub mod vlan_monitor;
+pub use vlan_monitor::{
+    get_vlan_telemetry_cmd,
+    reset_vlan_telemetry_cmd,
+};
+
+// 蓝牙 BR/EDR / BLE / HCI 专业监测与近场空间感知
+pub mod bluetooth_monitor;
+pub use bluetooth_monitor::{
+    get_bluetooth_telemetry_cmd,
+    reset_bluetooth_telemetry_cmd,
+};
+
+// 无线与 VLAN 统一诊断分析器
+pub mod wireless_analyzer;
+pub use wireless_analyzer::dissect_wireless_or_vlan_hex_cmd;
+
 use once_cell::sync::Lazy;
 use std::sync::{Arc, Mutex};
 use tauri::Emitter;
@@ -1952,7 +1977,18 @@ pub fn run() {
             // 测地线可视路由追踪与地球地理情报 (TASK-43)
             start_traceroute_cmd,
             lookup_ip_geo_coordinates_cmd,
-            get_self_ip_geo_cmd
+            get_self_ip_geo_cmd,
+            // Wi-Fi / 802.11 无线与链路监测
+            get_wifi_telemetry_cmd,
+            reset_wifi_telemetry_cmd,
+            // VLAN / QinQ 专业虚拟局域网监测
+            get_vlan_telemetry_cmd,
+            reset_vlan_telemetry_cmd,
+            // 蓝牙 BR/EDR / BLE / HCI 专业监测
+            get_bluetooth_telemetry_cmd,
+            reset_bluetooth_telemetry_cmd,
+            // 无线与 VLAN 统一诊断解剖
+            dissect_wireless_or_vlan_hex_cmd
         ])
         .on_window_event(|_window, event| match event {
             tauri::WindowEvent::CloseRequested { .. } => {

@@ -2987,18 +2987,51 @@ fn parse_ethernet_frame(data: &[u8], last_hash: &mut String) -> Option<PacketRec
         other_eth => {
             let payload_bytes = eth.payload();
             let entropy = ForensicEngine::calculate_entropy(payload_bytes);
-            let proto_name = match other_eth.0 {
-                0x88CC => "LLDP".into(),
-                0x8100 => "VLAN_802.1Q".into(),
-                0x8847 => "MPLS_UNICAST".into(),
-                0x8864 => "PPPoE_SESSION".into(),
-                0x888E => "EAPOL_802.1X".into(),
-                0x88F7 => "PTP_IEEE1588".into(),
-                0x88E5 => "MACsec_802.1AE".into(),
-                0x8906 => "FCoE".into(),
-                other => format!("ETH_0x{:04X}", other),
-            };
             let mut b_map = HashMap::new();
+
+            // IEEE 802.1Q / 802.1ad QinQ VLAN 深度剥离与遥测分析
+            let (proto_name, is_vlan_frame) = if crate::vlan_monitor::is_vlan_ethertype(other_eth.0) {
+                let stripped = crate::vlan_monitor::strip_vlan_tags(other_eth.0, payload_bytes);
+                crate::vlan_monitor::record_vlan_packet(
+                    &stripped.tags,
+                    data.len(),
+                    &mac_src,
+                    stripped.has_vlan_hopping_threat,
+                    &timestamp,
+                );
+
+                b_map.insert("is_vlan".into(), json!(true));
+                b_map.insert("is_qinq".into(), json!(stripped.is_double_tagged));
+                b_map.insert("vlan_tags".into(), json!(stripped.tags));
+                if let Some(first) = stripped.tags.first() {
+                    b_map.insert("vlan_vid".into(), json!(first.vid));
+                    b_map.insert("vlan_pcp".into(), json!(first.pcp));
+                    b_map.insert("vlan_priority_desc".into(), json!(&first.priority_desc));
+                }
+                if stripped.has_vlan_hopping_threat {
+                    b_map.insert("vlan_threat_alert".into(), json!(&stripped.threat_summary));
+                }
+
+                let p_name = if stripped.is_double_tagged {
+                    "QinQ_802.1ad".to_string()
+                } else {
+                    "VLAN_802.1Q".to_string()
+                };
+                (p_name, true)
+            } else {
+                let p_name = match other_eth.0 {
+                    0x88CC => "LLDP".into(),
+                    0x8847 => "MPLS_UNICAST".into(),
+                    0x8864 => "PPPoE_SESSION".into(),
+                    0x888E => "EAPOL_802.1X".into(),
+                    0x88F7 => "PTP_IEEE1588".into(),
+                    0x88E5 => "MACsec_802.1AE".into(),
+                    0x8906 => "FCoE".into(),
+                    other => format!("ETH_0x{:04X}", other),
+                };
+                (p_name, false)
+            };
+
             b_map.insert("ether_type".into(), json!(format!("0x{:04X}", other_eth.0)));
             b_map.insert("protocol_name".into(), json!(&proto_name));
             b_map.insert("frame_length_bytes".into(), json!(data.len()));
@@ -3006,10 +3039,17 @@ fn parse_ethernet_frame(data: &[u8], last_hash: &mut String) -> Option<PacketRec
             b_map.insert("source_mac".into(), json!(&mac_src));
             b_map.insert("destination_mac".into(), json!(&mac_dst));
 
-            let summary_text = format!(
-                "Ethernet Frame [{}] {} -> {} (Length: {}B)",
-                proto_name, mac_src, mac_dst, data.len()
-            );
+            let summary_text = if is_vlan_frame {
+                format!(
+                    "VLAN Encapsulated Frame [{}] {} -> {} (Length: {}B)",
+                    proto_name, mac_src, mac_dst, data.len()
+                )
+            } else {
+                format!(
+                    "Ethernet Frame [{}] {} -> {} (Length: {}B)",
+                    proto_name, mac_src, mac_dst, data.len()
+                )
+            };
 
             let payload_hex = hex::encode(payload_bytes);
             // 统一全局链式哈希（单一司法证据链）

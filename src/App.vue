@@ -183,6 +183,13 @@
 
         <!-- 常用动作按钮组 -->
         <div class="flex items-center gap-1 shrink-0">
+          <!-- 无线与虚拟局域网专业监测控制台 -->
+          <button @click="isWirelessVlanOpen = true"
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-full glass-pill hover:bg-white/10 transition-colors cursor-pointer text-xs font-mono shrink-0 shadow-xs"
+            title="点击打开 Wi-Fi 频谱 / VLAN 拓扑 / 蓝牙近场空间感知专业控制台">
+            <span class="text-xs">📶</span>
+            <span class="text-[11px] font-semibold text-sky-200">无线/VLAN</span>
+          </button>
           <button @click="isEnvDiagnosticOpen = true"
             class="flex items-center gap-1.5 px-2.5 py-1 rounded-full glass-pill hover:bg-white/10 transition-colors cursor-pointer text-xs font-mono shrink-0"
             :title="`[底层运行环境就绪度: ${envScore ?? '--'}%] 点击查看 Npcap / Wireshark / USBPcap 驱动诊断`">
@@ -421,6 +428,12 @@
       @close="isEnvDiagnosticOpen = false"
     />
 
+    <!-- 全局无线网络 (Wi-Fi/蓝牙) 与虚拟局域网 (VLAN) 专业监测模态框 -->
+    <WirelessVlanMonitorModal
+      :isOpen="isWirelessVlanOpen"
+      @close="isWirelessVlanOpen = false"
+    />
+
     <IpDossierModal
       :isOpen="isGlobalDossierOpen"
       :targetIp="globalDossierIp"
@@ -456,6 +469,7 @@ import PacketDeepModal from './components/PacketDeepModal.vue';
 import HoneypotWorkbenchModal from './components/HoneypotWorkbenchModal.vue';
 import IpDossierModal from './components/IpDossierModal.vue';
 import EnvironmentDiagnosticModal from './components/EnvironmentDiagnosticModal.vue';
+import WirelessVlanMonitorModal from './components/WirelessVlanMonitorModal.vue';
 import TrafficAnalyzerView from './views/TrafficAnalyzerView.vue';
 import AssetIntelligenceView from './views/AssetIntelligenceView.vue';
 import HardwareBusView from './views/HardwareBusView.vue';
@@ -629,6 +643,7 @@ function openDeepModal(pkt: any) {
 
 const isGlobalDossierOpen = ref(false);
 const isEnvDiagnosticOpen = ref(false);
+const isWirelessVlanOpen = ref(false);
 const envScore = ref<number | null>(null);
 
 function loadEnvReadiness() {
