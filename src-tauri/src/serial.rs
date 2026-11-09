@@ -151,10 +151,10 @@ fn check_port_availability(port_name: &str) -> bool {
     }
 
     // 2. 尝试以极小超时快速打开，验证 OS 句柄未被其他软件独占锁死
-    match serialport::new(port_name, 9600).timeout(Duration::from_millis(15)).open() {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+    // 2. 纯内存状态判定: 严禁在枚举流程中调用 open()，
+    // 否则在遇到 Windows 蓝牙虚拟串口 (BTHENUM) 或脱机虚拟串口时，
+    // Win32 CreateFileW 会被内核蓝牙射频握手同步死锁 5~30 秒导致启动停滞！
+    true
 }
 
 /// 枚举本机所有可用的 COM 物理/虚拟串口名称列表 (保持向前兼容)

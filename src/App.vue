@@ -414,6 +414,7 @@
 
     <!-- 全局全景报文深度剖析弹窗 -->
     <PacketDeepModal
+      v-if="isDeepModalOpen"
       :isOpen="isDeepModalOpen"
       :packet="deepModalPacket"
       @close="isDeepModalOpen = false"
@@ -423,6 +424,7 @@
 
     <!-- 全局蜜罐诱捕威胁溯源工作台模态框 -->
     <HoneypotWorkbenchModal
+      v-if="isHoneypotOpen"
       :isOpen="isHoneypotOpen"
       :packets="honeypotPackets"
       :isRunning="isHoneypotRunning"
@@ -437,17 +439,20 @@
     <!-- 全局统一 IP 全息档案溯源模态框 -->
     <!-- 全局底层抓包驱动与解剖工具链全景诊断模态框 -->
     <EnvironmentDiagnosticModal
+      v-if="isEnvDiagnosticOpen"
       :isOpen="isEnvDiagnosticOpen"
       @close="isEnvDiagnosticOpen = false"
     />
 
     <!-- 全局无线网络 (Wi-Fi/蓝牙) 与虚拟局域网 (VLAN) 专业监测模态框 -->
     <WirelessVlanMonitorModal
+      v-if="isWirelessVlanOpen"
       :isOpen="isWirelessVlanOpen"
       @close="isWirelessVlanOpen = false"
     />
 
     <IpDossierModal
+      v-if="isGlobalDossierOpen"
       :isOpen="isGlobalDossierOpen"
       :targetIp="globalDossierIp"
       :packets="packets"
@@ -942,7 +947,7 @@ function handleFilterTraffic(ip: string) {
   addLog(`[TRAFFIC] 已按 IP 快速过滤流量: ${ip}`);
 }
 
-onMounted(async () => {
+onMounted(() => {
   loadEnvReadiness();
   // 确保 DOM 根节点立即挂载苹果 2026 冰晶磨砂明亮类名
   document.documentElement.classList.remove('theme-apple-dark');
@@ -950,44 +955,43 @@ onMounted(async () => {
   document.body.classList.remove('theme-apple-dark');
   document.body.classList.add('theme-apple-light');
   localStorage.setItem('omni_probe_apple_theme', 'light');
-  try {
-    interfaces.value = await invoke<string[]>('list_interfaces');
-    if (interfaces.value.length > 0 && !selectedIface.value) {
-      selectedIface.value = interfaces.value[0];
-    }
-    // 开机自启：自动点亮探针主引擎与工控规约全维演示流水线
-    await startCapture();
-  } catch (e) {
-    addLog(`[ERROR] 获取网卡列表失败: ${e}`);
-  }
 
-  try {
-    const details = await invoke<SerialPortDetail[]>('list_serial_ports_detail');
+  // 并行通道 A: 网卡枚举与后台自启嗅探 (不阻塞首屏交互)
+  invoke<string[]>('list_interfaces').then((ifaces) => {
+    interfaces.value = ifaces;
+    if (ifaces.length > 0 && !selectedIface.value) {
+      selectedIface.value = ifaces[0];
+    }
+    startCapture();
+  }).catch((e) => {
+    addLog(`[ERROR] 获取网卡列表失败: ${e}`);
+  });
+
+  // 并行通道 B: 物理与虚拟串口极速枚举 (不阻塞首屏交互)
+  invoke<SerialPortDetail[]>('list_serial_ports_detail').then((details) => {
     serialPortsDetail.value = details;
     serialPorts.value = details.map(d => d.port_name);
     if (serialPorts.value.length > 0 && !selectedSerial.value) {
       selectedSerial.value = serialPorts.value[0];
     }
-  } catch (e) {
-    try {
-      serialPorts.value = await invoke<string[]>('list_serial_ports');
-      if (serialPorts.value.length > 0 && !selectedSerial.value) {
-        selectedSerial.value = serialPorts.value[0];
+  }).catch(() => {
+    invoke<string[]>('list_serial_ports').then((ports) => {
+      serialPorts.value = ports;
+      if (ports.length > 0 && !selectedSerial.value) {
+        selectedSerial.value = ports[0];
       }
-    } catch (err) {
+    }).catch((err) => {
       addLog(`[ERROR] 获取物理串口列表失败: ${err}`);
-    }
-  }
+    });
+  });
 
-  try {
-    const activeList = await invoke<any[]>('list_active_serial_probes');
+  // 并行通道 C: 活跃串口探活
+  invoke<any[]>('list_active_serial_probes').then((activeList) => {
     activeSerialPorts.value = activeList.map(a => a.port_name);
     isSerialRunning.value = activeSerialPorts.value.length > 0;
-  } catch (e) {
-    // 忽略
-  }
+  }).catch(() => {});
 
-  refreshSerialPorts();
+  // 并行通道 D: 局域网资产感知与 USB 设备扫描
   refreshAssets();
   refreshUsbDevices();
 
@@ -1136,10 +1140,9 @@ onMounted(async () => {
     addLog(payload);
   });
 
-  try {
-    const hpRunning = await invoke<boolean>('is_honeypot_running_cmd');
+  invoke<boolean>('is_honeypot_running_cmd').then((hpRunning) => {
     isHoneypotRunning.value = hpRunning;
-  } catch (_) {}
+  }).catch(() => {});
 });
 </script>
 
