@@ -676,7 +676,7 @@ impl HugepageLockedBuffer {
         let cap = slot_capacity.max(2048);
         let total = count * cap;
 
-        let mut ptr = std::ptr::null_mut();
+        let mut ptr: *mut u8 = std::ptr::null_mut();
         let mut is_pinned = false;
         let mut is_large = false;
 

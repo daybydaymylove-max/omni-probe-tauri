@@ -7,7 +7,9 @@
 // 4. EBWebView 孤立临时文件自愈清理
 // ============================================================
 
+#[cfg(windows)]
 use std::sync::Mutex;
+#[cfg(windows)]
 use once_cell::sync::Lazy;
 
 #[cfg(windows)]

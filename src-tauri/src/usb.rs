@@ -160,7 +160,7 @@ mod win_setupapi {
 fn get_present_usb_devices_windows() -> Vec<UsbDeviceInfo> {
     use win_setupapi::*;
 
-    let mut devices = Vec::new();
+    let mut devices: Vec<UsbDeviceInfo> = Vec::new();
     let enumerator: Vec<u16> = "USB\0".encode_utf16().collect();
 
     unsafe {
@@ -253,7 +253,7 @@ pub fn scan_connected_usb_devices() -> Vec<UsbDeviceInfo> {
     let mut devices = get_present_usb_devices_windows();
 
     #[cfg(not(windows))]
-    let mut devices = Vec::new();
+    let mut devices: Vec<UsbDeviceInfo> = Vec::new();
 
     #[cfg(target_os = "linux")]
     {
@@ -302,7 +302,7 @@ pub fn scan_connected_usb_devices() -> Vec<UsbDeviceInfo> {
                 let vid = format!("{:04X}", usb.vid);
                 let pid = format!("{:04X}", usb.pid);
                 let inst_id = format!("USB_SERIAL/{}/{}/{}", vid, pid, p.port_name);
-                if !devices.iter().any(|d| d.instance_id == inst_id || (d.vid == vid && d.pid == pid)) {
+                if !devices.iter().any(|d: &UsbDeviceInfo| d.instance_id == inst_id || (d.vid == vid && d.pid == pid)) {
                     let name = usb.product.clone().unwrap_or_else(|| format!("USB Serial ({})", p.port_name));
                     let mfg = usb.manufacturer.unwrap_or_default();
                     devices.push(UsbDeviceInfo {

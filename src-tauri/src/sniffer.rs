@@ -1612,6 +1612,7 @@ pub fn trigger_lan_radar_discovery(app: tauri::AppHandle) {
             ),
         );
 
+        #[allow(unused_variables, unused_assignments)]
         let mut round = 0u64;
 
         while *running.lock().unwrap() {

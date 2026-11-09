@@ -554,6 +554,7 @@ pub fn scan_lan_subnet_active(app: tauri::AppHandle) {
             let mut handles = Vec::new();
 
             for chunk_idx in 0..4 {
+                #[cfg(windows)]
                 let app_chunk = app.clone();
                 let h = std::thread::spawn(move || {
                     let start_h = (chunk_idx * 64) + 1;
@@ -693,6 +694,7 @@ pub fn start_asset_discovery_daemon(app: tauri::AppHandle) {
             // 2. 每隔 20 秒执行一次温和的轻量探活
             if ticker % 5 == 0 {
                 let subnets = detect_physical_subnets();
+                #[cfg(windows)]
                 for (o0, o1, o2, _) in subnets {
                     #[cfg(windows)]
                     {

@@ -226,6 +226,7 @@ pub fn start_continuous_probe(
 pub async fn run_icmp_ping(target_ip: &str, timeout_ms: u64) -> ProbeResult {
     let id = ACTIVE_PROBE_ID.fetch_add(1, Ordering::Relaxed);
     let start = std::time::Instant::now();
+    #[cfg(any(windows, target_os = "macos"))]
     let timeout_str = timeout_ms.to_string();
     let target = target_ip.to_string();
 
