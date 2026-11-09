@@ -137,6 +137,7 @@ pub mod traceroute_engine;
 pub use traceroute_engine::{
     start_traceroute_cmd,
     lookup_ip_geo_coordinates_cmd,
+    get_self_ip_geo_cmd,
 };
 
 use once_cell::sync::Lazy;
@@ -1950,7 +1951,8 @@ pub fn run() {
             reset_glushkov_engine_metrics_cmd,
             // 测地线可视路由追踪与地球地理情报 (TASK-43)
             start_traceroute_cmd,
-            lookup_ip_geo_coordinates_cmd
+            lookup_ip_geo_coordinates_cmd,
+            get_self_ip_geo_cmd
         ])
         .on_window_event(|_window, event| match event {
             tauri::WindowEvent::CloseRequested { .. } => {

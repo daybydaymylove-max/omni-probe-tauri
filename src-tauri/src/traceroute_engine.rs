@@ -73,6 +73,9 @@ pub struct TracerouteHop {
     pub cumulative_distance_km: f64,
     /// 理论光纤单向传播时延 (毫秒 ms)
     pub theoretical_fiber_rtt_ms: f64,
+    /// 是否为使用者自我主机源点 IP (Hop 0)
+    #[serde(default)]
+    pub is_self: bool,
 }
 
 /// 完整路由追踪诊断报告
@@ -328,6 +331,68 @@ impl OfflineGeoCatalog {
 
 pub static GLOBAL_GEO_CATALOG: Lazy<OfflineGeoCatalog> = Lazy::new(OfflineGeoCatalog::new);
 
+/// 自动探测使用者访问指定目标时所使用的本地活跃出站 IPv4 地址 (无需网络通信，由 OS 路由表内核判定)
+pub fn detect_outbound_local_ip(target: &str) -> Ipv4Addr {
+    use std::net::UdpSocket;
+    let probe_target = if let Ok(ip) = target.parse::<Ipv4Addr>() {
+        format!("{}:80", ip)
+    } else {
+        "114.114.114.114:80".to_string()
+    };
+    if let Ok(socket) = UdpSocket::bind("0.0.0.0:0") {
+        if socket.connect(&probe_target).is_ok() {
+            if let Ok(std::net::SocketAddr::V4(local)) = socket.local_addr() {
+                return *local.ip();
+            }
+        }
+    }
+    Ipv4Addr::new(127, 0, 0, 1)
+}
+
+/// 基于 ip2region.xdb 离线库与操作系统路由表，精准解析使用者的自我 IP 及其地理位置 (Hop 0)
+pub fn resolve_self_ip_geo(target: Option<&str>) -> (Ipv4Addr, TracerouteHop) {
+    let local_ip = detect_outbound_local_ip(target.unwrap_or("114.114.114.114"));
+    let local_ip_str = local_ip.to_string();
+
+    let engine = GLOBAL_IP_ENGINE.lock().unwrap();
+    let intel = engine.classify(&local_ip_str);
+
+    let (country, province, city, isp, zone_name) = (
+        intel.country.unwrap_or_else(|| "中国".to_string()),
+        intel.province.unwrap_or_default(),
+        intel.city.unwrap_or_default(),
+        intel.isp.unwrap_or_else(|| "本地网络适配器".to_string()),
+        intel.zone_name,
+    );
+
+    let geo = if intel.is_private || intel.is_loopback {
+        // 内网或回环 IP: 初始锚定在本地基准
+        Some(GLOBAL_GEO_CATALOG.get_local_anchor())
+    } else {
+        GLOBAL_GEO_CATALOG
+            .lookup(&country, &province, &city)
+            .or_else(|| Some(GLOBAL_GEO_CATALOG.get_local_anchor()))
+    };
+
+    let hop = TracerouteHop {
+        hop: 0,
+        ip: local_ip_str,
+        rtt_ms: Some(0.0),
+        is_timeout: false,
+        geo,
+        country,
+        province,
+        city,
+        isp,
+        zone_name,
+        cumulative_distance_km: 0.0,
+        theoretical_fiber_rtt_ms: 0.0,
+        is_self: true,
+    };
+
+    (local_ip, hop)
+}
+
 // ============================================================
 // 3. 跨平台路由追踪执行机与流式事件推送
 // ============================================================
@@ -427,8 +492,18 @@ pub async fn execute_traceroute(
     let stdout = child.stdout.take().ok_or("无法捕获进程标准输出")?;
     let mut reader = BufReader::new(stdout).lines();
 
+    // 1. 立即探测并确定使用者的自我 IP (Self Local/Public IP) 与地理坐标 (Hop 0)
+    let (self_ip, self_hop) = resolve_self_ip_geo(Some(&target));
+    let mut last_coord = self_hop.geo.clone().unwrap_or_else(|| GLOBAL_GEO_CATALOG.get_local_anchor());
     let mut hops_records = Vec::new();
-    let mut last_coord = GLOBAL_GEO_CATALOG.get_local_anchor();
+    let mut self_geo_refined = !self_ip.is_private() && !self_ip.is_loopback();
+
+    // 立即向前端发射 Hop 0: 使用者自我主机源点
+    if let Some(ref a) = app {
+        let _ = a.emit("traceroute-hop-event", &self_hop);
+    }
+    hops_records.push(self_hop);
+
     let mut cumulative_dist = 0.0;
     let mut final_resolved_target_ip = target.clone();
     let mut is_completed = false;
@@ -476,14 +551,35 @@ pub async fn execute_traceroute(
             // 联动全球离线地理坐标库
             let geo_coord = if hop_ip != "*" {
                 if zone_name.contains("RFC1918") || zone_name.contains("私网") {
-                    // 内网节点继承本地起点坐标
-                    Some(GLOBAL_GEO_CATALOG.get_local_anchor())
+                    // 内网节点继承上一个有效坐标
+                    Some(last_coord.clone())
                 } else {
                     GLOBAL_GEO_CATALOG.lookup(&country, &province, &city)
                 }
             } else {
                 None
             };
+
+            // 动态自适应校准使用者本机真实地理归属:
+            // 如果使用者机器通过私网 NAT (如 192.168.x.x) 出网，链路上的第 1 个公网 IP 代表其城域网出口机房
+            if !self_geo_refined && (self_ip.is_private() || self_ip.is_loopback()) {
+                if let Some(ref curr_geo) = geo_coord {
+                    if !zone_name.contains("RFC1918") && !zone_name.contains("私网") && country != "未知" {
+                        hops_records[0].country = country.clone();
+                        hops_records[0].province = province.clone();
+                        hops_records[0].city = city.clone();
+                        hops_records[0].isp = format!("{} (出口宽带)", isp);
+                        hops_records[0].geo = Some(curr_geo.clone());
+                        last_coord = curr_geo.clone();
+                        self_geo_refined = true;
+
+                        // 重新向前端推送校准后的 Hop 0，使地图源点精准锚定在用户所在城市
+                        if let Some(ref a) = app {
+                            let _ = a.emit("traceroute-hop-event", &hops_records[0]);
+                        }
+                    }
+                }
+            }
 
             // 测地大圆距离积分与理论光纤时延计算
             if let Some(ref curr) = geo_coord {
@@ -512,6 +608,7 @@ pub async fn execute_traceroute(
                 zone_name,
                 cumulative_distance_km: (cumulative_dist * 10.0).round() / 10.0,
                 theoretical_fiber_rtt_ms: theoretical_fiber,
+                is_self: false,
             };
 
             // 边探测边向前端发射流式事件 (驱动前端地图实时动态绘制测地飞线)
@@ -600,6 +697,12 @@ pub fn lookup_ip_geo_coordinates_cmd(ip: String) -> Result<Option<GeoCoordinates
     Ok(GLOBAL_GEO_CATALOG.lookup(&country, &province, &city))
 }
 
+#[tauri::command]
+pub fn get_self_ip_geo_cmd(target: Option<String>) -> Result<TracerouteHop, String> {
+    let (_, self_hop) = resolve_self_ip_geo(target.as_deref());
+    Ok(self_hop)
+}
+
 // ============================================================
 // 5. 严苛工业单元测试套件 (DoD 质量门禁)
 // ============================================================
@@ -607,6 +710,21 @@ pub fn lookup_ip_geo_coordinates_cmd(ip: String) -> Result<Option<GeoCoordinates
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_detect_outbound_local_ip_and_self_geo() {
+        // 测试本地出站 IP 探测 (路由表内核瞬时裁决)
+        let local_ip = detect_outbound_local_ip("8.8.8.8");
+        assert!(!local_ip.is_unspecified(), "Local outbound IP must not be 0.0.0.0");
+
+        // 测试自我 IP 解析与 Hop 0 结构
+        let (ip, self_hop) = resolve_self_ip_geo(Some("8.8.8.8"));
+        assert_eq!(ip, local_ip);
+        assert_eq!(self_hop.hop, 0);
+        assert!(self_hop.is_self);
+        assert_eq!(self_hop.rtt_ms, Some(0.0));
+        assert!(self_hop.geo.is_some());
+    }
 
     #[test]
     fn test_haversine_distance_accuracy() {
