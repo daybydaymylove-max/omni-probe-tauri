@@ -508,6 +508,198 @@ pub struct DualPacketDiffResult {
     pub waveform_metrics: Option<WaveformComparisonMetrics>,
 }
 
+/// 通用跨模块比对输入实体 (支持网络包、NetAssist、串口、纯 HEX/ASCII 草稿)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UniversalDiffPayload {
+    pub id: Option<u64>,
+    pub label: String,
+    pub timestamp: Option<String>,
+    pub protocol: Option<String>,
+    pub endpoint_src: Option<String>,
+    pub endpoint_dst: Option<String>,
+    pub payload_hex: String,
+    pub raw_text: Option<String>,
+    pub extra_fields: Option<HashMap<String, String>>,
+}
+
+/// 全局通用的跨模块双样本数据深度差分与波形比对分析引擎
+/// 时间复杂度: O(N * M) (LCS 算法)
+/// 空间复杂度: O(N * M)
+pub fn compare_universal_payloads(
+    item_a: UniversalDiffPayload,
+    item_b: UniversalDiffPayload,
+) -> Result<DualPacketDiffResult, String> {
+    let mut field_diffs = Vec::new();
+
+    let mut add_field = |layer: &str, name: &str, val_a: &str, val_b: &str| {
+        let is_diff = val_a != val_b;
+        let diff_type = if !is_diff {
+            "EQUAL".to_string()
+        } else if val_a.is_empty() && !val_b.is_empty() {
+            "ADDED_IN_B".to_string()
+        } else if !val_a.is_empty() && val_b.is_empty() {
+            "MISSING_IN_B".to_string()
+        } else {
+            "CHANGED".to_string()
+        };
+        field_diffs.push(FieldDiffItem {
+            layer: layer.to_string(),
+            field_name: name.to_string(),
+            val_a: val_a.to_string(),
+            val_b: val_b.to_string(),
+            is_different: is_diff,
+            diff_type,
+        });
+    };
+
+    // 基础元信息
+    add_field("元数据", "样本标签", &item_a.label, &item_b.label);
+    if item_a.timestamp.is_some() || item_b.timestamp.is_some() {
+        add_field(
+            "元数据",
+            "时标记录",
+            item_a.timestamp.as_deref().unwrap_or("-"),
+            item_b.timestamp.as_deref().unwrap_or("-"),
+        );
+    }
+    if item_a.protocol.is_some() || item_b.protocol.is_some() {
+        add_field(
+            "规约特征",
+            "通信协议/模式",
+            item_a.protocol.as_deref().unwrap_or("GENERIC"),
+            item_b.protocol.as_deref().unwrap_or("GENERIC"),
+        );
+    }
+    if item_a.endpoint_src.is_some() || item_b.endpoint_src.is_some() {
+        add_field(
+            "通信端点",
+            "源端点 (Source)",
+            item_a.endpoint_src.as_deref().unwrap_or("-"),
+            item_b.endpoint_src.as_deref().unwrap_or("-"),
+        );
+    }
+    if item_a.endpoint_dst.is_some() || item_b.endpoint_dst.is_some() {
+        add_field(
+            "通信端点",
+            "目的端点 (Destination)",
+            item_a.endpoint_dst.as_deref().unwrap_or("-"),
+            item_b.endpoint_dst.as_deref().unwrap_or("-"),
+        );
+    }
+
+    // 扩展业务属性比对
+    let mut all_extra_keys = std::collections::BTreeSet::new();
+    if let Some(ref map_a) = item_a.extra_fields {
+        for k in map_a.keys() {
+            all_extra_keys.insert(k.clone());
+        }
+    }
+    if let Some(ref map_b) = item_b.extra_fields {
+        for k in map_b.keys() {
+            all_extra_keys.insert(k.clone());
+        }
+    }
+    for k in all_extra_keys {
+        let val_a = item_a
+            .extra_fields
+            .as_ref()
+            .and_then(|m| m.get(&k))
+            .map(|s| s.as_str())
+            .unwrap_or("");
+        let val_b = item_b
+            .extra_fields
+            .as_ref()
+            .and_then(|m| m.get(&k))
+            .map(|s| s.as_str())
+            .unwrap_or("");
+        add_field("业务扩展属性", &k, val_a, val_b);
+    }
+
+    // 载荷逐字节解析 (优先 HEX，若 HEX 为空则回退至 raw_text，若解析 HEX 失败亦回退至纯文本)
+    let clean_a = item_a.payload_hex.replace([' ', '\n', '\r', '\t'], "");
+    let clean_b = item_b.payload_hex.replace([' ', '\n', '\r', '\t'], "");
+
+    let bytes_a = if !clean_a.is_empty() {
+        hex::decode(&clean_a).unwrap_or_else(|_| {
+            if let Some(ref txt) = item_a.raw_text {
+                txt.as_bytes().to_vec()
+            } else {
+                clean_a.as_bytes().to_vec()
+            }
+        })
+    } else if let Some(ref txt) = item_a.raw_text {
+        txt.as_bytes().to_vec()
+    } else {
+        Vec::new()
+    };
+
+    let bytes_b = if !clean_b.is_empty() {
+        hex::decode(&clean_b).unwrap_or_else(|_| {
+            if let Some(ref txt) = item_b.raw_text {
+                txt.as_bytes().to_vec()
+            } else {
+                clean_b.as_bytes().to_vec()
+            }
+        })
+    } else if let Some(ref txt) = item_b.raw_text {
+        txt.as_bytes().to_vec()
+    } else {
+        Vec::new()
+    };
+
+    let tags_a = lcs_diff_tags(&bytes_a, &bytes_b, true);
+    let tags_b = lcs_diff_tags(&bytes_a, &bytes_b, false);
+
+    let desc_a = if item_a.label.is_empty() {
+        format!("样本 A ({} 字节)", bytes_a.len())
+    } else {
+        item_a.label.clone()
+    };
+    let desc_b = if item_b.label.is_empty() {
+        format!("样本 B ({} 字节)", bytes_b.len())
+    } else {
+        item_b.label.clone()
+    };
+
+    let hex_diff_a = build_hex_rows(&bytes_a, &tags_a, &format!("样本 A: {}", desc_a));
+    let hex_diff_b = build_hex_rows(&bytes_b, &tags_b, &format!("样本 B: {}", desc_b));
+
+    let mutated_a = tags_a.iter().filter(|t| t.as_str() != "equal").count();
+    let mutated_b = tags_b.iter().filter(|t| t.as_str() != "equal").count();
+    let mutated_bytes_count = mutated_a.max(mutated_b);
+
+    let max_len = bytes_a.len().max(bytes_b.len());
+    let mutation_rate_percent = if max_len > 0 {
+        (mutated_bytes_count as f64 / max_len as f64) * 100.0
+    } else {
+        0.0
+    };
+
+    let diff_fields_count = field_diffs.iter().filter(|f| f.is_different).count();
+    let summary = format!(
+        "通用比对完成: 元数据差异 {} 项 | 载荷突变字节: {}/{} ({:.1}%)",
+        diff_fields_count, mutated_bytes_count, max_len, mutation_rate_percent
+    );
+
+    let waveform_metrics = Some(compute_waveform_metrics(&bytes_a, &bytes_b));
+
+    Ok(DualPacketDiffResult {
+        packet_a_id: item_a.id.unwrap_or(1),
+        packet_b_id: item_b.id.unwrap_or(2),
+        packet_a_desc: desc_a,
+        packet_b_desc: desc_b,
+        total_bytes_a: bytes_a.len(),
+        total_bytes_b: bytes_b.len(),
+        mutated_bytes_count,
+        mutation_rate_percent,
+        hex_diff_a,
+        hex_diff_b,
+        field_diffs,
+        summary,
+        waveform_metrics,
+    })
+}
+
 /// 计算两组字节流的时域与空间域波形比对分析指标（余弦相似度、皮尔逊相关性、波率、差值点阵）
 /// 时间复杂度: O(L), 空间复杂度: O(L), L = max(len_a, len_b)
 pub fn compute_waveform_metrics(bytes_a: &[u8], bytes_b: &[u8]) -> WaveformComparisonMetrics {
@@ -1288,6 +1480,108 @@ mod tests {
 
         // offset 3: AA, BB, CC 各不相同，突变率为 2/3 (66.67%)
         assert!((spec[3].mutation_rate - 66.666).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_universal_payloads_comparison() {
+        // 1. 正常十六进制报文比对 (模拟 NetAssist 或串口通讯响应帧)
+        let mut extra_a = HashMap::new();
+        extra_a.insert("direction".to_string(), "TX".to_string());
+        extra_a.insert("baudrate".to_string(), "115200".to_string());
+
+        let mut extra_b = HashMap::new();
+        extra_b.insert("direction".to_string(), "RX".to_string());
+        extra_b.insert("baudrate".to_string(), "115200".to_string());
+
+        let item_a = UniversalDiffPayload {
+            id: Some(101),
+            label: "NetAssist 发送帧".to_string(),
+            timestamp: Some("12:00:01.000".to_string()),
+            protocol: Some("Modbus-RTU".to_string()),
+            endpoint_src: Some("192.168.1.100:502".to_string()),
+            endpoint_dst: Some("192.168.1.200:502".to_string()),
+            payload_hex: "01 03 00 00 00 02 C4 0B".to_string(),
+            raw_text: None,
+            extra_fields: Some(extra_a),
+        };
+
+        let item_b = UniversalDiffPayload {
+            id: Some(102),
+            label: "NetAssist 接收帧".to_string(),
+            timestamp: Some("12:00:01.025".to_string()),
+            protocol: Some("Modbus-RTU".to_string()),
+            endpoint_src: Some("192.168.1.200:502".to_string()),
+            endpoint_dst: Some("192.168.1.100:502".to_string()),
+            payload_hex: "01 03 04 00 12 00 34 89 21".to_string(),
+            raw_text: None,
+            extra_fields: Some(extra_b),
+        };
+
+        let res = compare_universal_payloads(item_a, item_b).expect("通用比对成功");
+        assert_eq!(res.total_bytes_a, 8);
+        assert_eq!(res.total_bytes_b, 9);
+        assert!(res.mutated_bytes_count > 0);
+        assert!(res.waveform_metrics.is_some());
+
+        // 验证元数据比对字段中包含 direction 差异
+        let dir_diff = res.field_diffs.iter().find(|f| f.field_name == "direction");
+        assert!(dir_diff.is_some());
+        assert!(dir_diff.unwrap().is_different);
+
+        // 2. 极限用例: 空数据比对
+        let empty_a = UniversalDiffPayload {
+            id: None,
+            label: "草稿 A".to_string(),
+            timestamp: None,
+            protocol: None,
+            endpoint_src: None,
+            endpoint_dst: None,
+            payload_hex: "".to_string(),
+            raw_text: None,
+            extra_fields: None,
+        };
+        let empty_b = UniversalDiffPayload {
+            id: None,
+            label: "草稿 B".to_string(),
+            timestamp: None,
+            protocol: None,
+            endpoint_src: None,
+            endpoint_dst: None,
+            payload_hex: "".to_string(),
+            raw_text: None,
+            extra_fields: None,
+        };
+        let res_empty = compare_universal_payloads(empty_a, empty_b).expect("空比对应平稳返回");
+        assert_eq!(res_empty.total_bytes_a, 0);
+        assert_eq!(res_empty.total_bytes_b, 0);
+        assert_eq!(res_empty.mutation_rate_percent, 0.0);
+
+        // 3. 极限用例: ASCII 纯文本比对
+        let txt_a = UniversalDiffPayload {
+            id: None,
+            label: "HTTP 请求头 A".to_string(),
+            timestamp: None,
+            protocol: Some("HTTP".to_string()),
+            endpoint_src: None,
+            endpoint_dst: None,
+            payload_hex: "".to_string(),
+            raw_text: Some("GET /api/v1/status HTTP/1.1".to_string()),
+            extra_fields: None,
+        };
+        let txt_b = UniversalDiffPayload {
+            id: None,
+            label: "HTTP 请求头 B".to_string(),
+            timestamp: None,
+            protocol: Some("HTTP".to_string()),
+            endpoint_src: None,
+            endpoint_dst: None,
+            payload_hex: "".to_string(),
+            raw_text: Some("POST /api/v1/update HTTP/1.1".to_string()),
+            extra_fields: None,
+        };
+        let res_txt = compare_universal_payloads(txt_a, txt_b).expect("文本比对成功");
+        assert!(res_txt.total_bytes_a > 10);
+        assert!(res_txt.mutated_bytes_count > 0);
     }
 }
 

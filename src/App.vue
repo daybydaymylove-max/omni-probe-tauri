@@ -184,6 +184,15 @@
         <!-- 常用动作按钮组 -->
         <div class="flex items-center gap-1 shrink-0">
           <!-- 全球网络地理态势地图一键直达 -->
+          <!-- 全局通用数据比对中心 (跨模块通用基础设施) -->
+          <button @click="openUniversalDiffCenter"
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-full glass-pill hover:bg-white/10 transition-colors cursor-pointer text-xs font-mono shrink-0 shadow-xs"
+            :class="diffBus.hasBothSlots.value ? 'bg-indigo-600/70 border-indigo-400 text-white font-bold' : ''"
+            :title="`[全局数据比对中心 (Ctrl+Shift+D)] 槽位 A: ${diffBus.slotA.value ? '已装载' : '空'} | 槽位 B: ${diffBus.slotB.value ? '已装载' : '空'}`">
+            <span class="text-xs">⚖️</span>
+            <span class="text-[11px] font-semibold text-indigo-200">数据比对</span>
+            <span v-if="diffBus.slotA.value || diffBus.slotB.value" class="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_6px_#818CF8]"></span>
+          </button>
           <button @click="activeWorkbench = 'geo_map'"
             class="flex items-center gap-1.5 px-2.5 py-1 rounded-full glass-pill hover:bg-white/10 transition-colors cursor-pointer text-xs font-mono shrink-0 shadow-xs"
             :class="activeWorkbench === 'geo_map' ? 'bg-indigo-600/60 border-indigo-400 text-white font-bold' : ''"
@@ -470,6 +479,9 @@
     />
 
     <!-- 统一全局通知/友好提示浮层 (四级告警与防抖抑制) -->
+    <!-- 全局通用数据比对工作台 (双栏 Hex 同步 + 规约树差分 + 载荷波线波率 + 自由草稿) -->
+    <PacketDiffModal />
+
     <GlobalNotificationToast />
 
   </div>
@@ -485,6 +497,8 @@ import HoneypotWorkbenchModal from './components/HoneypotWorkbenchModal.vue';
 import IpDossierModal from './components/IpDossierModal.vue';
 import EnvironmentDiagnosticModal from './components/EnvironmentDiagnosticModal.vue';
 import WirelessVlanMonitorModal from './components/WirelessVlanMonitorModal.vue';
+import PacketDiffModal from './components/PacketDiffModal.vue';
+import { useUniversalDiff } from './composables/useUniversalDiff';
 import GlobalNotificationToast from './components/GlobalNotificationToast.vue';
 import { notifySuccess, notifyInfo, notifyWarning, notifyError } from './composables/useNotification';
 import TrafficAnalyzerView from './views/TrafficAnalyzerView.vue';
@@ -608,6 +622,24 @@ async function toggleSniffingPause() {
 
 const activeWorkbench = ref<WorkbenchId>('traffic');
 
+const diffBus = useUniversalDiff();
+
+function openUniversalDiffCenter() {
+  if (diffBus.slotA.value && diffBus.slotB.value) {
+    diffBus.compareSlots();
+  } else if (diffBus.currentItemA.value && diffBus.currentItemB.value) {
+    diffBus.isDiffModalOpen.value = true;
+  } else {
+    diffBus.openScratchpad();
+  }
+}
+
+function handleGlobalKeydown(e: KeyboardEvent) {
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+    e.preventDefault();
+    openUniversalDiffCenter();
+  }
+}
 const isRunning = ref(false);
 const isPaused = ref(false);
 const isSerialRunning = ref(false);
@@ -966,6 +998,7 @@ function handleFilterTraffic(ip: string) {
 
 onMounted(() => {
   loadEnvReadiness();
+  window.addEventListener('keydown', handleGlobalKeydown);
   // 确保 DOM 根节点立即挂载苹果 2026 冰晶磨砂明亮类名
   document.documentElement.classList.remove('theme-apple-dark');
   document.documentElement.classList.add('theme-apple-light');
@@ -1018,6 +1051,7 @@ onMounted(() => {
   }, 5000);
 
   onUnmounted(() => {
+  window.removeEventListener('keydown', handleGlobalKeydown);
     if (assetTimer) {
       clearInterval(assetTimer);
       assetTimer = null;

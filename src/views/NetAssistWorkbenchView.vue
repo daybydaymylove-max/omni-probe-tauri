@@ -263,6 +263,9 @@
               </button>
 
               <button @click="packetLog = []" class="px-1.5 py-0.5 glass-pill rounded text-[10px] text-slate-500 hover:text-slate-800 cursor-pointer">清屏</button>
+              <button @click="diffBus.openScratchpad()" class="px-2 py-0.5 glass-pill rounded text-[10px] text-indigo-700 dark:text-indigo-300 font-bold hover:text-indigo-900 cursor-pointer flex items-center gap-1" title="打开自由数据差分工作台 (支持手动粘贴对比)">
+                <span>⚖️ 自由比对</span>
+              </button>
               <button @click="exportLog" class="px-2 py-0.5 glass-pill rounded text-[10px] text-sky-700 dark:text-sky-300 font-bold hover:text-sky-900 cursor-pointer">导出</button>
             </div>
           </div>
@@ -305,6 +308,12 @@
                     </button>
                     <button @click="inspectPacketInModal(item)" class="px-1 py-0.2 rounded bg-indigo-50 text-indigo-800 border border-indigo-200 text-[9px] font-bold hover:bg-indigo-100 cursor-pointer" title="在 Omni-Probe 报文分析器中全景解构此帧">
                       🔬 解构
+                    </button>
+                    <button @click="setDiffSlotA(item)" class="px-1.5 py-0.2 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-[9px] font-bold hover:bg-blue-100 cursor-pointer" title="存入全局比对槽位 A (基准)">
+                      ⚖️ 设为 A
+                    </button>
+                    <button @click="setDiffSlotB(item)" class="px-1.5 py-0.2 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-[9px] font-bold hover:bg-indigo-100 cursor-pointer" title="存入全局比对槽位 B 并立即拉起波形与差分对比">
+                      ⚖️ 设为 B
                     </button>
                   </div>
                 </div>
@@ -418,7 +427,15 @@
             </div>
 
             <!-- 右侧动作按钮列 -->
-            <div class="flex flex-col gap-1.5 w-24 shrink-0">
+            <div class="flex flex-col gap-1.5 w-28 shrink-0">
+              <button
+                @click="compareTxWithLastRx"
+                :disabled="!txPayload.trim() || !lastRxItem"
+                class="px-2 py-1 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-800 dark:text-indigo-200 border border-indigo-400/30 font-bold text-[10px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1 shadow-2xs"
+                title="一键对比当前发送区请求报文与最新收到的响应帧 (Hex 同步 + 变异波率)"
+              >
+                <span>⚖️ 请求 vs 响应</span>
+              </button>
               <button
                 @click="sendPayload"
                 :disabled="!isRunning || !txPayload.trim() || (txFormat === 'HEX' && !hexValidation.valid)"
@@ -548,6 +565,7 @@ import {
   notifyWarning,
   notifyError,
 } from '../composables/useNotification';
+import { useUniversalDiff } from '../composables/useUniversalDiff';
 import PacketDetailModal from '../components/PacketDetailModal.vue';
 interface PacketRecord {
   id: number;
@@ -652,6 +670,79 @@ interface PacketLogItem {
 
 const packetLog = ref<PacketLogItem[]>([]);
 const rxScrollContainer = ref<HTMLDivElement | null>(null);
+
+// 全局通用数据比对总线联动
+const diffBus = useUniversalDiff();
+
+const lastRxItem = computed(() => {
+  for (let i = packetLog.value.length - 1; i >= 0; i--) {
+    if (packetLog.value[i].direction === 'RX') return packetLog.value[i];
+  }
+  return null;
+});
+
+function setDiffSlotA(item: PacketLogItem) {
+  diffBus.setSlotA({
+    id: item.id,
+    label: `[${item.direction}] ${item.remote_addr}`,
+    timestamp: formatTime(item.timestamp_ms),
+    direction: item.direction,
+    mode: selectedMode.value,
+    endpoint: item.remote_addr,
+    payloadHex: item.payload_hex,
+    payloadAscii: item.payload_text,
+    byteLength: item.length
+  }, `NetAssist ${item.direction} #${item.id}`);
+}
+
+function setDiffSlotB(item: PacketLogItem) {
+  diffBus.setSlotB({
+    id: item.id,
+    label: `[${item.direction}] ${item.remote_addr}`,
+    timestamp: formatTime(item.timestamp_ms),
+    direction: item.direction,
+    mode: selectedMode.value,
+    endpoint: item.remote_addr,
+    payloadHex: item.payload_hex,
+    payloadAscii: item.payload_text,
+    byteLength: item.length
+  }, `NetAssist ${item.direction} #${item.id}`);
+
+  if (diffBus.slotA.value) {
+    diffBus.compareSlots();
+  }
+}
+
+function compareTxWithLastRx() {
+  if (!lastRxItem.value) {
+    notifyWarning('提示', '尚未捕获到任何对端响应帧，请先发送并接收数据');
+    return;
+  }
+  const cleanHex = txFormat.value === 'HEX' ? txPayload.value.replace(/[\s\r\n\t]/g, '') : '';
+  const txItem = {
+    id: 'TX_DRAFT',
+    label: `[TX 请求帧] ${targetIp.value || '127.0.0.1'}:${targetPort.value || 0}`,
+    timestamp: new Date().toLocaleTimeString(),
+    direction: 'TX',
+    mode: selectedMode.value,
+    endpoint: `${targetIp.value || '127.0.0.1'}:${targetPort.value || 0}`,
+    payloadHex: cleanHex || txPayload.value,
+    payloadAscii: txFormat.value === 'ASCII' ? txPayload.value : '',
+    byteLength: cleanHex ? cleanHex.length / 2 : txPayload.value.length
+  };
+  const rxItem = {
+    id: lastRxItem.value.id,
+    label: `[RX 最新回复] ${lastRxItem.value.remote_addr}`,
+    timestamp: formatTime(lastRxItem.value.timestamp_ms),
+    direction: 'RX',
+    mode: selectedMode.value,
+    endpoint: lastRxItem.value.remote_addr,
+    payloadHex: lastRxItem.value.payload_hex,
+    payloadAscii: lastRxItem.value.payload_text,
+    byteLength: lastRxItem.value.length
+  };
+  diffBus.openUniversalDiff(txItem, rxItem, 'hex');
+}
 
 // 统计信息
 const stats = ref({

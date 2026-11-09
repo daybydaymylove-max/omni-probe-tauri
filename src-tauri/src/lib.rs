@@ -1288,6 +1288,14 @@ async fn compare_two_packets_cmd(packet_a: sniffer::PacketRecord, packet_b: snif
     analyzer::compare_two_packets(packet_a, packet_b)
 }
 
+#[tauri::command]
+async fn compare_universal_payloads_cmd(
+    item_a: analyzer::UniversalDiffPayload,
+    item_b: analyzer::UniversalDiffPayload,
+) -> Result<analyzer::DualPacketDiffResult, String> {
+    analyzer::compare_universal_payloads(item_a, item_b)
+}
+
 // 3. 第三优先级：物理硬件基线白名单与合规差分比对
 #[tauri::command]
 async fn save_hardware_whitelist_cmd(items: Vec<hardware::HardwareWhitelistItem>) -> Result<usize, String> {
@@ -1891,6 +1899,7 @@ pub fn run() {
             list_packet_samples_cmd,
             delete_packet_sample_cmd,
             compare_two_packets_cmd,
+            compare_universal_payloads_cmd,
             save_hardware_whitelist_cmd,
             get_hardware_whitelist_cmd,
             clear_hardware_whitelist_cmd,
