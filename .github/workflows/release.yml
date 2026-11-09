@@ -18,14 +18,14 @@ jobs:
       matrix:
         include:
           - platform: 'windows-latest'
+            targets: ''
             args: ''
-            artifact_name: 'Windows-x64'
           - platform: 'ubuntu-22.04'
+            targets: ''
             args: ''
-            artifact_name: 'Linux-x64'
           - platform: 'macos-latest'
+            targets: ''
             args: ''
-            artifact_name: 'macOS'
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -40,8 +40,6 @@ jobs:
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -73,12 +71,12 @@ jobs:
         run: npm run build
 
       - name: Build and Package with Tauri Action
-        uses: tauri-apps/action@v0
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'Omni-Probe ${{ github.ref_name }}'
+          tagName: v0.2.4
+          releaseName: 'Omni-Probe v0.2.4'
           releaseBody: 'Omni-Probe 工业级全能网络探针系统原生多端发布版本。包含 Windows x64 (MSI/EXE)、Linux (DEB/AppImage) 以及 macOS (DMG/APP)。已完整集成全局跨模块全数据源比对总线、载荷五维波形与变异波率分析。'
           releaseDraft: false
           prerelease: false
