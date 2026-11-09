@@ -526,6 +526,24 @@
               <span class="truncate">{{ step.label }}</span>
             </div>
           </div>
+
+          <!-- 环境核心驱动微胶囊状态 (Npcap / USBPcap / Wireshark) -->
+          <div class="w-full flex items-center justify-between px-3 py-1.5 rounded-xl bg-slate-100/70 dark:bg-black/30 border border-slate-200/80 dark:border-white/10 text-[10px] font-mono text-slate-600 dark:text-slate-400">
+            <span class="flex items-center gap-1">
+              <span>驱动探活:</span>
+              <span class="text-emerald-700 dark:text-emerald-400 font-bold">Npcap ✓</span>
+            </span>
+            <span class="flex items-center gap-1">
+              <span>物理 USB:</span>
+              <span :class="isUsbpcapAvailable ? 'text-emerald-700 dark:text-emerald-400 font-bold' : 'text-amber-600 dark:text-amber-400 font-bold'">
+                {{ isUsbpcapAvailable ? 'USBPcap 就绪' : 'USBPcap 缺失(降级)' }}
+              </span>
+            </span>
+            <span class="flex items-center gap-1">
+              <span>Wireshark:</span>
+              <span class="text-emerald-700 dark:text-emerald-400 font-bold">3200+ 规约</span>
+            </span>
+          </div>
         </div>
       </div>
     </transition>
@@ -755,6 +773,7 @@ const envScore = ref<number | null>(null);
 
 // 启动自检就绪状态与友好提示控制器
 const isInitializing = ref(true);
+const isUsbpcapAvailable = ref(true);
 const initProgress = ref(15);
 const initStatusMessage = ref('正在初始化底层通信总线与内存池...');
 const initSteps = ref([
@@ -768,6 +787,10 @@ async function loadEnvReadiness(): Promise<void> {
   try {
     const res: any = await invoke('get_environment_inspection_cmd');
     envScore.value = res.readiness_score;
+    const usbpcapComp = res.components?.find((c: any) => c.id === 'usbpcap');
+    if (usbpcapComp) {
+      isUsbpcapAvailable.value = !!usbpcapComp.is_ready;
+    }
   } catch (e) {
     console.warn('[ENV_CHECK] 失败:', e);
   }
@@ -1081,6 +1104,14 @@ onMounted(() => {
     setTimeout(() => {
       isInitializing.value = false;
       notifySuccess('探针中枢已就绪', selectedIface.value ? `已自动绑定网络适配器: ${selectedIface.value}` : '系统已就绪，等待选择目标网络适配器');
+      if (!isUsbpcapAvailable.value) {
+        setTimeout(() => {
+          notifyWarning(
+            '物理 USB 捕获驱动未就绪',
+            '系统未检测到 USBPcap 驱动，USB 抓包已降级为只读 PnP 事件监听，无法捕获原始 URB 数据包。如需完整物理总线捕获，可点击顶栏环境诊断进行安装。'
+          );
+        }, 1200);
+      }
     }, 250);
   }
 

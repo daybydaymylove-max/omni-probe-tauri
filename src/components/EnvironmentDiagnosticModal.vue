@@ -71,10 +71,34 @@
             </div>
           </div>
 
-          <div class="text-[11px] font-mono text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-black/30 p-2.5 rounded-xl border border-slate-200/60 dark:border-white/10 shrink-0">
+          <div class="text-[11px] font-mono text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-black/30 p-2.5 rounded-xl border border-slate-200/60 dark:border-white/10 shrink-0 space-y-0.5">
             <div>• 42+ 核心工业规约: <strong class="text-emerald-600 dark:text-emerald-400">100% 原生支持</strong></div>
             <div>• 3200+ 官方全量规约: <strong :class="isTsharkReady ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-500'">{{ isTsharkReady ? '已解锁就绪' : '需安装 Wireshark' }}</strong></div>
             <div>• L2 混杂模式嗅探: <strong :class="isNpcapReady ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-500'">{{ isNpcapReady ? '千兆混杂就绪' : '降级 Raw Socket' }}</strong></div>
+            <div>• 物理 USB 硬件总线: <strong :class="isUsbpcapReady ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-500'">{{ isUsbpcapReady ? 'URB 物理总线就绪' : '缺少驱动 (无法捕获原始 URB)' }}</strong></div>
+          </div>
+        </div>
+
+        <!-- 缺少 USBPcap 驱动时的醒目警示与潜在问题提醒 -->
+        <div v-if="!isUsbpcapReady" class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs font-sans space-y-1.5 animate-in fade-in duration-200">
+          <div class="font-bold flex items-center justify-between">
+            <div class="flex items-center gap-2 text-amber-800 dark:text-amber-300">
+              <svg class="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span>⚠️ 物理 USB 总线捕获驱动 (USBPcap) 缺失提醒与潜在业务影响</span>
+            </div>
+            <button v-if="!launchedMap['usbpcap'] && !installingMap['usbpcap']"
+              @click="confirmingComponent = 'usbpcap'"
+              class="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] shadow-sm transition-all cursor-pointer flex items-center gap-1">
+              <span>立即安装 USBPcap</span>
+              <span class="text-[9px]">↓</span>
+            </button>
+          </div>
+          <div class="text-[11px] leading-relaxed text-slate-700 dark:text-slate-300 space-y-1 pl-6 font-mono">
+            <div>• <strong>无法截获原始 USB 通信帧</strong>：无法捕获物理 USB 根集线器 (Root Hub) 与外设之间的 URB 请求块（控制、批量、中断、等时传输），USB 流量分析窗口无数据流。</div>
+            <div>• <strong>BadUSB 固件攻击感知失效</strong>：无法分析微秒级键盘击键间隔（IAT &lt; 25ms 硬件木马打字机特征），无法进行击键熵值分析与恶意设备阻断。</div>
+            <div>• <strong>功能强制降级</strong>：USB 工作台仅能以只读方式接收 Windows 系统 PnP 插拔事件，无法获取任何原始报文载荷。</div>
           </div>
         </div>
 
@@ -341,6 +365,10 @@ const isNpcapReady = computed(() => {
 
 const isTsharkReady = computed(() => {
   return report.value?.components.find(c => c.id === 'tshark')?.is_ready || false;
+});
+
+const isUsbpcapReady = computed(() => {
+  return report.value?.components.find(c => c.id === 'usbpcap')?.is_ready || false;
 });
 
 const scoreColorClass = computed(() => {
