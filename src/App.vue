@@ -1103,14 +1103,14 @@ onMounted(() => {
     initStatusMessage.value = '系统自检就绪，全息分析仪已启动';
     setTimeout(() => {
       isInitializing.value = false;
-      notifySuccess('探针中枢已就绪', selectedIface.value ? `已自动绑定网络适配器: ${selectedIface.value}` : '系统已就绪，等待选择目标网络适配器');
-      if (!isUsbpcapAvailable.value) {
+      notifySuccess('探针中枢已就绪', selectedIface.value ? `已自动挂载网络适配器: ${selectedIface.value}` : '系统多轨自愈引擎已就绪');
+
+      // 用户可选的环境诊断弹窗逻辑：若用户未勾选跳过且环境非 100%，弹出全景自检面板供用户知情与一键安装
+      const skipModal = localStorage.getItem('omni_probe_skip_startup_env_modal') === 'true';
+      if (!skipModal && envScore.value !== null && envScore.value < 100) {
         setTimeout(() => {
-          notifyWarning(
-            '物理 USB 捕获驱动未就绪',
-            '系统未检测到 USBPcap 驱动，USB 抓包已降级为只读 PnP 事件监听，无法捕获原始 URB 数据包。如需完整物理总线捕获，可点击顶栏环境诊断进行安装。'
-          );
-        }, 1200);
+          isEnvDiagnosticOpen.value = true;
+        }, 500);
       }
     }, 250);
   }

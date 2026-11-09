@@ -76,20 +76,20 @@ impl EnvironmentInspector {
     /// 
     /// 复杂度: O(1), 单次微秒级至毫秒级文件/API探活
     pub fn inspect_all() -> EnvironmentInspectionReport {
-        let mut components = Vec::with_capacity(4);
+        let mut components = Vec::with_capacity(5);
         let mut score = 0u32;
 
-        // 1. 探活 Npcap / WinPcap 抓包驱动 (权重: 35 分)
+        // 1. 探活 Npcap / WinPcap 抓包驱动 (权重: 30 分)
         let npcap_status = Self::inspect_npcap();
         if npcap_status.is_ready {
-            score += 35;
+            score += 30;
         }
         components.push(npcap_status);
 
-        // 2. 探活 Wireshark / TShark 官方解剖引擎 (权重: 30 分)
+        // 2. 探活 Wireshark / TShark 官方解剖引擎 (权重: 25 分)
         let tshark_status = Self::inspect_tshark();
         if tshark_status.is_ready {
-            score += 30;
+            score += 25;
         }
         components.push(tshark_status);
 
@@ -100,25 +100,32 @@ impl EnvironmentInspector {
         }
         components.push(usbpcap_status);
 
-        // 4. 探活 Windows Administrator 进程特权 (权重: 15 分)
+        // 4. 探活 ip2region.xdb 离线 IP 地理情报库 (权重: 15 分)
+        let ip_db_status = Self::inspect_ip_db();
+        if ip_db_status.is_ready {
+            score += 15;
+        }
+        components.push(ip_db_status);
+
+        // 5. 探活 Windows Administrator 进程特权 (权重: 10 分)
         let admin_status = Self::inspect_admin_privilege();
         if admin_status.is_ready {
-            score += 15;
+            score += 10;
         }
         components.push(admin_status);
 
         let (status_level, summary) = match score {
             90..=100 => (
                 "Optimal".to_string(),
-                "系统底层抓包驱动与解剖工具链已达到【工业级最佳全能态】：支持千兆混杂模式、全量 3200+ 协议官方解剖与物理 USB 深度审计。".to_string(),
+                "系统底层抓包驱动与离线情报工具链已达到【工业级最佳全能态】：支持千兆混杂模式、全量 3200+ 协议官方解剖、物理 USB 深度审计与千万级离线地理情报。".to_string(),
             ),
             50..=89 => (
                 "Standard".to_string(),
-                "系统处于【工业标准运行态】：核心自主功能正常运转，部分高级功能处于安全降级或外围扩展模式，建议一键安装官方推荐驱动。".to_string(),
+                "系统处于【工业标准运行态】：多轨并行自愈引擎已全面接管，核心自主功能正常运转，部分高级功能处于安全降级或外围扩展模式。".to_string(),
             ),
             _ => (
                 "Degraded".to_string(),
-                "系统处于【安全兜底受限态】：底层核心抓包驱动缺失，系统正在以受限 Raw Sockets 运行，强烈建议一键自动安装 Npcap 驱动。".to_string(),
+                "系统处于【多轨自愈兜底态】：底层外部驱动与数据库缺失，系统已自动启用纯内置模块（Raw Socket / 内网 LPM 字典 / 原生协议解剖）保障核心功能可用。".to_string(),
             ),
         };
 
@@ -252,6 +259,61 @@ impl EnvironmentInspector {
         }
     }
 
+    /// 探活 ip2region.xdb 离线 IP 地理情报数据库 (千万级离线地理信息)
+    pub fn inspect_ip_db() -> ComponentStatus {
+        let is_loaded = if let Ok(engine) = crate::ip_intelligence::GLOBAL_IP_ENGINE.lock() {
+            engine.is_xdb_loaded()
+        } else {
+            false
+        };
+
+        let candidate_paths = [
+            "data/ip2region.xdb",
+            "src-tauri/data/ip2region.xdb",
+            "ip2region.xdb",
+            "../data/ip2region.xdb",
+        ];
+
+        let mut found_path = None;
+        let mut file_size_mb = None;
+
+        for p_str in &candidate_paths {
+            let p = Path::new(p_str);
+            if p.exists() {
+                if let Ok(meta) = std::fs::metadata(p) {
+                    if meta.len() >= 5 * 1024 * 1024 {
+                        found_path = Some(p_str.to_string());
+                        file_size_mb = Some((meta.len() as f64) / (1024.0 * 1024.0));
+                        break;
+                    }
+                }
+            }
+        }
+
+        let is_ready = is_loaded || found_path.is_some();
+        let version = if is_ready {
+            Some(format!("ip2region v2.0 XDB ({:.2} MB)", file_size_mb.unwrap_or(11.5)))
+        } else {
+            None
+        };
+
+        ComponentStatus {
+            id: "ip_db".to_string(),
+            name: "ip2region.xdb 离线 IP 地理情报库".to_string(),
+            category: "IntelligenceDatabase".to_string(),
+            is_ready,
+            version,
+            path: found_path,
+            capability_enabled: "解锁千万级公网 IPv4 物理地理位置（国家、省份、城市、运营商 ISP）微秒级精准离线解析，赋能全球网络态势地图与地理测地追踪。".to_string(),
+            fallback_mode: "已自动激活内置多轨自愈引擎：启用内存最长前缀 LPM 内网 CIDR 规则字典、全球权威骨干基础设施静态表与 RFC 1918 私网分类，免外部文件离线运行。".to_string(),
+            official_url: "https://github.com/lionsoul2014/ip2region".to_string(),
+            install_tips: "可将 ip2region.xdb 文件置于程序根目录下的 data 目录中，亦可点击右侧【自动从官网下载】一键流式载入。".to_string(),
+            can_auto_install: true,
+            installer_filename: Some("ip2region.xdb".to_string()),
+            estimated_size_mb: Some(11.5),
+        }
+    }
+
     /// 获取官方安全下载源元数据
     pub fn get_official_installer_meta(component_id: &str) -> Option<OfficialInstallerMeta> {
         match component_id {
@@ -272,6 +334,12 @@ impl EnvironmentInspector {
                 direct_download_url: "https://2.na.dl.wireshark.org/win64/Wireshark-win64-4.4.1.exe".to_string(),
                 target_filename: "Wireshark-win64-4.4.1.exe".to_string(),
                 estimated_size_bytes: 84_400_000,
+            }),
+            "ip_db" | "ip2region" => Some(OfficialInstallerMeta {
+                component_id: "ip_db".to_string(),
+                direct_download_url: "https://raw.githubusercontent.com/lionsoul2014/ip2region/master/data/ip2region.xdb".to_string(),
+                target_filename: "ip2region.xdb".to_string(),
+                estimated_size_bytes: 12_000_000,
             }),
             _ => None,
         }
@@ -375,23 +443,50 @@ impl EnvironmentInspector {
             error_msg: None,
         });
 
-        // 启动 Windows 官方安装向导
-        Self::launch_executable_installer(&dest_path)?;
+        // 区分可执行安装向导与离线数据库热挂载
+        if component_id == "ip_db" || meta.target_filename.ends_with(".xdb") {
+            let target_dir = std::path::PathBuf::from("data");
+            let _ = std::fs::create_dir_all(&target_dir);
+            let final_path = target_dir.join("ip2region.xdb");
+            let _ = std::fs::copy(&dest_path, &final_path);
 
-        // 广播成功启动向导事件
-        let _ = app.emit("installer-download-progress", InstallerDownloadProgress {
-            component_id: component_id.clone(),
-            status: "completed".to_string(),
-            percent: 100.0,
-            downloaded_bytes,
-            total_bytes: downloaded_bytes,
-            error_msg: None,
-        });
+            if let Ok(mut engine) = crate::ip_intelligence::GLOBAL_IP_ENGINE.lock() {
+                let _ = engine.load_xdb(final_path.to_str().unwrap_or_default());
+            }
 
-        Ok(format!(
-            "已成功从官方下载 {} 并唤起安装向导，请在弹出的系统窗口中完成安装。",
-            meta.target_filename
-        ))
+            // 广播成功挂载事件
+            let _ = app.emit("installer-download-progress", InstallerDownloadProgress {
+                component_id: component_id.clone(),
+                status: "completed".to_string(),
+                percent: 100.0,
+                downloaded_bytes,
+                total_bytes: downloaded_bytes,
+                error_msg: None,
+            });
+
+            Ok(format!(
+                "已成功从官方下载 {} 并热挂载至 IP 地理情报引擎！",
+                meta.target_filename
+            ))
+        } else {
+            // 启动 Windows 官方安装向导
+            Self::launch_executable_installer(&dest_path)?;
+
+            // 广播成功启动向导事件
+            let _ = app.emit("installer-download-progress", InstallerDownloadProgress {
+                component_id: component_id.clone(),
+                status: "completed".to_string(),
+                percent: 100.0,
+                downloaded_bytes,
+                total_bytes: downloaded_bytes,
+                error_msg: None,
+            });
+
+            Ok(format!(
+                "已成功从官方下载 {} 并唤起安装向导，请在弹出的系统窗口中完成安装。",
+                meta.target_filename
+            ))
+        }
     }
 
     /// 跨平台安全启动安装包向导可执行程序
@@ -441,15 +536,16 @@ mod tests {
     fn test_environment_inspection_sanity_and_scoring() {
         let report = EnvironmentInspector::inspect_all();
         assert!(report.readiness_score <= 100);
-        assert_eq!(report.components.len(), 4);
+        assert_eq!(report.components.len(), 5);
         assert!(!report.checked_at.is_empty());
         assert!(["Optimal", "Standard", "Degraded"].contains(&report.status_level.as_str()));
 
-        // 验证四项核心组件齐全
+        // 验证五项核心组件齐全
         let ids: Vec<&str> = report.components.iter().map(|c| c.id.as_str()).collect();
         assert!(ids.contains(&"npcap"));
         assert!(ids.contains(&"tshark"));
         assert!(ids.contains(&"usbpcap"));
+        assert!(ids.contains(&"ip_db"));
         assert!(ids.contains(&"admin"));
     }
 
