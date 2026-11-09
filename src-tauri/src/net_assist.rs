@@ -715,12 +715,94 @@ mod tests {
         let text = bytes_to_safe_ascii(raw);
         assert_eq!(text, "Hello..World\r\n");
     }
+
+    #[test]
+    fn test_get_local_ip_addresses_contains_defaults() {
+        let list = get_local_ip_addresses_cmd();
+        assert!(list.len() >= 2);
+        assert!(list.iter().any(|item| item.ip == "0.0.0.0"));
+        assert!(list.iter().any(|item| item.ip == "127.0.0.1"));
+    }
 }
 
 
 // ---------------------------------------------------------------------------
 // 6. Tauri IPC 命令导出
 // ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LocalIpInfo {
+    pub ip: String,
+    pub name: String,
+    pub is_loopback: bool,
+}
+
+#[tauri::command]
+pub fn get_local_ip_addresses_cmd() -> Vec<LocalIpInfo> {
+    let mut list = Vec::new();
+    list.push(LocalIpInfo {
+        ip: "0.0.0.0".to_string(),
+        name: "0.0.0.0 (全部本地网卡 / Any)".to_string(),
+        is_loopback: false,
+    });
+    list.push(LocalIpInfo {
+        ip: "127.0.0.1".to_string(),
+        name: "127.0.0.1 (本地回环 / Loopback)".to_string(),
+        is_loopback: true,
+    });
+
+    // 1. 标准 Socket 探活确定主通信网卡 IP (零外部驱动依赖)
+    if let Ok(socket) = std::net::UdpSocket::bind("0.0.0.0:0") {
+        for probe_dest in ["8.8.8.8:80", "1.1.1.1:53", "192.168.1.1:80", "10.0.0.1:80"] {
+            if socket.connect(probe_dest).is_ok() {
+                if let Ok(local_addr) = socket.local_addr() {
+                    let ip_str = local_addr.ip().to_string();
+                    if ip_str != "127.0.0.1" && ip_str != "0.0.0.0" && !list.iter().any(|r| r.ip == ip_str) {
+                        list.push(LocalIpInfo {
+                            ip: ip_str.clone(),
+                            name: format!("{} (默认主通信网卡 IP)", ip_str),
+                            is_loopback: false,
+                        });
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Windows 平台通过系统原生命令安全枚举所有网卡 IP
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        if let Ok(output) = std::process::Command::new("netsh")
+            .args(["interface", "ipv4", "show", "addresses"])
+            .creation_flags(0x08000000) // CREATE_NO_WINDOW
+            .output()
+        {
+            let text = String::from_utf8_lossy(&output.stdout);
+            for line in text.lines() {
+                let trimmed = line.trim();
+                if trimmed.contains("IP") || trimmed.contains("IP Address") || trimmed.contains("IP 地址") {
+                    if let Some(pos) = trimmed.rfind(':') {
+                        let candidate = trimmed[pos + 1..].trim();
+                        if let Ok(ipv4) = candidate.parse::<std::net::Ipv4Addr>() {
+                            let ip_str = ipv4.to_string();
+                            if ip_str != "127.0.0.1" && ip_str != "0.0.0.0" && !list.iter().any(|r| r.ip == ip_str) {
+                                list.push(LocalIpInfo {
+                                    ip: ip_str.clone(),
+                                    name: format!("{} (本地网络接口 IP)", ip_str),
+                                    is_loopback: false,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    list
+}
 
 #[tauri::command]
 pub async fn start_net_assist_session_cmd(

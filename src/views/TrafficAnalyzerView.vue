@@ -237,15 +237,18 @@
 
         <!-- 2. 链路执行工具下拉菜单 -->
         <div class="relative group">
-          <button class="glass-pill text-amber-300 hover:text-white px-2.5 py-1 rounded-xl font-medium transition-all cursor-pointer flex items-center gap-1">
+          <button class="glass-pill text-amber-800 dark:text-amber-300 hover:text-amber-900 px-2.5 py-1 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1">
             <span class="whitespace-nowrap">⚡ 链路控制</span>
             <span class="text-[9px]">▾</span>
           </button>
-          <div class="absolute right-0 top-full mt-1.5 w-44 glass-surface rounded-2xl p-1.5 hidden group-hover:block z-50 border border-white/15 shadow-2xl space-y-1 font-medium">
-            <button @click="isTargetProbeOpen = true" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-amber-500/15 text-slate-200 hover:text-amber-300 flex items-center gap-2 transition-colors">
+          <div class="absolute right-0 top-full mt-1.5 w-48 glass-surface rounded-2xl p-1.5 hidden group-hover:block z-50 border border-slate-200/80 dark:border-white/15 shadow-2xl space-y-1 font-medium">
+            <button @click="$emit('switchWorkbench', 'net_assist')" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-sky-500/15 text-slate-800 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 flex items-center gap-2 transition-colors font-bold">
+              <span>🔌 网络调试助手 (NetAssist)</span>
+            </button>
+            <button @click="isTargetProbeOpen = true" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-amber-500/15 text-slate-700 dark:text-slate-200 hover:text-amber-700 flex items-center gap-2 transition-colors">
               <span>📡 靶向主动反探</span>
             </button>
-            <button @click="openInjectModal(selectedPacket?.payload_hex)" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-rose-500/15 text-slate-200 hover:text-rose-300 flex items-center gap-2 transition-colors">
+            <button @click="openInjectModal(selectedPacket?.payload_hex)" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-rose-500/15 text-slate-700 dark:text-slate-200 hover:text-rose-700 flex items-center gap-2 transition-colors">
               <span>💉 链路层帧注入</span>
             </button>
             <button @click="isColumnSettingsOpen = true" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-white/10 text-slate-200 flex items-center gap-2 transition-colors">
@@ -894,6 +897,9 @@
       <button @click="menuAction('inject')" class="w-full text-left px-3 py-1.5 hover:bg-blue-500/10 hover:text-blue-700 flex items-center gap-2 cursor-pointer transition-colors">
         <span>💉</span> 注入此帧载荷
       </button>
+      <button @click="sendPayloadToNetAssist(contextMenu.packet); closeContextMenu()" class="w-full text-left px-3 py-1.5 hover:bg-sky-500/10 hover:text-sky-700 flex items-center gap-2 cursor-pointer transition-colors font-bold text-sky-800">
+        <span>🔌</span> 推送此载荷至调试助手 (NetAssist)
+      </button>
       <button @click="menuAction('detail')" class="w-full text-left px-3 py-1.5 hover:bg-blue-500/10 hover:text-blue-700 flex items-center gap-2 cursor-pointer transition-colors">
         <span>🔬</span> 全景深度解剖
       </button>
@@ -962,7 +968,7 @@
 </template>
 
 <script setup lang="ts">
-import { notifyError } from '../composables/useNotification';
+import { notifyError, notifySuccess } from '../composables/useNotification';
 function copyHex(hex?: string) {
   if (hex && navigator.clipboard) {
     navigator.clipboard.writeText(hex);
@@ -1354,7 +1360,7 @@ const emit = defineEmits([
   'updateSerial', 'updateBaudRate', 'updatePortBaudRate',
   'clearData',
   'updateBpf', 'updateIface', 'replayPacket', 'saveBaseline',
-  'appendLog', 'importPackets', 'openHoneypot'
+  'appendLog', 'importPackets', 'openHoneypot', 'switchWorkbench'
 ]);
 
 const activeBus = ref<'nic' | 'serial' | 'usb'>('nic');
@@ -2551,6 +2557,18 @@ function closeContextMenu() {
   if (contextMenu.value.visible) {
     contextMenu.value.visible = false;
   }
+}
+
+function sendPayloadToNetAssist(pkt: PacketRecord | null) {
+  if (!pkt) return;
+  const hex = pkt.payload_hex || '';
+  if (hex) {
+    try {
+      localStorage.setItem('omni_probe_net_assist_incoming_payload', hex);
+    } catch {}
+  }
+  emit('switchWorkbench', 'net_assist');
+  notifySuccess('已推送至网络调试助手', `报文 #${pkt.id} (${pkt.protocol}) 载荷已准备就绪`);
 }
 
 function menuAction(action: 'inject' | 'detail' | 'baseline' | 'replay' | 'copy' | 'tcp_stream' | 'dossier_src' | 'dossier_dst' | 'traceroute_src' | 'traceroute_dst' | 'set_diff_a' | 'diff_with_a' | 'save_sample') {

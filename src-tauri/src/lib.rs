@@ -177,6 +177,7 @@ pub use net_assist::{
     send_net_assist_data_cmd,
     get_net_assist_clients_cmd,
     calculate_checksum_cmd,
+    get_local_ip_addresses_cmd,
 };
 
 use once_cell::sync::Lazy;
@@ -2011,7 +2012,8 @@ pub fn run() {
             stop_net_assist_session_cmd,
             send_net_assist_data_cmd,
             get_net_assist_clients_cmd,
-            calculate_checksum_cmd
+            calculate_checksum_cmd,
+            get_local_ip_addresses_cmd
         ])
         .on_window_event(|_window, event| match event {
             tauri::WindowEvent::CloseRequested { .. } => {

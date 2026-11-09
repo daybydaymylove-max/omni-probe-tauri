@@ -342,6 +342,7 @@
           @openHoneypot="isHoneypotOpen = true"
           @appendLog="addLog"
           @importPackets="handleImportedPackets"
+          @switchWorkbench="activeWorkbench = $event"
         />
 
         <!-- 工作台 2：资产拓扑态势工作台 -->
@@ -413,6 +414,7 @@
         <!-- 工作台 10：工业级网络调试助手 (NetAssist Pro) -->
         <NetAssistWorkbenchView
           v-else-if="activeWorkbench === 'net_assist'"
+          @switchWorkbench="activeWorkbench = $event"
         />
       </main>
     </div>
