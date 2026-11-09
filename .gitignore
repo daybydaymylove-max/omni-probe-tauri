@@ -50,3 +50,8 @@ logs/
 *.vcd
 dist-release/
 !src-tauri/src/rfc9001_initial_packet.hex
+
+# ·¢²¼¹éµµ°ü
+*.zip
+*.tar.gz
+temp_release_win/
