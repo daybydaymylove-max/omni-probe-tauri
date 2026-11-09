@@ -816,19 +816,41 @@
               </div>
             </div>
 
+            <!-- 变异波率柱状谱与局部信息熵波形图 -->
+            <div v-if="matrixResult?.mutation_spectrum && matrixResult.mutation_spectrum.length > 0"
+              class="glass-pill rounded-xl p-3 border border-indigo-500/20 bg-slate-950/80 space-y-2">
+              <div class="flex items-center justify-between text-[10px]">
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-white">多样本变异波率谱与局部信息熵</span>
+                  <span class="text-[9px] text-slate-500 font-mono">跨度 {{ matrixResult.mutation_spectrum.length }} 字节</span>
+                </div>
+                <div v-if="hoverSpectrumBin" class="text-[10px] font-mono text-cyan-300">
+                  偏移 0x{{ hoverSpectrumBin.offset.toString(16).toUpperCase() }} | 波率: {{ hoverSpectrumBin.mutation_rate.toFixed(1) }}% | 局部熵: {{ hoverSpectrumBin.entropy.toFixed(2) }} | 优势码: 0x{{ hoverSpectrumBin.dominant_hex }}
+                </div>
+                <span v-else class="text-[9px] text-slate-500 font-mono">悬停查看各偏移突变波率与熵</span>
+              </div>
+              <div class="h-28 relative overflow-hidden flex items-center justify-center">
+                <canvas ref="matrixSpectrumCanvas" @mousemove="onMatrixSpectrumHover" @mouseleave="hoverSpectrumBin = null" class="w-full h-full cursor-crosshair"></canvas>
+              </div>
+            </div>
+
             <!-- 图例说明条 -->
             <div class="flex items-center gap-3 text-[10px] text-slate-400 px-1 font-sans">
               <span class="flex items-center gap-1">
-                <span class="w-2 h-2 rounded bg-slate-600"></span>
-                <span>公共特征 (相同)</span>
+                <span class="w-2 h-2 rounded bg-emerald-500"></span>
+                <span>0% 变异 (特征基线)</span>
+              </span>
+              <span class="flex items-center gap-1">
+                <span class="w-2 h-2 rounded bg-amber-500"></span>
+                <span>1~50% 低频抖动</span>
               </span>
               <span class="flex items-center gap-1">
                 <span class="w-2 h-2 rounded bg-rose-500"></span>
-                <span>变异/突变字节</span>
+                <span>>50% 高频突变</span>
               </span>
               <span class="flex items-center gap-1">
-                <span class="w-2 h-2 rounded bg-emerald-500"></span>
-                <span>差异插入</span>
+                <span class="w-3 h-0.5 bg-purple-400 inline-block"></span>
+                <span>信息熵折线 (0~8)</span>
               </span>
             </div>
 
@@ -1499,9 +1521,18 @@ interface PacketRecord {
   raw_text?: string;
 }
 
+export interface MutationWaveBin {
+  offset: number;
+  mutation_rate: number;
+  unique_values_count: number;
+  entropy: number;
+  dominant_hex: string;
+}
+
 interface MatrixResult {
   mode?: string;
   summary: string;
+  mutation_spectrum?: MutationWaveBin[];
   payloads: Array<{
     label: string;
     byte_length: number;
@@ -2577,6 +2608,120 @@ watch(activeBottomTab, v => {
 // LCS 矩阵比对逻辑
 const matrixPayloads = ref<string[]>([]);
 const matrixResult = ref<MatrixResult | null>(null);
+const matrixSpectrumCanvas = ref<HTMLCanvasElement | null>(null);
+const hoverSpectrumBin = ref<MutationWaveBin | null>(null);
+
+function drawMatrixSpectrum() {
+  const canvas = matrixSpectrumCanvas.value;
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return;
+
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+
+  const W = rect.width;
+  const H = rect.height;
+
+  // 底色
+  ctx.fillStyle = '#020617';
+  ctx.fillRect(0, 0, W, H);
+
+  const padL = 30;
+  const padR = 14;
+  const padT = 10;
+  const padB = 18;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+
+  // 标尺参考线
+  ctx.strokeStyle = 'rgba(51, 65, 85, 0.4)';
+  ctx.lineWidth = 1;
+  ctx.fillStyle = '#64748b';
+  ctx.font = '9px monospace';
+
+  const rates = [0, 50, 100];
+  for (const r of rates) {
+    const y = padT + plotH - (r / 100) * plotH;
+    ctx.beginPath();
+    ctx.moveTo(padL, y);
+    ctx.lineTo(W - padR, y);
+    ctx.stroke();
+    ctx.fillText(`${r}%`, 4, y + 3);
+  }
+
+  const spec = matrixResult.value?.mutation_spectrum || [];
+  if (spec.length === 0) return;
+
+  const colW = Math.max(1, (plotW / spec.length) - 1);
+  const stepX = plotW / spec.length;
+
+  // 1. 绘制变异波率彩色直方柱
+  spec.forEach((b, idx) => {
+    const barH = (b.mutation_rate / 100) * plotH;
+    const x = padL + idx * stepX;
+    const y = padT + plotH - barH;
+
+    if (b.mutation_rate === 0) {
+      ctx.fillStyle = '#10b981'; // 0% 翡翠绿
+      ctx.fillRect(x, padT + plotH - 2, Math.max(1, colW), 2);
+    } else if (b.mutation_rate <= 50) {
+      ctx.fillStyle = '#f59e0b'; // 1~50% 琥珀黄
+      ctx.fillRect(x, y, Math.max(1, colW), Math.max(2, barH));
+    } else {
+      ctx.fillStyle = '#f43f5e'; // >50% 玫瑰红
+      ctx.fillRect(x, y, Math.max(1, colW), Math.max(2, barH));
+    }
+  });
+
+  // 2. 叠加局部信息熵折线 (紫色)
+  ctx.strokeStyle = '#c084fc';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  spec.forEach((b, idx) => {
+    const x = padL + (idx + 0.5) * stepX;
+    const y = padT + plotH - (Math.min(8.0, b.entropy) / 8.0) * plotH;
+    if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // 3. 悬浮高亮指示
+  if (hoverSpectrumBin.value) {
+    const idx = hoverSpectrumBin.value.offset;
+    const x = padL + idx * stepX;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x - 1, padT, Math.max(2, colW + 2), plotH);
+  }
+}
+
+function onMatrixSpectrumHover(e: MouseEvent) {
+  const canvas = matrixSpectrumCanvas.value;
+  if (!canvas || !matrixResult.value?.mutation_spectrum) return;
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const padL = 30;
+  const padR = 14;
+  const plotW = rect.width - padL - padR;
+  const spec = matrixResult.value.mutation_spectrum;
+  if (spec.length === 0) return;
+
+  const relX = Math.max(0, Math.min(plotW, mouseX - padL));
+  const idx = Math.min(spec.length - 1, Math.floor((relX / plotW) * spec.length));
+  hoverSpectrumBin.value = spec[idx] || null;
+  drawMatrixSpectrum();
+}
+
+watch([matrixResult, activeBottomTab], () => {
+  if (activeBottomTab.value === 'matrix') {
+    nextTick(drawMatrixSpectrum);
+  }
+});
 
 async function runMatrixCompare() {
   const fromSel = Array.from(selectedPackets.value)
@@ -2590,6 +2735,7 @@ async function runMatrixCompare() {
   try {
     matrixResult.value = await invoke<MatrixResult>('run_matrix_compare_labeled_cmd', { payloads, labels });
     emit('appendLog', `[MATRIX] ✓ 成功完成 ${fromSel.length} 组特征报文矩阵对齐比对`);
+    nextTick(drawMatrixSpectrum);
   } catch (e) {
     emit('appendLog', `[ERROR] LCS 矩阵比对失败: ${e}`);
   }
@@ -2603,7 +2749,19 @@ function exportMatrixReport() {
   md += `- **生成时间**: ${timeStr}\n`;
   md += `- **比对样本总数**: ${res.payloads.length} 组\n`;
   md += `- **分析结论**: ${res.summary}\n\n`;
-  md += `## 1. 各样本特征对齐 Hex 矩阵\n\n`;
+
+  if (res.mutation_spectrum && res.mutation_spectrum.length > 0) {
+    md += `## 1. 各字节偏移变异波率与局部熵分布\n\n`;
+    md += `| 字节偏移 | 主导特征十六进制 | 变异波率 (%) | 局部信息熵 (bit) | 变异等级 |\n`;
+    md += `| :--- | :--- | :--- | :--- | :--- |\n`;
+    res.mutation_spectrum.forEach(b => {
+      const level = b.mutation_rate === 0 ? '基准特征码' : b.mutation_rate <= 50 ? '低频抖动' : '**高频突变**';
+      md += `| 0x${b.offset.toString(16).toUpperCase()} (#${b.offset}) | \`0x${b.dominant_hex}\` | ${b.mutation_rate.toFixed(1)}% | ${b.entropy.toFixed(3)} | ${level} |\n`;
+    });
+    md += `\n`;
+  }
+
+  md += `## 2. 各样本特征对齐 Hex 矩阵\n\n`;
   res.payloads.forEach((p, idx) => {
     md += `### 样本 ${idx + 1}: ${p.label} (${p.byte_length} 字节)\n\`\`\`\n`;
     p.hex_rows.forEach(r => {

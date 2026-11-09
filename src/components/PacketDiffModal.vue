@@ -37,6 +37,14 @@
               {{ differentFieldsCount }}
             </span>
           </button>
+          <button @click="activeMode = 'wave'"
+            :class="['px-3 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5',
+              activeMode === 'wave' ? 'bg-indigo-600 text-white shadow-sm font-bold' : 'text-slate-400 hover:text-white']">
+            <span>📈 载荷波线与波率分析</span>
+            <span v-if="diffResult?.waveform_metrics" class="px-1.5 py-0.2 rounded-full text-[9px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-mono">
+              {{ diffResult.waveform_metrics.mutation_wave_rate.toFixed(0) }}%
+            </span>
+          </button>
           <button @click="activeMode = 'samples'"
             :class="['px-3 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5',
               activeMode === 'samples' ? 'bg-indigo-600 text-white shadow-sm font-bold' : 'text-slate-400 hover:text-white']">
@@ -313,22 +321,153 @@
           </div>
         </div>
 
+        <!-- 模式四：逐字节波线与差分波率分析 (Byte Waveform & Mutation Rate Analysis) -->
+        <div v-show="activeMode === 'wave'" class="h-full overflow-y-auto bg-slate-950 p-5 space-y-4 custom-scrollbar">
+          <!-- 1. 顶部五维波形统计指标卡片 -->
+          <div v-if="diffResult?.waveform_metrics" class="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <!-- 指标 1: 余弦相似度 -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-col justify-between">
+              <span class="text-[10px] text-slate-400 font-sans">余弦几何相似度 (Cosine)</span>
+              <div class="flex items-baseline justify-between mt-1">
+                <span class="text-lg font-bold font-mono text-cyan-400">
+                  {{ (diffResult.waveform_metrics.cosine_similarity * 100).toFixed(1) }}%
+                </span>
+                <span class="text-[10px] text-slate-500 font-mono">形态几何</span>
+              </div>
+              <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                <div class="h-full bg-cyan-500 rounded-full" :style="{ width: `${Math.max(0, diffResult.waveform_metrics.cosine_similarity * 100)}%` }"></div>
+              </div>
+            </div>
+
+            <!-- 指标 2: 皮尔逊相关系数 -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-col justify-between">
+              <span class="text-[10px] text-slate-400 font-sans">皮尔逊相关性 (Pearson r)</span>
+              <div class="flex items-baseline justify-between mt-1">
+                <span class="text-lg font-bold font-mono" :class="diffResult.waveform_metrics.pearson_correlation >= 0.8 ? 'text-emerald-400' : diffResult.waveform_metrics.pearson_correlation >= 0.3 ? 'text-amber-400' : 'text-rose-400'">
+                  {{ diffResult.waveform_metrics.pearson_correlation.toFixed(3) }}
+                </span>
+                <span class="text-[10px] text-slate-500 font-mono">线性协同</span>
+              </div>
+              <span class="text-[9px] text-slate-400 mt-2 truncate">
+                {{ diffResult.waveform_metrics.pearson_correlation >= 0.8 ? '高度同向波动' : diffResult.waveform_metrics.pearson_correlation >= 0.3 ? '中度协同' : '弱相关/畸变' }}
+              </span>
+            </div>
+
+            <!-- 指标 3: 变异波率 -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-col justify-between">
+              <span class="text-[10px] text-slate-400 font-sans">变异波率 (Mutation Rate)</span>
+              <div class="flex items-baseline justify-between mt-1">
+                <span class="text-lg font-bold font-mono" :class="diffResult.waveform_metrics.mutation_wave_rate > 30 ? 'text-rose-400' : 'text-amber-300'">
+                  {{ diffResult.waveform_metrics.mutation_wave_rate.toFixed(1) }}%
+                </span>
+                <span class="text-[10px] text-slate-500 font-mono">突变点占比</span>
+              </div>
+              <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                <div class="h-full rounded-full transition-all" :class="diffResult.waveform_metrics.mutation_wave_rate > 30 ? 'bg-rose-500' : 'bg-amber-400'"
+                  :style="{ width: `${Math.min(100, diffResult.waveform_metrics.mutation_wave_rate)}%` }"></div>
+              </div>
+            </div>
+
+            <!-- 指标 4: 最大偏差跃变峰 -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-col justify-between">
+              <span class="text-[10px] text-slate-400 font-sans">最大跳变峰 (Peak Delta)</span>
+              <div class="flex items-baseline justify-between mt-1">
+                <span class="text-lg font-bold font-mono text-rose-400">
+                  Δ{{ diffResult.waveform_metrics.max_delta_value }}
+                </span>
+                <span class="text-[10px] font-mono text-indigo-300 bg-indigo-500/20 px-1 py-0.2 rounded border border-indigo-500/30">
+                  0x{{ diffResult.waveform_metrics.max_delta_offset.toString(16).toUpperCase() }}
+                </span>
+              </div>
+              <span class="text-[9px] text-slate-400 mt-2 truncate">
+                发生于偏移量 #{{ diffResult.waveform_metrics.max_delta_offset }}
+              </span>
+            </div>
+
+            <!-- 指标 5: 平均绝对偏差 -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-col justify-between">
+              <span class="text-[10px] text-slate-400 font-sans">平均绝对振幅差 (MAD)</span>
+              <div class="flex items-baseline justify-between mt-1">
+                <span class="text-lg font-bold font-mono text-purple-300">
+                  {{ diffResult.waveform_metrics.mean_absolute_deviation.toFixed(1) }}
+                </span>
+                <span class="text-[10px] text-slate-500 font-mono">/255</span>
+              </div>
+              <span class="text-[9px] text-slate-400 mt-2 truncate">
+                全字节平均差异震级
+              </span>
+            </div>
+          </div>
+
+          <!-- 2. 双波线叠加视窗与十字标尺信息条 -->
+          <div class="bg-slate-900/80 rounded-2xl border border-slate-800 p-4 space-y-3">
+            <div class="flex items-center justify-between text-xs pb-1 border-b border-slate-800">
+              <div class="flex items-center gap-3 font-mono">
+                <span class="font-bold text-white font-sans text-xs">载荷逐字节数值波线叠加对照 (Byte Value Waveform)</span>
+                <span class="flex items-center gap-1.5 text-[11px] text-cyan-400">
+                  <span class="w-2.5 h-1 bg-cyan-400 rounded-full inline-block"></span>
+                  <span>报文 A (#{{ diffResult?.packet_a_id }})</span>
+                </span>
+                <span class="flex items-center gap-1.5 text-[11px] text-purple-400">
+                  <span class="w-2.5 h-1 bg-purple-400 rounded-full inline-block"></span>
+                  <span>报文 B (#{{ diffResult?.packet_b_id }})</span>
+                </span>
+              </div>
+              <div v-if="hoverPoint" class="text-[11px] font-mono flex items-center gap-2 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
+                <span class="text-slate-400">偏移: <strong class="text-white">0x{{ hoverPoint.offset.toString(16).toUpperCase() }} ({{ hoverPoint.offset }})</strong></span>
+                <span class="text-cyan-400">A: 0x{{ hoverPoint.val_a.toString(16).padStart(2,'0').toUpperCase() }} ({{ hoverPoint.val_a }})</span>
+                <span class="text-purple-400">B: 0x{{ hoverPoint.val_b.toString(16).padStart(2,'0').toUpperCase() }} ({{ hoverPoint.val_b }})</span>
+                <span :class="hoverPoint.delta !== 0 ? 'text-rose-400 font-bold' : 'text-slate-500'">Δ: {{ hoverPoint.delta > 0 ? '+' : '' }}{{ hoverPoint.delta }}</span>
+              </div>
+              <span v-else class="text-[10px] text-slate-500 font-mono">移动鼠标至图表以激活十字探针</span>
+            </div>
+
+            <div class="h-56 bg-slate-950 rounded-xl border border-slate-800 relative overflow-hidden flex items-center justify-center">
+              <canvas ref="diffWaveCanvas" @mousemove="onWaveMouseMove" @mouseleave="hoverPoint = null" class="w-full h-full cursor-crosshair"></canvas>
+            </div>
+          </div>
+
+          <!-- 3. 差分波率与偏差振幅柱状谱 (Delta Spectrum) -->
+          <div class="bg-slate-900/80 rounded-2xl border border-slate-800 p-4 space-y-3">
+            <div class="flex items-center justify-between text-xs pb-1 border-b border-slate-800 font-mono">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-white font-sans text-xs">逐字节偏差振幅谱与变异密度 (|Δ| Amplitude Spectrum)</span>
+                <span class="text-[10px] text-slate-500 font-sans">点击柱位可直接切换 Hex 查看对应字节</span>
+              </div>
+              <div class="flex items-center gap-3 text-[10px] font-sans text-slate-400">
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-slate-700"></span> 0 一致</span>
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-amber-500"></span> 1~64 微变</span>
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-orange-500"></span> 65~128 中变</span>
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-rose-500"></span> >128 强突变</span>
+              </div>
+            </div>
+
+            <div class="h-36 bg-slate-950 rounded-xl border border-slate-800 relative overflow-hidden flex items-center justify-center">
+              <canvas ref="deltaSpectrumCanvas" @mousemove="onDeltaMouseMove" @click="onDeltaSpectrumClick" @mouseleave="hoverDelta = null" class="w-full h-full cursor-pointer"></canvas>
+            </div>
+          </div>
+        </div>
+
       </div>
 
-      <!-- 4. 底部状态与操作栏 -->
+      <!-- 4. 底部状态与操作栏 (多色标注体系) -->
       <div class="px-5 py-2.5 bg-slate-900 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400 shrink-0 font-mono">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 flex-wrap">
           <span class="flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-rose-500"></span>
-            <span>红色高亮: 突变/替换/删除</span>
+            <span class="w-2.5 h-2.5 rounded bg-slate-600"></span>
+            <span>冷灰: 一致匹配</span>
           </span>
           <span class="flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>绿色高亮: 突变插入</span>
+            <span class="w-2.5 h-2.5 rounded bg-rose-500"></span>
+            <span>玫瑰红: 数值突变/替换</span>
           </span>
           <span class="flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-slate-600"></span>
-            <span>灰色: 相同字节</span>
+            <span class="w-2.5 h-2.5 rounded bg-emerald-500"></span>
+            <span>翡翠绿: 突变插入</span>
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded bg-amber-500"></span>
+            <span>琥珀金: 缺失/删除</span>
           </span>
         </div>
 
@@ -345,7 +484,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { notifySuccess, notifyInfo, notifyError } from '../composables/useNotification';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -376,6 +515,24 @@ export interface FieldDiffItem {
   diff_type: string;
 }
 
+export interface DiffWaveformPoint {
+  offset: number;
+  val_a: number;
+  val_b: number;
+  delta: number;
+  is_mutated: boolean;
+}
+
+export interface WaveformComparisonMetrics {
+  cosine_similarity: number;
+  pearson_correlation: number;
+  mean_absolute_deviation: number;
+  max_delta_offset: number;
+  max_delta_value: number;
+  mutation_wave_rate: number;
+  waveform_points: DiffWaveformPoint[];
+}
+
 export interface DualPacketDiffResult {
   packet_a_id: number;
   packet_b_id: number;
@@ -389,6 +546,7 @@ export interface DualPacketDiffResult {
   hex_diff_b: ParsedPayload;
   field_diffs: FieldDiffItem[];
   summary: string;
+  waveform_metrics?: WaveformComparisonMetrics;
 }
 
 export interface StoredPacketSample {
@@ -406,9 +564,15 @@ const props = defineProps<{
 
 const emit = defineEmits(['close', 'selectAsA', 'selectAsB', 'appendLog']);
 
-const activeMode = ref<'hex' | 'fields' | 'samples'>('hex');
+const activeMode = ref<'hex' | 'fields' | 'wave' | 'samples'>('hex');
 const diffResult = ref<DualPacketDiffResult | null>(null);
 const storedSamples = ref<StoredPacketSample[]>([]);
+
+// 波形与差分谱 Canvas 引用与交互探针
+const diffWaveCanvas = ref<HTMLCanvasElement | null>(null);
+const deltaSpectrumCanvas = ref<HTMLCanvasElement | null>(null);
+const hoverPoint = ref<DiffWaveformPoint | null>(null);
+const hoverDelta = ref<DiffWaveformPoint | null>(null);
 
 // 同步滚动相关引用与标记
 const hexScrollA = ref<HTMLElement | null>(null);
@@ -526,7 +690,17 @@ function exportDiffReport() {
     md += `| 规约层 | 无字段差异记录 | - | - | 一致 |\n`;
   }
 
-  md += `\n## 2. 载荷十六进制 Myers 差分对齐\n\n`;
+  if (res.waveform_metrics) {
+    const wm = res.waveform_metrics;
+    md += `\n## 2. 载荷波形与变异波率深度分析指标\n\n`;
+    md += `- **波形余弦几何相似度**: ${(wm.cosine_similarity * 100).toFixed(2)}%\n`;
+    md += `- **皮尔逊线性相关系数**: ${wm.pearson_correlation.toFixed(4)}\n`;
+    md += `- **逐字节变异波率**: ${wm.mutation_wave_rate.toFixed(2)}%\n`;
+    md += `- **平均绝对振幅偏差 (MAD)**: ${wm.mean_absolute_deviation.toFixed(2)} / 255\n`;
+    md += `- **最大跳变峰位**: 偏移量 0x${wm.max_delta_offset.toString(16).toUpperCase()} (#${wm.max_delta_offset})，跳变振幅 Δ${wm.max_delta_value}\n`;
+  }
+
+  md += `\n## 3. 载荷十六进制 Myers 差分对齐\n\n`;
   md += `### 报文 A (基准):\n\`\`\`\n`;
   if (res.hex_diff_a?.hex_rows) {
     res.hex_diff_a.hex_rows.forEach(r => {
@@ -555,6 +729,275 @@ function exportDiffReport() {
   notifySuccess('差分分析报告已导出', `已成功生成报文 #${res.packet_a_id} 与 #${res.packet_b_id} 的 Markdown 报告`);
 }
 
+function drawDiffWaveform() {
+  const canvas = diffWaveCanvas.value;
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return;
+
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+
+  const W = rect.width;
+  const H = rect.height;
+
+  // 1. 底色
+  ctx.fillStyle = '#020617';
+  ctx.fillRect(0, 0, W, H);
+
+  // 2. 网格线与标尺 (0, 64, 128, 192, 255)
+  ctx.strokeStyle = 'rgba(51, 65, 85, 0.4)';
+  ctx.lineWidth = 1;
+  ctx.fillStyle = '#64748b';
+  ctx.font = '10px monospace';
+
+  const padL = 36;
+  const padR = 16;
+  const padT = 16;
+  const padB = 24;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+
+  const yVals = [0, 64, 128, 192, 255];
+  for (const v of yVals) {
+    const y = padT + plotH - (v / 255) * plotH;
+    ctx.beginPath();
+    ctx.moveTo(padL, y);
+    ctx.lineTo(W - padR, y);
+    ctx.stroke();
+    ctx.fillText(String(v), 6, y + 3);
+  }
+
+  const points = diffResult.value?.waveform_metrics?.waveform_points || [];
+  if (points.length === 0) {
+    ctx.fillStyle = '#64748b';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('暂无载荷波形点阵数据', W / 2, H / 2);
+    return;
+  }
+
+  const stepX = plotW / Math.max(1, points.length - 1);
+  const toX = (i: number) => padL + i * stepX;
+  const toY = (val: number) => padT + plotH - (val / 255) * plotH;
+
+  // 3. 绘制报文 A 波形 (青蓝 #38bdf8)
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  points.forEach((p, idx) => {
+    const x = toX(idx);
+    const y = toY(p.val_a);
+    if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // 4. 绘制报文 B 波形 (亮紫 #c084fc)
+  ctx.strokeStyle = '#c084fc';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  points.forEach((p, idx) => {
+    const x = toX(idx);
+    const y = toY(p.val_b);
+    if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // 5. 绘制变异点光斑
+  points.forEach((p, idx) => {
+    if (p.is_mutated) {
+      const x = toX(idx);
+      const yA = toY(p.val_a);
+      const yB = toY(p.val_b);
+
+      ctx.fillStyle = '#f43f5e';
+      ctx.beginPath();
+      ctx.arc(x, yA, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(x, yB, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+
+  // 6. 十字标尺
+  if (hoverPoint.value) {
+    const hp = hoverPoint.value;
+    const x = toX(hp.offset);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(x, padT);
+    ctx.lineTo(x, H - padB);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath();
+    ctx.arc(x, toY(hp.val_a), 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#c084fc';
+    ctx.beginPath();
+    ctx.arc(x, toY(hp.val_b), 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawDeltaSpectrum() {
+  const canvas = deltaSpectrumCanvas.value;
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return;
+
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+
+  const W = rect.width;
+  const H = rect.height;
+
+  ctx.fillStyle = '#020617';
+  ctx.fillRect(0, 0, W, H);
+
+  const padL = 36;
+  const padR = 16;
+  const padT = 12;
+  const padB = 20;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+
+  ctx.strokeStyle = 'rgba(51, 65, 85, 0.4)';
+  ctx.lineWidth = 1;
+  ctx.fillStyle = '#64748b';
+  ctx.font = '9px monospace';
+
+  const dVals = [0, 64, 128, 255];
+  for (const v of dVals) {
+    const y = padT + plotH - (v / 255) * plotH;
+    ctx.beginPath();
+    ctx.moveTo(padL, y);
+    ctx.lineTo(W - padR, y);
+    ctx.stroke();
+    ctx.fillText(String(v), 8, y + 3);
+  }
+
+  // 128 强突变警戒红虚线
+  const y128 = padT + plotH - (128 / 255) * plotH;
+  ctx.strokeStyle = 'rgba(244, 63, 94, 0.6)';
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(padL, y128);
+  ctx.lineTo(W - padR, y128);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  const points = diffResult.value?.waveform_metrics?.waveform_points || [];
+  if (points.length === 0) return;
+
+  const colW = Math.max(1, (plotW / points.length) - 1);
+  const stepX = plotW / points.length;
+
+  points.forEach((p, idx) => {
+    const absD = Math.abs(p.delta);
+    const barH = (absD / 255) * plotH;
+    const x = padL + idx * stepX;
+    const y = padT + plotH - barH;
+
+    if (absD === 0) {
+      ctx.fillStyle = 'rgba(51, 65, 85, 0.5)';
+      ctx.fillRect(x, padT + plotH - 2, Math.max(1, colW), 2);
+    } else if (absD <= 64) {
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(x, y, Math.max(1, colW), Math.max(2, barH));
+    } else if (absD <= 128) {
+      ctx.fillStyle = '#f97316';
+      ctx.fillRect(x, y, Math.max(1, colW), Math.max(2, barH));
+    } else {
+      ctx.fillStyle = '#f43f5e';
+      ctx.fillRect(x, y, Math.max(1, colW), Math.max(2, barH));
+    }
+  });
+
+  if (hoverDelta.value) {
+    const idx = hoverDelta.value.offset;
+    const x = padL + idx * stepX;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x - 1, padT, Math.max(2, colW + 2), plotH);
+  }
+}
+
+function onWaveMouseMove(e: MouseEvent) {
+  const canvas = diffWaveCanvas.value;
+  if (!canvas || !diffResult.value?.waveform_metrics?.waveform_points) return;
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const padL = 36;
+  const padR = 16;
+  const plotW = rect.width - padL - padR;
+  const points = diffResult.value.waveform_metrics.waveform_points;
+  if (points.length <= 1) return;
+
+  const relX = Math.max(0, Math.min(plotW, mouseX - padL));
+  const idx = Math.round((relX / plotW) * (points.length - 1));
+  hoverPoint.value = points[idx] || null;
+  drawDiffWaveform();
+}
+
+function onDeltaMouseMove(e: MouseEvent) {
+  const canvas = deltaSpectrumCanvas.value;
+  if (!canvas || !diffResult.value?.waveform_metrics?.waveform_points) return;
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const padL = 36;
+  const padR = 16;
+  const plotW = rect.width - padL - padR;
+  const points = diffResult.value.waveform_metrics.waveform_points;
+  if (points.length === 0) return;
+
+  const relX = Math.max(0, Math.min(plotW, mouseX - padL));
+  const idx = Math.min(points.length - 1, Math.floor((relX / plotW) * points.length));
+  hoverDelta.value = points[idx] || null;
+  drawDeltaSpectrum();
+}
+
+function onDeltaSpectrumClick() {
+  if (!hoverDelta.value) return;
+  const off = hoverDelta.value.offset;
+  activeMode.value = 'hex';
+  // 切换到 Hex 模式后，触发滚动对齐至该行
+  nextTick(() => {
+    const rowIndex = Math.floor(off / 16);
+    const targetScroll = rowIndex * 26;
+    if (hexScrollA.value) hexScrollA.value.scrollTop = targetScroll;
+    if (hexScrollB.value) hexScrollB.value.scrollTop = targetScroll;
+  });
+}
+
+function renderAllCharts() {
+  if (activeMode.value === 'wave') {
+    nextTick(() => {
+      drawDiffWaveform();
+      drawDeltaSpectrum();
+    });
+  }
+}
+
+watch([activeMode, diffResult], () => {
+  renderAllCharts();
+});
+
 watch(() => [props.packetA, props.packetB, props.isOpen], () => {
   if (props.isOpen && props.packetA && props.packetB) {
     runCompare();
@@ -563,6 +1006,11 @@ watch(() => [props.packetA, props.packetB, props.isOpen], () => {
 
 onMounted(() => {
   loadStoredSamples();
+  window.addEventListener('resize', renderAllCharts);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', renderAllCharts);
 });
 </script>
 

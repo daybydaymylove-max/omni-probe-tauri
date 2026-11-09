@@ -195,10 +195,40 @@ pub struct ParsedPayload {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct DiffWaveformPoint {
+    pub offset: usize,
+    pub val_a: u8,
+    pub val_b: u8,
+    pub delta: i16,
+    pub is_mutated: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct WaveformComparisonMetrics {
+    pub cosine_similarity: f64,
+    pub pearson_correlation: f64,
+    pub mean_absolute_deviation: f64,
+    pub max_delta_offset: usize,
+    pub max_delta_value: i16,
+    pub mutation_wave_rate: f64,
+    pub waveform_points: Vec<DiffWaveformPoint>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct MutationWaveBin {
+    pub offset: usize,
+    pub mutation_rate: f64,
+    pub unique_values_count: usize,
+    pub entropy: f64,
+    pub dominant_hex: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SmartDiffResult {
     pub mode: String,
     pub payloads: Vec<ParsedPayload>,
     pub summary: String,
+    pub mutation_spectrum: Vec<MutationWaveBin>,
 }
 
 pub fn smart_diff_payloads(raw_strings: Vec<String>) -> Result<SmartDiffResult, String> {
@@ -234,6 +264,8 @@ pub fn smart_diff_payloads_labeled(
         })
         .collect();
 
+    let spectrum = compute_mutation_spectrum(&payloads);
+
     if payloads.len() == 2 {
         let tags_a = lcs_diff_tags(&payloads[0], &payloads[1], true);
         let tags_b = lcs_diff_tags(&payloads[0], &payloads[1], false);
@@ -244,6 +276,7 @@ pub fn smart_diff_payloads_labeled(
             mode: "smart_diff".into(),
             payloads: vec![pa, pb],
             summary: format!("智能对齐比对: {} 个字节发生突变（替换/插入/删除）", changes),
+            mutation_spectrum: spectrum,
         })
     } else {
         let max_len = payloads.iter().map(|p| p.len()).max().unwrap_or(0);
@@ -280,6 +313,7 @@ pub fn smart_diff_payloads_labeled(
                 mutating.len(),
                 payloads.len()
             ),
+            mutation_spectrum: spectrum,
         })
     }
 }
@@ -471,6 +505,166 @@ pub struct DualPacketDiffResult {
     pub hex_diff_b: ParsedPayload,
     pub field_diffs: Vec<FieldDiffItem>,
     pub summary: String,
+    pub waveform_metrics: Option<WaveformComparisonMetrics>,
+}
+
+/// 计算两组字节流的时域与空间域波形比对分析指标（余弦相似度、皮尔逊相关性、波率、差值点阵）
+/// 时间复杂度: O(L), 空间复杂度: O(L), L = max(len_a, len_b)
+pub fn compute_waveform_metrics(bytes_a: &[u8], bytes_b: &[u8]) -> WaveformComparisonMetrics {
+    let len_a = bytes_a.len();
+    let len_b = bytes_b.len();
+    let max_len = len_a.max(len_b);
+
+    if max_len == 0 {
+        return WaveformComparisonMetrics {
+            cosine_similarity: 1.0,
+            pearson_correlation: 1.0,
+            mean_absolute_deviation: 0.0,
+            max_delta_offset: 0,
+            max_delta_value: 0,
+            mutation_wave_rate: 0.0,
+            waveform_points: Vec::new(),
+        };
+    }
+
+    let mut points = Vec::with_capacity(max_len);
+    let mut dot_product: f64 = 0.0;
+    let mut norm_a_sq: f64 = 0.0;
+    let mut norm_b_sq: f64 = 0.0;
+    let mut sum_a: f64 = 0.0;
+    let mut sum_b: f64 = 0.0;
+    let mut total_abs_delta: f64 = 0.0;
+    let mut max_delta_val: i16 = 0;
+    let mut max_delta_off: usize = 0;
+    let mut mutated_count: usize = 0;
+
+    for i in 0..max_len {
+        let va = bytes_a.get(i).copied().unwrap_or(0);
+        let vb = bytes_b.get(i).copied().unwrap_or(0);
+        let fa = va as f64;
+        let fb = vb as f64;
+        let delta = va as i16 - vb as i16;
+        let abs_delta = delta.abs();
+        let is_mutated = (i >= len_a) || (i >= len_b) || (va != vb);
+
+        if is_mutated {
+            mutated_count += 1;
+        }
+        if abs_delta > max_delta_val {
+            max_delta_val = abs_delta;
+            max_delta_off = i;
+        }
+        total_abs_delta += abs_delta as f64;
+
+        dot_product += fa * fb;
+        norm_a_sq += fa * fa;
+        norm_b_sq += fb * fb;
+        sum_a += fa;
+        sum_b += fb;
+
+        points.push(DiffWaveformPoint {
+            offset: i,
+            val_a: va,
+            val_b: vb,
+            delta,
+            is_mutated,
+        });
+    }
+
+    // 1. 余弦相似度
+    let denom_cos = (norm_a_sq.sqrt() * norm_b_sq.sqrt()).max(1e-12);
+    let mut cosine_sim = dot_product / denom_cos;
+    if cosine_sim.is_nan() {
+        cosine_sim = if norm_a_sq == 0.0 && norm_b_sq == 0.0 { 1.0 } else { 0.0 };
+    }
+    cosine_sim = cosine_sim.clamp(-1.0, 1.0);
+
+    // 2. 皮尔逊相关系数
+    let mean_a = sum_a / max_len as f64;
+    let mean_b = sum_b / max_len as f64;
+    let mut numerator_pearson: f64 = 0.0;
+    let mut var_a: f64 = 0.0;
+    let mut var_b: f64 = 0.0;
+
+    for p in &points {
+        let da = p.val_a as f64 - mean_a;
+        let db = p.val_b as f64 - mean_b;
+        numerator_pearson += da * db;
+        var_a += da * da;
+        var_b += db * db;
+    }
+
+    let denom_pearson = (var_a.sqrt() * var_b.sqrt()).max(1e-12);
+    let mut pearson = numerator_pearson / denom_pearson;
+    if pearson.is_nan() {
+        pearson = if var_a == 0.0 && var_b == 0.0 { 1.0 } else { 0.0 };
+    }
+    pearson = pearson.clamp(-1.0, 1.0);
+
+    let mean_abs_dev = total_abs_delta / max_len as f64;
+    let mutation_rate = (mutated_count as f64 / max_len as f64) * 100.0;
+
+    WaveformComparisonMetrics {
+        cosine_similarity: cosine_sim,
+        pearson_correlation: pearson,
+        mean_absolute_deviation: mean_abs_dev,
+        max_delta_offset: max_delta_off,
+        max_delta_value: max_delta_val,
+        mutation_wave_rate: mutation_rate,
+        waveform_points: points,
+    }
+}
+
+/// 计算多样本在各字节偏移量上的变异波率（Mutation Wave Rate）与局部信息熵谱
+/// 时间复杂度: O(K * L), 空间复杂度: O(L)
+pub fn compute_mutation_spectrum(payloads: &[Vec<u8>]) -> Vec<MutationWaveBin> {
+    if payloads.is_empty() {
+        return Vec::new();
+    }
+    let max_len = payloads.iter().map(|p| p.len()).max().unwrap_or(0);
+    let total_samples = payloads.len();
+    if max_len == 0 || total_samples == 0 {
+        return Vec::new();
+    }
+
+    let mut spectrum = Vec::with_capacity(max_len);
+
+    for offset in 0..max_len {
+        let mut freq_map = std::collections::HashMap::new();
+        for p in payloads {
+            let b = p.get(offset).copied().unwrap_or(0);
+            *freq_map.entry(b).or_insert(0usize) += 1;
+        }
+
+        let mut max_freq = 0usize;
+        let mut dominant_byte = 0u8;
+        let mut entropy = 0.0f64;
+
+        for (&b, &cnt) in &freq_map {
+            if cnt > max_freq {
+                max_freq = cnt;
+                dominant_byte = b;
+            }
+            let prob = cnt as f64 / total_samples as f64;
+            if prob > 0.0 {
+                entropy -= prob * prob.log2();
+            }
+        }
+
+        // 突变率: 偏离主导特征值的样本占比 (0% ~ 100%)
+        let non_dominant = total_samples.saturating_sub(max_freq);
+        let mutation_rate = (non_dominant as f64 / total_samples as f64) * 100.0;
+
+        spectrum.push(MutationWaveBin {
+            offset,
+            mutation_rate,
+            unique_values_count: freq_map.len(),
+            entropy,
+            dominant_hex: format!("{:02X}", dominant_byte),
+        });
+    }
+
+    spectrum
 }
 
 /// 获取报文样本归档主目录
@@ -680,6 +874,8 @@ pub fn compare_two_packets(
         diff_fields_count, mutated_bytes_count, max_len, mutation_rate_percent
     );
 
+    let waveform_metrics = Some(compute_waveform_metrics(&bytes_a, &bytes_b));
+
     Ok(DualPacketDiffResult {
         packet_a_id: packet_a.id,
         packet_b_id: packet_b.id,
@@ -693,6 +889,7 @@ pub fn compare_two_packets(
         hex_diff_b,
         field_diffs,
         summary,
+        waveform_metrics,
     })
 }
 
@@ -1044,6 +1241,53 @@ mod tests {
         let current = vec!["010203040508".to_string()];
         let diff = compare_with_historical_baseline(current).expect("联合比对失败");
         assert_eq!(diff.payloads.len(), 3, "联合比对后总样本数应为 3 (2基准+1当前)");
+    }
+
+    #[test]
+    fn test_waveform_metrics_calculation_and_edge_cases() {
+        // 极限用例 1: 零长度
+        let m_empty = compute_waveform_metrics(&[], &[]);
+        assert_eq!(m_empty.mutation_wave_rate, 0.0);
+        assert_eq!(m_empty.cosine_similarity, 1.0);
+
+        // 极限用例 2: 完全一致
+        let a = vec![0x10, 0x20, 0x30, 0x40];
+        let b = vec![0x10, 0x20, 0x30, 0x40];
+        let m_ident = compute_waveform_metrics(&a, &b);
+        assert_eq!(m_ident.mutation_wave_rate, 0.0);
+        assert!((m_ident.cosine_similarity - 1.0).abs() < 1e-6);
+        assert_eq!(m_ident.max_delta_value, 0);
+
+        // 极限用例 3: 局部大幅度突变
+        let b_mut = vec![0x10, 0x20, 0xFA, 0x40];
+        let m_mut = compute_waveform_metrics(&a, &b_mut);
+        assert_eq!(m_mut.mutation_wave_rate, 25.0); // 1 / 4
+        assert_eq!(m_mut.max_delta_offset, 2);
+        assert_eq!(m_mut.max_delta_value, 0xFA - 0x30); // 250 - 48 = 202
+    }
+
+    #[test]
+    fn test_mutation_spectrum_entropy_and_rate() {
+        let p1 = vec![0x01, 0x02, 0x03, 0xAA];
+        let p2 = vec![0x01, 0x02, 0x04, 0xBB];
+        let p3 = vec![0x01, 0x02, 0x03, 0xCC];
+
+        let spec = compute_mutation_spectrum(&[p1, p2, p3]);
+        assert_eq!(spec.len(), 4);
+
+        // offset 0: 全为 0x01，突变率为 0%
+        assert_eq!(spec[0].mutation_rate, 0.0);
+        assert_eq!(spec[0].dominant_hex, "01");
+
+        // offset 1: 全为 0x02，突变率为 0%
+        assert_eq!(spec[1].mutation_rate, 0.0);
+
+        // offset 2: 2 个 0x03，1 个 0x04，突变率为 1/3 (33.33%)
+        assert!((spec[2].mutation_rate - 33.333).abs() < 0.1);
+        assert_eq!(spec[2].dominant_hex, "03");
+
+        // offset 3: AA, BB, CC 各不相同，突变率为 2/3 (66.67%)
+        assert!((spec[3].mutation_rate - 66.666).abs() < 0.1);
     }
 }
 
