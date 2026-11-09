@@ -276,6 +276,12 @@
             <button @click="isImportOpen = true" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-sky-500/15 text-slate-200 hover:text-sky-300 flex items-center gap-2 transition-colors">
               <span>📂 导入离线 PCAP</span>
             </button>
+            <button @click="isIpDbOpen = true" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-blue-500/15 text-slate-200 hover:text-blue-300 flex items-center gap-2 transition-colors">
+              <span>🌐 IP 归属地情报库 (xdb)</span>
+            </button>
+            <button @click="isCidrAssetOpen = true" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-emerald-500/15 text-slate-200 hover:text-emerald-300 flex items-center gap-2 transition-colors">
+              <span>🏷️ 内网 CIDR 资产字典</span>
+            </button>
             <button @click="$emit('clearData')" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-rose-500/15 text-rose-300 flex items-center gap-2 transition-colors">
               <span>🗑️ 清空捕获缓冲池</span>
             </button>
