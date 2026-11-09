@@ -165,6 +165,10 @@ pub use bluetooth_monitor::{
 pub mod wireless_analyzer;
 pub use wireless_analyzer::dissect_wireless_or_vlan_hex_cmd;
 
+// 全球网络地理态势与地图引擎
+pub mod geo_map_engine;
+pub use geo_map_engine::get_global_geo_map_data_cmd;
+
 use once_cell::sync::Lazy;
 use std::sync::{Arc, Mutex};
 use tauri::Emitter;
@@ -1988,7 +1992,9 @@ pub fn run() {
             get_bluetooth_telemetry_cmd,
             reset_bluetooth_telemetry_cmd,
             // 无线与 VLAN 统一诊断解剖
-            dissect_wireless_or_vlan_hex_cmd
+            dissect_wireless_or_vlan_hex_cmd,
+            // 全球网络地理态势地图数据 (TASK-46)
+            get_global_geo_map_data_cmd
         ])
         .on_window_event(|_window, event| match event {
             tauri::WindowEvent::CloseRequested { .. } => {
