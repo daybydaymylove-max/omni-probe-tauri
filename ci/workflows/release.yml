@@ -66,8 +66,8 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev
 
-      - name: Install npm dependencies
-        run: npm ci
+      - name: Install dependencies
+        run: npm install
 
       - name: Build frontend
         run: npm run build
@@ -79,7 +79,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Omni-Probe ${{ github.ref_name }}'
-          releaseBody: 'Omni-Probe 工业级全能网络探针多操作系统平台原生发布版本。包含 Windows x64 (MSI/EXE)、Linux (DEB/AppImage) 以及 macOS (DMG/APP)。'
+          releaseBody: 'Omni-Probe 工业级全能网络探针系统原生多端发布版本。包含 Windows x64 (MSI/EXE)、Linux (DEB/AppImage) 以及 macOS (DMG/APP)。已完整集成全局跨模块全数据源比对总线、载荷五维波形与变异波率分析。'
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
