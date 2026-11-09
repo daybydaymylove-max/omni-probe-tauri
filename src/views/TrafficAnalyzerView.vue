@@ -229,6 +229,9 @@
             <button @click="openMatrixTab" :disabled="selectedPackets.size < 2" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-cyan-500/15 text-slate-200 hover:text-cyan-300 flex items-center gap-2 transition-colors disabled:opacity-40">
               <span>⚖ 多报文矩阵比对</span>
             </button>
+            <button @click="openTraceroute('')" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-cyan-500/15 text-slate-200 hover:text-cyan-300 flex items-center gap-2 transition-colors">
+              <span>🌐 测地可视路由追踪</span>
+            </button>
           </div>
         </div>
 
@@ -856,6 +859,12 @@
       <button v-if="contextMenu.packet?.dst_ip" @click="menuAction('dossier_dst')" class="w-full text-left px-3 py-1.5 hover:bg-blue-500/10 hover:text-blue-700 flex items-center gap-2 cursor-pointer transition-colors font-semibold text-sky-800">
         <span>🔍</span> 目的 IP 全息档案溯源
       </button>
+      <button v-if="contextMenu.packet?.src_ip" @click="menuAction('traceroute_src')" class="w-full text-left px-3 py-1.5 hover:bg-cyan-500/10 hover:text-cyan-700 flex items-center gap-2 cursor-pointer transition-colors font-semibold text-cyan-800">
+        <span>🌐</span> 源 IP 测地路由追踪 (Trace)
+      </button>
+      <button v-if="contextMenu.packet?.dst_ip" @click="menuAction('traceroute_dst')" class="w-full text-left px-3 py-1.5 hover:bg-cyan-500/10 hover:text-cyan-700 flex items-center gap-2 cursor-pointer transition-colors font-semibold text-cyan-800">
+        <span>🌐</span> 目的 IP 测地路由追踪 (Trace)
+      </button>
       <button @click="menuAction('copy')" class="w-full text-left px-3 py-1.5 hover:bg-blue-500/10 hover:text-blue-700 flex items-center gap-2 cursor-pointer transition-colors">
         <span>📋</span> 复制十六进制载荷
       </button>
@@ -892,6 +901,13 @@
       @selectAsB="packetDiffCompareB = $event"
       @appendLog="$emit('appendLog', $event)"
     />
+
+    <!-- 17. 测地线可视路由追踪与地球地理情报工作台模态框 (TASK-43) -->
+    <GeodesicTracerouteModal
+      :isOpen="isTracerouteOpen"
+      :initialTarget="tracerouteTarget"
+      @close="isTracerouteOpen = false"
+    />
   </div>
 </template>
 
@@ -924,6 +940,15 @@ import MultiSerialCompareModal from '../components/MultiSerialCompareModal.vue';
 import IpDossierModal from '../components/IpDossierModal.vue';
 import PacketDiffModal from '../components/PacketDiffModal.vue';
 import IoGraphsPanel from '../components/IoGraphsPanel.vue';
+import GeodesicTracerouteModal from '../components/GeodesicTracerouteModal.vue';
+
+// 测地线可视路由追踪与地球地理情报 (TASK-43)
+const isTracerouteOpen = ref(false);
+const tracerouteTarget = ref('');
+function openTraceroute(target?: string) {
+  tracerouteTarget.value = target || '';
+  isTracerouteOpen.value = true;
+}
 
 // 2026 Grand Horizon 宏大工业态势大盘与全息拓扑动画引擎
 const isHorizonExpanded = ref(true);
@@ -2396,7 +2421,7 @@ function closeContextMenu() {
   }
 }
 
-function menuAction(action: 'inject' | 'detail' | 'baseline' | 'replay' | 'copy' | 'tcp_stream' | 'dossier_src' | 'dossier_dst' | 'set_diff_a' | 'diff_with_a' | 'save_sample') {
+function menuAction(action: 'inject' | 'detail' | 'baseline' | 'replay' | 'copy' | 'tcp_stream' | 'dossier_src' | 'dossier_dst' | 'traceroute_src' | 'traceroute_dst' | 'set_diff_a' | 'diff_with_a' | 'save_sample') {
   const pkt = contextMenu.value.packet;
   closeContextMenu();
   if (!pkt) return;
@@ -2434,6 +2459,10 @@ function menuAction(action: 'inject' | 'detail' | 'baseline' | 'replay' | 'copy'
     openIpDossier(pkt.src_ip);
   } else if (action === 'dossier_dst' && pkt.dst_ip) {
     openIpDossier(pkt.dst_ip);
+  } else if (action === 'traceroute_src' && pkt.src_ip) {
+    openTraceroute(pkt.src_ip);
+  } else if (action === 'traceroute_dst' && pkt.dst_ip) {
+    openTraceroute(pkt.dst_ip);
   } else if (action === 'copy') {
     if (pkt.payload_hex && navigator.clipboard) {
       navigator.clipboard.writeText(pkt.payload_hex);

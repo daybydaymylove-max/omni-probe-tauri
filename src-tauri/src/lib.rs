@@ -1,4 +1,4 @@
-﻿pub mod sniffer;
+pub mod sniffer;
 pub mod analyzer;
 pub mod forensics;
 pub mod hardware;
@@ -131,6 +131,12 @@ pub use glushkov_engine::{
     get_glushkov_engine_metrics_cmd,
     scan_payload_glushkov_cmd,
     reset_glushkov_engine_metrics_cmd,
+};
+// 测地线可视路由追踪与地球地理情报引擎 (TASK-43)
+pub mod traceroute_engine;
+pub use traceroute_engine::{
+    start_traceroute_cmd,
+    lookup_ip_geo_coordinates_cmd,
 };
 
 use once_cell::sync::Lazy;
@@ -1941,7 +1947,10 @@ pub fn run() {
             // 基于 Glushkov 构造算法与位并行 (Bit-Parallel) 的 Hyperscan 风格高性能正则/多模式匹配 (TASK-42)
             get_glushkov_engine_metrics_cmd,
             scan_payload_glushkov_cmd,
-            reset_glushkov_engine_metrics_cmd
+            reset_glushkov_engine_metrics_cmd,
+            // 测地线可视路由追踪与地球地理情报 (TASK-43)
+            start_traceroute_cmd,
+            lookup_ip_geo_coordinates_cmd
         ])
         .on_window_event(|_window, event| match event {
             tauri::WindowEvent::CloseRequested { .. } => {

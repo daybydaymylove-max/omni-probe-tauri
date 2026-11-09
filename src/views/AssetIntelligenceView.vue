@@ -422,6 +422,11 @@
                       title="打开该 IP 全息画像档案">
                       📁
                     </button>
+                    <button @click="openTraceroute(asset.ip)"
+                      class="text-[10px] px-1.5 py-0.5 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-200 transition-all cursor-pointer font-semibold shadow-2xs"
+                      title="启动测地线可视路由追踪，探测地球大圆航线">
+                      🌐
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -472,6 +477,13 @@
       @filterTraffic="$emit('filterTraffic', $event)"
       @drillDown="selectedDossierIp = $event"
     />
+
+    <!-- 测地线可视路由追踪工作台 (TASK-43) -->
+    <GeodesicTracerouteModal
+      :isOpen="isTracerouteOpen"
+      :initialTarget="tracerouteTarget"
+      @close="isTracerouteOpen = false"
+    />
   </div>
 </template>
 
@@ -480,6 +492,7 @@ import { ref, computed, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import TopologyMap from '../components/TopologyMap.vue';
 import IpDossierModal from '../components/IpDossierModal.vue';
+import GeodesicTracerouteModal from '../components/GeodesicTracerouteModal.vue';
 
 interface DiscoveredAsset {
   ip: string;
@@ -680,6 +693,14 @@ function openIpDossier(ip: string) {
   if (!ip) return;
   selectedDossierIp.value = ip;
   dossierVisible.value = true;
+}
+
+const isTracerouteOpen = ref(false);
+const tracerouteTarget = ref('');
+function openTraceroute(ip: string) {
+  if (!ip) return;
+  tracerouteTarget.value = ip;
+  isTracerouteOpen.value = true;
 }
 
 const filteredAssets = computed(() => {

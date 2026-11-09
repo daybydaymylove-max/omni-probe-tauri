@@ -52,6 +52,11 @@
             </div>
           </div>
 
+          <button @click="isTracerouteOpen = true"
+            class="bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-200 text-xs px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
+            title="启动测地线可视路由追踪，绘制该 IP 在地球上的大圆物理路由">
+            <span>🌐 测地追踪</span>
+          </button>
           <button @click="filterInTrafficList"
             class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
             title="在主流量分析列表中即时过滤以该 IP 为源或目的的全部会话">
@@ -467,12 +472,22 @@
         </button>
       </div>
     </div>
+
+    <!-- 测地线可视路由追踪工作台 (TASK-43) -->
+    <GeodesicTracerouteModal
+      :isOpen="isTracerouteOpen"
+      :initialTarget="targetIp"
+      @close="isTracerouteOpen = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import GeodesicTracerouteModal from './GeodesicTracerouteModal.vue';
+
+const isTracerouteOpen = ref(false);
 
 interface DiscoveredAsset {
   ip: string;
