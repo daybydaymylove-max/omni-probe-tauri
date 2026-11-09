@@ -212,6 +212,12 @@
               :class="(envScore ?? 0) >= 90 ? 'bg-emerald-400 shadow-[0_0_6px_#10B981]' : (envScore ?? 0) >= 50 ? 'bg-amber-400 shadow-[0_0_6px_#F59E0B]' : 'bg-rose-400 shadow-[0_0_6px_#F43F5E]'"></span>
             <span class="text-[11px] font-semibold text-slate-200">环境: {{ envScore ?? '--' }}%</span>
           </button>
+          <button @click="isPreferencesOpen = true"
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-full glass-pill hover:bg-white/10 transition-colors cursor-pointer text-xs font-mono shrink-0"
+            title="[系统偏好设置 (Ctrl+,)] 环境自检 · 自动更新 · 视觉布局 · 存证存储">
+            <span class="text-xs">⚙️</span>
+            <span class="text-[11px] font-semibold text-slate-200">设置</span>
+          </button>
           <button @click="clearData" class="p-1.5 rounded-full hover:bg-white/10 opacity-70 hover:opacity-100 hover:text-rose-400 transition-colors cursor-pointer shrink-0" title="清除缓冲区数据">
             <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -458,6 +464,19 @@
       @close="isEnvDiagnosticOpen = false"
     />
 
+    <!-- 全局系统偏好设置中心模态框 (Apple Mica Frost 质感) -->
+    <PreferencesModal
+      v-if="isPreferencesOpen"
+      :isOpen="isPreferencesOpen"
+      :isLight="isAppleLight"
+      :isDockExpanded="isDockExpanded"
+      @close="isPreferencesOpen = false"
+      @toggleTheme="toggleAppleTheme"
+      @toggleDock="toggleDockPinned"
+      @openDiagnostic="isEnvDiagnosticOpen = true; isPreferencesOpen = false"
+      @clearData="clearData"
+    />
+
     <!-- 全局无线网络 (Wi-Fi/蓝牙) 与虚拟局域网 (VLAN) 专业监测模态框 -->
     <WirelessVlanMonitorModal
       v-if="isWirelessVlanOpen"
@@ -560,6 +579,7 @@ import PacketDeepModal from './components/PacketDeepModal.vue';
 import HoneypotWorkbenchModal from './components/HoneypotWorkbenchModal.vue';
 import IpDossierModal from './components/IpDossierModal.vue';
 import EnvironmentDiagnosticModal from './components/EnvironmentDiagnosticModal.vue';
+import PreferencesModal from './components/PreferencesModal.vue';
 import WirelessVlanMonitorModal from './components/WirelessVlanMonitorModal.vue';
 import PacketDiffModal from './components/PacketDiffModal.vue';
 import { useUniversalDiff } from './composables/useUniversalDiff';
@@ -702,6 +722,9 @@ function handleGlobalKeydown(e: KeyboardEvent) {
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
     e.preventDefault();
     openUniversalDiffCenter();
+  } else if ((e.ctrlKey || e.metaKey) && (e.key === ',' || e.key === '，')) {
+    e.preventDefault();
+    isPreferencesOpen.value = !isPreferencesOpen.value;
   }
 }
 const isRunning = ref(false);
@@ -768,6 +791,7 @@ function openDeepModal(pkt: any) {
 
 const isGlobalDossierOpen = ref(false);
 const isEnvDiagnosticOpen = ref(false);
+const isPreferencesOpen = ref(false);
 const isWirelessVlanOpen = ref(false);
 const envScore = ref<number | null>(null);
 
@@ -1111,6 +1135,21 @@ onMounted(() => {
         setTimeout(() => {
           isEnvDiagnosticOpen.value = true;
         }, 500);
+      }
+
+      // 用户可选的静默检查更新逻辑
+      const autoUpdate = localStorage.getItem('omni_probe_auto_check_update') !== 'false';
+      if (autoUpdate) {
+        setTimeout(async () => {
+          try {
+            const res: any = await invoke('check_app_update_cmd');
+            if (res && res.has_update) {
+              notifyInfo('发现新版本发布', `最新版本 ${res.latest_version} 已就绪，可前往偏好设置更新`);
+            }
+          } catch {
+            // 静默失败，不打扰用户
+          }
+        }, 1200);
       }
     }, 250);
   }

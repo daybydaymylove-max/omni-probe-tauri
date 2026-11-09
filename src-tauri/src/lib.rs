@@ -85,6 +85,8 @@ pub mod zero_copy_pool;
 pub mod protocol_dissectors;
 // SNMP MIB 交换机物理端口联动、万级主机分级聚合拓扑树与分布式探针汇聚引擎 (对标 ntopng / RFC 1213 / RFC 2863)
 pub mod snmp_topology;
+// 跨平台自动版本检查与在线更新引擎
+pub mod updater;
 pub use snmp_topology::{
     collapse_all_topology_cmd,
     drill_down_topology_node_cmd,
@@ -878,6 +880,11 @@ fn drag_app(app: tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.start_dragging();
     }
+}
+
+#[tauri::command]
+async fn check_app_update_cmd() -> Result<updater::UpdateCheckResult, String> {
+    updater::check_latest_release("0.2.4").await
 }
 
 // ============================================================
@@ -2028,7 +2035,9 @@ pub fn run() {
             send_net_assist_data_cmd,
             get_net_assist_clients_cmd,
             calculate_checksum_cmd,
-            get_local_ip_addresses_cmd
+            get_local_ip_addresses_cmd,
+            // 自动版本检查与在线更新
+            check_app_update_cmd
         ])
         .on_window_event(|_window, event| match event {
             tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed => {
