@@ -164,6 +164,7 @@
 </template>
 
 <script setup lang="ts">
+import { notifySuccess, notifyInfo, notifyError } from '../composables/useNotification';
 import { ref, onMounted, onUnmounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -250,8 +251,9 @@ async function startBridge() {
     });
     emit('log', res);
     await fetchActiveBridges();
+    notifySuccess('双串口中继已建立', `${portA.value} ⇄ ${portB.value} 双向中继链路已接通`);
   } catch (err: any) {
-    alert(`启动双串口中继失败: ${err?.message || String(err)}`);
+    notifyError('启动双串口中继受阻', err);
   } finally {
     isStarting.value = false;
   }
@@ -264,8 +266,9 @@ async function stopBridge(bridgeId: string) {
     });
     emit('log', res);
     await fetchActiveBridges();
+    notifyInfo('双串口中继已断开', '已安全终止数据双向转发桥接');
   } catch (err: any) {
-    alert(`停止中继失败: ${err?.message || String(err)}`);
+    notifyError('停止串口中继受阻', err);
   }
 }
 

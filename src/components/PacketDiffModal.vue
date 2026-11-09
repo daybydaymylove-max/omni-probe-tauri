@@ -330,6 +330,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
+import { notifySuccess, notifyInfo, notifyError } from '../composables/useNotification';
 import { invoke } from '@tauri-apps/api/core';
 
 export interface ByteCell {
@@ -461,8 +462,9 @@ async function doSaveSample(packet: any, slot: 'A' | 'B') {
     });
     await loadStoredSamples();
     emit('appendLog', `[DIFF] ✓ 报文 #${packet.id} 已固化为特征样本: ${name}`);
+    notifySuccess('特征样本固化成功', `报文 #${packet.id} 已成功归档为样本: ${name}`);
   } catch (e: any) {
-    alert(`保存样本失败: ${e}`);
+    notifyError('保存特征样本受阻', e);
   }
 }
 
@@ -471,8 +473,9 @@ async function doDeleteSample(id: string) {
   try {
     await invoke('delete_packet_sample_cmd', { id });
     await loadStoredSamples();
+    notifyInfo('特征样本已移除', '该样本已从本地样本库中安全删除');
   } catch (e: any) {
-    alert(`删除样本失败: ${e}`);
+    notifyError('删除特征样本受阻', e);
   }
 }
 

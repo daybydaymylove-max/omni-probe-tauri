@@ -825,17 +825,14 @@
       </div>
     </div>
 
-    <!-- 5. 全局操作反馈 Toast 浮层 -->
-    <div v-if="toastVisible" class="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-2.5 bg-slate-900/90 text-white rounded-xl shadow-xl backdrop-blur-md border border-slate-700/60 font-mono text-xs transition-all">
-      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-      <span>{{ toastMessage }}</span>
-    </div>
+    
 
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import { notifySuccess, notifyWarning, notifyError } from '../composables/useNotification';
 import { invoke } from '@tauri-apps/api/core';
 
 // 四大维度 Tab 类型
@@ -1056,17 +1053,14 @@ const isReportModalOpen = ref(false);
 const auditReport = ref<any | null>(null);
 
 // 全局 Toast 提示状态
-const toastVisible = ref(false);
-const toastMessage = ref('');
-let toastTimer: any = null;
-
 function showToast(msg: string) {
-  toastMessage.value = msg;
-  toastVisible.value = true;
-  if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => {
-    toastVisible.value = false;
-  }, 3500);
+  if (msg.includes('失败')) {
+    notifyError('防火墙规则阻断受阻', msg);
+  } else if (msg.includes('已经')) {
+    notifyWarning('防火墙规则已存在', msg);
+  } else {
+    notifySuccess('防火墙规则阻断生效', msg);
+  }
 }
 
 // 工业防火墙联动规则数据模型

@@ -488,6 +488,7 @@
 </template>
 
 <script setup lang="ts">
+import { notifySuccess, notifyInfo, notifyError } from '../composables/useNotification';
 import { ref, computed, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import TopologyMap from '../components/TopologyMap.vue';
@@ -636,8 +637,9 @@ async function doSaveSnapshot() {
     await loadSnapshots();
     selectedBaseSnapshotId.value = res.id;
     emit('appendLog', `[ASSET] ✓ 成功保存全网资产快照: ${res.name} (含 ${res.total_assets} 节点)`);
+    notifySuccess('资产快照保存成功', `已归档全网资产快照: ${res.name} (共 ${res.total_assets} 个节点)`);
   } catch (e: any) {
-    alert(`保存快照失败: ${e}`);
+    notifyError('保存资产快照受阻', e);
   } finally {
     isSavingSnapshot.value = false;
   }
@@ -653,8 +655,9 @@ async function doDeleteSnapshot(id: string) {
     }
     if (diffReport.value) diffReport.value = null;
     emit('appendLog', `[ASSET] 已移除历史快照 ${id}`);
+    notifyInfo('资产快照已移除', `历史资产快照 ${id} 已被删除`);
   } catch (e: any) {
-    alert(`删除快照失败: ${e}`);
+    notifyError('删除快照受阻', e);
   }
 }
 
@@ -669,8 +672,9 @@ async function doCompareSnapshots() {
     });
     diffReport.value = res;
     emit('appendLog', `[ASSET] 资产差分比对完成: 基准 ${res.base_name} vs ${res.target_name} | 发现 ${res.added_count} 新增 / ${res.modified_count} 变动 / ${res.high_risk_count} 高危`);
+    notifySuccess('资产差分比对完成', `基准 [${res.base_name}] vs [${res.target_name}]：新增 ${res.added_count}，变动 ${res.modified_count}，高危 ${res.high_risk_count}`);
   } catch (e: any) {
-    alert(`差分比对失败: ${e}`);
+    notifyError('资产差分比对受阻', e);
   } finally {
     isComparing.value = false;
   }

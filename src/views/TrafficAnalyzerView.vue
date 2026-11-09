@@ -912,6 +912,7 @@
 </template>
 
 <script setup lang="ts">
+import { notifyError } from '../composables/useNotification';
 function copyHex(hex?: string) {
   if (hex && navigator.clipboard) {
     navigator.clipboard.writeText(hex);
@@ -2441,7 +2442,7 @@ function menuAction(action: 'inject' | 'detail' | 'baseline' | 'replay' | 'copy'
           emit('appendLog', `[DIFF] ✓ 报文 #${pkt.id} 成功存入样本库: ${name}`);
         })
         .catch((err) => {
-          alert(`保存样本失败: ${err}`);
+          notifyError('保存流量分析样本受阻', err);
         });
     }
   } else if (action === 'tcp_stream') {

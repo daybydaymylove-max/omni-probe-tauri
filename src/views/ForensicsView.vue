@@ -368,6 +368,7 @@
 </template>
 
 <script setup lang="ts">
+import { notifySuccess, notifyError } from '../composables/useNotification';
 import { ref, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -487,11 +488,11 @@ async function triggerManualSeal() {
   loading.value = true;
   try {
     const res = await invoke<string>('manual_seal_cmd');
-    alert(res);
+    notifySuccess('数字证据链封存成功', res);
     await verifyEvidence();
     await loadChainOfCustody();
   } catch (e) {
-    alert(`封存失败: ${e}`);
+    notifyError('数字证据封存受阻', e);
   } finally {
     loading.value = false;
   }
@@ -502,9 +503,10 @@ async function verifyEvidence() {
   try {
     verificationReport.value = await invoke<EvidenceVerificationReport>('verify_evidence_chain_cmd');
     evidenceVault.value = verificationReport.value.items;
+    notifySuccess('证据链验真通过', `共校验 ${verificationReport.value.items.length} 份数字物证，哈希链自洽无篡改`);
     await loadChainOfCustody();
   } catch (e) {
-    alert(`验真失败: ${e}`);
+    notifyError('证据链完整性验真受阻', e);
   } finally {
     loading.value = false;
   }
@@ -514,11 +516,11 @@ async function exportPcapng() {
   loading.value = true;
   try {
     const res = await invoke<string>('export_pcapng_cmd', { ifName: 'All Active Interfaces' });
-    alert(res);
+    notifySuccess('取证 PCAPNG 导出完成', res);
     await loadForensicVault();
     await loadChainOfCustody();
   } catch (e) {
-    alert(`导出 PCAPNG 失败: ${e}`);
+    notifyError('导出 PCAPNG 失败', e);
   } finally {
     loading.value = false;
   }
@@ -527,21 +529,21 @@ async function exportPcapng() {
 async function setWormLock(fileName: string) {
   try {
     await invoke<boolean>('set_worm_lock_cmd', { fileName });
-    alert(`已对 ${fileName} 施加 WORM 只读防篡改物理锁定`);
+    notifySuccess('WORM 防篡改锁定生效', `已对证据文件 ${fileName} 施加底层只读防篡改属性`);
     await loadForensicVault();
     await loadChainOfCustody();
   } catch (e) {
-    alert(`WORM 锁定失败: ${e}`);
+    notifyError('WORM 锁定受阻', e);
   }
 }
 
 async function stampTsa(fileName: string) {
   try {
     const token = await invoke<any>('generate_tsa_timestamp_cmd', { fileName });
-    alert(`已成功加盖 RFC 3161 TSA 时间戳！\n序列号: ${token.serial_number}\n打标时间: ${token.stamped_at}`);
+    notifySuccess('RFC 3161 TSA 时间戳加盖成功', `序列号: ${token.serial_number} | 打标时间: ${token.stamped_at}`);
     await loadChainOfCustody();
   } catch (e) {
-    alert(`TSA 打标失败: ${e}`);
+    notifyError('TSA 时间戳加盖受阻', e);
   }
 }
 
@@ -559,7 +561,7 @@ async function generateReport() {
       caseNumber: reportCaseNumber.value,
     });
   } catch (e) {
-    alert(`生成报告失败: ${e}`);
+    notifyError('生成司法鉴定报告受阻', e);
   } finally {
     loading.value = false;
   }
@@ -568,7 +570,7 @@ async function generateReport() {
 function copyReport() {
   if (generatedReport.value) {
     navigator.clipboard.writeText(generatedReport.value.markdown_report);
-    alert('报告 Markdown 全文已复制到剪贴板');
+    notifySuccess('报告已复制', '司法取证鉴定报告 Markdown 全文已成功复制到剪贴板');
   }
 }
 

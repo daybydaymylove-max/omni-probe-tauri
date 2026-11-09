@@ -421,6 +421,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { notifySuccess, notifyWarning, notifyError } from '../composables/useNotification';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 
@@ -501,7 +502,7 @@ const passiveResults = ref<DecryptedTlsPayload[]>([]);
 
 const executePassiveDecrypt = async () => {
   if (!passiveClientHex.value.trim() || !passiveServerHex.value.trim()) {
-    alert('请同时输入客户端与服务端 TCP 载荷十六进制数据');
+    notifyWarning('输入参数不完整', '请同时输入客户端与服务端 TCP 载荷十六进制数据');
     return;
   }
   passiveLoading.value = true;
@@ -512,10 +513,10 @@ const executePassiveDecrypt = async () => {
       streamId: 'MANUAL_PASSIVE_STREAM',
     });
     if (passiveResults.value.length === 0) {
-      alert('未解密出应用层明文记录，请检查 ClientHello 是否完整以及 NSS 密钥库中是否存在对应的 ClientRandom 密钥。');
+      notifyWarning('解密未命中', '未解密出应用层明文记录，请检查 ClientHello 是否完整以及 NSS 密钥库中是否存在对应的 ClientRandom 密钥。');
     }
   } catch (e) {
-    alert(`被动解密失败: ${e}`);
+    notifyError('被动解密执行受阻', e);
   } finally {
     passiveLoading.value = false;
   }
@@ -616,7 +617,7 @@ const clearDecryptedLogs = async () => {
 
 const copyCaPem = () => {
   navigator.clipboard.writeText(caCertPem.value);
-  alert('CA 根证书 PEM 已复制到剪贴板！');
+  notifySuccess('根证书已复制', 'CA 根证书 PEM 文本已成功复制到系统剪贴板');
 };
 
 const triggerKeylogSelect = async () => {
@@ -624,10 +625,10 @@ const triggerKeylogSelect = async () => {
   if (path && path.trim()) {
     try {
       const count = await invoke<number>('load_sslkeylog_file_cmd', { filePath: path.trim() });
-      alert(`成功导入 ${count} 组 SSL 会话密钥！`);
+      notifySuccess('SSL 密钥导入成功', `成功导入 ${count} 组 SSL/TLS 会话主密钥`);
       await fetchStatus();
     } catch (e) {
-      alert(`导入失败: ${e}`);
+      notifyError('导入 SSL 会话密钥受阻', e);
     }
   }
 };

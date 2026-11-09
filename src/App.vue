@@ -462,19 +462,9 @@
       @drillDown="globalDossierIp = $event"
     />
 
-    <!-- 全局告警浮动提示：工业级通知胶囊，不硬截断，支持点击关闭与复制 -->
-    <transition name="slide-up">
-      <div v-if="currentAlert"
-        class="fixed bottom-4 right-4 glass-surface backdrop-blur-2xl text-slate-800 backdrop-blur-xl text-white text-xs font-mono px-3.5 py-2.5 rounded-xl shadow-2xl max-w-lg z-50 flex items-center justify-between gap-3 border border-rose-500/40 cursor-pointer hover:border-rose-400 transition-colors"
-        @click="currentAlert = null"
-        :title="'点击关闭通知: ' + currentAlert">
-        <div class="flex items-center gap-2.5 min-w-0">
-          <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping shrink-0"></span>
-          <span class="truncate text-rose-600 font-bold font-semibold">{{ currentAlert }}</span>
-        </div>
-        <button class="text-slate-400 hover:text-white text-xs shrink-0 px-1 py-0.5 rounded hover:bg-white/10">✕</button>
-      </div>
-    </transition>
+    <!-- 统一全局通知/友好提示浮层 (四级告警与防抖抑制) -->
+    <GlobalNotificationToast />
+
   </div>
 </template>
 
@@ -488,6 +478,8 @@ import HoneypotWorkbenchModal from './components/HoneypotWorkbenchModal.vue';
 import IpDossierModal from './components/IpDossierModal.vue';
 import EnvironmentDiagnosticModal from './components/EnvironmentDiagnosticModal.vue';
 import WirelessVlanMonitorModal from './components/WirelessVlanMonitorModal.vue';
+import GlobalNotificationToast from './components/GlobalNotificationToast.vue';
+import { notifySuccess, notifyInfo, notifyWarning, notifyError } from './composables/useNotification';
 import TrafficAnalyzerView from './views/TrafficAnalyzerView.vue';
 import AssetIntelligenceView from './views/AssetIntelligenceView.vue';
 import HardwareBusView from './views/HardwareBusView.vue';
@@ -589,6 +581,7 @@ const threatCount = computed(() => {
 
 async function triggerEmergencyCutoff() {
   addLog('[SECURITY] ⚠️ 用户触发一键紧急切断与嗅探停机响应');
+  notifyWarning('一键紧急停机响应', '已触发应急防护机制，全线切断嗅探引擎与物理总线');
   await stopCapture();
 }
 
@@ -649,7 +642,6 @@ const serialPortBaudRates = ref<Record<string, number>>({});
 
 const honeypotPackets = ref<any[]>([]);
 const systemLogs = ref<string[]>([]);
-const currentAlert = ref<string | null>(null);
 
 const isHoneypotOpen = ref(false);
 const isHoneypotRunning = ref(false);
@@ -702,8 +694,10 @@ async function startCapture() {
     isRunning.value = true;
     isPaused.value = false;
     addLog(`[PROBE] 网卡嗅探已启动 → ${selectedIface.value || 'auto'} BPF="${bpfFilter.value || 'none'}"`);
+    notifySuccess('网卡嗅探引擎已就绪', `已绑定网卡 [${selectedIface.value || 'auto'}]，过滤规则: ${bpfFilter.value || '全量捕获'}`);
   } catch (e) {
     addLog(`[ERROR] 网卡引擎启动失败: ${e}`);
+    notifyError('网卡抓包引擎启动受阻', e);
   }
 }
 
@@ -712,8 +706,10 @@ async function pauseCapture() {
     await invoke('pause_capture');
     isPaused.value = true;
     addLog('[PROBE] ⏸️ 网卡嗅探已挂起暂停（数据流暂停，网卡驱动保持热备）');
+    notifyInfo('网卡嗅探已挂起', '数据流捕获已暂停，网卡驱动保持热备状态');
   } catch (e) {
     addLog(`[ERROR] 暂停嗅探失败: ${e}`);
+    notifyError('暂停嗅探失败', e);
   }
 }
 
@@ -722,8 +718,10 @@ async function resumeCapture() {
     await invoke('resume_capture');
     isPaused.value = false;
     addLog('[PROBE] ▶️ 网卡嗅探已恢复（毫秒级无缝继续抓包）');
+    notifySuccess('网卡嗅探已恢复', '毫秒级无缝继续捕获实时数据流');
   } catch (e) {
     addLog(`[ERROR] 恢复嗅探失败: ${e}`);
+    notifyError('恢复嗅探失败', e);
   }
 }
 
@@ -736,8 +734,10 @@ async function stopCapture() {
     activeSerialPorts.value = [];
     isUsbRunning.value = false;
     addLog('[PROBE] 探针主引擎及全部物理总线已安全停止');
+    notifyInfo('捕获引擎已安全停止', '主引擎、物理串口及 USB 外设嗅探均已安全停机');
   } catch (e) {
     addLog(`[ERROR] 停止失败: ${e}`);
+    notifyError('停止捕获引擎失败', e);
   }
 }
 
@@ -746,6 +746,7 @@ async function startSerialCapture(port?: string, baudRate?: number) {
   const b = baudRate || serialPortBaudRates.value[p] || serialBaudRate.value || 9600;
   if (!p) {
     addLog('[SERIAL] 启动失败: 未选择可用串口');
+    notifyWarning('启动串口监听失败', '请先选择目标物理/虚拟 COM 端口');
     return;
   }
   try {
@@ -784,10 +785,10 @@ async function startUsbCapture() {
     isUsbRunning.value = true;
     addLog(res);
     await refreshUsbDevices();
-    currentAlert.value = '已成功挂钩 USB 物理总线探针，正在实时监测 USB 外设通信';
-    setTimeout(() => { if (currentAlert.value?.includes('USB')) currentAlert.value = null; }, 5000);
+    notifySuccess('USB 总线探针已就绪', '已成功挂钩系统底层 USB 外设通信总线');
   } catch (e) {
     addLog(`[ERROR] USB 嗅探启动失败: ${e}`);
+    notifyError('USB 嗅探启动受阻', e);
   }
 }
 
@@ -809,12 +810,14 @@ async function clearData() {
     addLog(`[ERROR] 清空内核日志失败: ${e}`);
   }
   addLog('[CLEANUP] 数据沙箱与流量记录已清空');
+  notifyInfo('数据沙箱已重置', '抓包流量缓存与内核日志已清空');
 }
 
 function handleImportedPackets(importedList: any[]) {
   if (importedList && importedList.length > 0) {
     packets.value = [...importedList, ...packets.value];
     addLog(`[TRAFFIC] 成功载入 ${importedList.length} 个离线报文至全局数据总线`);
+    notifySuccess('PCAP 数据包导入成功', `成功解析并载入 ${importedList.length} 帧离线流量报文至分析工作台`);
   }
 }
 
@@ -931,6 +934,7 @@ async function savePacketAsBaseline(pkt: any) {
     if (!list.includes(pkt.payload_hex)) list.push(pkt.payload_hex);
     await invoke<number>('save_baseline_payloads_cmd', { payloads: list });
     addLog(`[BASELINE] 成功将报文 #${pkt.id} 固化至基线库`);
+    notifySuccess('基线固化成功', `报文 #${pkt.id} 的协议特征已固化至基线白名单`);
   } catch (e) {
     addLog(`[ERROR] 固化基线失败: ${e}`);
   }
@@ -1011,10 +1015,7 @@ onMounted(() => {
     addLog(`[SERIAL] 🔌 检测到新物理串口接入: ${payload.description} [${payload.port_name}]`);
     if (payload.is_usb) {
       selectedSerial.value = payload.port_name;
-      currentAlert.value = `🔌 物理串口已接入并自动选中: ${payload.port_name} (${payload.product || payload.description})`;
-      setTimeout(() => {
-        if (currentAlert.value?.includes(payload.port_name)) currentAlert.value = null;
-      }, 6000);
+      notifyInfo('物理串口已接入并自动选中', `${payload.port_name} (${payload.product || payload.description})`);
     }
     refreshSerialPorts();
   });
@@ -1028,10 +1029,7 @@ onMounted(() => {
     const newUsb = newlyAdded.find(p => p.is_usb);
     if (newUsb) {
       selectedSerial.value = newUsb.port_name;
-      currentAlert.value = `🔌 物理串口已接入并自动选中: ${newUsb.port_name} (${newUsb.product || newUsb.description})`;
-      setTimeout(() => {
-        if (currentAlert.value?.includes(newUsb.port_name)) currentAlert.value = null;
-      }, 6000);
+      notifyInfo('物理串口已接入并自动选中', `${newUsb.port_name} (${newUsb.product || newUsb.description})`);
     } else if (!selectedSerial.value || !serialPorts.value.includes(selectedSerial.value)) {
       const bestUsb = payload.find(d => d.is_usb && d.is_available);
       const anyUsb = payload.find(d => d.is_usb);
@@ -1054,9 +1052,8 @@ onMounted(() => {
 
   listen<any>('hardware-alert', ({ payload }) => {
     if (typeof payload === 'string') {
-      currentAlert.value = payload;
       addLog(`[HARDWARE] 物理总线告警: ${payload}`);
-      setTimeout(() => { if (currentAlert.value === payload) currentAlert.value = null; }, 6000);
+      notifyWarning('物理总线安全告警', payload);
       return;
     }
     const alertType = payload.alert_type;
@@ -1064,20 +1061,16 @@ onMounted(() => {
     addLog(`[HARDWARE] 物理总线变更: ${alertType} - ${devName}`);
 
     if (alertType === 'USB_ATTACH') {
-      currentAlert.value = `🔌 物理 USB 外设已接入: ${devName}`;
-      setTimeout(() => { if (currentAlert.value?.includes(devName)) currentAlert.value = null; }, 6000);
+      notifyInfo('物理 USB 外设接入', devName);
       refreshUsbDevices();
     } else if (alertType === 'USB_DETACH') {
-      currentAlert.value = `⚠️ 物理 USB 外设已拔出: ${devName}`;
-      setTimeout(() => { if (currentAlert.value?.includes(devName)) currentAlert.value = null; }, 6000);
+      notifyWarning('物理 USB 外设拔出', devName);
       refreshUsbDevices();
     } else if (alertType === 'SERIAL_ATTACH') {
-      currentAlert.value = `🔌 物理串口已接入: ${devName}`;
-      setTimeout(() => { if (currentAlert.value?.includes(devName)) currentAlert.value = null; }, 6000);
+      notifyInfo('物理串口设备接入', devName);
       refreshSerialPorts();
     } else if (alertType === 'SERIAL_DETACH') {
-      currentAlert.value = `⚠️ 物理串口已拔出: ${devName}`;
-      setTimeout(() => { if (currentAlert.value?.includes(devName)) currentAlert.value = null; }, 6000);
+      notifyWarning('物理串口设备拔出', devName);
       refreshSerialPorts();
     }
   });
@@ -1123,17 +1116,13 @@ onMounted(() => {
   });
 
   listen<string>('ai-alert', ({ payload }) => {
-    currentAlert.value = payload;
     addLog(`[SECURITY] 告警: ${payload}`);
-    setTimeout(() => { if (currentAlert.value === payload) currentAlert.value = null; }, 8000);
+    notifyWarning('安全威胁检测告警', payload);
   });
 
   listen<any>('baseline-drift-alert', ({ payload }) => {
-    currentAlert.value = `[基线合规告警] ${payload.description}`;
     addLog(`[BASELINE-ALERT] [${payload.drift_type}] ${payload.description}`);
-    setTimeout(() => {
-      if (currentAlert.value?.includes(payload.description)) currentAlert.value = null;
-    }, 8000);
+    notifyWarning('等保基线漂移告警', `[${payload.drift_type}] ${payload.description}`);
   });
 
   listen<string>('system-log', ({ payload }) => {

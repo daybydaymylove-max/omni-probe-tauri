@@ -483,6 +483,7 @@
 </template>
 
 <script setup lang="ts">
+import { notifySuccess, notifyError } from '../composables/useNotification';
 import { ref, computed, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import GeodesicTracerouteModal from './GeodesicTracerouteModal.vue';
@@ -941,9 +942,9 @@ async function exportPcapForTargetIp() {
       packets: packetsToExport,
       filePath: filename,
     });
-    alert(`成功将目标 IP ${ip} 的 ${count} 帧出入报文导出为独立 PCAP 文件:\n${filename}`);
+    notifySuccess('PCAP 数据包导出成功', `成功将目标 IP ${ip} 的 ${count} 帧报文导出至文件: ${filename}`);
   } catch (e: any) {
-    alert(`导出 PCAP 失败: ${e}`);
+    notifyError('导出 PCAP 文件受阻', e);
   }
 }
 

@@ -213,6 +213,7 @@
 </template>
 
 <script setup lang="ts">
+import { notifySuccess, notifyInfo, notifyError } from '../composables/useNotification';
 import { ref, computed, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -334,8 +335,9 @@ async function startHoneypotEngine() {
     isRunning.value = true;
     emit('statusChanged', true);
     emit('log', res);
+    notifySuccess('蜜罐诱捕引擎已启动', '已监听仿真工控与网络高危服务端口，实时捕获未授权扫描');
   } catch (err: any) {
-    alert(`启动蜜罐诱捕失败: ${err?.message || String(err)}`);
+    notifyError('启动蜜罐诱捕受阻', err);
   } finally {
     isOperating.value = false;
   }
@@ -349,8 +351,9 @@ async function stopHoneypotEngine() {
     isRunning.value = false;
     emit('statusChanged', false);
     emit('log', res);
+    notifyInfo('蜜罐诱捕已停止', '所有虚拟诱捕端口已安全关闭并释放');
   } catch (err: any) {
-    alert(`停止蜜罐诱捕失败: ${err?.message || String(err)}`);
+    notifyError('停止蜜罐诱捕受阻', err);
   } finally {
     isOperating.value = false;
   }

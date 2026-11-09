@@ -280,6 +280,7 @@
 </template>
 
 <script setup lang="ts">
+import { notifySuccess, notifyError } from '../composables/useNotification';
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
@@ -391,9 +392,10 @@ async function startAutoInstall(componentId: string) {
     });
     delete installingMap.value[componentId];
     launchedMap.value[componentId] = true;
+    notifySuccess('安装引导已启动', '已成功唤起官方安装程序向导，请完成安装后点击刷新检测');
   } catch (e: any) {
     delete installingMap.value[componentId];
-    alert(`下载或启动安装失败: ${e}`);
+    notifyError('驱动安装引导受阻', e);
   }
 }
 
@@ -427,7 +429,7 @@ onMounted(async () => {
         launchedMap.value[p.component_id] = true;
       } else if (p.status === 'error') {
         delete installingMap.value[p.component_id];
-        alert(`官方安装包下载异常: ${p.error_msg}`);
+        notifyError('官方安装包下载异常', p.error_msg);
       } else {
         installingMap.value[p.component_id] = p;
       }

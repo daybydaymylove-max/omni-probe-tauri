@@ -578,6 +578,7 @@
 </template>
 
 <script setup lang="ts">
+import { notifySuccess, notifyWarning, notifyError } from '../composables/useNotification';
 import { ref, computed, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import SerialModemPinsPanel from '../components/SerialModemPinsPanel.vue';
@@ -714,10 +715,11 @@ async function doSaveCurrentAsWhitelist() {
 
     const count = await invoke<number>('save_hardware_whitelist_cmd', { items });
     emit('appendLog', `[HARDWARE] ✓ 成功固化 ${count} 个硬件为受信任基线白名单`);
+    notifySuccess('硬件基线白名单固化成功', `已将当前 ${count} 个在线物理设备固化至受信任白名单库`);
     await loadWhitelist();
     await doVerifyCompliance();
   } catch (e: any) {
-    alert(`固化白名单失败: ${e}`);
+    notifyError('固化硬件白名单受阻', e);
   } finally {
     isSavingWhitelist.value = false;
   }
@@ -743,8 +745,9 @@ async function doClearWhitelist() {
     await loadWhitelist();
     await doVerifyCompliance();
     emit('appendLog', '[HARDWARE] 已清空硬件基线白名单');
+    notifyWarning('硬件白名单已清空', '基线已重置，当前所有外设已被判定为未授权');
   } catch (e: any) {
-    alert(`清空白名单失败: ${e}`);
+    notifyError('清空白名单受阻', e);
   }
 }
 

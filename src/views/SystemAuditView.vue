@@ -986,6 +986,7 @@
 </template>
 
 <script setup lang="ts">
+import { notifySuccess, notifyWarning } from '../composables/useNotification';
 import { ref, computed, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -1331,7 +1332,7 @@ async function handleClearLogs() {
     loadAdminAuditTrail();
   } catch (e) {
     log(`[SECURITY-BLOCK] ${e}`);
-    alert(`[等保三级安全阻断]\n${e}\n\n如需处置审计日志，请先在顶部点击【切换身份】切换至安全审计员 (AuditAdmin，口令 audit@123)。`);
+    notifyWarning('等保三级安全合规拦截', `${e}。如需处置审计日志，请先在顶部点击【切换身份】切换至安全审计员 (AuditAdmin，口令 audit@123)。`);
     loadAdminAuditTrail();
   }
 }
@@ -1394,7 +1395,7 @@ async function loadCidrRules() {
 
 function addCidrRule() {
   if (!newCidr.value.trim() || !newZoneName.value.trim()) {
-    alert('网段 CIDR 与安全区域名称不能为空');
+    notifyWarning('输入校验未通过', '网段 CIDR 与安全区域名称不能为空，请填写后再添加');
     return;
   }
   cidrRules.value.push({
@@ -1474,7 +1475,7 @@ async function persistBaseline() {
   try {
     const count = await invoke<number>('persist_baseline_rules_cmd');
     log(`[BASELINE] 成功将 ${count} 条通信基线规则固化持久化至磁盘 (baseline_rules.json)`);
-    alert(`成功将 ${count} 条通信基线规则固化持久化至磁盘！系统重启后将自动加载恢复。`);
+    notifySuccess('通信基线规则已固化', `成功将 ${count} 条通信基线规则固化持久化至磁盘，系统重启后将自动加载恢复`);
     loadAdminAuditTrail();
   } catch (e) {
     log(`[ERROR] 固化基线失败: ${e}`);
