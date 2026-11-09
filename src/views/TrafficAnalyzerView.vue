@@ -339,8 +339,8 @@
           应用过滤
         </button>
       </div>
-        <!-- 工业常用 Display Filter 快捷药丸 -->
-        <div class="hidden xl:flex items-center gap-1.5 text-[10px] font-mono shrink-0 pl-1 border-l border-slate-200/60">
+        <!-- 工业常用 Display Filter 快捷药丸 (自适应 lg 屏幕展开) -->
+        <div class="hidden lg:flex items-center gap-1.5 text-[10px] font-mono shrink-0 pl-1 border-l border-slate-200/60">
           <button @click="quickApplyAstFilter('tcp.flags.syn == 1')" class="px-2 py-0.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 transition-colors cursor-pointer" title="筛选 TCP 握手发起包">SYN</button>
           <button @click="quickApplyAstFilter('modbus.func_code == 3')" class="px-2 py-0.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-colors cursor-pointer" title="筛选 Modbus 读保持寄存器">Modbus读</button>
           <button @click="quickApplyAstFilter('payload[0:4] == &quot;GET &quot;')" class="px-2 py-0.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-colors cursor-pointer" title="切片语法筛选 HTTP GET">GET切片</button>

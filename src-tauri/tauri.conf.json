@@ -12,10 +12,11 @@
       {
         "label": "main",
         "title": "Omni-Probe 工业级全能网络探针系统 v0.2.4",
-        "width": 1280,
-        "height": 820,
+        "width": 1440,
+        "height": 900,
         "minWidth": 1024,
         "minHeight": 680,
+        "maximized": true,
         "transparent": false,
         "decorations": true,
         "shadow": true,

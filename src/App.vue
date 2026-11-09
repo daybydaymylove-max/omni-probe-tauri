@@ -299,7 +299,7 @@
               OP
             </div>
             <div v-show="isDockExpanded" class="flex flex-col min-w-0 leading-tight">
-              <span class="text-[10px] font-bold text-slate-800 dark:text-white truncate">Omni-Probe v0.1.0</span>
+              <span class="text-[10px] font-bold text-slate-800 dark:text-white truncate">Omni-Probe v0.2.4</span>
               <span class="text-[8px] font-mono opacity-60">等保三级合规认证</span>
             </div>
           </div>
