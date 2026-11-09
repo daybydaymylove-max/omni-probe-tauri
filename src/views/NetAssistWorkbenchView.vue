@@ -1096,7 +1096,7 @@ function applyProtocolPreset(type: string) {
       break;
     case 'http_probe':
       txFormat.value = 'ASCII';
-      txPayload.value = 'GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nUser-Agent: OmniProbe-SocketDebugger/0.2.3\r\nConnection: close\r\n\r\n';
+      txPayload.value = 'GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nUser-Agent: OmniProbe-SocketDebugger/0.2.4\r\nConnection: close\r\n\r\n';
       break;
     case 'sl651_telemetry':
       txPayload.value = '7E 7E 01 00 00 00 00 01 00 02 32 00 00 03 14 00 00 00';
