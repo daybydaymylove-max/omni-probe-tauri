@@ -1,0 +1,85 @@
+name: 'Omni-Probe Multi-OS Build and Release'
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'windows-latest'
+            args: ''
+            artifact_name: 'Windows-x64'
+          - platform: 'ubuntu-22.04'
+            args: ''
+            artifact_name: 'Linux-x64'
+          - platform: 'macos-latest'
+            args: ''
+            artifact_name: 'macOS'
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libpcap-dev \
+            libudev-dev \
+            pkg-config \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Build and Package with Tauri Action
+        uses: tauri-apps/action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Omni-Probe ${{ github.ref_name }}'
+          releaseBody: 'Omni-Probe 工业级全能网络探针系统原生多端发布版本。包含 Windows x64 (MSI/EXE)、Linux (DEB/AppImage) 以及 macOS (DMG/APP)。已完整集成全局跨模块全数据源比对总线、载荷五维波形与变异波率分析。'
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
