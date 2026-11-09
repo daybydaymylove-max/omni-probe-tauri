@@ -2031,11 +2031,16 @@ pub fn run() {
             get_local_ip_addresses_cmd
         ])
         .on_window_event(|_window, event| match event {
-            tauri::WindowEvent::CloseRequested { .. } => {
-                let mut running = PROBE_RUNNING.lock().unwrap();
-                *running = false;
+            tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed => {
+                if let Ok(mut running) = PROBE_RUNNING.lock() {
+                    *running = false;
+                }
                 honeypot::stop_honeypot();
                 active_probe::stop_stream_pull();
+                serial::stop_serial_probe(None);
+                usb::stop_usb_sniffer();
+                cloud::stop_cloud_streaming();
+                std::process::exit(0);
             }
             _ => {}
         })

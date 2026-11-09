@@ -1149,7 +1149,7 @@ onMounted(() => {
     initSteps.value[1].done = true;
     initProgress.value = Math.max(initProgress.value, 65);
     initStatusMessage.value = `已检测到 ${ifaces.length} 个网络接口，已挂载物理网卡...`;
-    startCapture();
+    // 冷启动完成接口探活，保留就绪待命态，待 HUD 淡出或用户主动启动嗅探避免并发风暴
     checkAllReady();
   }).catch((e) => {
     addLog(`[ERROR] 获取网卡列表失败: ${e}`);
