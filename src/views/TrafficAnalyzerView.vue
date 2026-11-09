@@ -560,15 +560,19 @@
               </div>
             </div>
 
-            <!-- 空状态提示 -->
-            <div v-if="filteredPackets.length === 0" class="flex flex-col items-center justify-center py-24 text-slate-400 text-xs gap-2 select-none">
-              <div class="w-12 h-12 rounded-2xl glass-surface border border-white/10 flex items-center justify-center text-xl mb-1 shadow-lg text-cyan-400">
-                🌐
-              </div>
-              <span class="text-sm font-bold text-white">暂无匹配的数据包流</span>
-              <span class="text-[10px] text-slate-400 font-mono">请检查过滤条件，或点击顶部 HUD 动态岛【启动网卡嗅探】</span>
-            </div>
           </div>
+        </div>
+
+        <!-- 空状态提示 (严格锚定可视视口中央，彻底消除超宽 minWidth 导致的偏右问题) -->
+        <div v-if="filteredPackets.length === 0"
+          class="absolute inset-x-0 top-10 bottom-0 flex flex-col items-center justify-center text-slate-400 text-xs gap-2 select-none pointer-events-none z-10 px-4 text-center">
+          <div class="w-12 h-12 rounded-2xl glass-surface border border-slate-200/60 dark:border-white/10 flex items-center justify-center text-xl mb-1 shadow-lg text-cyan-500 dark:text-cyan-400 pointer-events-auto">
+            🌐
+          </div>
+          <span class="text-sm font-bold text-slate-800 dark:text-slate-100">暂无匹配的数据包流</span>
+          <span class="text-[11px] text-slate-500 dark:text-slate-400 font-mono max-w-md">
+            请检查过滤条件，或点击顶部 HUD 动态岛【启动网卡嗅探】
+          </span>
         </div>
 
         <!-- 多选快捷操作悬浮舱 (Floating Action Capsule) -->
