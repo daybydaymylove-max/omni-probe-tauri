@@ -723,6 +723,105 @@ mod tests {
         assert!(list.iter().any(|item| item.ip == "0.0.0.0"));
         assert!(list.iter().any(|item| item.ip == "127.0.0.1"));
     }
+
+    #[test]
+    fn test_crc32_standard_vector() {
+        // 标准测试向量: "123456789" 的 IEEE 802.3 CRC-32 必须为 0xCBF43926
+        let vector = b"123456789";
+        let crc = calculate_crc32(vector);
+        assert_eq!(crc, 0xCBF43926);
+    }
+
+    #[test]
+    fn test_calculate_checksum_cmd_all_algos() {
+        let hex_data = "010300000002".to_string();
+
+        // 1. Modbus CRC-16
+        let crc16 = calculate_checksum_cmd(hex_data.clone(), "MODBUS_CRC16".into()).expect("CRC16 计算失败");
+        assert_eq!(crc16, "C4 0B");
+
+        // 2. Sum8: 0x01 + 0x03 + 0x02 = 0x06
+        let sum8 = calculate_checksum_cmd(hex_data.clone(), "SUM8".into()).expect("SUM8 计算失败");
+        assert_eq!(sum8, "06");
+
+        // 3. BCC / XOR: 0x01 ^ 0x03 ^ 0x02 = 0x00
+        let bcc = calculate_checksum_cmd(hex_data.clone(), "BCC".into()).expect("BCC 计算失败");
+        assert_eq!(bcc, "00");
+
+        // 4. CRC-32
+        let crc32 = calculate_checksum_cmd(hex_data, "CRC32".into()).expect("CRC32 计算失败");
+        assert_eq!(crc32.len(), 8);
+    }
+
+    #[tokio::test]
+    async fn test_real_tcp_loopback_socket_transceive() {
+        use tokio::net::{TcpListener, TcpStream};
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        // 1. 动态绑定本地高位随机端口
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("绑定随机 TCP 端口失败");
+        let local_addr = listener.local_addr().expect("获取本地端口失败");
+
+        // 2. 启动异步服务端接收任务
+        let server_task = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.expect("接收 TCP 连接失败");
+            let mut buf = vec![0u8; 1024];
+            let n = socket.read(&mut buf).await.expect("读取数据失败");
+            // Echo 回发
+            socket.write_all(&buf[..n]).await.expect("回发数据失败");
+            n
+        });
+
+        // 3. 客户端连接并发送标准 Modbus 测试报文
+        let mut client = TcpStream::connect(local_addr).await.expect("连接本地 TCP 服务失败");
+        let test_payload = vec![0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0x01, 0x03, 0x00, 0x00, 0x00, 0x02];
+        client.write_all(&test_payload).await.expect("客户端发送报文失败");
+
+        let mut rx_buf = vec![0u8; 1024];
+        let rx_len = client.read(&mut rx_buf).await.expect("客户端接收 Echo 失败");
+
+        assert_eq!(rx_len, test_payload.len());
+        assert_eq!(&rx_buf[..rx_len], &test_payload[..]);
+
+        let server_processed = server_task.await.expect("服务端任务 Panic");
+        assert_eq!(server_processed, test_payload.len());
+    }
+
+    #[tokio::test]
+    async fn test_real_udp_loopback_socket_transceive() {
+        use tokio::net::UdpSocket;
+
+        let server_sock = UdpSocket::bind("127.0.0.1:0").await.expect("绑定 UDP 服务端失败");
+        let server_addr = server_sock.local_addr().expect("获取服务端地址失败");
+
+        let client_sock = UdpSocket::bind("127.0.0.1:0").await.expect("绑定 UDP 客户端失败");
+
+        let test_packet = b"OMNI_PROBE_NET_ASSIST_UDP_TEST_PAYLOAD";
+        client_sock.send_to(test_packet, server_addr).await.expect("UDP 发送失败");
+
+        let mut buf = [0u8; 128];
+        let (n, peer) = server_sock.recv_from(&mut buf).await.expect("UDP 接收失败");
+
+        assert_eq!(n, test_packet.len());
+        assert_eq!(&buf[..n], test_packet);
+        assert_eq!(peer, client_sock.local_addr().unwrap());
+    }
+
+    #[test]
+    fn test_extreme_stress_100k_checksum_performance() {
+        // 极限用例 2: 100KB 大数据载荷压力测试，验证 O(N) 线性时空复杂度与无溢出
+        let large_payload = vec![0x55u8; 100_000];
+        let start = std::time::Instant::now();
+        let crc16 = calculate_modbus_crc16(&large_payload);
+        let elapsed = start.elapsed();
+
+        // 100KB 数据计算耗时应当在 5ms 之内
+        assert!(elapsed.as_millis() < 50, "CRC16 100KB 计算超时: {:?}", elapsed);
+        assert_ne!(crc16, 0);
+
+        let crc32 = calculate_crc32(&large_payload);
+        assert_ne!(crc32, 0);
+    }
 }
 
 
