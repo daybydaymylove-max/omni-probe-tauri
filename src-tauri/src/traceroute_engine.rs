@@ -550,6 +550,7 @@ pub async fn execute_traceroute(
     #[cfg(target_os = "windows")]
     let mut cmd = {
         let mut c = Command::new("tracert");
+        c.creation_flags(0x08000000);
         c.arg("-d")
             .arg("-h")
             .arg(hops_limit.to_string())

@@ -484,6 +484,54 @@
 
     <GlobalNotificationToast />
 
+    <!-- 启动中枢自检就绪友好提示 HUD (Launch & Readiness Splash Transition) -->
+    <transition name="splash-fade">
+      <div v-if="isInitializing" class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 dark:bg-black/75 backdrop-blur-2xl select-none">
+        <div class="relative w-[480px] p-7 rounded-3xl glass-surface border border-slate-200/80 dark:border-white/20 shadow-2xl flex flex-col items-center text-center space-y-4">
+          <!-- 呼吸脉冲徽标 -->
+          <div class="relative flex items-center justify-center my-1">
+            <div class="absolute w-20 h-20 rounded-full bg-cyan-500/20 animate-ping"></div>
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-xl shadow-cyan-500/30 text-white text-2xl font-bold">
+              ⚡
+            </div>
+          </div>
+
+          <!-- 系统标题与版本 -->
+          <div class="space-y-0.5">
+            <h2 class="text-sm font-bold text-slate-900 dark:text-white tracking-tight flex items-center justify-center gap-2">
+              <span>OMNI-PROBE 网络探针系统</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-900 dark:bg-cyan-500/20 dark:text-cyan-300 font-mono font-bold">v0.2.4</span>
+            </h2>
+            <p class="text-[11px] text-slate-600 dark:text-slate-400 font-mono">工业级全栈多总线网络深度分析仪 · 正在启动自检</p>
+          </div>
+
+          <!-- 动态进度条 -->
+          <div class="w-full space-y-1.5 pt-1">
+            <div class="flex items-center justify-between text-xs font-mono">
+              <span class="text-slate-800 dark:text-slate-200 font-medium truncate max-w-[340px]">{{ initStatusMessage }}</span>
+              <span class="font-bold text-cyan-800 dark:text-cyan-300">{{ Math.round(initProgress) }}%</span>
+            </div>
+            <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden p-0.5 border border-slate-300 dark:border-white/15">
+              <div class="h-full rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 transition-all duration-300 shadow-sm"
+                :style="{ width: `${initProgress}%` }"></div>
+            </div>
+          </div>
+
+          <!-- 阶段式就绪清单 -->
+          <div class="w-full grid grid-cols-2 gap-2 text-[11px] font-mono text-left pt-2">
+            <div v-for="(step, idx) in initSteps" :key="idx"
+              class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border transition-all"
+              :class="step.done 
+                ? 'bg-emerald-50 text-emerald-900 border-emerald-300 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300 font-semibold' 
+                : 'bg-slate-100/60 text-slate-500 border-slate-200 dark:bg-white/5 dark:border-white/10 dark:text-slate-400'">
+              <span class="text-xs">{{ step.done ? '✓' : '○' }}</span>
+              <span class="truncate">{{ step.label }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
+
   </div>
 </template>
 
@@ -707,12 +755,24 @@ const isEnvDiagnosticOpen = ref(false);
 const isWirelessVlanOpen = ref(false);
 const envScore = ref<number | null>(null);
 
-function loadEnvReadiness() {
-  invoke('get_environment_inspection_cmd').then((res: any) => {
+// 启动自检就绪状态与友好提示控制器
+const isInitializing = ref(true);
+const initProgress = ref(15);
+const initStatusMessage = ref('正在初始化底层通信总线与内存池...');
+const initSteps = ref([
+  { label: '内核旁路与环形缓冲池', done: false },
+  { label: '物理网络适配器探测', done: false },
+  { label: '工业现场总线与串口', done: false },
+  { label: '工控规约解剖矩阵', done: false },
+]);
+
+async function loadEnvReadiness(): Promise<void> {
+  try {
+    const res: any = await invoke('get_environment_inspection_cmd');
     envScore.value = res.readiness_score;
-  }).catch((e) => {
+  } catch (e) {
     console.warn('[ENV_CHECK] 失败:', e);
-  });
+  }
 }
 const globalDossierIp = ref('');
 
@@ -997,8 +1057,53 @@ function handleFilterTraffic(ip: string) {
 }
 
 onMounted(() => {
-  loadEnvReadiness();
   window.addEventListener('keydown', handleGlobalKeydown);
+  // 步进平滑定时器
+  const progressTimer = setInterval(() => {
+    if (initProgress.value < 88) {
+      initProgress.value += 4;
+    }
+  }, 80);
+
+  // 阶段 1: 内存池与内核旁路
+  setTimeout(() => {
+    initSteps.value[0].done = true;
+    initProgress.value = Math.max(initProgress.value, 35);
+    initStatusMessage.value = '内核旁路与环形缓冲池已就绪...';
+  }, 120);
+
+  let isFinished = false;
+  function finishInitialization() {
+    if (isFinished) return;
+    isFinished = true;
+    clearInterval(progressTimer);
+    initSteps.value.forEach(s => s.done = true);
+    initProgress.value = 100;
+    initStatusMessage.value = '系统自检就绪，全息分析仪已启动';
+    setTimeout(() => {
+      isInitializing.value = false;
+      notifySuccess('探针中枢已就绪', selectedIface.value ? `已自动绑定网络适配器: ${selectedIface.value}` : '系统已就绪，等待选择目标网络适配器');
+    }, 250);
+  }
+
+  // 1.8 秒防卡顿兜底看门狗 (Watchdog)
+  const watchdog = setTimeout(() => {
+    finishInitialization();
+  }, 1800);
+
+  function checkAllReady() {
+    if (initSteps.value.every(s => s.done)) {
+      clearTimeout(watchdog);
+      finishInitialization();
+    }
+  }
+
+  // 任务 1: 环境检查
+  loadEnvReadiness().finally(() => {
+    initSteps.value[3].done = true;
+    initProgress.value = Math.max(initProgress.value, 75);
+    checkAllReady();
+  });
   // 确保 DOM 根节点立即挂载苹果 2026 冰晶磨砂明亮类名
   document.documentElement.classList.remove('theme-apple-dark');
   document.documentElement.classList.add('theme-apple-light');
@@ -1012,7 +1117,11 @@ onMounted(() => {
     if (ifaces.length > 0 && !selectedIface.value) {
       selectedIface.value = ifaces[0];
     }
+    initSteps.value[1].done = true;
+    initProgress.value = Math.max(initProgress.value, 65);
+    initStatusMessage.value = `已检测到 ${ifaces.length} 个网络接口，已挂载物理网卡...`;
     startCapture();
+    checkAllReady();
   }).catch((e) => {
     addLog(`[ERROR] 获取网卡列表失败: ${e}`);
   });
@@ -1024,6 +1133,9 @@ onMounted(() => {
     if (serialPorts.value.length > 0 && !selectedSerial.value) {
       selectedSerial.value = serialPorts.value[0];
     }
+    initSteps.value[2].done = true;
+    initProgress.value = Math.max(initProgress.value, 85);
+    checkAllReady();
   }).catch(() => {
     invoke<string[]>('list_serial_ports').then((ports) => {
       serialPorts.value = ports;
@@ -1189,4 +1301,7 @@ onMounted(() => {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.6); }
 .slide-up-enter-active, .slide-up-leave-active { transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
 .slide-up-enter-from, .slide-up-leave-to { opacity: 0; transform: translateY(12px); }
+.splash-fade-enter-active, .splash-fade-leave-active { transition: opacity 0.35s ease, transform 0.35s ease; }
+.splash-fade-enter-from { opacity: 0; transform: scale(0.97); }
+.splash-fade-leave-to { opacity: 0; transform: scale(1.02); }
 </style>

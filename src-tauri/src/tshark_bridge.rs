@@ -19,6 +19,12 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use serde::{Deserialize, Serialize};
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 /// Wireshark / TShark 运行时探活状态
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TsharkStatus {
@@ -94,7 +100,17 @@ impl TsharkBridge {
         }
 
         // 尝试从环境变量 PATH 中查找
-        if let Ok(output) = Command::new("where.exe").arg("tshark").output() {
+        #[cfg(windows)]
+        let mut where_cmd = Command::new("where.exe");
+        #[cfg(windows)]
+        where_cmd.arg("tshark").creation_flags(CREATE_NO_WINDOW);
+
+        #[cfg(not(windows))]
+        let mut where_cmd = Command::new("which");
+        #[cfg(not(windows))]
+        where_cmd.arg("tshark");
+
+        if let Ok(output) = where_cmd.output() {
             if output.status.success() {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 if let Some(first_line) = stdout.lines().next() {
@@ -130,7 +146,12 @@ impl TsharkBridge {
         let path_str = path.to_string_lossy().to_string();
 
         // 执行 tshark -v 获取版本与编译元数据
-        match Command::new(&path).arg("-v").output() {
+        let mut v_cmd = Command::new(&path);
+        v_cmd.arg("-v");
+        #[cfg(windows)]
+        v_cmd.creation_flags(CREATE_NO_WINDOW);
+
+        match v_cmd.output() {
             Ok(output) => {
                 if output.status.success() {
                     let version_out = String::from_utf8_lossy(&output.stdout);
@@ -240,13 +261,15 @@ impl TsharkBridge {
         let pcap_stream = Self::create_in_memory_pcap_stream(packet_raw_bytes, link);
 
         // 启动 tshark 子进程，配置 stdin/stdout 纯内存异步管道
-        let mut child = match Command::new(&tshark_path)
-            .args(["-T", "json", "-r", "-"])
+        let mut tshark_cmd = Command::new(&tshark_path);
+        tshark_cmd.args(["-T", "json", "-r", "-"])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-        {
+            .stderr(Stdio::piped());
+        #[cfg(windows)]
+        tshark_cmd.creation_flags(CREATE_NO_WINDOW);
+
+        let mut child = match tshark_cmd.spawn() {
             Ok(c) => c,
             Err(e) => {
                 return TsharkDissectionResult {
