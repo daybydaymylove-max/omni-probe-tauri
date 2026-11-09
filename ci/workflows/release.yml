@@ -54,6 +54,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             libpcap-dev \
+            libudev-dev \
+            pkg-config \
             libwebkit2gtk-4.1-dev \
             build-essential \
             curl \
@@ -77,7 +79,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Omni-Probe ${{ github.ref_name }}'
-          releaseBody: 'See full changelog in release details.'
+          releaseBody: 'Omni-Probe 工业级全能网络探针多操作系统平台原生发布版本。包含 Windows x64 (MSI/EXE)、Linux (DEB/AppImage) 以及 macOS (DMG/APP)。'
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
