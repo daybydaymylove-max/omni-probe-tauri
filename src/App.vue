@@ -56,10 +56,8 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" />
             </svg>
           </button>
-          <div class="w-7 h-7 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/25 shrink-0">
-            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-            </svg>
+          <div class="w-7 h-7 rounded-xl overflow-hidden shadow-lg shadow-cyan-500/25 shrink-0 border border-white/20 flex items-center justify-center bg-slate-900/90 p-0.5">
+            <img src="/logo.svg" alt="Omni-Probe Logo" class="w-full h-full object-contain" />
           </div>
           <div class="flex flex-col whitespace-nowrap">
             <div class="flex items-center gap-1.5">
@@ -491,8 +489,8 @@
           <!-- 呼吸脉冲徽标 -->
           <div class="relative flex items-center justify-center my-1">
             <div class="absolute w-20 h-20 rounded-full bg-cyan-500/20 animate-ping"></div>
-            <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-xl shadow-cyan-500/30 text-white text-2xl font-bold">
-              ⚡
+            <div class="w-16 h-16 rounded-2xl overflow-hidden shadow-xl shadow-cyan-500/30 border border-white/30 flex items-center justify-center bg-slate-900/95 p-1 relative z-10">
+              <img src="/logo.svg" alt="Omni-Probe Logo" class="w-full h-full object-contain filter drop-shadow(0 0 8px rgba(6,182,212,0.6))" />
             </div>
           </div>
 

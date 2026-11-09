@@ -1,0 +1,164 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- 背景外部漫反射光晕 -->
+    <filter id="ambient-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="36" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <!-- 探针核芯高能辉光 -->
+    <filter id="core-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <!-- 极细腻环境投影 -->
+    <filter id="drop-shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="24" stdDeviation="32" flood-color="#020617" flood-opacity="0.65" />
+    </filter>
+
+    <!-- 渐变定义 -->
+    <!-- 外壳主背景：深邃工业钛金夜蓝 -->
+    <linearGradient id="squircle-bg" x1="15%" y1="10%" x2="85%" y2="90%">
+      <stop offset="0%" stop-color="#1E293B" />
+      <stop offset="40%" stop-color="#0F172A" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+
+    <!-- 外壳高光倒角边缘 -->
+    <linearGradient id="squircle-rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.8" />
+      <stop offset="35%" stop-color="#0284C7" stop-opacity="0.3" />
+      <stop offset="70%" stop-color="#0F172A" stop-opacity="0.1" />
+      <stop offset="100%" stop-color="#06B6D4" stop-opacity="0.6" />
+    </linearGradient>
+
+    <!-- 雷达刻度渐变 -->
+    <radialGradient id="radar-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0284C7" stop-opacity="0.25" />
+      <stop offset="65%" stop-color="#0284C7" stop-opacity="0.05" />
+      <stop offset="100%" stop-color="#0284C7" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- 探针主金属刃面 -->
+    <linearGradient id="probe-left" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E0F2FE" />
+      <stop offset="30%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#0369A1" />
+    </linearGradient>
+
+    <linearGradient id="probe-right" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#BAE6FD" />
+      <stop offset="30%" stop-color="#0284C7" />
+      <stop offset="100%" stop-color="#075985" />
+    </linearGradient>
+
+    <!-- 核心能量波束 -->
+    <linearGradient id="beam-grad" x1="50%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" stop-color="#0284C7" stop-opacity="0" />
+      <stop offset="50%" stop-color="#06B6D4" stop-opacity="0.75" />
+      <stop offset="100%" stop-color="#FFFFFF" />
+    </linearGradient>
+
+    <!-- 突变波形渐变 -->
+    <linearGradient id="waveform-grad" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#06B6D4" stop-opacity="0.1" />
+      <stop offset="30%" stop-color="#22D3EE" stop-opacity="0.8" />
+      <stop offset="50%" stop-color="#F59E0B" />
+      <stop offset="70%" stop-color="#38BDF8" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#0EA5E9" stop-opacity="0.1" />
+    </linearGradient>
+  </defs>
+
+  <!-- 1. 外部环境微光底衬 -->
+  <circle cx="512" cy="512" r="390" fill="url(#radar-glow)" filter="url(#ambient-glow)" />
+
+  <!-- 2. 主体 Apple Squircle 工业级外壳 (带投影与微米高光边缘) -->
+  <g filter="url(#drop-shadow)">
+    <!-- 外壳底面 -->
+    <rect x="112" y="112" width="800" height="800" rx="200" ry="200" fill="url(#squircle-bg)" />
+    <!-- 倒角金属微光外边框 -->
+    <rect x="112" y="112" width="800" height="800" rx="200" ry="200" fill="none" stroke="url(#squircle-rim)" stroke-width="6" />
+    <!-- 内部次级内敛反光槽 -->
+    <rect x="122" y="122" width="780" height="780" rx="190" ry="190" fill="none" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2" />
+  </g>
+
+  <!-- 3. 背景网格与物理多总线通信雷达刻度 (Precision Bus & Radar Matrix) -->
+  <g opacity="0.65">
+    <!-- 外雷达大环 -->
+    <circle cx="512" cy="512" r="300" fill="none" stroke="#0284C7" stroke-width="2" stroke-dasharray="6 8" stroke-opacity="0.4" />
+    <!-- 中雷达环 -->
+    <circle cx="512" cy="512" r="210" fill="none" stroke="#38BDF8" stroke-width="2" stroke-opacity="0.3" />
+    <!-- 内核心环 -->
+    <circle cx="512" cy="512" r="120" fill="none" stroke="#06B6D4" stroke-width="1.5" stroke-dasharray="3 4" stroke-opacity="0.5" />
+
+    <!-- 象限刻度标线 -->
+    <line x1="512" y1="162" x2="512" y2="202" stroke="#38BDF8" stroke-width="3" stroke-linecap="round" />
+    <line x1="512" y1="822" x2="512" y2="862" stroke="#38BDF8" stroke-width="3" stroke-linecap="round" />
+    <line x1="162" y1="512" x2="202" y2="512" stroke="#38BDF8" stroke-width="3" stroke-linecap="round" />
+    <line x1="822" y1="512" x2="862" y2="512" stroke="#38BDF8" stroke-width="3" stroke-linecap="round" />
+
+    <!-- 45度精密角分刻度 -->
+    <line x1="264" y1="264" x2="288" y2="288" stroke="#0284C7" stroke-width="2" stroke-linecap="round" stroke-opacity="0.6" />
+    <line x1="760" y1="264" x2="736" y2="288" stroke="#0284C7" stroke-width="2" stroke-linecap="round" stroke-opacity="0.6" />
+    <line x1="264" y1="760" x2="288" y2="736" stroke="#0284C7" stroke-width="2" stroke-linecap="round" stroke-opacity="0.6" />
+    <line x1="760" y1="760" x2="736" y2="736" stroke="#0284C7" stroke-width="2" stroke-linecap="round" stroke-opacity="0.6" />
+  </g>
+
+  <!-- 4. 穿透式物理数据突变波谱 (Mutant Waveform Analyzer) -->
+  <g>
+    <!-- 浅光背景辉光波 -->
+    <path d="M 192 580 C 290 580, 340 500, 420 500 C 470 500, 490 340, 512 340 C 534 340, 554 660, 604 660 C 674 660, 724 580, 832 580"
+          fill="none" stroke="url(#waveform-grad)" stroke-width="12" stroke-linecap="round" opacity="0.35" filter="url(#ambient-glow)" />
+
+    <!-- 真实清晰数据突变折线 (高对比度) -->
+    <path d="M 192 580 C 290 580, 340 500, 420 500 C 470 500, 490 340, 512 340 C 534 340, 554 660, 604 660 C 674 660, 724 580, 832 580"
+          fill="none" stroke="url(#waveform-grad)" stroke-width="5" stroke-linecap="round" />
+
+    <!-- 突变采样峰值指示光标点 (Sampling Peaks) -->
+    <circle cx="420" cy="500" r="5" fill="#38BDF8" />
+    <circle cx="512" cy="340" r="7" fill="#FFFFFF" stroke="#06B6D4" stroke-width="3" />
+    <circle cx="604" cy="660" r="6" fill="#F59E0B" stroke="#78350F" stroke-width="2" />
+  </g>
+
+  <!-- 5. 核心探针物理结构 (The Omni-Probe Needle & Quantum Hex Core) -->
+  <g filter="url(#core-glow)">
+    <!-- 探针底部射频基座 (Probe Connector Base) -->
+    <polygon points="460,780 564,780 544,720 480,720" fill="#1E293B" stroke="#0284C7" stroke-width="2" />
+    <line x1="480" y1="750" x2="544" y2="750" stroke="#38BDF8" stroke-width="3" opacity="0.8" />
+
+    <!-- 探针主体下半部主干 -->
+    <polygon points="484,720 540,720 528,540 496,540" fill="#0F172A" stroke="#38BDF8" stroke-width="1.5" />
+
+    <!-- 探针中间多面体晶核 (Left Cut & Right Cut) -->
+    <!-- 左切面高光翼 -->
+    <polygon points="512,240 436,460 488,540 512,520" fill="url(#probe-left)" />
+    <!-- 右切面反射翼 -->
+    <polygon points="512,240 588,460 536,540 512,520" fill="url(#probe-right)" />
+
+    <!-- 探针中央超导体晶棱线 -->
+    <line x1="512" y1="240" x2="512" y2="520" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" />
+
+    <!-- 探针高能聚束针尖 (The Needle Apex) -->
+    <polygon points="512,180 502,248 522,248" fill="#FFFFFF" />
+  </g>
+
+  <!-- 6. 探针接触面脉冲微星与能量激波 (Pulse Contact Spark) -->
+  <g>
+    <!-- 外部激发环 -->
+    <circle cx="512" cy="180" r="42" fill="none" stroke="#38BDF8" stroke-width="2" stroke-opacity="0.6" stroke-dasharray="4 6" />
+    <circle cx="512" cy="180" r="22" fill="#06B6D4" fill-opacity="0.3" filter="url(#ambient-glow)" />
+    
+    <!-- 核心微星光芒十字 -->
+    <polygon points="512,142 516,176 550,180 516,184 512,218 508,184 474,180 508,176" fill="#FFFFFF" />
+    <circle cx="512" cy="180" r="5" fill="#FDE047" />
+  </g>
+
+  <!-- 7. 物理总线引脚端子点缀 (CAN/RS485/Ethernet Bus Nodes) -->
+  <g fill="#38BDF8">
+    <circle cx="280" cy="512" r="4" opacity="0.6" />
+    <circle cx="340" cy="512" r="3" opacity="0.4" />
+    <circle cx="684" cy="512" r="3" opacity="0.4" />
+    <circle cx="744" cy="512" r="4" opacity="0.6" />
+  </g>
+</svg>
