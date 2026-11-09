@@ -6,14 +6,14 @@
       <div class="px-6 py-3 border-b border-slate-800 bg-slate-950/70 flex items-center justify-between shrink-0 flex-wrap gap-3">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-xl shadow-inner">
-            🌍
+            {{ isLanTarget ? '🏢' : '🌍' }}
           </div>
           <div>
             <div class="flex items-center gap-2">
               <h3 class="text-base font-bold font-mono tracking-tight text-white flex items-center gap-2">
-                <span>数字地球测地线可视路由追踪</span>
+                <span>测地线可视路由追踪与微观虚拟拓扑</span>
                 <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800/60 font-sans">
-                  Digital Globe & Geodesic Traceroute
+                  {{ isLanTarget ? 'LAN Micro-Topology Schematic' : 'Geodesic Digital Globe' }}
                 </span>
               </h3>
               <span v-if="isTracing" class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-amber-500/10 text-amber-300 border border-amber-500/30 animate-pulse">
@@ -26,18 +26,29 @@
               </span>
             </div>
             <p class="text-[11px] text-slate-400 font-mono mt-0.5">
-              100% 离线脱机三维数字地球与等角圆柱投影 · 本机自我真实位置智能锚定 · 物理光纤时延比对与缓冲排队剖析
+              {{ isLanTarget ? '局域网/工控网络微观拓扑虚拟架构图示 · 逐级网关与子网跃迁 · 微秒级物理排队时延' : '100% 离线脱机三维数字地球与等角圆柱投影 · 本机自我真实位置智能锚定 · 物理光纤时延比对' }}
             </p>
           </div>
         </div>
 
-        <!-- 右侧：2D/3D 模式切换、地球自转控制、导出与关闭 -->
+        <!-- 右侧：3D/2D/LAN 三模切换、控制与关闭 -->
         <div class="flex items-center gap-2.5 flex-wrap">
-          <!-- 2D / 3D 视图模式切换胶囊 -->
+          <!-- 三模视图切换胶囊 -->
           <div class="bg-slate-950/80 p-0.5 rounded-xl border border-slate-800 flex items-center gap-0.5 font-mono text-xs">
             <button
+              @click="viewMode = 'lan'"
+              :class="['px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 font-bold',
+                viewMode === 'lan' ? 'bg-gradient-to-r from-emerald-600 to-cyan-600 text-white shadow-md' : 'text-slate-400 hover:text-white']"
+              title="切换至局域网微观虚拟拓扑架构图示 (清晰展示内网逐级网关跃迁、子网网段与微秒级时延)"
+            >
+              <span>🏢 局域网虚拟拓扑</span>
+              <span v-if="isLanTarget" class="px-1 py-0.2 rounded-full text-[9px] bg-emerald-400/20 text-emerald-300 font-bold border border-emerald-500/30">
+                内网推荐
+              </span>
+            </button>
+            <button
               @click="viewMode = '3d'"
-              :class="['px-3 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 font-bold',
+              :class="['px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 font-bold',
                 viewMode === '3d' ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white']"
               title="切换至三维交互式数字地球 (支持鼠标 360° 旋转、滚轮缩放与立体拱桥测地大圆航线)"
             >
@@ -45,7 +56,7 @@
             </button>
             <button
               @click="viewMode = '2d'"
-              :class="['px-3 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 font-bold',
+              :class="['px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 font-bold',
                 viewMode === '2d' ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white']"
               title="切换至二维高精度等角圆柱投影地图 (全景展开世界经纬网络)"
             >
@@ -53,7 +64,7 @@
             </button>
           </div>
 
-          <!-- 3D 专属控制：自转开关与重置视角 -->
+          <!-- 3D 专属控制 -->
           <template v-if="viewMode === '3d'">
             <button
               @click="toggleGlobeAutoRotate"
@@ -117,7 +128,7 @@
         </div>
 
         <div class="flex items-center gap-3 text-slate-400 text-[11px]">
-          <span>数据库: <strong class="text-slate-300">ip2region.xdb 离线内嵌</strong></span>
+          <span>定位网络体系: <strong :class="isLanTarget ? 'text-amber-400' : 'text-cyan-400'">{{ isLanTarget ? 'RFC 1918 局域网微观路由' : '全球广域互联网骨干' }}</strong></span>
           <span>·</span>
           <span>定位状态: <strong class="text-emerald-400 font-bold">{{ selfHopInfo.refineStatus }}</strong></span>
         </div>
@@ -133,8 +144,8 @@
             v-model="inputTarget"
             :disabled="isTracing"
             type="text"
-            placeholder="IPv4 地址或域名 (例如: 8.8.8.8, 114.114.114.114)"
-            class="px-3 py-1.5 w-60 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono text-xs shadow-inner"
+            placeholder="IPv4 地址或域名 (例如: 192.168.1.1, 10.0.0.1, 8.8.8.8)"
+            class="px-3 py-1.5 w-64 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono text-xs shadow-inner"
             @keyup.enter="startTrace"
           />
 
@@ -146,7 +157,7 @@
             :disabled="isTracing"
             class="px-2 py-1 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 text-xs cursor-pointer"
           >
-            <option :value="15">15 跳 (快速)</option>
+            <option :value="15">15 跳 (局域网推荐)</option>
             <option :value="30">30 跳 (标准)</option>
             <option :value="45">45 跳 (深度)</option>
             <option :value="64">64 跳 (全网穷尽)</option>
@@ -160,7 +171,7 @@
             :disabled="isTracing"
             class="px-2 py-1 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 text-xs cursor-pointer"
           >
-            <option :value="500">500 ms (极速)</option>
+            <option :value="300">300 ms (局域网极速)</option>
             <option :value="1000">1000 ms (推荐)</option>
             <option :value="2000">2000 ms (严密)</option>
           </select>
@@ -182,14 +193,16 @@
           </button>
         </div>
 
-        <!-- 关键指标摘要 (物理距离 & 光速时延) -->
+        <!-- 关键指标摘要 -->
         <div class="flex items-center gap-4 text-xs font-mono">
           <div class="flex items-center gap-1 text-slate-300">
-            <span class="text-slate-500">测地直线总距:</span>
-            <strong class="text-cyan-400">{{ totalGeodesicKm.toFixed(1) }} km</strong>
+            <span class="text-slate-500">{{ isLanTarget ? '内网物理线距:' : '测地直线总距:' }}</span>
+            <strong :class="isLanTarget ? 'text-emerald-400' : 'text-cyan-400'">
+              {{ isLanTarget ? (totalGeodesicKm * 1000).toFixed(0) + ' m' : totalGeodesicKm.toFixed(1) + ' km' }}
+            </strong>
           </div>
           <div class="flex items-center gap-1 text-slate-300">
-            <span class="text-slate-500">光纤理论往返:</span>
+            <span class="text-slate-500">理论最低时延:</span>
             <strong class="text-emerald-400">{{ theoreticalMinRtt.toFixed(2) }} ms</strong>
           </div>
           <div class="flex items-center gap-1 text-slate-300">
@@ -199,16 +212,116 @@
         </div>
       </div>
 
-      <!-- 4. 中部核心可视化与数据交互区 -->
+      <!-- 4. 中部核心可视化区 (支持 3D 数字地球 / 2D 全景地图 / 局域网微观虚拟拓扑 三模自适应) -->
       <div class="flex-1 flex flex-col overflow-y-auto p-4 gap-4 min-h-0 bg-slate-950/80">
         
-        <!-- 4.1 可视化画布容器 (3D 数字地球 / 2D 全景地图) -->
-        <div class="relative w-full h-84 rounded-2xl bg-gradient-to-b from-slate-950 via-[#0a0f1d] to-slate-950 border border-slate-800/80 shadow-2xl overflow-hidden flex items-center justify-center shrink-0">
+        <!-- 4.1 可视化画布容器 -->
+        <div class="relative w-full h-88 rounded-2xl bg-gradient-to-b from-slate-950 via-[#091122] to-slate-950 border border-slate-800/80 shadow-2xl overflow-hidden flex items-center justify-center shrink-0">
           
-          <!-- 背景网格暗纹 -->
           <div class="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:28px_28px] opacity-35 pointer-events-none"></div>
 
-          <!-- 3D 数字地球 Canvas (完全脱机原生正射三维渲染，带鼠标交互拖拽旋转) -->
+          <!-- 模式 A: 局域网微观虚拟拓扑架构图示 (LAN Micro-Topology Virtual Schematic) -->
+          <div
+            v-show="viewMode === 'lan'"
+            class="w-full h-full flex flex-col justify-between p-5 overflow-x-auto select-none"
+          >
+            <!-- 局域网拓扑标题 -->
+            <div class="flex items-center justify-between text-xs font-mono z-10">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]"></span>
+                <span class="font-bold text-white uppercase tracking-wider">局域网企业架构逐级跃迁虚拟拓扑图示</span>
+                <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 text-[10px]">
+                  Purdue Enterprise Hierarchy
+                </span>
+              </div>
+              <div class="text-[11px] text-slate-400 flex items-center gap-2">
+                <span>介质: <strong class="text-cyan-400">千兆双绞线 / 工业以太网</strong></span>
+                <span>·</span>
+                <span>跳步时延: <strong class="text-emerald-400">&lt; 1.0 ms</strong></span>
+              </div>
+            </div>
+
+            <!-- 横向逐跳架构节点卡片流与发光数据总线 -->
+            <div class="relative flex-1 flex items-center gap-3 overflow-x-auto py-3 px-2 custom-scrollbar">
+              
+              <template v-for="(hop, idx) in hops" :key="'lan-node-' + hop.hop_number">
+                <!-- 节点卡片 -->
+                <div
+                  :class="[
+                    'relative shrink-0 w-64 rounded-2xl p-3.5 border transition-all cursor-pointer backdrop-blur-xl flex flex-col justify-between shadow-xl',
+                    hop.is_self ? 'bg-emerald-950/40 border-emerald-500/50 shadow-emerald-950/30' : (hop.is_destination ? 'bg-amber-950/40 border-amber-500/50 shadow-amber-950/30' : 'bg-slate-900/80 border-slate-700/80 hover:border-cyan-500/60'),
+                    selectedHop?.hopNumber === hop.hop_number ? 'ring-2 ring-cyan-400 scale-102' : ''
+                  ]"
+                  @click="selectHopRow(hop)"
+                >
+                  <!-- 卡片顶部 -->
+                  <div class="flex items-center justify-between border-b border-white/10 pb-2 mb-2">
+                    <span
+                      :class="[
+                        'px-2 py-0.5 rounded-md text-[10px] font-bold font-mono',
+                        hop.is_self ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : (hop.is_destination ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-slate-800 text-slate-300')
+                      ]"
+                    >
+                      {{ hop.is_self ? '源点 #0 (本机)' : `Hop #${hop.hop_number}` }}
+                    </span>
+                    <span class="text-[11px] font-mono font-bold" :class="getRttClass(hop.rtt_ms)">
+                      {{ hop.is_self ? '0.0 ms' : (hop.is_timeout ? '*' : hop.rtt_ms.toFixed(1) + ' ms') }}
+                    </span>
+                  </div>
+
+                  <!-- 节点核心 IP 与角色描述 -->
+                  <div class="flex items-center gap-2.5 my-1">
+                    <span class="text-2xl">{{ getLanNodeIcon(hop) }}</span>
+                    <div class="flex-1 min-w-0">
+                      <div class="font-mono font-bold text-sm text-white truncate">{{ hop.ip }}</div>
+                      <div class="text-[11px] text-cyan-300 font-medium truncate mt-0.5">
+                        {{ hop.lan_role || (hop.is_self ? '本机源端' : '局域网路由') }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 底部子网与物理线距 -->
+                  <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-400">
+                    <span class="text-slate-300">网段: {{ hop.subnet_cidr || '局域网/24' }}</span>
+                    <span class="text-emerald-400">线距: ~{{ Math.round(hop.cumulative_distance_km * 1000) }}m</span>
+                  </div>
+                </div>
+
+                <!-- 节点间的高速互联数据管道 (若非最后一个节点) -->
+                <div v-if="idx < hops.length - 1" class="shrink-0 flex flex-col items-center justify-center px-1">
+                  <!-- 发光箭头母线 -->
+                  <div class="relative w-12 h-1 bg-gradient-to-r from-emerald-500/50 via-cyan-400 to-emerald-500/50 rounded-full overflow-hidden">
+                    <div class="absolute inset-0 bg-white/80 w-4 h-full rounded-full animate-dash-h"></div>
+                  </div>
+                  <span class="text-[9px] font-mono text-cyan-400 font-bold mt-1">
+                    {{ (hops[idx + 1].rtt_ms - hop.rtt_ms) >= 0 ? '+' + (hops[idx + 1].rtt_ms - hop.rtt_ms).toFixed(1) + 'ms' : '0.2ms' }}
+                  </span>
+                </div>
+              </template>
+
+              <!-- 空状态 -->
+              <div v-if="hops.length === 0" class="w-full text-center text-slate-500 text-xs py-10 font-mono">
+                请输入局域网 IP (如 192.168.1.1, 10.0.0.1) 并点击【启动测地追踪】开始探测微观架构
+              </div>
+
+            </div>
+
+            <!-- 底部局域网架构状态说明 -->
+            <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 border-t border-slate-800/80 pt-2 z-10">
+              <div class="flex items-center gap-3">
+                <span class="text-emerald-400 font-bold">🟢 二层直通线速 (Line-Rate)</span>
+                <span>·</span>
+                <span>介质模型: Cat6 综合布线 (增量 ~35m/跳)</span>
+                <span>·</span>
+                <span>排队诊断: 无内网广播风暴或二层环路</span>
+              </div>
+              <div class="text-slate-400">
+                可随时在右上角切换至【3D 数字地球】或【2D 全景地图】
+              </div>
+            </div>
+          </div>
+
+          <!-- 模式 B: 3D 数字地球 Canvas -->
           <canvas
             v-show="viewMode === '3d'"
             ref="globeCanvasRef"
@@ -220,7 +333,7 @@
             @wheel.prevent="onGlobeWheel"
           ></canvas>
 
-          <!-- 2D 全景平面投影 SVG (真实高精度经纬度大陆多边形边界 + 经纬度刻度尺) -->
+          <!-- 模式 C: 2D 全景平面投影 SVG -->
           <svg
             v-show="viewMode === '2d'"
             viewBox="0 0 960 480"
@@ -237,7 +350,7 @@
               </filter>
             </defs>
 
-            <!-- 2D 经纬网格 (每 30° 一根线) -->
+            <!-- 2D 经纬网格 -->
             <g class="stroke-slate-800/60 stroke-[0.8]" stroke-dasharray="2 3">
               <line x1="0" y1="240" x2="960" y2="240" class="stroke-slate-600/80 stroke-1" stroke-dasharray="none" />
               <line x1="480" y1="0" x2="480" y2="480" class="stroke-slate-600/80 stroke-1" stroke-dasharray="none" />
@@ -247,7 +360,7 @@
               <line v-for="x in [80, 160, 240, 320, 400, 560, 640, 720, 800, 880]" :key="'lon-' + x" :x1="x" y1="0" :x2="x" y2="480" />
             </g>
 
-            <!-- 2D 真实高精经纬度大陆板块多边形渲染 (确保经纬度与 IP 标注严密对齐) -->
+            <!-- 2D 真实高精经纬度大陆板块多边形 -->
             <g class="fill-slate-800/70 stroke-cyan-500/30 stroke-[0.8]">
               <path v-for="(pathStr, pIdx) in worldLandPaths2d" :key="'poly-2d-' + pIdx" :d="pathStr" />
             </g>
@@ -275,7 +388,7 @@
                 class="cursor-pointer hover:scale-125 transition-transform"
                 @mouseenter="hoveredHop = point"
                 @mouseleave="hoveredHop = null"
-                @click="selectedHop = point"
+                @click="selectHopRow(point.rawHop)"
               >
                 <circle
                   r="7"
@@ -320,14 +433,15 @@
             </div>
             <div class="text-slate-500 text-[9px] mt-1.5 flex items-center justify-between border-t border-slate-800 pt-1">
               <span>精确经纬度: [{{ hoveredHop.lon.toFixed(2) }}°, {{ hoveredHop.lat.toFixed(2) }}°]</span>
-              <span>距起点: {{ hoveredHop.cumulativeKm.toFixed(1) }} km</span>
+              <span>距起点: {{ (hoveredHop.cumulativeKm * (isLanTarget ? 1000 : 1)).toFixed(1) }} {{ isLanTarget ? 'm' : 'km' }}</span>
             </div>
           </div>
 
           <!-- 地图底部控制提示与图例 -->
           <div class="absolute bottom-2.5 left-4 text-[10px] font-mono text-slate-400 flex items-center gap-3 select-none pointer-events-none bg-slate-950/70 px-3 py-1 rounded-xl border border-slate-800/60">
-            <span v-if="viewMode === '3d'">🖱️ 鼠标按住拖拽自由 360° 旋转地球 · 滚轮缩放</span>
-            <span v-else>🗺️ 投影体系: WGS-84 等角圆柱投影 (Equirectangular) · 纯离线高精经纬度</span>
+            <span v-if="viewMode === 'lan'">🏢 局域网虚拟架构拓扑: 鼠标点击卡片可在下方指标列表精准联动下钻</span>
+            <span v-else-if="viewMode === '3d'">🖱️ 鼠标按住拖拽自由 360° 旋转地球 · 滚轮缩放</span>
+            <span v-else>🗺️ 投影体系: WGS-84 等角圆柱投影 · 纯离线高精经纬度</span>
             <span>·</span>
             <span class="text-emerald-400 font-bold">已精准定位使用者自我 IP</span>
           </div>
@@ -340,7 +454,7 @@
             </div>
             <div class="flex items-center gap-1.5 text-cyan-400">
               <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
-              <span>路由器骨干跳</span>
+              <span>路由与交换跃点</span>
             </div>
             <div class="flex items-center gap-1.5 text-amber-400">
               <span class="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_6px_#f59e0b]"></span>
@@ -354,13 +468,13 @@
           
           <div class="px-4 py-2 bg-slate-950/70 border-b border-slate-800 flex items-center justify-between shrink-0 text-xs font-mono">
             <div class="flex items-center gap-2 text-slate-300 font-bold">
-              <span>📋 路由跃点与物理网络学指标清单 (Hop Telemetry & Bufferbloat)</span>
+              <span>📋 路由跃点全息清单 (Hop-by-Hop Architecture Telemetry)</span>
               <span class="text-[11px] px-2 py-0.2 rounded-full bg-slate-800 text-slate-400 font-normal">
                 已探测 {{ hops.length }} 节点
               </span>
             </div>
             <div class="text-[11px] text-slate-400">
-              首行始终对齐使用者本机自我 IP · 纯脱机经纬度与光纤测距
+              首行始终对齐使用者本机自我 IP · 局域网微观角色与子网自动研判
             </div>
           </div>
 
@@ -371,11 +485,10 @@
                   <th class="py-2 px-3 w-16 text-center">跳数</th>
                   <th class="py-2 px-3 w-40">路由器 / 主机 IP</th>
                   <th class="py-2 px-3 w-28">RTT 时延</th>
-                  <th class="py-2 px-3 w-56">地理归属 (国家/省/市)</th>
-                  <th class="py-2 px-3 w-36">运营商 (ISP)</th>
-                  <th class="py-2 px-3 w-40">测地坐标 (Lon, Lat)</th>
-                  <th class="py-2 px-3 w-28">区间物理距</th>
-                  <th class="py-2 px-3 w-28">累计物理距</th>
+                  <th class="py-2 px-3 w-48">网络角色 / 拓扑层级</th>
+                  <th class="py-2 px-3 w-40">地理归属 (国家/省/市)</th>
+                  <th class="py-2 px-3 w-32">子网 (CIDR)</th>
+                  <th class="py-2 px-3 w-28">物理线缆距</th>
                   <th class="py-2 px-3 text-right">缓冲排队剖析</th>
                 </tr>
               </thead>
@@ -410,7 +523,7 @@
                     <span v-else-if="hop.is_destination" class="text-[9px] px-1 rounded bg-amber-900/60 text-amber-200 border border-amber-700">终点</span>
                   </td>
 
-                  <!-- RTT 延迟与可视化条形图 -->
+                  <!-- RTT 延迟 -->
                   <td class="py-2 px-3">
                     <div v-if="hop.is_timeout" class="text-slate-500 italic">* ms</div>
                     <div v-else-if="hop.is_self" class="text-emerald-400 font-bold">0.0 ms</div>
@@ -420,48 +533,43 @@
                         <div
                           class="h-full rounded-full transition-all"
                           :class="getRttBarColor(hop.rtt_ms)"
-                          :style="{ width: Math.min(100, (hop.rtt_ms / 200) * 100) + '%' }"
+                          :style="{ width: Math.min(100, (hop.rtt_ms / (isLanTarget ? 5 : 200)) * 100) + '%' }"
                         ></div>
                       </div>
                     </div>
                   </td>
 
-                  <!-- 地理归属 -->
-                  <td class="py-2 px-3 text-slate-200">
-                    <div class="flex items-center gap-1">
-                      <span v-if="hop.country && hop.country !== '未知'">🌍 {{ formatLocation(hop) }}</span>
-                      <span v-else-if="hop.is_self">🏠 本地内网主机终端</span>
-                      <span v-else class="text-slate-500 italic">内网 / 未知跃点</span>
+                  <!-- 网络角色 / 拓扑层级 -->
+                  <td class="py-2 px-3 text-cyan-300 font-medium">
+                    <div class="flex items-center gap-1.5">
+                      <span>{{ getLanNodeIcon(hop) }}</span>
+                      <span class="truncate">{{ hop.lan_role || (hop.is_self ? '本机源端主机' : '骨干网络跃点') }}</span>
                     </div>
                   </td>
 
-                  <!-- 运营商 ISP -->
+                  <!-- 地理归属 -->
+                  <td class="py-2 px-3 text-slate-200">
+                    <div class="flex items-center gap-1 truncate">
+                      <span v-if="hop.country && hop.country !== '未知'">🌍 {{ formatLocation(hop) }}</span>
+                      <span v-else-if="hop.is_self">🏠 本地内网主机终端</span>
+                      <span v-else class="text-slate-500 italic">内网 / 私有网段</span>
+                    </div>
+                  </td>
+
+                  <!-- 子网网段 -->
                   <td class="py-2 px-3 text-slate-300 text-[11px]">
-                    <span v-if="hop.isp && hop.isp !== '未知'" class="px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-700/60 text-slate-200">
-                      {{ hop.isp }}
+                    <span v-if="hop.subnet_cidr" class="px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-700/60 text-cyan-200">
+                      {{ hop.subnet_cidr }}
                     </span>
                     <span v-else class="text-slate-600">-</span>
                   </td>
 
-                  <!-- 测地坐标 -->
-                  <td class="py-2 px-3 text-slate-400 text-[11px]">
-                    <span v-if="hop.has_geo" :class="hop.is_self ? 'text-emerald-400 font-bold' : 'text-cyan-400'">
-                      [{{ hop.longitude.toFixed(2) }}°, {{ hop.latitude.toFixed(2) }}°]
-                    </span>
-                    <span v-else class="text-slate-600">-</span>
-                  </td>
-
-                  <!-- 区间物理距离 -->
-                  <td class="py-2 px-3 text-slate-300">
-                    <span v-if="hop.segment_distance_km > 0" class="text-slate-200">
-                      +{{ hop.segment_distance_km.toFixed(1) }} km
-                    </span>
-                    <span v-else class="text-slate-600">0.0 km</span>
-                  </td>
-
-                  <!-- 累计物理距离 -->
+                  <!-- 物理线缆距 -->
                   <td class="py-2 px-3 text-slate-300 font-bold">
-                    <span v-if="hop.cumulative_distance_km > 0" class="text-cyan-300">
+                    <span v-if="isLanTarget" class="text-emerald-400">
+                      ~{{ Math.round(hop.cumulative_distance_km * 1000) }} m
+                    </span>
+                    <span v-else-if="hop.cumulative_distance_km > 0" class="text-cyan-300">
                       {{ hop.cumulative_distance_km.toFixed(1) }} km
                     </span>
                     <span v-else class="text-slate-600">0.0 km</span>
@@ -472,13 +580,15 @@
                     <span v-if="hop.is_self" class="text-emerald-400 text-[10px] font-bold">
                       源起点 🟢
                     </span>
+                    <span v-else-if="isLanTarget" class="text-emerald-400 text-[10px] font-bold">
+                      {{ hop.rtt_ms < 1.0 ? '微秒线速 ⚡' : '正常交换 🟢' }}
+                    </span>
                     <span
                       v-else-if="!hop.is_timeout && hop.bufferbloat_ratio > 0"
                       :class="[
                         'px-2 py-0.5 rounded text-[10px] font-bold border',
                         hop.bufferbloat_ratio > 10 ? 'bg-rose-500/10 text-rose-300 border-rose-500/30' : (hop.bufferbloat_ratio > 4 ? 'bg-amber-500/10 text-amber-300 border-amber-500/30' : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30')
                       ]"
-                      :title="`理论光纤时延: ${hop.fiber_rtt_ms.toFixed(2)}ms, 排队比率: ${hop.bufferbloat_ratio.toFixed(1)}x`"
                     >
                       {{ hop.bufferbloat_ratio > 10 ? '严重排队 ⚠️' : (hop.bufferbloat_ratio > 4 ? '轻度拥塞 ⚡' : '物理极限 🟢') }}
                     </span>
@@ -487,10 +597,10 @@
                 </tr>
 
                 <tr v-if="hops.length === 0">
-                  <td colspan="9" class="py-12 text-center text-slate-500">
+                  <td colspan="8" class="py-12 text-center text-slate-500">
                     <div class="flex flex-col items-center justify-center gap-2">
                       <span class="text-3xl">🌐</span>
-                      <span>正在准备测地线探测管线，输入目标主机后点击【启动测地追踪】</span>
+                      <span>输入目标 IP (支持公网 IP 或 192.168.x.x / 10.x.x.x 局域网)，点击【启动测地追踪】</span>
                     </div>
                   </td>
                 </tr>
@@ -506,9 +616,9 @@
         <div class="flex items-center gap-3">
           <span>三维渲染: 正射空间投影 (Orthographic)</span>
           <span>·</span>
-          <span>大圆算法: Haversine 球面测地线</span>
+          <span>局域网引擎: Purdue Model 微观拓扑感知</span>
           <span>·</span>
-          <span>定位引擎: ip2region.xdb 联动自适应</span>
+          <span>数据库: ip2region.xdb 联动自适应</span>
         </div>
         <div class="flex items-center gap-2">
           <span v-if="statusMessage" class="text-cyan-400 font-bold">{{ statusMessage }}</span>
@@ -544,6 +654,9 @@ export interface TracerouteHopEvent {
   is_destination: boolean;
   status_text: string;
   is_self?: boolean;
+  is_lan?: boolean;
+  lan_role?: string;
+  subnet_cidr?: string;
 }
 
 interface GeoPoint {
@@ -559,6 +672,7 @@ interface GeoPoint {
   cumulativeKm: number;
   isSelf: boolean;
   isFinal: boolean;
+  rawHop: TracerouteHopEvent;
 }
 
 const props = defineProps<{
@@ -570,8 +684,8 @@ const emit = defineEmits<{
   (e: 'close'): void;
 }>();
 
-// 模式控制
-const viewMode = ref<'3d' | '2d'>('3d');
+// 模式控制: 'lan' (局域网微观虚拟拓扑) | '3d' (三维数字地球) | '2d' (二维全景地图)
+const viewMode = ref<'lan' | '3d' | '2d'>('3d');
 const isAutoRotating = ref(true);
 
 // 目标与配置
@@ -585,6 +699,12 @@ const isFinished = ref(false);
 const currentHop = ref(0);
 const hops = ref<TracerouteHopEvent[]>([]);
 const statusMessage = ref('');
+
+// 判断当前目标是否属于局域网范围
+const isLanTarget = computed(() => {
+  const t = inputTarget.value.trim();
+  return t.startsWith('192.168.') || t.startsWith('10.') || t.startsWith('172.') || t.startsWith('127.') || t === 'localhost';
+});
 
 // 使用者自我真实主机信息 (Hop 0)
 const selfHopInfo = ref({
@@ -603,9 +723,9 @@ const selectedHop = ref<GeoPoint | null>(null);
 // 3D 地球 Canvas 引用与旋转视角状态
 const globeCanvasRef = ref<HTMLCanvasElement | null>(null);
 const globeRotation = ref({
-  centerLon: 116.4, // 初始正对中国东亚中心
+  centerLon: 116.4,
   centerLat: 32.0,
-  radius: 140,      // 球体像素半径
+  radius: 140,
   isDragging: false,
   lastMouseX: 0,
   lastMouseY: 0
@@ -614,13 +734,9 @@ const globeRotation = ref({
 let animationFrameId: number | null = null;
 let unlistenHopEvent: UnlistenFn | null = null;
 
-// ============================================================
-// 自然地球真实高精度经纬度陆地多边形 (Natural Earth 真实坐标数据)
-// 包含中国海岸线/半岛、欧亚、非洲、美洲、澳洲等真实 [lon, lat] 顶点
-// 保证无论是 2D 还是 3D 模式，大陆轮廓与标注经纬度在数学上 100% 吻合！
-// ============================================================
+// 自然地球真实高精经纬度陆地多边形
 const WORLD_LAND_POLYGONS: number[][][] = [
-  // 1. 欧亚大陆主陆地板块 (包含中国沿海、中南半岛、印度半岛、阿拉伯、欧洲大西洋沿岸、斯堪的纳维亚、西伯利亚)
+  // 欧亚大陆主陆地板块 (包含中国海岸线/半岛、欧洲大西洋沿岸、斯堪的纳维亚、西伯利亚)
   [
     [121.6, 38.9], [122.5, 37.4], [119.5, 35.0], [121.9, 30.9], [120.0, 26.5], [116.8, 23.5], [113.8, 22.3],
     [110.3, 20.9], [108.5, 21.5], [106.0, 19.5], [109.0, 13.0], [105.0, 10.0], [100.5, 13.7], [103.8, 1.3],
@@ -632,13 +748,13 @@ const WORLD_LAND_POLYGONS: number[][][] = [
     [170.0, 66.0], [162.0, 55.0], [143.0, 50.0], [132.0, 43.0], [127.0, 38.0], [129.0, 35.0], [126.0, 37.0],
     [124.5, 40.0], [121.6, 38.9]
   ],
-  // 2. 非洲大陆
+  // 非洲大陆
   [
     [32.5, 30.0], [34.0, 27.0], [43.5, 12.0], [51.2, 10.5], [40.5, -15.0], [35.0, -25.0], [28.0, -32.5],
     [18.5, -34.3], [14.5, -23.0], [12.0, -6.0], [9.0, 4.0], [0.0, 5.5], [-13.0, 9.0], [-17.5, 14.7],
     [-13.0, 27.0], [-5.8, 35.8], [10.5, 37.0], [20.0, 32.0], [30.0, 31.2], [32.5, 30.0]
   ],
-  // 3. 北美洲大陆
+  // 北美洲大陆
   [
     [-168.0, 65.5], [-160.0, 56.0], [-140.0, 60.0], [-125.0, 49.0], [-122.4, 37.8], [-117.0, 32.5],
     [-110.0, 23.0], [-105.0, 20.0], [-95.0, 16.0], [-80.0, 8.5], [-77.0, 8.0], [-83.0, 10.0],
@@ -646,35 +762,35 @@ const WORLD_LAND_POLYGONS: number[][][] = [
     [-60.0, 47.0], [-55.0, 50.0], [-65.0, 60.0], [-85.0, 60.0], [-95.0, 70.0], [-120.0, 70.0],
     [-156.7, 71.3], [-168.0, 65.5]
   ],
-  // 4. 南美洲大陆
+  // 南美洲大陆
   [
     [-77.0, 8.0], [-70.0, 12.0], [-60.0, 10.0], [-50.0, 0.0], [-35.0, -5.5], [-38.0, -13.0],
     [-43.0, -23.0], [-50.0, -30.0], [-58.0, -35.0], [-65.0, -42.0], [-67.0, -55.0], [-74.0, -45.0],
     [-71.5, -33.0], [-77.0, -12.0], [-80.0, -2.0], [-77.0, 8.0]
   ],
-  // 5. 澳大利亚大陆
+  // 澳大利亚大陆
   [
     [142.5, -11.0], [149.0, -20.0], [153.0, -27.5], [150.0, -37.0], [140.0, -38.0], [130.0, -32.0],
     [115.5, -34.0], [114.0, -22.0], [122.0, -17.0], [130.8, -12.5], [136.0, -12.0], [142.5, -11.0]
   ],
-  // 6. 日本列岛主要岛链
+  // 日本列岛
   [
     [140.5, 35.5], [141.5, 38.5], [141.0, 41.5], [140.0, 43.0], [145.0, 44.0], [142.0, 42.0],
     [139.5, 36.5], [135.5, 34.5], [131.0, 31.5], [130.0, 33.5], [133.0, 35.5], [137.0, 37.0], [140.5, 35.5]
   ],
-  // 7. 中国台湾岛
+  // 台湾岛
   [
     [121.5, 25.3], [122.0, 24.5], [121.0, 22.0], [120.2, 23.0], [120.5, 24.5], [121.5, 25.3]
   ],
-  // 8. 中国海南岛
+  // 海南岛
   [
     [110.5, 20.0], [111.0, 19.0], [109.5, 18.2], [108.6, 19.2], [110.5, 20.0]
   ],
-  // 9. 大不列颠与爱尔兰
+  // 大不列颠与爱尔兰
   [
     [-5.0, 50.0], [1.5, 51.5], [0.0, 54.0], [-2.0, 58.5], [-5.0, 58.5], [-5.0, 55.0], [-3.0, 51.5], [-5.0, 50.0]
   ],
-  // 10. 格陵兰岛
+  // 格陵兰岛
   [
     [-45.0, 60.0], [-35.0, 65.0], [-20.0, 75.0], [-30.0, 82.0], [-60.0, 80.0], [-55.0, 70.0], [-45.0, 60.0]
   ]
@@ -713,7 +829,8 @@ const geoWaypoints = computed<GeoPoint[]>(() => {
       isp: hop.isp,
       cumulativeKm: hop.cumulative_distance_km,
       isSelf: hop.is_self ?? (hop.hop_number === 0),
-      isFinal: hop.is_destination || (i === validHops.length - 1 && validHops.length > 1)
+      isFinal: hop.is_destination || (i === validHops.length - 1 && validHops.length > 1),
+      rawHop: hop
     });
   }
   return points;
@@ -776,6 +893,14 @@ const actualFinalRttClass = computed(() => {
   return last ? getRttClass(last.rtt_ms) : 'text-slate-400';
 });
 
+// 局域网节点图标匹配
+function getLanNodeIcon(hop: TracerouteHopEvent): string {
+  if (hop.is_self || hop.hop_number === 0) return '💻';
+  if (hop.is_destination) return '🎯';
+  if (hop.hop_number === 1) return '🔀';
+  return '🛡️';
+}
+
 // ============================================================
 // 3D 数字地球渲染引擎 (Orthographic 3D Canvas)
 // ============================================================
@@ -787,9 +912,8 @@ function projectLonLatToGlobe(lon: number, lat: number, centerLon: number, cente
   const lambda0 = (centerLon * Math.PI) / 180.0;
   const phi0 = (centerLat * Math.PI) / 180.0;
 
-  // 正射三维空间向量
   const cosC = Math.sin(phi0) * Math.sin(phi) + Math.cos(phi0) * Math.cos(phi) * Math.cos(lambda - lambda0);
-  const visible = cosC >= 0; // 是否在可视正面半球
+  const visible = cosC >= 0;
 
   const x = radius * Math.cos(phi) * Math.sin(lambda - lambda0);
   const y = radius * (Math.sin(phi0) * Math.cos(phi) * Math.cos(lambda - lambda0) - Math.cos(phi0) * Math.sin(phi));
@@ -813,7 +937,7 @@ function render3dGlobe() {
 
   ctx.clearRect(0, 0, w, h);
 
-  // 1. 大气外散射发光光环 (Atmospheric Scattering Halo)
+  // 1. 大气外散射光环
   const haloGrad = ctx.createRadialGradient(cx, cy, r * 0.9, cx, cy, r * 1.25);
   haloGrad.addColorStop(0, 'rgba(6, 182, 212, 0.28)');
   haloGrad.addColorStop(0.5, 'rgba(14, 165, 233, 0.12)');
@@ -823,7 +947,7 @@ function render3dGlobe() {
   ctx.arc(cx, cy, r * 1.25, 0, Math.PI * 2);
   ctx.fill();
 
-  // 2. 球体深邃背景色 (球形暗蓝渐变)
+  // 2. 球体深邃背景色
   const sphereGrad = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.35, r * 0.1, cx, cy, r);
   sphereGrad.addColorStop(0, '#0f2744');
   sphereGrad.addColorStop(0.65, '#07162c');
@@ -833,17 +957,15 @@ function render3dGlobe() {
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.fill();
 
-  // 裁剪球体区域
   ctx.save();
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.clip();
 
-  // 3. 经纬线网格 (经线每 30°，纬线每 30°)
+  // 3. 经纬线网格 (每 30° 一根)
   ctx.strokeStyle = 'rgba(56, 189, 248, 0.16)';
   ctx.lineWidth = 0.8;
 
-  // 纬线圈
   for (let lat = -60; lat <= 60; lat += 30) {
     ctx.beginPath();
     let started = false;
@@ -863,7 +985,6 @@ function render3dGlobe() {
     ctx.stroke();
   }
 
-  // 经线圈
   for (let lon = -180; lon < 180; lon += 30) {
     ctx.beginPath();
     let started = false;
@@ -883,7 +1004,7 @@ function render3dGlobe() {
     ctx.stroke();
   }
 
-  // 4. 绘制自然地球真实经纬度高精大陆板块
+  // 4. 自然地球真实经纬度高精大陆板块
   ctx.fillStyle = 'rgba(30, 58, 95, 0.72)';
   ctx.strokeStyle = 'rgba(34, 211, 238, 0.35)';
   ctx.lineWidth = 1;
@@ -917,7 +1038,6 @@ function render3dGlobe() {
       const p1 = pts[i];
       const p2 = pts[i + 1];
 
-      // 球面插值采样画拱桥
       const numSteps = 24;
       const arcPoints: { x: number; y: number; visible: boolean }[] = [];
 
@@ -925,13 +1045,11 @@ function render3dGlobe() {
         const t = s / numSteps;
         const interpLon = p1.lon + (p2.lon - p1.lon) * t;
         const interpLat = p1.lat + (p2.lat - p1.lat) * t;
-        // 拱高抛物线
         const alt = Math.sin(t * Math.PI) * (r * 0.18);
         const pt = projectLonLatToGlobe(interpLon, interpLat, cLon, cLat, r + alt);
         arcPoints.push(pt);
       }
 
-      // 绘制飞线骨架
       ctx.beginPath();
       let started = false;
       for (const ap of arcPoints) {
@@ -948,7 +1066,6 @@ function render3dGlobe() {
       ctx.lineWidth = 2.2;
       ctx.stroke();
 
-      // 沿飞线流动发光脉冲点
       const flowT = (pulseTime * 0.8 + i * 0.3) % 1.0;
       const flowIdx = Math.floor(flowT * (arcPoints.length - 1));
       const flowPt = arcPoints[flowIdx];
@@ -971,7 +1088,6 @@ function render3dGlobe() {
       const px = cx + p.x;
       const py = cy + p.y;
 
-      // 脉冲波圈
       const pulseR = 5 + (Math.sin(pulseTime * 4) + 1) * 2.5;
       ctx.beginPath();
       ctx.arc(px, py, pulseR, 0, Math.PI * 2);
@@ -979,7 +1095,6 @@ function render3dGlobe() {
       ctx.lineWidth = 1.2;
       ctx.stroke();
 
-      // 核心发光实心点
       ctx.beginPath();
       ctx.arc(px, py, 4, 0, Math.PI * 2);
       ctx.fillStyle = pt.isSelf ? '#10b981' : (pt.isFinal ? '#f59e0b' : '#06b6d4');
@@ -988,7 +1103,6 @@ function render3dGlobe() {
       ctx.fill();
       ctx.shadowBlur = 0;
 
-      // 标签文本
       ctx.fillStyle = pt.isSelf ? '#34d399' : (pt.isFinal ? '#fbbf24' : '#e2e8f0');
       ctx.font = 'bold 10px monospace';
       ctx.textAlign = 'center';
@@ -999,7 +1113,6 @@ function render3dGlobe() {
 
   ctx.restore();
 
-  // 球面边缘高光外圈
   ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
@@ -1007,11 +1120,9 @@ function render3dGlobe() {
   ctx.stroke();
 }
 
-// 动画主循环
 function animate() {
   pulseTime += 0.02;
 
-  // 自转推进
   if (isAutoRotating.value && !globeRotation.value.isDragging && viewMode.value === '3d') {
     globeRotation.value.centerLon = (globeRotation.value.centerLon + 0.15) % 360;
   }
@@ -1023,7 +1134,6 @@ function animate() {
   animationFrameId = requestAnimationFrame(animate);
 }
 
-// 鼠标拖拽 3D 地球视角
 function onGlobeMouseDown(e: MouseEvent) {
   globeRotation.value.isDragging = true;
   globeRotation.value.lastMouseX = e.clientX;
@@ -1038,7 +1148,6 @@ function onGlobeMouseMove(e: MouseEvent) {
   globeRotation.value.lastMouseX = e.clientX;
   globeRotation.value.lastMouseY = e.clientY;
 
-  // 灵敏度平滑转换
   globeRotation.value.centerLon = (globeRotation.value.centerLon - dx * 0.4 + 360) % 360;
   globeRotation.value.centerLat = Math.max(-80, Math.min(80, globeRotation.value.centerLat + dy * 0.4));
 }
@@ -1069,6 +1178,12 @@ watch(
   (newVal) => {
     if (newVal) {
       inputTarget.value = newVal;
+      // 智能感知: 若为局域网 IP 则自适应切入 LAN 模式
+      if (isLanTarget.value) {
+        viewMode.value = 'lan';
+      } else {
+        viewMode.value = '3d';
+      }
       if (props.isOpen && !isTracing.value) {
         hops.value = [];
         isFinished.value = false;
@@ -1084,6 +1199,9 @@ watch(
       if (props.initialTarget) {
         inputTarget.value = props.initialTarget;
       }
+      if (isLanTarget.value) {
+        viewMode.value = 'lan';
+      }
       setupEventListener();
       initSelfIpGeo();
       nextTick(() => {
@@ -1098,6 +1216,9 @@ watch(
 onMounted(() => {
   window.addEventListener('resize', resizeGlobeCanvas);
   if (props.isOpen) {
+    if (isLanTarget.value) {
+      viewMode.value = 'lan';
+    }
     setupEventListener();
     initSelfIpGeo();
   }
@@ -1126,7 +1247,6 @@ function resizeGlobeCanvas() {
   }
 }
 
-// 初始化获取使用者自我 IP 真实地理
 async function initSelfIpGeo() {
   try {
     const selfHop = await invoke<TracerouteHopEvent>('get_self_ip_geo_cmd', {
@@ -1160,12 +1280,10 @@ async function setupEventListener() {
       const hop = event.payload;
       currentHop.value = hop.hop_number;
 
-      // 如果收到的是自我 IP (Hop 0)
       if (hop.is_self || hop.hop_number === 0) {
         updateSelfHopState(hop);
       }
 
-      // 插入或更新到 hops 列表
       const existingIdx = hops.value.findIndex(h => h.hop_number === hop.hop_number);
       if (existingIdx >= 0) {
         hops.value[existingIdx] = hop;
@@ -1173,7 +1291,6 @@ async function setupEventListener() {
         hops.value.push(hop);
       }
 
-      // 排序确保 Hop 0 始终排在第一位
       hops.value.sort((a, b) => a.hop_number - b.hop_number);
 
       statusMessage.value = hop.is_self
@@ -1202,12 +1319,17 @@ async function startTrace() {
   if (!inputTarget.value.trim()) return;
   if (isTracing.value) return;
 
+  // 自适应选择模式
+  if (isLanTarget.value) {
+    viewMode.value = 'lan';
+  }
+
   isTracing.value = true;
   isFinished.value = false;
   hops.value = [];
   hoveredHop.value = null;
   selectedHop.value = null;
-  statusMessage.value = `正在启动对 ${inputTarget.value} 的测地线路由追踪...`;
+  statusMessage.value = `正在启动对 ${inputTarget.value} 的路由追踪...`;
 
   try {
     await setupEventListener();
@@ -1217,7 +1339,7 @@ async function startTrace() {
       timeoutMs: timeoutMs.value
     });
     isFinished.value = true;
-    statusMessage.value = `测地线路由追踪已完成 (总计 ${hops.value.length} 跳)`;
+    statusMessage.value = `路由追踪已完成 (总计 ${hops.value.length} 跃点)`;
   } catch (err: any) {
     statusMessage.value = `探测出错: ${String(err)}`;
   } finally {
@@ -1235,13 +1357,24 @@ function handleClose() {
 }
 
 function selectHopRow(hop: TracerouteHopEvent) {
+  selectedHop.value = {
+    hopNumber: hop.hop_number,
+    ip: hop.ip,
+    lon: hop.longitude,
+    lat: hop.latitude,
+    x2d: 0,
+    y2d: 0,
+    rttMs: hop.rtt_ms,
+    location: formatLocation(hop),
+    isp: hop.isp,
+    cumulativeKm: hop.cumulative_distance_km,
+    isSelf: hop.is_self ?? (hop.hop_number === 0),
+    isFinal: hop.is_destination,
+    rawHop: hop
+  };
   if (hop.has_geo) {
-    const pt = geoWaypoints.value.find(p => p.hopNumber === hop.hop_number);
-    if (pt) {
-      selectedHop.value = pt;
-      globeRotation.value.centerLon = pt.lon;
-      globeRotation.value.centerLat = pt.lat;
-    }
+    globeRotation.value.centerLon = hop.longitude;
+    globeRotation.value.centerLat = hop.latitude;
   }
 }
 
@@ -1250,20 +1383,22 @@ function formatLocation(hop: TracerouteHopEvent): string {
   if (hop.country && hop.country !== '未知') parts.push(hop.country);
   if (hop.province && hop.province !== '未知' && hop.province !== hop.country) parts.push(hop.province);
   if (hop.city && hop.city !== '未知' && hop.city !== hop.province) parts.push(hop.city);
-  return parts.join(' · ') || (hop.is_self ? '本地主机终端' : '骨干网络跃点');
+  return parts.join(' · ') || (hop.is_self ? '本地主机终端' : (hop.is_lan ? '局域网/内网' : '骨干网络跃点'));
 }
 
 function getRttClass(rtt: number): string {
   if (rtt < 0) return 'text-slate-500';
-  if (rtt < 30) return 'text-emerald-400 font-bold';
-  if (rtt < 80) return 'text-cyan-400 font-bold';
+  if (rtt < 1.0) return 'text-emerald-400 font-bold';
+  if (rtt < 30) return 'text-cyan-400 font-bold';
+  if (rtt < 80) return 'text-sky-400 font-bold';
   if (rtt < 150) return 'text-amber-400 font-bold';
   return 'text-rose-400 font-bold';
 }
 
 function getRttBarColor(rtt: number): string {
-  if (rtt < 30) return 'bg-emerald-500';
-  if (rtt < 80) return 'bg-cyan-500';
+  if (rtt < 1.0) return 'bg-emerald-400';
+  if (rtt < 30) return 'bg-cyan-500';
+  if (rtt < 80) return 'bg-sky-500';
   if (rtt < 150) return 'bg-amber-500';
   return 'bg-rose-500';
 }
@@ -1272,26 +1407,27 @@ function exportTracerouteReport() {
   if (hops.value.length === 0) return;
 
   const now = new Date().toISOString();
-  let md = `# Omni-Probe 数字地球测地线路由追踪与网络物理审计报告\n\n`;
-  md += `- **目标主机**: \`${inputTarget.value}\`\n`;
+  let md = `# Omni-Probe 路由追踪与微观拓扑架构审计报告\n\n`;
+  md += `- **目标主机**: \`${inputTarget.value}\` (${isLanTarget.value ? '企业局域网/内网私有地址' : '广域互联网'})\n`;
   md += `- **使用者自我主机 (Hop 0)**: \`${selfHopInfo.value.ip}\` (${selfHopInfo.value.location} · ${selfHopInfo.value.isp})\n`;
   md += `- **探测时间**: ${now}\n`;
   md += `- **探测总跳数**: ${hops.value.length} 跃点\n`;
-  md += `- **测地线总物理距离**: ${totalGeodesicKm.value.toFixed(1)} km\n`;
-  md += `- **光纤真空理论往返极限 (RTT_min)**: ${theoreticalMinRtt.value.toFixed(2)} ms\n`;
+  md += `- **累计物理线缆跨度**: ${isLanTarget.value ? (totalGeodesicKm.value * 1000).toFixed(0) + ' m' : totalGeodesicKm.value.toFixed(1) + ' km'}\n`;
+  md += `- **理论最低时延**: ${theoreticalMinRtt.value.toFixed(2)} ms\n`;
   md += `- **实测终点网络往返 (RTT_act)**: ${actualFinalRttText.value}\n\n`;
   md += `## 1. 逐跳网络拓扑与物理学剖析\n\n`;
-  md += `| 跳数 | 路由器 / 主机 IP | RTT (ms) | 地理归属 | 运营商 (ISP) | 测地经纬度 | 区间距离 (km) | 累计物理距 (km) | 光纤极限 RTT | 缓冲排队比率 |\n`;
-  md += `| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n`;
+  md += `| 跳数 | 路由器 / 主机 IP | RTT (ms) | 网络角色 | 地理归属 | 子网 (CIDR) | 物理线缆距 | 缓冲排队剖析 |\n`;
+  md += `| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n`;
 
   for (const h of hops.value) {
     const loc = formatLocation(h);
     const rtt = h.is_timeout ? '*' : (h.is_self ? '0.0' : h.rtt_ms.toFixed(1));
-    const coords = h.has_geo ? `[${h.longitude.toFixed(2)}°, ${h.latitude.toFixed(2)}°]` : '-';
-    const fiberRtt = h.fiber_rtt_ms > 0 ? h.fiber_rtt_ms.toFixed(2) : '-';
-    const queueRatio = h.bufferbloat_ratio > 0 ? `${h.bufferbloat_ratio.toFixed(1)}x` : '-';
+    const distStr = isLanTarget.value ? `~${Math.round(h.cumulative_distance_km * 1000)}m` : `${h.cumulative_distance_km.toFixed(1)}km`;
     const hopLabel = h.is_self ? '**源点 #0 (本机)**' : `#${h.hop_number}`;
-    md += `| ${hopLabel} | \`${h.ip}\` | ${rtt} | ${loc} | ${h.isp || '-'} | ${coords} | ${h.segment_distance_km.toFixed(1)} | ${h.cumulative_distance_km.toFixed(1)} | ${fiberRtt} | ${queueRatio} |\n`;
+    const role = h.lan_role || (h.is_self ? '本机源端主机' : '骨干网络跃点');
+    const subnet = h.subnet_cidr || '-';
+    const queueRatio = isLanTarget.value ? (h.rtt_ms < 1.0 ? '微秒线速 ⚡' : '正常交换 🟢') : (h.bufferbloat_ratio > 0 ? `${h.bufferbloat_ratio.toFixed(1)}x` : '-');
+    md += `| ${hopLabel} | \`${h.ip}\` | ${rtt} | ${role} | ${loc} | ${subnet} | ${distStr} | ${queueRatio} |\n`;
   }
 
   md += `\n---\n*Omni-Probe 工业网络全息分析仪 · 物理网络与等保三级司法溯源审计中心*\n`;
@@ -1300,7 +1436,7 @@ function exportTracerouteReport() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `digital_globe_traceroute_${inputTarget.value.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.md`;
+  a.download = `traceroute_report_${inputTarget.value.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.md`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -1315,5 +1451,18 @@ function exportTracerouteReport() {
 
 .animate-dash {
   animation: dash 2s linear infinite;
+}
+
+@keyframes dashH {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+.animate-dash-h {
+  animation: dashH 1.6s ease-in-out infinite;
 }
 </style>

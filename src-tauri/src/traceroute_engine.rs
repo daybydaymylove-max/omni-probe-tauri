@@ -76,6 +76,13 @@ pub struct TracerouteHop {
     /// 是否为使用者自我主机源点 IP (Hop 0)
     #[serde(default)]
     pub is_self: bool,
+    /// 是否属于局域网范围私有地址 (RFC 1918)
+    #[serde(default)]
+    pub is_lan: bool,
+    /// 局域网网络架构拓扑角色 (如 默认网关, 汇聚交换机, 目标资产)
+    pub lan_role: Option<String>,
+    /// 局域网所属子网网段 (例如 192.168.31.0/24)
+    pub subnet_cidr: Option<String>,
 }
 
 /// 完整路由追踪诊断报告
@@ -101,6 +108,9 @@ pub struct TracerouteReport {
     pub duration_ms: u64,
     /// 诊断结论摘要
     pub summary: String,
+    /// 探测目标是否属于局域网范围
+    #[serde(default)]
+    pub is_lan_target: bool,
 }
 
 // ============================================================
@@ -349,10 +359,82 @@ pub fn detect_outbound_local_ip(target: &str) -> Ipv4Addr {
     Ipv4Addr::new(127, 0, 0, 1)
 }
 
+/// 判断指定 IPv4 字符串是否属于局域网私网范围 (RFC 1918 / Loopback / Link-Local)
+pub fn is_lan_private_ip(ip_str: &str) -> bool {
+    if let Ok(ip) = Ipv4Addr::from_str(ip_str) {
+        let octets = ip.octets();
+        if octets[0] == 10 {
+            return true;
+        }
+        if octets[0] == 172 && (16..=31).contains(&octets[1]) {
+            return true;
+        }
+        if octets[0] == 192 && octets[1] == 168 {
+            return true;
+        }
+        if octets[0] == 127 {
+            return true;
+        }
+        if octets[0] == 169 && octets[1] == 254 {
+            return true;
+        }
+        if octets[0] == 100 && (64..=127).contains(&octets[1]) {
+            return true;
+        }
+    }
+    false
+}
+
+/// 推断局域网节点的子网 CIDR (如 192.168.31.0/24)
+pub fn infer_lan_subnet_cidr(ip_str: &str) -> Option<String> {
+    if let Ok(ip) = Ipv4Addr::from_str(ip_str) {
+        let octets = ip.octets();
+        if octets[0] == 192 && octets[1] == 168 {
+            return Some(format!("192.168.{}.0/24", octets[2]));
+        } else if octets[0] == 10 {
+            return Some(format!("10.{}.{}.0/24", octets[1], octets[2]));
+        } else if octets[0] == 172 && (16..=31).contains(&octets[1]) {
+            return Some(format!("172.{}.{}.0/24", octets[1], octets[2]));
+        } else if octets[0] == 127 {
+            return Some("127.0.0.0/8".to_string());
+        }
+    }
+    None
+}
+
+/// 局域网网络架构拓扑角色推断
+pub fn infer_lan_topology_role(
+    hop_num: u32,
+    is_self: bool,
+    is_destination: bool,
+    ip_str: &str,
+    _self_ip_str: &str,
+) -> String {
+    if is_self || hop_num == 0 {
+        return "本机源端主机 (Probe Host)".to_string();
+    }
+    if is_destination {
+        return "目标内网资产/主机 (Target Asset)".to_string();
+    }
+    if hop_num == 1 {
+        if ip_str.ends_with(".1") || ip_str.ends_with(".254") {
+            return "局域网默认网关 / 接入交换机 (Default Gateway)".to_string();
+        }
+        return "局域网首跳接入设备 (Access Switch)".to_string();
+    }
+    if ip_str.ends_with(".1") || ip_str.ends_with(".254") {
+        return format!("跨网段核心路由 / VLAN 网关 #{}", hop_num);
+    }
+    format!("汇聚层交换节点 #{}", hop_num)
+}
+
 /// 基于 ip2region.xdb 离线库与操作系统路由表，精准解析使用者的自我 IP 及其地理位置 (Hop 0)
 pub fn resolve_self_ip_geo(target: Option<&str>) -> (Ipv4Addr, TracerouteHop) {
     let local_ip = detect_outbound_local_ip(target.unwrap_or("114.114.114.114"));
     let local_ip_str = local_ip.to_string();
+    let is_self_lan = is_lan_private_ip(&local_ip_str);
+    let lan_role = Some("本机源端主机 (Probe Host)".to_string());
+    let subnet_cidr = infer_lan_subnet_cidr(&local_ip_str);
 
     let engine = GLOBAL_IP_ENGINE.lock().unwrap();
     let intel = engine.classify(&local_ip_str);
@@ -388,6 +470,9 @@ pub fn resolve_self_ip_geo(target: Option<&str>) -> (Ipv4Addr, TracerouteHop) {
         cumulative_distance_km: 0.0,
         theoretical_fiber_rtt_ms: 0.0,
         is_self: true,
+        is_lan: is_self_lan,
+        lan_role,
+        subnet_cidr,
     };
 
     (local_ip, hop)
@@ -582,6 +667,9 @@ pub async fn execute_traceroute(
             }
 
             // 测地大圆距离积分与理论光纤时延计算
+            let is_hop_lan = is_lan_private_ip(&hop_ip);
+            let is_target_hop = (hop_ip == final_resolved_target_ip || hop_ip == target) && hop_ip != "*";
+
             if let Some(ref curr) = geo_coord {
                 let hop_dist = calculate_haversine_distance_km(
                     last_coord.latitude,
@@ -589,11 +677,29 @@ pub async fn execute_traceroute(
                     curr.latitude,
                     curr.longitude,
                 );
-                cumulative_dist += hop_dist;
+                // 局域网同城/同园区微观线缆模型: 若两点物理经纬度重合或为私网跳，按机房物理双绞线/跳线累加 0.035km (35m)
+                let actual_dist = if is_hop_lan && hop_dist < 0.1 {
+                    0.035
+                } else {
+                    hop_dist
+                };
+                cumulative_dist += actual_dist;
                 last_coord = curr.clone();
             }
 
             let theoretical_fiber = estimate_theoretical_fiber_rtt_ms(cumulative_dist);
+            let lan_role = if is_hop_lan {
+                Some(infer_lan_topology_role(
+                    hop_num,
+                    false,
+                    is_target_hop,
+                    &hop_ip,
+                    &self_ip.to_string(),
+                ))
+            } else {
+                None
+            };
+            let subnet_cidr = infer_lan_subnet_cidr(&hop_ip);
 
             let hop_item = TracerouteHop {
                 hop: hop_num,
@@ -606,9 +712,12 @@ pub async fn execute_traceroute(
                 city,
                 isp,
                 zone_name,
-                cumulative_distance_km: (cumulative_dist * 10.0).round() / 10.0,
+                cumulative_distance_km: (cumulative_dist * 1000.0).round() / 1000.0,
                 theoretical_fiber_rtt_ms: theoretical_fiber,
                 is_self: false,
+                is_lan: is_hop_lan,
+                lan_role,
+                subnet_cidr,
             };
 
             // 边探测边向前端发射流式事件 (驱动前端地图实时动态绘制测地飞线)
@@ -647,6 +756,8 @@ pub async fn execute_traceroute(
         )
     };
 
+    let is_lan_target = is_lan_private_ip(&final_resolved_target_ip) || is_lan_private_ip(&target);
+
     Ok(TracerouteReport {
         target,
         target_ip: final_resolved_target_ip,
@@ -658,6 +769,7 @@ pub async fn execute_traceroute(
         start_time: start_time_iso,
         duration_ms: duration,
         summary,
+        is_lan_target,
     })
 }
 
@@ -810,5 +922,30 @@ mod tests {
         let antipodal = calculate_haversine_distance_km(90.0, 0.0, -90.0, 0.0);
         // 半球周长约为 20015 km
         assert!((antipodal - 20015.0).abs() < 50.0);
+    }
+
+    #[test]
+    fn test_lan_private_ip_and_topology_roles() {
+        // 1. 局域网私网 IP 判定 (RFC 1918 / Loopback)
+        assert!(is_lan_private_ip("192.168.1.1"));
+        assert!(is_lan_private_ip("10.0.0.1"));
+        assert!(is_lan_private_ip("172.16.10.50"));
+        assert!(is_lan_private_ip("127.0.0.1"));
+        assert!(!is_lan_private_ip("8.8.8.8"));
+        assert!(!is_lan_private_ip("114.114.114.114"));
+
+        // 2. 子网推断
+        assert_eq!(infer_lan_subnet_cidr("192.168.31.205"), Some("192.168.31.0/24".to_string()));
+        assert_eq!(infer_lan_subnet_cidr("10.10.1.1"), Some("10.10.1.0/24".to_string()));
+
+        // 3. 局域网拓扑角色推断
+        let role_self = infer_lan_topology_role(0, true, false, "192.168.31.205", "192.168.31.205");
+        assert!(role_self.contains("本机源端"));
+
+        let role_gw = infer_lan_topology_role(1, false, false, "192.168.31.1", "192.168.31.205");
+        assert!(role_gw.contains("局域网默认网关"));
+
+        let role_target = infer_lan_topology_role(3, false, true, "10.0.0.88", "192.168.31.205");
+        assert!(role_target.contains("目标内网资产"));
     }
 }
