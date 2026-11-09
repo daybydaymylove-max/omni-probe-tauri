@@ -41,6 +41,7 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-feature
 # 流量解密与 SSL Inspection: 纯 Rust X.509 证书生成
 rcgen = "0.13"
 flate2 = "1.0"
+crc32fast = "1.4"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.56.0"

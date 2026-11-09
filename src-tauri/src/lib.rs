@@ -169,6 +169,16 @@ pub use wireless_analyzer::dissect_wireless_or_vlan_hex_cmd;
 pub mod geo_map_engine;
 pub use geo_map_engine::get_global_geo_map_data_cmd;
 
+// 工业级网络调试助手通信引擎 (对标 NetAssist / TCP Client / TCP Server / UDP)
+pub mod net_assist;
+pub use net_assist::{
+    start_net_assist_session_cmd,
+    stop_net_assist_session_cmd,
+    send_net_assist_data_cmd,
+    get_net_assist_clients_cmd,
+    calculate_checksum_cmd,
+};
+
 use once_cell::sync::Lazy;
 use std::sync::{Arc, Mutex};
 use tauri::Emitter;
@@ -1748,6 +1758,7 @@ pub fn run() {
 
             discovery::start_asset_discovery_daemon(app.handle().clone());
             serial::start_serial_hotplug_detector(app.handle().clone());
+            app.manage(net_assist::NetAssistManager::new());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -1994,7 +2005,13 @@ pub fn run() {
             // 无线与 VLAN 统一诊断解剖
             dissect_wireless_or_vlan_hex_cmd,
             // 全球网络地理态势地图数据 (TASK-46)
-            get_global_geo_map_data_cmd
+            get_global_geo_map_data_cmd,
+            // 工业级网络调试助手 (NetAssist)
+            start_net_assist_session_cmd,
+            stop_net_assist_session_cmd,
+            send_net_assist_data_cmd,
+            get_net_assist_clients_cmd,
+            calculate_checksum_cmd
         ])
         .on_window_event(|_window, event| match event {
             tauri::WindowEvent::CloseRequested { .. } => {
