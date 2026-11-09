@@ -230,6 +230,21 @@
               <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">
                 全面放行解密
               </span>
+              <button @click="compareDecryptedReqResp(selectedItem)"
+                class="px-2 py-0.5 rounded bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] cursor-pointer shadow-xs transition-colors flex items-center gap-1"
+                title="对比此笔会话解密请求体与响应体的差分与波形">
+                <span>⚖️ 请求 vs 响应</span>
+              </button>
+              <button @click="setDiffSlotA(selectedItem)"
+                class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[10px] cursor-pointer hover:bg-blue-100 transition-colors"
+                title="将此会话明文载荷存入全局比对槽位 A">
+                设为 A
+              </button>
+              <button @click="setDiffSlotB(selectedItem)"
+                class="px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 font-bold text-[10px] cursor-pointer hover:bg-purple-100 transition-colors"
+                title="将此会话明文载荷存入全局比对槽位 B 并启动比对">
+                设为 B
+              </button>
             </div>
           </div>
 
@@ -421,6 +436,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useUniversalDiff } from '../composables/useUniversalDiff';
 import { notifySuccess, notifyWarning, notifyError } from '../composables/useNotification';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
@@ -486,6 +502,66 @@ const keylogStatus = ref<TlsKeyLogStatus>({
   total_keys: 0,
   matched_sessions_count: 0,
 });
+// 全局通用数据比对总线
+const diffBus = useUniversalDiff();
+
+function compareDecryptedReqResp(item: DecryptedTrafficRecord) {
+  const reqItem = {
+    id: `DEC_REQ_${item.id}`,
+    label: `[解密请求] ${item.method} ${item.full_url}`,
+    timestamp: item.timestamp,
+    protocol: 'HTTP/TLS_REQ',
+    endpoint_src: '客户端代理',
+    endpoint_dst: item.host || '目标服务器',
+    payloadHex: '',
+    rawText: item.request_body_snippet || JSON.stringify(item.request_headers),
+    length: item.request_body_snippet ? item.request_body_snippet.length : 0
+  };
+  const respItem = {
+    id: `DEC_RESP_${item.id}`,
+    label: `[解密响应] 状态码 ${item.response_status}`,
+    timestamp: item.timestamp,
+    protocol: 'HTTP/TLS_RESP',
+    endpoint_src: item.host || '目标服务器',
+    endpoint_dst: '客户端代理',
+    payloadHex: '',
+    rawText: item.response_body_snippet || '',
+    length: item.response_body_snippet ? item.response_body_snippet.length : 0
+  };
+  diffBus.openUniversalDiff(reqItem, respItem, 'hex');
+}
+
+function setDiffSlotA(item: DecryptedTrafficRecord) {
+  diffBus.setSlotA({
+    id: `DEC_${item.id}`,
+    label: `[解密会话] ${item.method} ${item.full_url}`,
+    timestamp: item.timestamp,
+    protocol: 'DECRYPTED_TLS',
+    endpoint_src: '代理通道',
+    endpoint_dst: item.host || '-',
+    payloadHex: '',
+    rawText: item.response_body_snippet || item.request_body_snippet || '',
+    length: (item.response_body_snippet || item.request_body_snippet || '').length
+  }, `解密 #${item.id}`);
+}
+
+function setDiffSlotB(item: DecryptedTrafficRecord) {
+  diffBus.setSlotB({
+    id: `DEC_${item.id}`,
+    label: `[解密会话] ${item.method} ${item.full_url}`,
+    timestamp: item.timestamp,
+    protocol: 'DECRYPTED_TLS',
+    endpoint_src: '代理通道',
+    endpoint_dst: item.host || '-',
+    payloadHex: '',
+    rawText: item.response_body_snippet || item.request_body_snippet || '',
+    length: (item.response_body_snippet || item.request_body_snippet || '').length
+  }, `解密 #${item.id}`);
+  if (diffBus.slotA.value) {
+    diffBus.compareSlots();
+  }
+}
+
 const decryptedLogs = ref<DecryptedTrafficRecord[]>([]);
 const selectedItem = ref<DecryptedTrafficRecord | null>(null);
 

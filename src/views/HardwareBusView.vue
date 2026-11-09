@@ -505,7 +505,24 @@
             class="bg-[#121824]/90 border border-white/10 rounded-xl p-2.5 text-xs font-mono space-y-1.5 shadow-md">
             <div class="flex items-center justify-between text-[10px] text-slate-400 border-b border-white/5 pb-1">
               <span class="font-bold text-slate-200">{{ item.channel }} | {{ item.target }}</span>
-              <span class="font-mono">{{ item.time }} (RTT: {{ item.latencyMs.toFixed(1) }}ms)</span>
+              <div class="flex items-center gap-1.5">
+                <span class="font-mono">{{ item.time }} (RTT: {{ item.latencyMs.toFixed(1) }}ms)</span>
+                <button v-if="item.bytesReceived > 0" @click="compareSerialTxRx(item)"
+                  class="px-2 py-0.5 rounded bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 border border-indigo-500/40 font-bold text-[9px] cursor-pointer transition-colors"
+                  title="比对本次交互发送帧与回复帧的差分与波形">
+                  ⚖️ 对比 TX vs RX
+                </button>
+                <button @click="setDiffSlotA(item)"
+                  class="px-1.5 py-0.5 rounded bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 border border-blue-500/30 text-[9px] font-bold cursor-pointer transition-colors"
+                  title="将本帧存入全局比对槽位 A">
+                  设为 A
+                </button>
+                <button @click="setDiffSlotB(item)"
+                  class="px-1.5 py-0.5 rounded bg-purple-500/20 hover:bg-purple-500/40 text-purple-300 border border-purple-500/30 text-[9px] font-bold cursor-pointer transition-colors"
+                  title="将本帧存入全局比对槽位 B 并启动比对">
+                  设为 B
+                </button>
+              </div>
             </div>
             
             <!-- TX 出向 -->
@@ -579,6 +596,7 @@
 
 <script setup lang="ts">
 import { notifySuccess, notifyWarning, notifyError } from '../composables/useNotification';
+import { useUniversalDiff } from '../composables/useUniversalDiff';
 import { ref, computed, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import SerialModemPinsPanel from '../components/SerialModemPinsPanel.vue';
@@ -810,6 +828,65 @@ const portOpSerialPayload = ref('01 03 00 00 00 02 C4 0B');
 const portOpSerialIsHex = ref(true);
 const portOpExecuting = ref(false);
 const transceiveHistory = ref<TransceiveHistoryItem[]>([]);
+
+// 全局通用数据比对总线
+const diffBus = useUniversalDiff();
+
+function compareSerialTxRx(item: TransceiveHistoryItem) {
+  const txItem = {
+    id: `SER_TX_${item.id}`,
+    label: `[硬件发送] ${item.channel} ➔ ${item.target}`,
+    timestamp: item.time,
+    protocol: item.detectedProto || 'BUS_TX',
+    endpoint_src: '本地总线主机',
+    endpoint_dst: item.target,
+    payloadHex: item.txPayload.replace(/\s+/g, ''),
+    byteLength: item.bytesSent
+  };
+  const rxItem = {
+    id: `SER_RX_${item.id}`,
+    label: `[硬件回包] ${item.channel} ➔ ${item.target}`,
+    timestamp: item.time,
+    protocol: item.detectedProto || 'BUS_RX',
+    endpoint_src: item.target,
+    endpoint_dst: '本地总线主机',
+    payloadHex: item.rxPayload.replace(/\s+/g, ''),
+    rawText: item.rxText,
+    byteLength: item.bytesReceived
+  };
+  diffBus.openUniversalDiff(txItem, rxItem, 'hex');
+}
+
+function setDiffSlotA(item: TransceiveHistoryItem) {
+  diffBus.setSlotA({
+    id: `SER_${item.id}`,
+    label: `[总线] ${item.channel} ${item.target}`,
+    timestamp: item.time,
+    protocol: item.detectedProto || 'BUS_IO',
+    endpoint_src: item.channel,
+    endpoint_dst: item.target,
+    payloadHex: (item.rxPayload || item.txPayload).replace(/\s+/g, ''),
+    rawText: item.rxText,
+    byteLength: item.bytesReceived || item.bytesSent
+  }, `总线 ${item.channel}`);
+}
+
+function setDiffSlotB(item: TransceiveHistoryItem) {
+  diffBus.setSlotB({
+    id: `SER_${item.id}`,
+    label: `[总线] ${item.channel} ${item.target}`,
+    timestamp: item.time,
+    protocol: item.detectedProto || 'BUS_IO',
+    endpoint_src: item.channel,
+    endpoint_dst: item.target,
+    payloadHex: (item.rxPayload || item.txPayload).replace(/\s+/g, ''),
+    rawText: item.rxText,
+    byteLength: item.bytesReceived || item.bytesSent
+  }, `总线 ${item.channel}`);
+  if (diffBus.slotA.value) {
+    diffBus.compareSlots();
+  }
+}
 
 const usbSerialCount = computed(() => props.usbDevices.filter(d => d.class_desc.includes('串口') || d.class_desc.includes('CDC')).length);
 
