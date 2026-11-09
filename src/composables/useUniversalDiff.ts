@@ -33,7 +33,7 @@ const scratchpadTextB = ref('');
 
 /**
  * 工业级数据对象规整适配器
- * 将 PacketRecord、NetAssist 日志、串口帧、纯 Hex 字符串或文本归一化为 UniversalDiffItem
+ * 将 PacketRecord、网络调试日志、串口帧、纯 Hex 字符串或文本归一化为 UniversalDiffItem
  */
 export function normalizeToDiffableItem(input: any, defaultLabel = '数据样本'): UniversalDiffItem {
   if (!input) {
@@ -69,7 +69,7 @@ export function normalizeToDiffableItem(input: any, defaultLabel = '数据样本
     }
   }
 
-  // 2. NetAssist 调试助手日志项 (PacketLogItem)
+  // 2. 网络调试工作台日志项 (PacketLogItem)
   if ('payloadHex' in input && 'direction' in input && 'endpoint' in input) {
     const extra: Record<string, string> = {
       '通信流向': input.direction,

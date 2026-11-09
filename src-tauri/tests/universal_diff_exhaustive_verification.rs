@@ -3,7 +3,7 @@
 //! ==============================================================================
 //! 覆盖 5 大数据源形态：
 //! 1. 网络嗅探抓包报文 (Wireshark-grade PacketRecord)
-//! 2. NetAssist 网络调试助手收发历史帧 (TX Request vs RX Response)
+//! 2. 网络套接字调试收发历史帧 (TX Request vs RX Response)
 //! 3. 硬件串口/工业总线交互数据 (Serial Modbus-RTU / Bus IO)
 //! 4. TLS/HTTPS 全息解密明文流 (Decrypted HTTP Payload)
 //! 5. 自由草稿即时输入 (Scratchpad Hex & Raw String)
@@ -76,8 +76,8 @@ fn test_datasource_1_network_sniffing_packets_diff() {
 }
 
 #[test]
-fn test_datasource_2_netassist_tx_vs_rx_diff() {
-    // 数据源 2: NetAssist 网络调试助手 (发送区指令 vs 接收端回包)
+fn test_datasource_2_socket_debugger_tx_vs_rx_diff() {
+    // 数据源 2: 网络套接字调试工作台 (发送区指令 vs 接收端回包)
     let mut extra_tx = HashMap::new();
     extra_tx.insert("通信流向".to_string(), "TX".to_string());
     extra_tx.insert("规约模式".to_string(), "TCP_CLIENT".to_string());
@@ -110,7 +110,7 @@ fn test_datasource_2_netassist_tx_vs_rx_diff() {
         extra_fields: Some(extra_rx),
     };
 
-    let diff = compare_universal_payloads(net_tx, net_rx).expect("NetAssist 比对执行成功");
+    let diff = compare_universal_payloads(net_tx, net_rx).expect("套接字调试比对执行成功");
     assert_eq!(diff.total_bytes_a, 8);
     assert_eq!(diff.total_bytes_b, 9);
     // 检查字段比对列表中存在流向差异 (TX vs RX)

@@ -64,7 +64,7 @@
           <div class="flex flex-col whitespace-nowrap">
             <div class="flex items-center gap-1.5">
               <span class="text-xs font-bold tracking-tight text-slate-800 dark:text-white/95">OMNI-PROBE</span>
-              <span class="text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded-full glass-pill text-cyan-300">
+              <span class="text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded-full glass-pill text-cyan-950 dark:text-cyan-300">
                 2026 MICA FROST
               </span>
             </div>
@@ -167,7 +167,7 @@
         <!-- 环形缓冲池指标胶囊：严格单行展示 -->
         <div class="flex items-center gap-2 glass-pill px-3 py-1 rounded-full text-[11px] whitespace-nowrap shrink-0 font-mono">
           <span class="opacity-70 font-sans">环形缓冲池:</span>
-          <span class="font-bold text-cyan-300">{{ ringBufferUsageText }}</span>
+          <span class="font-bold text-cyan-950 dark:text-cyan-300">{{ ringBufferUsageText }}</span>
           <div class="w-12 h-1.5 bg-white/10 rounded-full overflow-hidden shrink-0">
             <div class="h-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-300"
               :style="{ width: `${ringBufferPercent}%` }"></div>
@@ -190,7 +190,7 @@
             :class="diffBus.hasBothSlots.value ? 'bg-indigo-600/70 border-indigo-400 text-white font-bold' : ''"
             :title="`[全局数据比对中心 (Ctrl+Shift+D)] 槽位 A: ${diffBus.slotA.value ? '已装载' : '空'} | 槽位 B: ${diffBus.slotB.value ? '已装载' : '空'}`">
             <span class="text-xs">⚖️</span>
-            <span class="text-[11px] font-semibold text-indigo-200">数据比对</span>
+            <span class="text-[11px] font-semibold text-indigo-900 dark:text-indigo-200">数据比对</span>
             <span v-if="diffBus.slotA.value || diffBus.slotB.value" class="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_6px_#818CF8]"></span>
           </button>
           <button @click="activeWorkbench = 'geo_map'"
@@ -198,7 +198,7 @@
             :class="activeWorkbench === 'geo_map' ? 'bg-indigo-600/60 border-indigo-400 text-white font-bold' : ''"
             title="一键切入全球网络地理态势与地图工作台">
             <span class="text-xs">🌍</span>
-            <span class="text-[11px] font-semibold text-cyan-200">全球地图</span>
+            <span class="text-[11px] font-semibold text-cyan-900 dark:text-cyan-200">全球地图</span>
           </button>
           <!-- 无线与虚拟局域网专业监测控制台 -->
           <button @click="isWirelessVlanOpen = true"
@@ -420,7 +420,7 @@
           v-else-if="activeWorkbench === 'geo_map'"
         />
 
-        <!-- 工作台 10：工业级网络调试助手 (NetAssist Pro) -->
+        <!-- 工作台 10：工业级网络通信调试工作台 -->
         <NetAssistWorkbenchView
           v-else-if="activeWorkbench === 'net_assist'"
           @switchWorkbench="activeWorkbench = $event"

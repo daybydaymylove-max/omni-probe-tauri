@@ -10,7 +10,7 @@
         <div>
           <div class="flex items-center gap-2">
             <h2 class="text-xs font-bold text-slate-800 dark:text-slate-100 tracking-tight">
-              工业级全双工网络调试助手 (NetAssist Pro)
+              工业级全双工网络调试助手
             </h2>
             <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold flex items-center gap-1 border shadow-2xs"
               :class="isRunning
@@ -692,7 +692,7 @@ function setDiffSlotA(item: PacketLogItem) {
     payloadHex: item.payload_hex,
     payloadAscii: item.payload_text,
     byteLength: item.length
-  }, `NetAssist ${item.direction} #${item.id}`);
+  }, `套接字调试 ${item.direction} #${item.id}`);
 }
 
 function setDiffSlotB(item: PacketLogItem) {
@@ -706,7 +706,7 @@ function setDiffSlotB(item: PacketLogItem) {
     payloadHex: item.payload_hex,
     payloadAscii: item.payload_text,
     byteLength: item.length
-  }, `NetAssist ${item.direction} #${item.id}`);
+  }, `套接字调试 ${item.direction} #${item.id}`);
 
   if (diffBus.slotA.value) {
     diffBus.compareSlots();
@@ -1096,7 +1096,7 @@ function applyProtocolPreset(type: string) {
       break;
     case 'http_probe':
       txFormat.value = 'ASCII';
-      txPayload.value = 'GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nUser-Agent: OmniProbe-NetAssist/0.2.2\r\nConnection: close\r\n\r\n';
+      txPayload.value = 'GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nUser-Agent: OmniProbe-SocketDebugger/0.2.3\r\nConnection: close\r\n\r\n';
       break;
     case 'sl651_telemetry':
       txPayload.value = '7E 7E 01 00 00 00 00 01 00 02 32 00 00 03 14 00 00 00';
@@ -1117,7 +1117,7 @@ function exportLog() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `OmniProbe_NetAssist_Log_${Date.now()}.txt`;
+  a.download = `OmniProbe_SocketLog_${Date.now()}.txt`;
   a.click();
   URL.revokeObjectURL(url);
   notifySuccess('通信日志导出成功', '已生成纯文本日志文件并已启动下载');

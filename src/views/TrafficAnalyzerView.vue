@@ -10,7 +10,7 @@
         <div class="flex items-center justify-between mb-1.5 z-10">
           <div class="flex items-center gap-2">
             <span class="text-xs font-bold uppercase tracking-wider text-slate-200">工业控制通信全息态势</span>
-            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-950 dark:bg-cyan-500/10 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-500/20 font-bold">
               5 个活跃核心工控单元
             </span>
           </div>
@@ -86,7 +86,7 @@
         <div class="flex flex-col gap-1.5 py-1">
           <div class="flex justify-between items-center text-[11px]">
             <span class="text-slate-400">工业 OT 协议载荷占比</span>
-            <span class="font-mono text-cyan-300 font-bold">{{ industrialRatioText }}</span>
+            <span class="font-mono text-cyan-950 dark:text-cyan-300 font-bold">{{ industrialRatioText }}</span>
           </div>
           <!-- 分段彩色胶囊条 -->
           <div class="w-full h-2.5 rounded-full bg-white/5 overflow-hidden flex p-0.5 gap-0.5 border border-white/10">
@@ -212,7 +212,7 @@
 
         <!-- 1. 深度分析工具下拉菜单 -->
         <div class="relative group">
-          <button class="glass-pill text-cyan-300 hover:text-white px-2.5 py-1 rounded-xl font-medium transition-all cursor-pointer flex items-center gap-1">
+          <button class="glass-pill text-cyan-900 dark:text-cyan-300 hover:text-cyan-950 dark:hover:text-white px-2.5 py-1 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1">
             <span class="whitespace-nowrap">📊 专业分析</span>
             <span class="text-[9px]">▾</span>
           </button>
@@ -243,7 +243,7 @@
           </button>
           <div class="absolute right-0 top-full mt-1.5 w-48 glass-surface rounded-2xl p-1.5 hidden group-hover:block z-50 border border-slate-200/80 dark:border-white/15 shadow-2xl space-y-1 font-medium">
             <button @click="$emit('switchWorkbench', 'net_assist')" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-sky-500/15 text-slate-800 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 flex items-center gap-2 transition-colors font-bold">
-              <span>🔌 网络调试助手 (NetAssist)</span>
+              <span>🔌 网络通信调试工作台</span>
             </button>
             <button @click="isTargetProbeOpen = true" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-amber-500/15 text-slate-700 dark:text-slate-200 hover:text-amber-700 flex items-center gap-2 transition-colors">
               <span>📡 靶向主动反探</span>
@@ -471,35 +471,35 @@
                       <span :class="['px-1.5 py-0.2 rounded text-[10px] font-bold font-mono shrink-0', parseL7StructuredSummary(pkt).actionClass]">
                         {{ parseL7StructuredSummary(pkt).action }}
                       </span>
-                      <span class="truncate text-slate-800 dark:text-slate-200 font-mono font-medium">
+                      <span class="truncate text-slate-900 dark:text-slate-100 font-mono font-semibold">
                         {{ parseL7StructuredSummary(pkt).detail }}
                       </span>
                     </template>
 
-                    <!-- 模式 B: ASCII + HEX 双模快速预览 -->
+                    <!-- 模式 B: ASCII + HEX 双模快速预览 (高对比度清晰色彩，彻底告别浅白反光) -->
                     <template v-else-if="parseL7StructuredSummary(pkt).kind === 'ascii_hex'">
-                      <span class="px-1 py-0.2 rounded text-[9px] font-bold font-mono bg-cyan-100 text-cyan-900 border border-cyan-300 dark:bg-cyan-950 dark:text-cyan-300 dark:border-cyan-800 shrink-0">
+                      <span class="px-1.5 py-0.2 rounded text-[9px] font-bold font-mono bg-sky-100 text-sky-950 border border-sky-300 dark:bg-sky-950 dark:text-sky-300 dark:border-sky-800 shrink-0">
                         ASCII
                       </span>
-                      <span class="truncate max-w-[200px] text-slate-800 dark:text-slate-200 font-mono">
+                      <span class="truncate max-w-[220px] text-slate-900 dark:text-slate-100 font-mono font-medium">
                         {{ parseL7StructuredSummary(pkt).asciiText }}
                       </span>
-                      <span class="text-slate-300 dark:text-slate-600 font-sans">|</span>
-                      <span class="px-1 py-0.2 rounded text-[9px] font-bold font-mono bg-purple-100 text-purple-900 border border-purple-300 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800 shrink-0">
+                      <span class="text-slate-400 dark:text-slate-500 font-sans">|</span>
+                      <span class="px-1.5 py-0.2 rounded text-[9px] font-bold font-mono bg-purple-100 text-purple-950 border border-purple-300 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800 shrink-0">
                         HEX
                       </span>
-                      <span class="truncate text-slate-600 dark:text-slate-400 font-mono text-[10px]">
+                      <span class="truncate text-slate-700 dark:text-slate-300 font-mono text-[10px]">
                         {{ parseL7StructuredSummary(pkt).hexText }}
                       </span>
                     </template>
 
                     <!-- 模式 C: 规约语义前缀 + 详情 -->
                     <template v-else-if="parseL7StructuredSummary(pkt).kind === 'key_val'">
-                      <span class="font-bold text-sky-900 dark:text-sky-300 shrink-0">
+                      <span class="font-bold text-sky-950 dark:text-sky-300 shrink-0">
                         {{ parseL7StructuredSummary(pkt).prefix }}
                       </span>
-                      <span class="text-slate-300 dark:text-slate-600 font-sans">|</span>
-                      <span class="truncate text-slate-800 dark:text-slate-200 font-mono">
+                      <span class="text-slate-400 dark:text-slate-500 font-sans">|</span>
+                      <span class="truncate text-slate-900 dark:text-slate-100 font-mono font-medium">
                         {{ parseL7StructuredSummary(pkt).body }}
                       </span>
                     </template>
@@ -508,7 +508,7 @@
                     <template v-else>
                       <span :class="[
                         'truncate font-mono',
-                        pkt.entropy_level === 'critical' ? 'text-rose-700 dark:text-rose-400 font-bold' : 'text-slate-800 dark:text-slate-200 font-medium'
+                        pkt.entropy_level === 'critical' ? 'text-rose-950 dark:text-rose-300 font-bold' : 'text-slate-900 dark:text-slate-100 font-semibold'
                       ]">
                         {{ parseL7StructuredSummary(pkt).plainText }}
                       </span>
@@ -643,7 +643,7 @@
           </div>
 
           <div v-if="selectedPacket && activeBottomTab === 'hexdump'" class="flex items-center gap-1.5">
-            <span class="text-[10px] font-mono text-cyan-300 bg-cyan-400/10 px-2 py-0.5 rounded border border-cyan-400/20">
+            <span class="text-[10px] font-mono text-cyan-950 dark:text-cyan-300 bg-cyan-100/90 dark:bg-cyan-400/10 px-2 py-0.5 rounded border border-cyan-300 dark:border-cyan-400/20 font-bold">
               #{{ selectedPacket.id }} {{ selectedPacket.protocol }}
             </span>
             <button @click="openDetailModal(selectedPacket)" class="text-[10px] text-slate-400 hover:text-white transition-colors" title="全屏全景剖析">
@@ -824,7 +824,7 @@
                   <span class="font-bold text-white">多样本变异波率谱与局部信息熵</span>
                   <span class="text-[9px] text-slate-500 font-mono">跨度 {{ matrixResult.mutation_spectrum.length }} 字节</span>
                 </div>
-                <div v-if="hoverSpectrumBin" class="text-[10px] font-mono text-cyan-300">
+                <div v-if="hoverSpectrumBin" class="text-[10px] font-mono text-cyan-950 dark:text-cyan-300 font-bold">
                   偏移 0x{{ hoverSpectrumBin.offset.toString(16).toUpperCase() }} | 波率: {{ hoverSpectrumBin.mutation_rate.toFixed(1) }}% | 局部熵: {{ hoverSpectrumBin.entropy.toFixed(2) }} | 优势码: 0x{{ hoverSpectrumBin.dominant_hex }}
                 </div>
                 <span v-else class="text-[9px] text-slate-500 font-mono">悬停查看各偏移突变波率与熵</span>
@@ -859,7 +859,7 @@
               <div v-for="(p, pIdx) in matrixResult.payloads" :key="pIdx"
                 class="bg-slate-950/80 rounded-xl border border-white/10 p-2.5 space-y-1.5">
                 <div class="flex items-center justify-between text-[10px] border-b border-white/10 pb-1">
-                  <span class="font-bold text-cyan-300 font-mono truncate mr-2">{{ p.label }}</span>
+                  <span class="font-bold text-cyan-950 dark:text-cyan-300 font-mono truncate mr-2">{{ p.label }}</span>
                   <span class="text-slate-400 font-mono shrink-0">{{ p.byte_length }} 字节</span>
                 </div>
 
@@ -969,7 +969,7 @@
             <div class="flex items-center justify-between mb-1">
               <label class="text-xs font-bold text-slate-300">原始帧十六进制载荷 (Raw Hex Payload):</label>
               <div class="flex items-center gap-2">
-                <button @click="formatInjectHex" class="text-[10px] text-cyan-400 hover:text-cyan-300 font-semibold cursor-pointer">
+                <button @click="formatInjectHex" class="text-[10px] text-cyan-800 dark:text-cyan-300 hover:text-cyan-600 dark:hover:text-cyan-200 font-semibold cursor-pointer">
                   清洗并格式化
                 </button>
                 <span class="text-[10px] font-mono text-slate-500">
@@ -1098,7 +1098,7 @@
         <span>💉</span> 注入此帧载荷
       </button>
       <button @click="sendPayloadToNetAssist(contextMenu.packet); closeContextMenu()" class="w-full text-left px-3 py-1.5 hover:bg-sky-500/10 hover:text-sky-700 flex items-center gap-2 cursor-pointer transition-colors font-bold text-sky-800">
-        <span>🔌</span> 推送此载荷至调试助手 (NetAssist)
+        <span>🔌</span> 推送此载荷至网络通信调试工作台
       </button>
       <button @click="menuAction('detail')" class="w-full text-left px-3 py-1.5 hover:bg-blue-500/10 hover:text-blue-700 flex items-center gap-2 cursor-pointer transition-colors">
         <span>🔬</span> 全景深度解剖
@@ -2126,17 +2126,17 @@ function parseL7StructuredSummary(pkt: PacketRecord): L7StructuredSummary {
       detail = '';
     }
 
-    let actionClass = 'text-sky-800 dark:text-sky-300 bg-sky-100/90 dark:bg-sky-950/70 border border-sky-300/80 dark:border-sky-800/60';
+    let actionClass = 'text-sky-950 dark:text-sky-200 bg-sky-100/90 dark:bg-sky-950/70 border border-sky-300 dark:border-sky-800 font-bold';
     if (/DISCONNECT|CLOSE|RESET|FAIL|ERROR|DROP|TIMEOUT/i.test(action)) {
-      actionClass = 'text-rose-800 dark:text-rose-300 bg-rose-100/90 dark:bg-rose-950/70 border border-rose-300/80 dark:border-rose-800/60';
+      actionClass = 'text-rose-950 dark:text-rose-200 bg-rose-100/90 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-800 font-bold';
     } else if (/CONNECT|OPEN|ACCEPT|ESTABLISHED|OK|ACK/i.test(action)) {
-      actionClass = 'text-emerald-800 dark:text-emerald-300 bg-emerald-100/90 dark:bg-emerald-950/70 border border-emerald-300/80 dark:border-emerald-800/60';
+      actionClass = 'text-emerald-950 dark:text-emerald-200 bg-emerald-100/90 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-800 font-bold';
     }
 
     return {
       kind: 'sys_ctrl',
       badge: 'SYS_CTRL',
-      badgeClass: 'bg-slate-200/90 text-slate-700 border-slate-300/80 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 font-bold',
+      badgeClass: 'bg-slate-200 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 font-bold',
       action,
       actionClass,
       detail
@@ -2814,21 +2814,21 @@ function directionBadgeClass(direction: string): string {
     return 'bg-amber-500 text-slate-950 font-bold border-amber-600 shadow-2xs';
   }
   if (direction === 'SYS_CTRL') {
-    return 'bg-slate-100/90 text-slate-700 border-slate-300/80 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 font-semibold';
+    return 'bg-slate-200 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600 font-bold';
   }
   if (direction === 'SYS_ALERT') {
-    return 'bg-rose-100/90 text-rose-800 border-rose-300/80 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-800 font-bold';
+    return 'bg-rose-100 text-rose-950 border-rose-300 dark:bg-rose-950/80 dark:text-rose-200 dark:border-rose-800 font-bold';
   }
-  if (direction === 'PASSIVE_RECV' || direction === 'IN' || direction === 'PORT_INBOUND') {
-    return 'bg-emerald-50 text-emerald-800 border-emerald-300/80 dark:bg-emerald-950/70 dark:text-emerald-300 dark:border-emerald-800 font-semibold';
+  if (direction === 'PASSIVE_RECV' || direction === 'IN' || direction === 'PORT_INBOUND' || direction === 'INBOUND') {
+    return 'bg-emerald-100 text-emerald-950 border-emerald-300 dark:bg-emerald-950/70 dark:text-emerald-300 dark:border-emerald-800 font-bold';
   }
-  if (direction === 'ACTIVE_PULL' || direction === 'OUT' || direction === 'PORT_OUTBOUND') {
-    return 'bg-blue-50 text-blue-800 border-blue-300/80 dark:bg-blue-950/70 dark:text-blue-300 dark:border-blue-800 font-semibold';
+  if (direction === 'ACTIVE_PULL' || direction === 'OUT' || direction === 'PORT_OUTBOUND' || direction === 'OUTBOUND') {
+    return 'bg-blue-100 text-blue-950 border-blue-300 dark:bg-blue-950/70 dark:text-blue-300 dark:border-blue-800 font-bold';
   }
-  if (direction === 'SERIAL_TX') return 'bg-indigo-50 text-indigo-800 border-indigo-300/80 dark:bg-indigo-950/70 dark:text-indigo-300 dark:border-indigo-800 font-semibold';
-  if (direction === 'SERIAL_RX') return 'bg-purple-50 text-purple-800 border-purple-300/80 dark:bg-purple-950/70 dark:text-purple-300 dark:border-purple-800 font-semibold';
-  if (direction === 'USB_ATTACH' || direction === 'USB_DETACH') return 'bg-teal-50 text-teal-800 border-teal-300/80 dark:bg-teal-950/70 dark:text-teal-300 dark:border-teal-800 font-semibold';
-  return 'bg-slate-100/80 text-slate-700 border-slate-200/90 dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700';
+  if (direction === 'SERIAL_TX') return 'bg-indigo-100 text-indigo-950 border-indigo-300 dark:bg-indigo-950/70 dark:text-indigo-300 dark:border-indigo-800 font-bold';
+  if (direction === 'SERIAL_RX') return 'bg-purple-100 text-purple-950 border-purple-300 dark:bg-purple-950/70 dark:text-purple-300 dark:border-purple-800 font-bold';
+  if (direction === 'USB_ATTACH' || direction === 'USB_DETACH') return 'bg-teal-100 text-teal-950 border-teal-300 dark:bg-teal-950/70 dark:text-teal-300 dark:border-teal-800 font-bold';
+  return 'bg-slate-200 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 font-medium';
 }
 
 function protocolColor(proto: string): string {

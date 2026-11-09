@@ -41,7 +41,7 @@
             :class="['px-3 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5',
               activeMode === 'wave' ? 'bg-indigo-600 text-white shadow-sm font-bold' : 'text-slate-400 hover:text-white']">
             <span>📈 载荷波线与波率分析</span>
-            <span v-if="diffResult?.waveform_metrics" class="px-1.5 py-0.2 rounded-full text-[9px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-mono">
+            <span v-if="diffResult?.waveform_metrics" class="px-1.5 py-0.2 rounded-full text-[9px] bg-cyan-100 text-cyan-950 dark:bg-cyan-500/20 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-500/30 font-mono font-bold">
               {{ diffResult.waveform_metrics.mutation_wave_rate.toFixed(0) }}%
             </span>
           </button>

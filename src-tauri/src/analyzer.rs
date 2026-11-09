@@ -508,7 +508,7 @@ pub struct DualPacketDiffResult {
     pub waveform_metrics: Option<WaveformComparisonMetrics>,
 }
 
-/// 通用跨模块比对输入实体 (支持网络包、NetAssist、串口、纯 HEX/ASCII 草稿)
+/// 通用跨模块比对输入实体 (支持网络包、套接字调试、串口、纯 HEX/ASCII 草稿)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UniversalDiffPayload {
     pub id: Option<u64>,
@@ -1484,7 +1484,7 @@ mod tests {
 
     #[test]
     fn test_universal_payloads_comparison() {
-        // 1. 正常十六进制报文比对 (模拟 NetAssist 或串口通讯响应帧)
+        // 1. 正常十六进制报文比对 (模拟套接字调试或串口通讯响应帧)
         let mut extra_a = HashMap::new();
         extra_a.insert("direction".to_string(), "TX".to_string());
         extra_a.insert("baudrate".to_string(), "115200".to_string());
@@ -1495,7 +1495,7 @@ mod tests {
 
         let item_a = UniversalDiffPayload {
             id: Some(101),
-            label: "NetAssist 发送帧".to_string(),
+            label: "套接字调试 发送帧".to_string(),
             timestamp: Some("12:00:01.000".to_string()),
             protocol: Some("Modbus-RTU".to_string()),
             endpoint_src: Some("192.168.1.100:502".to_string()),
@@ -1507,7 +1507,7 @@ mod tests {
 
         let item_b = UniversalDiffPayload {
             id: Some(102),
-            label: "NetAssist 接收帧".to_string(),
+            label: "套接字调试 接收帧".to_string(),
             timestamp: Some("12:00:01.025".to_string()),
             protocol: Some("Modbus-RTU".to_string()),
             endpoint_src: Some("192.168.1.200:502".to_string()),
