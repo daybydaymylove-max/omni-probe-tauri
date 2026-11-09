@@ -62,17 +62,26 @@
           </span>
         </div>
 
-        <!-- 关闭按钮 -->
-        <button @click="$emit('close')"
-          class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-rose-600 hover:text-white text-slate-400 flex items-center justify-center transition-colors cursor-pointer border border-slate-700">
-          ✕
-        </button>
+        <!-- 导出与关闭按钮组 -->
+        <div class="flex items-center gap-2">
+          <button v-if="diffResult" @click="exportDiffReport"
+            class="px-3 py-1.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white border border-indigo-500/40 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+            title="导出双报文差异分析报告 (Markdown)">
+            <span>📥</span>
+            <span>导出差分报告</span>
+          </button>
+          <button @click="$emit('close')"
+            class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-rose-600 hover:text-white text-slate-400 flex items-center justify-center transition-colors cursor-pointer border border-slate-700"
+            title="关闭视窗">
+            ✕
+          </button>
+        </div>
       </div>
 
       <!-- 2. 双报文元信息对比条 (Header Compare Bar) -->
-      <div class="grid grid-cols-2 gap-4 px-5 py-2.5 bg-slate-950/60 border-b border-slate-800 text-xs font-mono shrink-0">
+      <div class="px-5 py-2.5 bg-slate-950/60 border-b border-slate-800 text-xs font-mono shrink-0 flex items-center gap-3">
         <!-- 左侧：基准报文 A -->
-        <div class="flex items-center justify-between bg-slate-900/80 border border-slate-700/80 px-3 py-1.5 rounded-xl">
+        <div class="flex-1 flex items-center justify-between bg-slate-900/80 border border-slate-700/80 px-3 py-1.5 rounded-xl">
           <div class="flex items-center gap-2 truncate">
             <span class="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold">
               基准报文 A
@@ -92,8 +101,15 @@
           </div>
         </div>
 
+        <!-- 中间：互换 A ⇄ B 按钮 -->
+        <button @click="swapPackets" :disabled="!packetA || !packetB"
+          class="shrink-0 w-8 h-8 rounded-xl bg-slate-800/80 hover:bg-indigo-600/40 text-slate-300 hover:text-white border border-slate-700 flex items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed shadow-xs"
+          title="互换基准报文 A 与比对报文 B 的比对方向">
+          🔄
+        </button>
+
         <!-- 右侧：比对报文 B -->
-        <div class="flex items-center justify-between bg-slate-900/80 border border-slate-700/80 px-3 py-1.5 rounded-xl">
+        <div class="flex-1 flex items-center justify-between bg-slate-900/80 border border-slate-700/80 px-3 py-1.5 rounded-xl">
           <div class="flex items-center gap-2 truncate">
             <span class="px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-bold">
               比对报文 B
@@ -477,6 +493,66 @@ async function doDeleteSample(id: string) {
   } catch (e: any) {
     notifyError('删除特征样本受阻', e);
   }
+}
+
+function swapPackets() {
+  if (!props.packetA || !props.packetB) return;
+  const tempA = props.packetA;
+  emit('selectAsA', props.packetB);
+  emit('selectAsB', tempA);
+}
+
+function exportDiffReport() {
+  if (!diffResult.value) return;
+  const res = diffResult.value;
+  const timeStr = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
+
+  let md = `# Omni-Probe 双报文协议与 Hex 差分分析报告\n\n`;
+  md += `- **分析生成时间**: ${timeStr}\n`;
+  md += `- **基准报文 A**: #${res.packet_a_id} (${props.packetA?.protocol || 'N/A'}) - ${props.packetA?.src_ip}:${props.packetA?.src_port} ➔ ${props.packetA?.dst_ip}:${props.packetA?.dst_port} (${res.total_bytes_a} 字节)\n`;
+  md += `- **比对报文 B**: #${res.packet_b_id} (${props.packetB?.protocol || 'N/A'}) - ${props.packetB?.src_ip}:${props.packetB?.src_port} ➔ ${props.packetB?.dst_ip}:${props.packetB?.dst_port} (${res.total_bytes_b} 字节)\n`;
+  md += `- **比对结论**: ${res.summary}\n`;
+  md += `- **突变字节数**: ${res.mutated_bytes_count} / ${Math.max(res.total_bytes_a, res.total_bytes_b)} (突变率: ${res.mutation_rate_percent.toFixed(2)}%)\n\n`;
+
+  md += `## 1. 协议树逐字段比对清单\n\n`;
+  md += `| 规约分层 | 协议字段 | 报文 A 取值 | 报文 B 取值 | 比对状态 |\n`;
+  md += `| :--- | :--- | :--- | :--- | :--- |\n`;
+  if (res.field_diffs && res.field_diffs.length > 0) {
+    res.field_diffs.forEach(f => {
+      const status = f.diff_type === 'EQUAL' ? '一致' : f.diff_type === 'CHANGED' ? '**差异**' : f.diff_type === 'ADDED_IN_B' ? 'B新增' : 'B缺失';
+      md += `| ${f.layer} | ${f.field_name} | \`${f.val_a || '-'}\` | \`${f.val_b || '-'}\` | ${status} |\n`;
+    });
+  } else {
+    md += `| 规约层 | 无字段差异记录 | - | - | 一致 |\n`;
+  }
+
+  md += `\n## 2. 载荷十六进制 Myers 差分对齐\n\n`;
+  md += `### 报文 A (基准):\n\`\`\`\n`;
+  if (res.hex_diff_a?.hex_rows) {
+    res.hex_diff_a.hex_rows.forEach(r => {
+      const hexStr = r.cells.map(c => c.hex).join(' ');
+      md += `${r.offset}  ${hexStr.padEnd(48, ' ')}  |${r.ascii_repr}|\n`;
+    });
+  }
+  md += `\`\`\`\n\n`;
+
+  md += `### 报文 B (比对):\n\`\`\`\n`;
+  if (res.hex_diff_b?.hex_rows) {
+    res.hex_diff_b.hex_rows.forEach(r => {
+      const hexStr = r.cells.map(c => c.hex).join(' ');
+      md += `${r.offset}  ${hexStr.padEnd(48, ' ')}  |${r.ascii_repr}|\n`;
+    });
+  }
+  md += `\`\`\`\n\n`;
+
+  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `packet_diff_#${res.packet_a_id}_vs_#${res.packet_b_id}_${Date.now()}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+  notifySuccess('差分分析报告已导出', `已成功生成报文 #${res.packet_a_id} 与 #${res.packet_b_id} 的 Markdown 报告`);
 }
 
 watch(() => [props.packetA, props.packetB, props.isOpen], () => {

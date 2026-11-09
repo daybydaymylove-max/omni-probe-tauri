@@ -498,6 +498,11 @@ async fn run_matrix_compare(payloads: Vec<String>) -> Result<analyzer::SmartDiff
 }
 
 #[tauri::command]
+async fn run_matrix_compare_labeled_cmd(payloads: Vec<String>, labels: Vec<String>) -> Result<analyzer::SmartDiffResult, String> {
+    analyzer::smart_diff_payloads_labeled(payloads, labels)
+}
+
+#[tauri::command]
 async fn save_baseline_payloads_cmd(payloads: Vec<String>) -> Result<usize, String> {
     analyzer::save_baseline_payloads(payloads)
 }
@@ -1791,6 +1796,7 @@ pub fn run() {
             send_port_transceive_cmd,
             // 分析工具与基线管理
             run_matrix_compare,
+            run_matrix_compare_labeled_cmd,
             save_baseline_payloads_cmd,
             load_baseline_payloads_cmd,
             compare_with_historical_baseline_cmd,

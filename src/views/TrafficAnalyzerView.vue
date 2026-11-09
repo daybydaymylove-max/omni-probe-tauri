@@ -358,7 +358,7 @@
     <div class="flex-1 glass-surface rounded-2xl flex overflow-hidden min-h-0 shadow-2xl border border-white/10">
       
       <!-- 3.1 左侧：高密度原生报文流表格 (宽约 65%~70%) -->
-      <div class="flex-1 flex flex-col overflow-hidden border-r border-white/10 min-w-0">
+      <div class="flex-1 flex flex-col overflow-hidden border-r border-white/10 min-w-0 relative">
         <!-- 虚拟滚动表格容器 -->
         <div ref="tableContainer" @scroll="onScroll" class="flex-1 overflow-auto custom-scrollbar relative min-h-0">
           <div :style="{ minWidth: totalTableMinWidth }">
@@ -388,8 +388,8 @@
             <!-- 虚拟滚动行 -->
             <div :style="{ height: totalHeight + 'px', position: 'relative' }">
               <div :style="{ transform: `translateY(${offsetY}px)`, position: 'absolute', top: 0, left: 0, right: 0 }">
-                <div v-for="pkt in visiblePackets" :key="pkt.id"
-                  @click="handleRowClick($event, pkt)"
+                <div v-for="(pkt, vIdx) in visiblePackets" :key="pkt.id"
+                  @click="handleRowClick($event, pkt, startIdx + vIdx)"
                   @dblclick="openDetailModal(pkt)"
                   @contextmenu.prevent="openContextMenu($event, pkt)"
                   :style="gridTemplateStyle"
@@ -401,9 +401,11 @@
                     pkt.id % 2 === 0 ? 'bg-slate-500/[0.02] dark:bg-white/[0.015] hover:bg-slate-500/[0.06] dark:hover:bg-white/[0.04] text-slate-800 dark:text-slate-200' :
                     'hover:bg-slate-500/[0.06] dark:hover:bg-white/[0.04] text-slate-800 dark:text-slate-200'
                   ]">
-                  <!-- 1. 序号 (经典 7 列之 1 - 墨青高对比度) -->
-                  <div v-if="isColVisible('id')" class="font-bold text-cyan-800 dark:text-cyan-300 font-mono min-w-0 truncate" :title="`报文帧序号 #${pkt.id}`">
-                    #{{ pkt.id }}
+                  <!-- 1. 序号 (经典 7 列之 1 - 墨青高对比度，支持勾选) -->
+                  <div v-if="isColVisible('id')" class="font-bold text-cyan-800 dark:text-cyan-300 font-mono min-w-0 truncate flex items-center gap-1.5" :title="`报文帧序号 #${pkt.id} (点击勾选)`">
+                    <input type="checkbox" :checked="selectedPackets.has(pkt.id)" @click.stop="togglePacketCheck(pkt)"
+                      class="rounded text-indigo-600 focus:ring-0 cursor-pointer w-3 h-3 shrink-0 accent-indigo-600">
+                    <span class="truncate">#{{ pkt.id }}</span>
                   </div>
 
                   <!-- 2. 精准时间 (经典 7 列之 2 - 沉稳灰阶) -->
@@ -568,6 +570,51 @@
             </div>
           </div>
         </div>
+
+        <!-- 多选快捷操作悬浮舱 (Floating Action Capsule) -->
+        <div v-if="selectedPackets.size >= 2"
+          class="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-2xl bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-xl border border-indigo-500/60 shadow-[0_10px_35px_rgba(0,0,0,0.5)] flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div class="flex items-center gap-2 text-xs font-mono font-bold text-indigo-300">
+            <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
+            <span>已选定 <strong class="text-white">{{ selectedPackets.size }}</strong> 帧报文</span>
+          </div>
+
+          <div class="h-4 w-px bg-slate-700"></div>
+
+          <!-- 动作按钮组 -->
+          <div class="flex items-center gap-2 text-xs">
+            <!-- 恰好选定 2 帧：一键双报文差分 -->
+            <button v-if="selectedPackets.size === 2" @click="openDiffWithSelected2"
+              class="px-3 py-1 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+              title="一键对比已勾选的 2 帧报文">
+              <span>⚖️</span>
+              <span>双报文协议差分 (A vs B)</span>
+            </button>
+
+            <!-- 选定 >= 2 帧：多报文矩阵比对 -->
+            <button @click="openMatrixTab"
+              class="px-3 py-1 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+              title="切换至矩阵比对工作台">
+              <span>🔲</span>
+              <span>多报文矩阵比对</span>
+            </button>
+
+            <!-- 批量存为基线 -->
+            <button @click="saveSelectedPacketsAsBaseline"
+              class="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold flex items-center gap-1 transition-all cursor-pointer"
+              title="将已选报文载荷持久化存入基线库">
+              <span>💾</span>
+              <span>存为特征基线</span>
+            </button>
+
+            <!-- 清空选择 -->
+            <button @click="clearSelectedPackets"
+              class="px-2 py-1 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer text-xs"
+              title="清空已选数据包">
+              ✕ 取消
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- 3.2 右侧：常驻【全维深度解构与智能分析工坊】 (宽约 480px) -->
@@ -588,6 +635,11 @@
             <button @click="activeBottomTab = 'wave'" :class="['px-2.5 py-1 rounded-lg transition-all cursor-pointer', activeBottomTab === 'wave' ? 'bg-amber-500/25 text-amber-300 font-bold' : 'text-slate-400 hover:text-white']">
               示波追踪
             </button>
+            <button @click="openMatrixTab" :class="['px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1', activeBottomTab === 'matrix' ? 'bg-indigo-600 text-white font-bold shadow-xs' : 'text-slate-400 hover:text-white']"
+              title="多报文矩阵特征比对">
+              <span>矩阵比对</span>
+              <span v-if="selectedPackets.size >= 2" class="px-1.5 py-0.2 rounded-full text-[9px] bg-indigo-500 text-white font-mono font-bold">{{ selectedPackets.size }}</span>
+            </button>
           </div>
 
           <div v-if="selectedPacket && activeBottomTab === 'hexdump'" class="flex items-center gap-1.5">
@@ -599,7 +651,7 @@
             </button>
           </div>
           <span v-else class="text-[10px] text-slate-500 font-mono">
-            {{ activeBottomTab === 'dialogue' ? '双向交互' : activeBottomTab === 'iographs' ? '纳秒聚合' : activeBottomTab === 'wave' ? '载荷波形' : '待命' }}
+            {{ activeBottomTab === 'dialogue' ? '双向交互' : activeBottomTab === 'iographs' ? '纳秒聚合' : activeBottomTab === 'wave' ? '载荷波形' : activeBottomTab === 'matrix' ? '矩阵特征对齐' : '待命' }}
           </span>
         </div>
 
@@ -720,6 +772,121 @@
             <span>峰值: {{ waveMax }}</span>
             <span>谷值: {{ waveMin }}</span>
             <span>点数: {{ wavePoints.length }}</span>
+          </div>
+        </div>
+
+        <!-- 子视图 5: 多报文矩阵特征比对与对齐工坊 (Matrix Diff Inspector) -->
+        <div v-else-if="activeBottomTab === 'matrix'" class="flex-1 overflow-y-auto p-3 space-y-3 font-mono text-xs custom-scrollbar">
+          <!-- 顶部状态与操作条 -->
+          <div class="flex items-center justify-between text-[11px] pb-2 border-b border-white/10 flex-wrap gap-2">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-slate-200">多报文矩阵特征比对</span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold">
+                已载入 {{ matrixPayloads.length }} 组载荷
+              </span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button @click="runMatrixCompare" :disabled="selectedPackets.size < 2"
+                class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 border border-indigo-500/30 text-[10px] cursor-pointer disabled:opacity-40 transition-colors">
+                ⟳ 重新计算
+              </button>
+              <button @click="runJointBaselineCompare"
+                class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/30 text-[10px] cursor-pointer transition-colors"
+                title="与已固化的历史基线进行多维度联合比对">
+                📊 联合历史基线
+              </button>
+              <button @click="exportMatrixReport" :disabled="!matrixResult"
+                class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700 text-[10px] cursor-pointer disabled:opacity-40 transition-colors"
+                title="导出矩阵特征分析报告 (Markdown)">
+                📥 导出
+              </button>
+            </div>
+          </div>
+
+          <!-- 比对结果或空状态 -->
+          <template v-if="matrixResult && matrixResult.payloads && matrixResult.payloads.length > 0">
+            <!-- 摘要卡片 -->
+            <div class="glass-pill rounded-xl p-2.5 border border-indigo-500/30 bg-indigo-500/10 space-y-1">
+              <div class="flex items-center justify-between text-[10px] text-indigo-300">
+                <span class="font-bold">比对分析概要</span>
+                <span>模式: {{ matrixResult.mode || 'LCS 特征对齐' }}</span>
+              </div>
+              <div class="text-[11px] text-slate-200">
+                {{ matrixResult.summary }}
+              </div>
+            </div>
+
+            <!-- 图例说明条 -->
+            <div class="flex items-center gap-3 text-[10px] text-slate-400 px-1 font-sans">
+              <span class="flex items-center gap-1">
+                <span class="w-2 h-2 rounded bg-slate-600"></span>
+                <span>公共特征 (相同)</span>
+              </span>
+              <span class="flex items-center gap-1">
+                <span class="w-2 h-2 rounded bg-rose-500"></span>
+                <span>变异/突变字节</span>
+              </span>
+              <span class="flex items-center gap-1">
+                <span class="w-2 h-2 rounded bg-emerald-500"></span>
+                <span>差异插入</span>
+              </span>
+            </div>
+
+            <!-- 逐个报文特征比对视窗 -->
+            <div class="space-y-3">
+              <div v-for="(p, pIdx) in matrixResult.payloads" :key="pIdx"
+                class="bg-slate-950/80 rounded-xl border border-white/10 p-2.5 space-y-1.5">
+                <div class="flex items-center justify-between text-[10px] border-b border-white/10 pb-1">
+                  <span class="font-bold text-cyan-300 font-mono truncate mr-2">{{ p.label }}</span>
+                  <span class="text-slate-400 font-mono shrink-0">{{ p.byte_length }} 字节</span>
+                </div>
+
+                <div class="space-y-1 font-mono text-[10px]">
+                  <div v-for="row in p.hex_rows" :key="row.offset"
+                    class="flex items-center justify-between hover:bg-white/[0.04] px-1 py-0.5 rounded">
+                    <!-- 偏移量 -->
+                    <span class="text-slate-500 w-10 shrink-0 select-none">{{ row.offset }}</span>
+
+                    <!-- 16 字节 Hex 列 -->
+                    <div class="flex items-center gap-1 flex-1 mx-1.5 overflow-x-auto">
+                      <span v-for="(c, cIdx) in row.cells" :key="cIdx"
+                        :class="[
+                          'px-0.5 rounded-xs text-center min-w-[17px]',
+                          c.diff_type === 'mutation' || c.diff_type === 'replace' ? 'bg-rose-500 text-white font-bold' :
+                          c.diff_type === 'insert' ? 'bg-emerald-500 text-white font-bold' :
+                          c.diff_type === 'missing' ? 'text-slate-600' :
+                          'text-slate-400'
+                        ]"
+                        :title="c.diff_type !== 'equal' ? `突变类型: ${c.diff_type} (${c.hex})` : c.hex">
+                        {{ c.hex }}
+                      </span>
+                    </div>
+
+                    <!-- ASCII 预览 -->
+                    <span class="text-slate-400 w-24 shrink-0 truncate pl-1 border-l border-white/10 select-none text-[9px]">
+                      {{ row.ascii_repr }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- 空状态或提示引导 -->
+          <div v-else class="flex flex-col items-center justify-center py-16 text-center text-slate-400 space-y-2">
+            <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-300 text-lg">
+              🔲
+            </div>
+            <div class="text-xs font-bold text-slate-200">请选择至少 2 帧报文进行特征矩阵比对</div>
+            <div class="text-[11px] text-slate-400 max-w-[320px] font-sans leading-relaxed">
+              您可以在左侧表格按住 <kbd class="px-1 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[10px]">Ctrl</kbd> 或 <kbd class="px-1 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[10px]">Shift</kbd> 点选多帧报文，系统将自动对齐多报文并高亮变异字节位。
+            </div>
+            <div class="pt-2 flex items-center gap-2">
+              <button v-if="filteredPackets.length >= 2" @click="quickSelectFirstTwoAndCompare"
+                class="px-3 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-semibold cursor-pointer transition-colors shadow-xs">
+                ⚡ 快速对比前两帧
+              </button>
+            </div>
           </div>
         </div>
 
@@ -871,6 +1038,17 @@
       <div class="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase border-b border-slate-100/80 mb-1">
         报文 #{{ contextMenu.packet?.id }}
       </div>
+      <!-- 多选快速比对入口 -->
+      <template v-if="selectedPackets.size === 2">
+        <button @click="openDiffWithSelected2(); closeContextMenu()" class="w-full text-left px-3 py-1.5 hover:bg-indigo-500/10 hover:text-indigo-700 flex items-center gap-2 cursor-pointer transition-colors font-bold text-indigo-900 bg-indigo-50/70 border-b border-indigo-100">
+          <span>⚖️</span> 比对选中的 2 帧报文 (双报文差分)
+        </button>
+      </template>
+      <template v-if="selectedPackets.size >= 2">
+        <button @click="openMatrixTab(); closeContextMenu()" class="w-full text-left px-3 py-1.5 hover:bg-purple-500/10 hover:text-purple-700 flex items-center gap-2 cursor-pointer transition-colors font-bold text-purple-900 bg-purple-50/70 border-b border-purple-100">
+          <span>🔲</span> 开启选中的 {{ selectedPackets.size }} 帧矩阵比对
+        </button>
+      </template>
       <button v-if="contextMenu.packet?.src_ip" @click="quickApplyFieldFilter('ip.src', contextMenu.packet?.src_ip, '=='); closeContextMenu()" class="w-full text-left px-3 py-1.5 hover:bg-blue-500/10 hover:text-blue-700 flex items-center gap-2 cursor-pointer transition-colors font-semibold text-slate-800">
         <span>🔍 按源 IP 过滤 (ip.src == {{ contextMenu.packet?.src_ip }})</span>
       </button>
@@ -1322,6 +1500,7 @@ interface PacketRecord {
 }
 
 interface MatrixResult {
+  mode?: string;
   summary: string;
   payloads: Array<{
     label: string;
@@ -2199,14 +2378,79 @@ const endIdx = computed(() => Math.min(filteredPackets.value.length, startIdx.va
 const visiblePackets = computed(() => filteredPackets.value.slice(startIdx.value, endIdx.value));
 const offsetY = computed(() => startIdx.value * ROW_HEIGHT);
 
-function handleRowClick(e: MouseEvent, pkt: PacketRecord) {
-  if (e.ctrlKey || e.metaKey) {
+const lastClickedIndex = ref<number>(-1);
+
+function handleRowClick(e: MouseEvent, pkt: PacketRecord, index?: number) {
+  if (e.shiftKey && lastClickedIndex.value >= 0 && index !== undefined) {
+    const start = Math.min(lastClickedIndex.value, index);
+    const end = Math.max(lastClickedIndex.value, index);
+    const newSet = new Set(selectedPackets.value);
+    for (let i = start; i <= end; i++) {
+      const p = filteredPackets.value[i];
+      if (p) newSet.add(p.id);
+    }
+    selectedPackets.value = newSet;
+    selectedPacket.value = pkt;
+  } else if (e.ctrlKey || e.metaKey) {
     const s = new Set(selectedPackets.value);
     if (s.has(pkt.id)) s.delete(pkt.id); else s.add(pkt.id);
     selectedPackets.value = s;
+    selectedPacket.value = pkt;
+    if (index !== undefined) lastClickedIndex.value = index;
   } else {
     selectedPacket.value = pkt;
     selectedPackets.value = new Set([pkt.id]);
+    if (index !== undefined) lastClickedIndex.value = index;
+  }
+}
+
+function togglePacketCheck(pkt: PacketRecord) {
+  const s = new Set(selectedPackets.value);
+  if (s.has(pkt.id)) s.delete(pkt.id); else s.add(pkt.id);
+  selectedPackets.value = s;
+  selectedPacket.value = pkt;
+}
+
+function clearSelectedPackets() {
+  selectedPackets.value = new Set();
+}
+
+function openDiffWithSelected2() {
+  const selArr = Array.from(selectedPackets.value)
+    .map(id => props.packets.find(p => p.id === id))
+    .filter(Boolean) as PacketRecord[];
+  if (selArr.length >= 2) {
+    packetDiffBaselineA.value = selArr[0];
+    packetDiffCompareB.value = selArr[1];
+    isPacketDiffOpen.value = true;
+    emit('appendLog', `[DIFF] ✓ 已将选中的报文 #${selArr[0].id} 与 #${selArr[1].id} 送入双报文差分对比工作台`);
+  }
+}
+
+async function quickSelectFirstTwoAndCompare() {
+  if (filteredPackets.value.length >= 2) {
+    const p1 = filteredPackets.value[0];
+    const p2 = filteredPackets.value[1];
+    selectedPackets.value = new Set([p1.id, p2.id]);
+    selectedPacket.value = p1;
+    await runMatrixCompare();
+  }
+}
+
+async function saveSelectedPacketsAsBaseline() {
+  const selArr = Array.from(selectedPackets.value)
+    .map(id => props.packets.find(p => p.id === id))
+    .filter(Boolean) as PacketRecord[];
+  if (selArr.length === 0) return;
+  const payloads = selArr.map(p => p.payload_hex).filter(Boolean);
+  if (payloads.length === 0) return;
+  try {
+    const count = await invoke<number>('save_baseline_payloads_cmd', { payloads });
+    emit('appendLog', `[BASELINE] ✓ 已批量保存 ${count} 条报文特征载荷至基线库`);
+    notifySuccess('基线固化成功', `已批量保存 ${count} 条特征报文至本地基线库`);
+  } catch (e: any) {
+    emit('appendLog', `[ERROR] 批量保存基线失败: ${e}`);
+    notifyError('保存基线受阻', e);
   }
 }
 
@@ -2337,15 +2581,45 @@ const matrixResult = ref<MatrixResult | null>(null);
 async function runMatrixCompare() {
   const fromSel = Array.from(selectedPackets.value)
     .map(id => props.packets.find(p => p.id === id))
-    .filter(Boolean).map(p => p!.payload_hex);
+    .filter(Boolean) as PacketRecord[];
   if (fromSel.length < 2) return;
-  matrixPayloads.value = fromSel;
+  const payloads = fromSel.map(p => p.payload_hex);
+  const labels = fromSel.map(p => `#${p.id} [${p.protocol}] ${p.src_ip}:${p.src_port}➔${p.dst_ip}:${p.dst_port}`);
+  matrixPayloads.value = payloads;
   activeBottomTab.value = 'matrix';
   try {
-    matrixResult.value = await invoke<MatrixResult>('run_matrix_compare', { payloads: fromSel });
+    matrixResult.value = await invoke<MatrixResult>('run_matrix_compare_labeled_cmd', { payloads, labels });
+    emit('appendLog', `[MATRIX] ✓ 成功完成 ${fromSel.length} 组特征报文矩阵对齐比对`);
   } catch (e) {
     emit('appendLog', `[ERROR] LCS 矩阵比对失败: ${e}`);
   }
+}
+
+function exportMatrixReport() {
+  if (!matrixResult.value) return;
+  const res = matrixResult.value;
+  const timeStr = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
+  let md = `# Omni-Probe 多报文矩阵特征比对分析报告\n\n`;
+  md += `- **生成时间**: ${timeStr}\n`;
+  md += `- **比对样本总数**: ${res.payloads.length} 组\n`;
+  md += `- **分析结论**: ${res.summary}\n\n`;
+  md += `## 1. 各样本特征对齐 Hex 矩阵\n\n`;
+  res.payloads.forEach((p, idx) => {
+    md += `### 样本 ${idx + 1}: ${p.label} (${p.byte_length} 字节)\n\`\`\`\n`;
+    p.hex_rows.forEach(r => {
+      const hexStr = r.cells.map(c => c.hex).join(' ');
+      md += `${r.offset}  ${hexStr.padEnd(48, ' ')}  |${r.ascii_repr}|\n`;
+    });
+    md += `\`\`\`\n\n`;
+  });
+  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `matrix_diff_report_${Date.now()}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+  notifySuccess('矩阵分析报告已导出', '多报文特征矩阵比对报告已成功保存为 Markdown');
 }
 
 async function loadHistoricalBaseline() {
