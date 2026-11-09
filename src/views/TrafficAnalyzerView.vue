@@ -124,10 +124,10 @@
     <!-- 展开大盘的快捷药丸（仅在收起态显示） -->
     <div v-if="!isHorizonExpanded" class="flex justify-between items-center px-4 py-1.5 glass-surface rounded-2xl shrink-0">
       <div class="flex items-center gap-3 text-xs">
-        <span class="text-cyan-400 font-bold">全息工业控制态势大盘已折叠</span>
-        <span class="text-slate-400 font-mono text-[11px]">吞吐: {{ telemetryThroughputMbps }} Mbps | 包率: {{ telemetryPps }} PPS | 累计解包: {{ packets.length }} 帧</span>
+        <span class="text-cyan-800 dark:text-cyan-400 font-bold">全息工业控制态势大盘已折叠</span>
+        <span class="text-slate-600 dark:text-slate-400 font-mono text-[11px]">吞吐: {{ telemetryThroughputMbps }} Mbps | 包率: {{ telemetryPps }} PPS | 累计解包: {{ packets.length }} 帧</span>
       </div>
-      <button @click="isHorizonExpanded = true" class="text-xs font-bold text-cyan-300 hover:text-white glass-pill px-3 py-1 rounded-xl transition-all cursor-pointer">
+      <button @click="isHorizonExpanded = true" class="text-xs font-bold text-cyan-800 dark:text-cyan-300 hover:text-cyan-900 dark:hover:text-white glass-pill px-3 py-1 rounded-xl transition-all cursor-pointer">
         ▼ 展开全息态势大盘
       </button>
     </div>
@@ -136,7 +136,7 @@
     <div class="glass-surface rounded-2xl px-3.5 py-1.5 flex items-center justify-between gap-3 shrink-0 shadow-lg">
       <!-- 左翼：高频流控与协议微胶囊 -->
       <div class="flex items-center gap-2">
-        <span class="text-xs font-bold uppercase tracking-wider text-slate-200 shrink-0">报文流水线</span>
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 shrink-0">报文流水线</span>
         <!-- 协议微胶囊切换标签群 -->
         <div class="flex items-center gap-1 glass-pill p-0.5 rounded-xl text-[11px]">
           <button v-for="tag in quickProtocolTags" :key="tag.value" @click="filterProtocol = tag.value"
@@ -144,25 +144,25 @@
             :class="[
               'px-2.5 py-0.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0',
               filterProtocol === tag.value
-                ? 'bg-cyan-500/25 text-cyan-300 font-bold shadow-[0_0_8px_rgba(0,242,254,0.25)] border border-cyan-400/30'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 font-bold shadow-2xs border border-cyan-500/40'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             ]">
             {{ tag.label }}
           </button>
           <!-- 更多规约完整下拉框 -->
-          <select v-model="filterProtocol" class="bg-transparent text-slate-300 text-[11px] rounded-lg px-1.5 py-0.5 focus:outline-none border-l border-white/10 ml-0.5">
-            <option value="" class="bg-[#181820]">全部规约</option>
-            <option v-for="p in protocolList" :key="p" :value="p" class="bg-[#181820]">{{ p }}</option>
+          <select v-model="filterProtocol" class="bg-transparent text-slate-700 dark:text-slate-300 text-[11px] rounded-lg px-1.5 py-0.5 focus:outline-none border-l border-slate-300/60 dark:border-white/10 ml-0.5">
+            <option value="" class="bg-white dark:bg-[#181820]">全部规约</option>
+            <option v-for="p in protocolList" :key="p" :value="p" class="bg-white dark:bg-[#181820]">{{ p }}</option>
           </select>
         </div>
 
-        <div class="h-4 w-px bg-white/10"></div>
+        <div class="h-4 w-px bg-slate-300/60 dark:bg-white/10"></div>
 
         <!-- 物理总线快速切换 -->
         <div class="flex glass-pill p-0.5 rounded-xl text-[11px] font-mono">
-          <button @click="activeBus = 'nic'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer', activeBus === 'nic' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-400 hover:text-white']">NIC</button>
-          <button @click="activeBus = 'serial'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer', activeBus === 'serial' ? 'bg-indigo-500/20 text-indigo-300 font-bold' : 'text-slate-400 hover:text-white']">COM</button>
-          <button @click="activeBus = 'usb'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer', activeBus === 'usb' ? 'bg-purple-500/20 text-purple-300 font-bold' : 'text-slate-400 hover:text-white']">USB</button>
+          <button @click="activeBus = 'nic'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer', activeBus === 'nic' ? 'bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white']">NIC</button>
+          <button @click="activeBus = 'serial'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer', activeBus === 'serial' ? 'bg-indigo-500/20 text-indigo-800 dark:text-indigo-300 font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white']">COM</button>
+          <button @click="activeBus = 'usb'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer', activeBus === 'usb' ? 'bg-purple-500/20 text-purple-800 dark:text-purple-300 font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white']">USB</button>
         </div>
 
         <!-- 串口/USB 控制 -->
@@ -360,15 +360,15 @@
         <div ref="tableContainer" @scroll="onScroll" class="flex-1 overflow-auto custom-scrollbar relative min-h-0">
           <div :style="{ minWidth: totalTableMinWidth }">
             <!-- 精准规范表头 (去除粗糙的硬编码文字竖线 |) -->
-            <div class="sticky top-0 z-20 px-3.5 py-2 glass-surface border-b border-white/10 text-[10px] font-bold text-slate-400 uppercase font-mono backdrop-blur-md items-center"
+            <div class="sticky top-0 z-20 px-3.5 py-2 glass-surface border-b border-slate-200/80 dark:border-white/10 text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase font-mono backdrop-blur-md items-center tracking-wider"
               :style="gridTemplateStyle">
               <div v-for="(col, idx) in visibleColumns" :key="col.key"
                 class="relative group flex items-center justify-between pr-2.5 h-full min-w-0">
                 <div @click="col.sortable ? toggleSort(col.key) : null"
-                  :class="['truncate flex items-center gap-0.5 min-w-0 flex-1', col.sortable ? 'cursor-pointer hover:text-cyan-400' : '']"
+                  :class="['truncate flex items-center gap-0.5 min-w-0 flex-1', col.sortable ? 'cursor-pointer hover:text-cyan-700 dark:hover:text-cyan-400' : '']"
                   :title="`${getColumnLabel(col)} (点击排序)`">
                   <span class="truncate">{{ getColumnLabel(col) }}</span>
-                  <span v-if="col.sortable && sortKey === col.key" class="text-cyan-400 font-bold ml-0.5 shrink-0">
+                  <span v-if="col.sortable && sortKey === col.key" class="text-cyan-700 dark:text-cyan-400 font-bold ml-0.5 shrink-0">
                     {{ sortAsc ? '▲' : '▼' }}
                   </span>
                 </div>
@@ -377,7 +377,7 @@
                   :class="resizingColumnKey === col.key ? 'bg-cyan-500/30' : ''"
                   @mousedown.stop.prevent="startColResize($event, idx)"
                   @dblclick.stop.prevent="resetColWidth(idx)">
-                  <div class="w-[1px] h-3 bg-white/10 group-hover:bg-cyan-400 transition-colors"></div>
+                  <div class="w-[1px] h-3 bg-slate-300 dark:bg-white/10 group-hover:bg-cyan-500 transition-colors"></div>
                 </div>
               </div>
             </div>
@@ -391,19 +391,20 @@
                   @contextmenu.prevent="openContextMenu($event, pkt)"
                   :style="gridTemplateStyle"
                   :class="[
-                    'px-3.5 py-1.5 text-xs font-mono border-b border-white/[0.03] cursor-pointer items-center transition-colors',
-                    selectedPacket?.id === pkt.id ? 'bg-cyan-500/[0.09] border-l-2 border-cyan-400 font-semibold text-white shadow-inner' :
-                    selectedPackets.has(pkt.id) ? 'bg-indigo-500/15 text-slate-100' :
-                    pkt.entropy_level === 'critical' ? 'bg-rose-500/10 hover:bg-rose-500/15 text-rose-200' :
-                    'hover:bg-white/[0.03] text-slate-300'
+                    'px-3.5 py-1.5 text-xs font-mono border-b border-slate-200/60 dark:border-white/[0.04] cursor-pointer items-center transition-colors',
+                    selectedPacket?.id === pkt.id ? 'bg-cyan-500/15 border-l-2 border-cyan-600 dark:border-cyan-400 font-semibold text-slate-900 dark:text-white shadow-inner' :
+                    selectedPackets.has(pkt.id) ? 'bg-indigo-500/15 text-slate-900 dark:text-slate-100' :
+                    pkt.entropy_level === 'critical' ? 'bg-rose-500/10 hover:bg-rose-500/15 text-rose-900 dark:text-rose-200' :
+                    pkt.id % 2 === 0 ? 'bg-slate-500/[0.02] dark:bg-white/[0.015] hover:bg-slate-500/[0.06] dark:hover:bg-white/[0.04] text-slate-800 dark:text-slate-200' :
+                    'hover:bg-slate-500/[0.06] dark:hover:bg-white/[0.04] text-slate-800 dark:text-slate-200'
                   ]">
-                  <!-- 1. 序号 (经典 7 列之 1) -->
-                  <div v-if="isColVisible('id')" class="font-bold text-cyan-400 font-mono min-w-0 truncate" :title="`报文帧序号 #${pkt.id}`">
+                  <!-- 1. 序号 (经典 7 列之 1 - 墨青高对比度) -->
+                  <div v-if="isColVisible('id')" class="font-bold text-cyan-800 dark:text-cyan-300 font-mono min-w-0 truncate" :title="`报文帧序号 #${pkt.id}`">
                     #{{ pkt.id }}
                   </div>
 
-                  <!-- 2. 精准时间 (经典 7 列之 2) -->
-                  <div v-if="isColVisible('timestamp')" class="text-[11px] text-slate-400 font-mono truncate min-w-0" :title="pkt.timestamp">
+                  <!-- 2. 精准时间 (经典 7 列之 2 - 沉稳灰阶) -->
+                  <div v-if="isColVisible('timestamp')" class="text-[11px] text-slate-600 dark:text-slate-300 font-mono truncate min-w-0" :title="pkt.timestamp">
                     {{ pkt.timestamp }}
                   </div>
 
@@ -416,25 +417,25 @@
                       </span>
                     </template>
                     <template v-else-if="pkt.transport === 'USB' || pkt.direction?.startsWith('USB')">
-                      <span class="font-bold text-purple-300 shrink-0 font-mono flex items-center gap-1">
+                      <span class="font-bold text-purple-800 dark:text-purple-300 shrink-0 font-mono flex items-center gap-1">
                         <span>🔌</span>
                         <span>{{ pkt.src_ip || 'USB' }}</span>
                       </span>
                     </template>
                     <template v-else>
-                      <span class="font-bold text-slate-200 truncate hover:text-cyan-300 hover:underline cursor-pointer transition-colors"
+                      <span class="font-bold text-slate-800 dark:text-slate-200 truncate hover:text-cyan-700 dark:hover:text-cyan-300 hover:underline cursor-pointer transition-colors"
                         @click.stop="openIpDossier(pkt.src_ip)" title="点击查阅该 IP 全息档案">
                         {{ formatEndpoint(pkt.src_ip, pkt.src_port) }}
                       </span>
-                      <span v-if="getRemoteIpTag(pkt)" class="text-[9px] text-cyan-300 font-sans px-1 py-0.2 rounded bg-cyan-500/10 border border-cyan-500/20 shrink-0 font-medium" :title="getRemoteIpLocation(pkt)">
+                      <span v-if="getRemoteIpTag(pkt)" class="text-[9px] text-cyan-900 dark:text-cyan-300 font-sans px-1 py-0.2 rounded bg-cyan-100/90 dark:bg-cyan-500/15 border border-cyan-300/80 dark:border-cyan-500/25 shrink-0 font-bold" :title="getRemoteIpLocation(pkt)">
                         {{ getRemoteIpTag(pkt) }}
                       </span>
                     </template>
                   </div>
 
                   <!-- 4. 目标端点 (经典 7 列之 4) -->
-                  <div v-if="isColVisible('dst_endpoint')" class="text-[11px] font-mono text-slate-300 truncate min-w-0" :title="formatEndpointTitle(pkt.dst_ip, pkt.dst_port, pkt)">
-                    <span class="truncate hover:text-cyan-300 hover:underline cursor-pointer transition-colors"
+                  <div v-if="isColVisible('dst_endpoint')" class="text-[11px] font-mono text-slate-800 dark:text-slate-200 truncate min-w-0" :title="formatEndpointTitle(pkt.dst_ip, pkt.dst_port, pkt)">
+                    <span class="truncate hover:text-cyan-700 dark:hover:text-cyan-300 hover:underline cursor-pointer transition-colors font-medium"
                       @click.stop="openIpDossier(pkt.dst_ip)">
                       {{ formatEndpoint(pkt.dst_ip, pkt.dst_port) }}
                     </span>
@@ -448,16 +449,65 @@
                   </div>
 
                   <!-- 6. 载荷大小 (经典 7 列之 6) -->
-                  <div v-if="isColVisible('length')" class="text-[11px] text-slate-400 font-mono truncate min-w-0 text-right pr-2">
+                  <div v-if="isColVisible('length')" class="text-[11px] text-slate-600 dark:text-slate-300 font-mono truncate min-w-0 text-right pr-2 font-medium">
                     {{ pkt.length }} B
                   </div>
 
-                  <!-- 7. 应用层解析关键信息 (经典 7 列之 7 - 宽度自适应撑满) -->
+                  <!-- 7. 应用层解析关键信息 (经典 7 列之 7 - 结构化人机工程学高反差渲染，彻底告别浅白发飘) -->
                   <div v-if="isColVisible('l7_summary')" class="text-[11px] font-mono truncate min-w-0 flex items-center gap-1.5"
-                    :class="pkt.entropy_level === 'critical' ? 'text-rose-300 font-semibold' : 'text-cyan-200'"
                     :title="getPacketL7Summary(pkt)">
                     <span v-if="pkt.entropy_level === 'critical'" class="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_6px_#F43F5E] shrink-0"></span>
-                    <span class="truncate">{{ getPacketL7Summary(pkt) }}</span>
+
+                    <!-- 模式 A: SYS_CTRL 系统控制事件 -->
+                    <template v-if="parseL7StructuredSummary(pkt).kind === 'sys_ctrl'">
+                      <span :class="['px-1.5 py-0.2 rounded text-[9px] border shadow-2xs font-mono shrink-0', parseL7StructuredSummary(pkt).badgeClass]">
+                        {{ parseL7StructuredSummary(pkt).badge }}
+                      </span>
+                      <span :class="['px-1.5 py-0.2 rounded text-[10px] font-bold font-mono shrink-0', parseL7StructuredSummary(pkt).actionClass]">
+                        {{ parseL7StructuredSummary(pkt).action }}
+                      </span>
+                      <span class="truncate text-slate-800 dark:text-slate-200 font-mono font-medium">
+                        {{ parseL7StructuredSummary(pkt).detail }}
+                      </span>
+                    </template>
+
+                    <!-- 模式 B: ASCII + HEX 双模快速预览 -->
+                    <template v-else-if="parseL7StructuredSummary(pkt).kind === 'ascii_hex'">
+                      <span class="px-1 py-0.2 rounded text-[9px] font-bold font-mono bg-cyan-100 text-cyan-900 border border-cyan-300 dark:bg-cyan-950 dark:text-cyan-300 dark:border-cyan-800 shrink-0">
+                        ASCII
+                      </span>
+                      <span class="truncate max-w-[200px] text-slate-800 dark:text-slate-200 font-mono">
+                        {{ parseL7StructuredSummary(pkt).asciiText }}
+                      </span>
+                      <span class="text-slate-300 dark:text-slate-600 font-sans">|</span>
+                      <span class="px-1 py-0.2 rounded text-[9px] font-bold font-mono bg-purple-100 text-purple-900 border border-purple-300 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800 shrink-0">
+                        HEX
+                      </span>
+                      <span class="truncate text-slate-600 dark:text-slate-400 font-mono text-[10px]">
+                        {{ parseL7StructuredSummary(pkt).hexText }}
+                      </span>
+                    </template>
+
+                    <!-- 模式 C: 规约语义前缀 + 详情 -->
+                    <template v-else-if="parseL7StructuredSummary(pkt).kind === 'key_val'">
+                      <span class="font-bold text-sky-900 dark:text-sky-300 shrink-0">
+                        {{ parseL7StructuredSummary(pkt).prefix }}
+                      </span>
+                      <span class="text-slate-300 dark:text-slate-600 font-sans">|</span>
+                      <span class="truncate text-slate-800 dark:text-slate-200 font-mono">
+                        {{ parseL7StructuredSummary(pkt).body }}
+                      </span>
+                    </template>
+
+                    <!-- 模式 D: 常规纯文本 -->
+                    <template v-else>
+                      <span :class="[
+                        'truncate font-mono',
+                        pkt.entropy_level === 'critical' ? 'text-rose-700 dark:text-rose-400 font-bold' : 'text-slate-800 dark:text-slate-200 font-medium'
+                      ]">
+                        {{ parseL7StructuredSummary(pkt).plainText }}
+                      </span>
+                    </template>
                   </div>
 
                   <!-- 以下为高级兼容扩展列 (用户可通过列配置自由选择开启) -->
@@ -468,37 +518,37 @@
                   </div>
 
                   <div v-if="isColVisible('transport')" class="text-[11px] font-bold truncate min-w-0"
-                    :class="pkt.transport === 'SERIAL' ? 'text-indigo-400' : pkt.transport === 'USB' ? 'text-purple-400' : 'text-slate-300'">
+                    :class="pkt.transport === 'SERIAL' ? 'text-indigo-700 dark:text-indigo-400' : pkt.transport === 'USB' ? 'text-purple-700 dark:text-purple-400' : 'text-slate-700 dark:text-slate-300'">
                     {{ pkt.transport }}
                   </div>
 
                   <div v-if="isColVisible('src_ip')" class="text-[11px] truncate font-mono flex items-center gap-1 min-w-0" :title="formatRemoteIp(pkt)">
-                    <span class="font-bold text-slate-200 truncate hover:text-cyan-300 cursor-pointer" @click.stop="openIpDossier(pkt.src_ip)">{{ pkt.src_ip || 'LOCAL' }}</span>
-                    <span v-if="getRemoteIpTag(pkt)" class="text-[9px] text-cyan-300 font-sans px-1 py-0.2 rounded bg-cyan-500/10 border border-cyan-500/20 shrink-0 font-medium">{{ getRemoteIpTag(pkt) }}</span>
+                    <span class="font-bold text-slate-800 dark:text-slate-200 truncate hover:text-cyan-700 dark:hover:text-cyan-300 cursor-pointer" @click.stop="openIpDossier(pkt.src_ip)">{{ pkt.src_ip || 'LOCAL' }}</span>
+                    <span v-if="getRemoteIpTag(pkt)" class="text-[9px] text-cyan-900 dark:text-cyan-300 font-sans px-1 py-0.2 rounded bg-cyan-100/90 dark:bg-cyan-500/15 border border-cyan-300/80 dark:border-cyan-500/25 shrink-0 font-bold">{{ getRemoteIpTag(pkt) }}</span>
                   </div>
 
-                  <div v-if="isColVisible('src_port')" class="text-[11px] font-mono text-slate-300 truncate min-w-0">
+                  <div v-if="isColVisible('src_port')" class="text-[11px] font-mono text-slate-700 dark:text-slate-300 truncate min-w-0">
                     {{ pkt.src_port > 0 ? pkt.src_port : '-' }}
                   </div>
 
-                  <div v-if="isColVisible('dst_port')" class="text-[11px] font-mono text-slate-300 truncate min-w-0">
+                  <div v-if="isColVisible('dst_port')" class="text-[11px] font-mono text-slate-700 dark:text-slate-300 truncate min-w-0">
                     {{ pkt.dst_port > 0 ? pkt.dst_port : '-' }}
                   </div>
 
                   <div v-if="isColVisible('entropy')" class="text-[11px] truncate min-w-0">
                     <span :class="[
-                      pkt.entropy >= 7.5 ? 'text-rose-400 font-bold bg-rose-500/15 px-1 py-0.2 rounded border border-rose-500/30' :
-                      pkt.entropy >= 6.0 ? 'text-amber-400 font-bold bg-amber-500/15 px-1 py-0.2 rounded border border-amber-500/30' :
-                      'text-slate-400 font-mono']">
+                      pkt.entropy >= 7.5 ? 'text-rose-800 dark:text-rose-300 font-bold bg-rose-500/15 px-1 py-0.2 rounded border border-rose-500/30' :
+                      pkt.entropy >= 6.0 ? 'text-amber-800 dark:text-amber-300 font-bold bg-amber-500/15 px-1 py-0.2 rounded border border-amber-500/30' :
+                      'text-slate-600 dark:text-slate-400 font-mono']">
                       {{ pkt.entropy ? pkt.entropy.toFixed(2) : '0.00' }}
                     </span>
                   </div>
 
-                  <div v-if="isColVisible('mac_src')" class="text-[10px] text-slate-400 truncate min-w-0" :title="pkt.mac_src">
+                  <div v-if="isColVisible('mac_src')" class="text-[10px] text-slate-600 dark:text-slate-400 truncate min-w-0" :title="pkt.mac_src">
                     {{ pkt.mac_src || 'N/A' }}
                   </div>
 
-                  <div v-if="isColVisible('payload')" class="text-[11px] text-slate-300 truncate font-mono min-w-0" :title="pkt.raw_text || pkt.payload_hex">
+                  <div v-if="isColVisible('payload')" class="text-[11px] text-slate-700 dark:text-slate-300 truncate font-mono min-w-0" :title="pkt.raw_text || pkt.payload_hex">
                     {{ pkt.raw_text || pkt.payload_hex }}
                   </div>
                 </div>
@@ -562,34 +612,34 @@
               <div class="text-slate-300 text-[10px]">
                 IPv4 · {{ selectedPacket.src_ip || '192.168.1.100' }} ➔ {{ selectedPacket.dst_ip || '192.168.1.20' }}
               </div>
-              <div class="text-cyan-300 text-[10px]">
+              <div class="text-cyan-800 dark:text-cyan-300 text-[10px] font-medium">
                 {{ selectedPacket.transport || 'TCP' }} · 端口: {{ selectedPacket.src_port || '-' }} ➔ {{ selectedPacket.dst_port || '-' }}
               </div>
             </div>
 
             <!-- 卡片 2: L7 工业协议深度解构树 -->
             <div class="glass-pill rounded-xl p-2.5 border border-amber-400/25 bg-amber-500/[0.02] space-y-1.5">
-              <div class="flex items-center justify-between text-[10px] font-bold text-amber-400 uppercase tracking-wider font-sans">
+              <div class="flex items-center justify-between text-[10px] font-bold text-amber-900 dark:text-amber-400 uppercase tracking-wider font-sans">
                 <span>{{ l7DecodedTree.protocolTitle }}</span>
-                <span class="text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/30 text-[9px] font-mono">{{ l7DecodedTree.statusBadge }}</span>
+                <span class="text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-300 dark:border-emerald-500/30 text-[9px] font-mono font-semibold">{{ l7DecodedTree.statusBadge }}</span>
               </div>
-              <div class="space-y-1 text-slate-300 text-[10px] font-mono">
+              <div class="space-y-1 text-slate-800 dark:text-slate-200 text-[10px] font-mono">
                 <div v-for="(item, idx) in l7DecodedTree.nodes" :key="idx"
                   :class="[
-                    'transition-colors group relative flex items-center justify-between py-0.5 rounded px-1 hover:bg-white/5',
-                    item.level === 1 ? 'pl-2 border-l border-amber-400/40 text-slate-200' :
-                    item.level === 2 ? 'pl-4 border-l border-cyan-400/40 text-cyan-200' :
-                    'pl-6 border-l border-emerald-400/30 text-emerald-300'
+                    'transition-colors group relative flex items-center justify-between py-0.5 rounded px-1 hover:bg-slate-500/5 dark:hover:bg-white/5',
+                    item.level === 1 ? 'pl-2 border-l border-amber-500/50 text-slate-800 dark:text-slate-200 font-semibold' :
+                    item.level === 2 ? 'pl-4 border-l border-cyan-500/50 text-cyan-900 dark:text-cyan-200 font-medium' :
+                    'pl-6 border-l border-emerald-500/40 text-emerald-900 dark:text-emerald-300'
                   ]">
                   <span class="truncate mr-2">{{ item.text }}</span>
                   <div v-if="item.fieldKey" class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 shrink-0">
                     <button @click.stop="quickApplyFieldFilter(item.fieldKey, item.fieldValue, '==')"
-                      class="text-[9px] px-1 py-0.2 rounded bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/40 border border-cyan-500/30 cursor-pointer"
+                      class="text-[9px] px-1 py-0.2 rounded bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 hover:bg-cyan-500/40 border border-cyan-500/30 cursor-pointer"
                       title="作为过滤条件应用 (==)">
                       过滤
                     </button>
                     <button @click.stop="quickApplyFieldFilter(item.fieldKey, item.fieldValue, '!=')"
-                      class="text-[9px] px-1 py-0.2 rounded bg-rose-500/20 text-rose-300 hover:bg-rose-500/40 border border-rose-500/30 cursor-pointer"
+                      class="text-[9px] px-1 py-0.2 rounded bg-rose-500/20 text-rose-800 dark:text-rose-300 hover:bg-rose-500/40 border border-rose-500/30 cursor-pointer"
                       title="排除此字段 (!=)">
                       排除
                     </button>
@@ -602,15 +652,15 @@
             <div class="glass-pill rounded-xl p-2.5 border border-white/10 space-y-1 bg-black/60">
               <div class="flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-wider font-sans">
                 <span>Raw Hex Payload ({{ selectedPacket.length }} Bytes)</span>
-                <button @click="copyHex(selectedPacket.payload_hex)" class="text-cyan-400 hover:text-white cursor-pointer transition-colors text-[9px] flex items-center gap-1">
+                <button @click="copyHex(selectedPacket.payload_hex)" class="text-cyan-800 dark:text-cyan-400 hover:underline cursor-pointer transition-colors text-[9px] flex items-center gap-1">
                   <span>📋 复制十六进制</span>
                 </button>
               </div>
-              <div class="text-[10px] text-slate-300 leading-relaxed font-mono max-h-48 overflow-y-auto custom-scrollbar select-text">
+              <div class="text-[10px] text-slate-800 dark:text-slate-300 leading-relaxed font-mono max-h-48 overflow-y-auto custom-scrollbar select-text">
                 <div v-for="(line, idx) in formatAlignedHexDump(selectedPacket.payload_hex)" :key="idx" class="leading-relaxed whitespace-pre font-mono">
-                  <span class="text-slate-500">{{ line.slice(0, 6) }}</span>
-                  <span class="text-slate-200">{{ line.slice(6, 54) }}</span>
-                  <span class="text-cyan-400 font-bold">{{ line.slice(54) }}</span>
+                  <span class="text-slate-500 dark:text-slate-400">{{ line.slice(0, 6) }}</span>
+                  <span class="text-slate-700 dark:text-slate-200">{{ line.slice(6, 54) }}</span>
+                  <span class="text-cyan-800 dark:text-cyan-300 font-bold font-mono">{{ line.slice(54) }}</span>
                 </div>
                 <div v-if="!selectedPacket.payload_hex" class="text-slate-500 text-[10px] py-1">
                   (无应用层载荷)
@@ -1828,6 +1878,82 @@ function getPacketL7Summary(pkt: PacketRecord): string {
   return '报文结构符合工业标准规约规约，正常通信中';
 }
 
+interface L7StructuredSummary {
+  kind: 'sys_ctrl' | 'ascii_hex' | 'key_val' | 'plain';
+  badge?: string;
+  badgeClass?: string;
+  action?: string;
+  actionClass?: string;
+  detail?: string;
+  asciiText?: string;
+  hexText?: string;
+  prefix?: string;
+  body?: string;
+  plainText?: string;
+}
+
+function parseL7StructuredSummary(pkt: PacketRecord): L7StructuredSummary {
+  const raw = getPacketL7Summary(pkt);
+  if (!raw) return { kind: 'plain', plainText: '' };
+
+  // 1. 系统控制事件: [SYS_CTRL] ACTION DETAIL
+  if (raw.startsWith('[SYS_CTRL]')) {
+    const after = raw.slice(10).trim();
+    const spaceIdx = after.indexOf(' ');
+    let action = '';
+    let detail = '';
+    if (spaceIdx > 0) {
+      action = after.slice(0, spaceIdx).trim();
+      detail = after.slice(spaceIdx + 1).trim();
+    } else {
+      action = after;
+      detail = '';
+    }
+
+    let actionClass = 'text-sky-800 dark:text-sky-300 bg-sky-100/90 dark:bg-sky-950/70 border border-sky-300/80 dark:border-sky-800/60';
+    if (/DISCONNECT|CLOSE|RESET|FAIL|ERROR|DROP|TIMEOUT/i.test(action)) {
+      actionClass = 'text-rose-800 dark:text-rose-300 bg-rose-100/90 dark:bg-rose-950/70 border border-rose-300/80 dark:border-rose-800/60';
+    } else if (/CONNECT|OPEN|ACCEPT|ESTABLISHED|OK|ACK/i.test(action)) {
+      actionClass = 'text-emerald-800 dark:text-emerald-300 bg-emerald-100/90 dark:bg-emerald-950/70 border border-emerald-300/80 dark:border-emerald-800/60';
+    }
+
+    return {
+      kind: 'sys_ctrl',
+      badge: 'SYS_CTRL',
+      badgeClass: 'bg-slate-200/90 text-slate-700 border-slate-300/80 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 font-bold',
+      action,
+      actionClass,
+      detail
+    };
+  }
+
+  // 2. 双模载荷预览: [ASCII] ... | [HEX] ...
+  const asciiHexMatch = raw.match(/^\[ASCII\]\s*(.*?)\s*\|\s*\[HEX\]\s*(.*)$/);
+  if (asciiHexMatch) {
+    return {
+      kind: 'ascii_hex',
+      asciiText: asciiHexMatch[1],
+      hexText: asciiHexMatch[2]
+    };
+  }
+
+  // 3. 键值或指令分隔: 包含 | 或者 : 的规约解析
+  if (raw.includes(' | ')) {
+    const pipeIdx = raw.indexOf(' | ');
+    return {
+      kind: 'key_val',
+      prefix: raw.slice(0, pipeIdx).trim(),
+      body: raw.slice(pipeIdx + 3).trim()
+    };
+  }
+
+  // 4. 普通纯文本
+  return {
+    kind: 'plain',
+    plainText: raw
+  };
+}
+
 interface L7TreeNode {
   text: string;
   level: number;
@@ -2247,19 +2373,24 @@ function formatBytes(bytes: number): string {
 
 function directionBadgeClass(direction: string): string {
   if (direction === 'HONEYPOT_RECV') {
-    return 'bg-amber-500 text-white font-bold border-amber-600 shadow-2xs';
+    return 'bg-amber-500 text-slate-950 font-bold border-amber-600 shadow-2xs';
+  }
+  if (direction === 'SYS_CTRL') {
+    return 'bg-slate-100/90 text-slate-700 border-slate-300/80 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 font-semibold';
+  }
+  if (direction === 'SYS_ALERT') {
+    return 'bg-rose-100/90 text-rose-800 border-rose-300/80 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-800 font-bold';
   }
   if (direction === 'PASSIVE_RECV' || direction === 'IN' || direction === 'PORT_INBOUND') {
-    return 'bg-emerald-100 text-emerald-800 border-emerald-300';
+    return 'bg-emerald-50 text-emerald-800 border-emerald-300/80 dark:bg-emerald-950/70 dark:text-emerald-300 dark:border-emerald-800 font-semibold';
   }
   if (direction === 'ACTIVE_PULL' || direction === 'OUT' || direction === 'PORT_OUTBOUND') {
-    return 'bg-blue-100 text-blue-800 border-blue-300';
+    return 'bg-blue-50 text-blue-800 border-blue-300/80 dark:bg-blue-950/70 dark:text-blue-300 dark:border-blue-800 font-semibold';
   }
-  if (direction === 'SERIAL_TX') return 'bg-indigo-100 text-indigo-800 border-indigo-300';
-  if (direction === 'SERIAL_RX') return 'bg-purple-100 text-purple-800 border-purple-300';
-  if (direction === 'USB_ATTACH' || direction === 'USB_DETACH') return 'bg-teal-100 text-teal-800 border-teal-300';
-  if (direction === 'SYS_ALERT' || direction === 'SYS_CTRL') return 'bg-amber-100 text-amber-800 border-amber-300';
-  return 'bg-slate-100 text-slate-700 border-slate-200';
+  if (direction === 'SERIAL_TX') return 'bg-indigo-50 text-indigo-800 border-indigo-300/80 dark:bg-indigo-950/70 dark:text-indigo-300 dark:border-indigo-800 font-semibold';
+  if (direction === 'SERIAL_RX') return 'bg-purple-50 text-purple-800 border-purple-300/80 dark:bg-purple-950/70 dark:text-purple-300 dark:border-purple-800 font-semibold';
+  if (direction === 'USB_ATTACH' || direction === 'USB_DETACH') return 'bg-teal-50 text-teal-800 border-teal-300/80 dark:bg-teal-950/70 dark:text-teal-300 dark:border-teal-800 font-semibold';
+  return 'bg-slate-100/80 text-slate-700 border-slate-200/90 dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700';
 }
 
 function protocolColor(proto: string): string {

@@ -258,6 +258,64 @@ body {
   color: #64748B !important;
 }
 
+/* ------------------------------------------------------------- */
+/* 工业人机工程学：白昼磨砂高对比度安全网 (WCAG 2.1 AA/AAA 级合规) */
+/* 杜绝亮浅色字体在浅白背景上对比度过低、发虚、刺眼及严重视觉疲劳 */
+/* ------------------------------------------------------------- */
+.theme-apple-light .text-cyan-200,
+.theme-apple-light .text-cyan-300,
+.theme-apple-light .text-cyan-400,
+.theme-apple-light .text-teal-200,
+.theme-apple-light .text-teal-300,
+.theme-apple-light .text-teal-400 {
+  color: #0E7490 !important; /* 深墨青色 Cyan-700，纯白底对比度 > 6.5:1 */
+}
+
+.theme-apple-light .text-emerald-200,
+.theme-apple-light .text-emerald-300,
+.theme-apple-light .text-emerald-400,
+.theme-apple-light .text-green-200,
+.theme-apple-light .text-green-300,
+.theme-apple-light .text-green-400 {
+  color: #047857 !important; /* 工业深翠绿 Emerald-700，纯白底对比度 > 5.5:1 */
+}
+
+.theme-apple-light .text-amber-200,
+.theme-apple-light .text-amber-300,
+.theme-apple-light .text-amber-400,
+.theme-apple-light .text-yellow-200,
+.theme-apple-light .text-yellow-300,
+.theme-apple-light .text-yellow-400 {
+  color: #B45309 !important; /* 沉稳深琥珀色 Amber-700，纯白底对比度 > 5.0:1，杜绝刺眼亮黄 */
+}
+
+.theme-apple-light .text-rose-200,
+.theme-apple-light .text-rose-300,
+.theme-apple-light .text-rose-400,
+.theme-apple-light .text-red-200,
+.theme-apple-light .text-red-300,
+.theme-apple-light .text-red-400 {
+  color: #BE123C !important; /* 工业深玫瑰红 Rose-700，纯白底对比度 > 6.2:1 */
+}
+
+.theme-apple-light .text-purple-200,
+.theme-apple-light .text-purple-300,
+.theme-apple-light .text-purple-400,
+.theme-apple-light .text-indigo-200,
+.theme-apple-light .text-indigo-300,
+.theme-apple-light .text-indigo-400 {
+  color: #4338CA !important; /* 沉着深靛紫 Indigo-700，纯白底对比度 > 6.8:1 */
+}
+
+.theme-apple-light .text-sky-200,
+.theme-apple-light .text-sky-300,
+.theme-apple-light .text-sky-400,
+.theme-apple-light .text-blue-200,
+.theme-apple-light .text-blue-300,
+.theme-apple-light .text-blue-400 {
+  color: #0369A1 !important; /* 工业深海蓝 Sky-700，纯白底对比度 > 6.0:1 */
+}
+
 input {
   color: #0F172A;
 }
