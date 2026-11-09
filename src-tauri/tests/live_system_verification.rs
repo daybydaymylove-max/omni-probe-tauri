@@ -17,7 +17,8 @@ use aes_gcm::aead::{Aead, KeyInit, Payload};
 use aes_gcm::{Aes128Gcm, Nonce as GcmNonce};
 use sha2::{Digest, Sha256};
 
-fn main() {
+#[test]
+fn test_live_system_verification_pipeline() {
     println!("\n======================================================================");
     println!("     OMNI-PROBE 真实物理环境全链路动态实证 (LIVE SYSTEM PROOF)");
     println!("======================================================================\n");
