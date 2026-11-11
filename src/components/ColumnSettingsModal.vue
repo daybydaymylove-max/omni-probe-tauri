@@ -1,57 +1,61 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-150 select-none">
-    <div class="bg-white/95 backdrop-blur-2xl rounded-3xl border border-white/80 shadow-2xl w-[680px] max-w-[92vw] max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+  <div v-if="isOpen" class="ui-modal-backdrop fixed inset-0 z-50 flex items-center justify-center animate-in fade-in duration-150 select-none">
+    <div class="ui-modal-surface rounded-3xl w-[680px] max-w-[92vw] max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
       
       <!-- 1. 弹窗头部 -->
-      <div class="px-6 py-4 border-b border-slate-200/70 flex items-center justify-between bg-gradient-to-r from-slate-50 to-white">
+      <div class="ui-nav-glass px-6 py-4 border-b border-(--border-subtle) flex items-center justify-between shrink-0">
         <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-200 flex items-center justify-center text-blue-600 font-bold text-sm">
-            📐
+          <div class="w-8 h-8 rounded-xl bg-sky-500/12 border border-sky-500/30 flex items-center justify-center text-sky-600 dark:text-sky-400">
+            <AppIcon name="sliders" class="w-4 h-4" />
           </div>
           <div>
-            <h3 class="text-sm font-bold text-slate-800 tracking-wide">侦听列表字段显示长度与列宽调节</h3>
-            <p class="text-[11px] text-slate-400">自由设定各字段显示宽度、显示/隐藏开关，或选用场景预设</p>
+            <h3 class="text-sm font-bold text-(--text-primary) tracking-wide">侦听列表字段显示长度与列宽调节</h3>
+            <p class="text-xs text-(--text-muted)">自由设定各字段显示宽度、显示/隐藏开关，或选用场景预设</p>
           </div>
         </div>
         <button @click="$emit('close')"
-          class="w-7 h-7 rounded-xl hover:bg-slate-200/60 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer">
-          ✕
+          class="ui-btn-secondary w-8 h-8 rounded-xl p-0 flex items-center justify-center cursor-pointer"
+          aria-label="关闭弹窗">
+          <AppIcon name="close" class="w-4 h-4" />
         </button>
       </div>
 
       <!-- 2. 快捷预设分段选择 -->
-      <div class="px-6 py-3 bg-slate-100/60 border-b border-slate-200/50 flex items-center justify-between gap-3">
-        <span class="text-xs font-bold text-slate-600 shrink-0">快捷场景预设:</span>
+      <div class="px-6 py-3 bg-(--surface-content-alt) border-b border-(--border-subtle) flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <span class="text-xs font-bold text-(--text-secondary) shrink-0">快捷场景预设:</span>
         <div class="flex items-center gap-2">
           <button @click="applyPreset('compact')"
-            class="px-3 py-1 text-xs rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold transition-all shadow-2xs hover:border-blue-400 active:scale-95 cursor-pointer">
-            📱 紧凑小屏视图
+            class="ui-btn-secondary px-3 py-1.5 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer">
+            <AppIcon name="minimize" class="w-3.5 h-3.5" />
+            <span>紧凑小屏视图</span>
           </button>
           <button @click="applyPreset('standard')"
-            class="px-3 py-1 text-xs rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold transition-all shadow-2xs hover:border-blue-400 active:scale-95 cursor-pointer">
-            💻 标准平衡视图
+            class="ui-btn-secondary px-3 py-1.5 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer">
+            <AppIcon name="layers" class="w-3.5 h-3.5" />
+            <span>标准平衡视图</span>
           </button>
           <button @click="applyPreset('wide')"
-            class="px-3 py-1 text-xs rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold transition-all shadow-2xs hover:border-blue-400 active:scale-95 cursor-pointer">
-            🖥 宽屏/全景视图
+            class="ui-btn-secondary px-3 py-1.5 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer">
+            <AppIcon name="maximize" class="w-3.5 h-3.5" />
+            <span>宽屏/全景视图</span>
           </button>
         </div>
       </div>
 
       <!-- 3. 字段明细列表配置区 -->
-      <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-3 min-h-0 bg-slate-50/30">
+      <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-2.5 min-h-0">
         <div v-for="(col, idx) in localColumns" :key="col.key"
-          class="p-3 bg-white rounded-2xl border border-slate-200/70 shadow-2xs flex items-center justify-between gap-4 hover:border-blue-300/80 transition-colors">
+          class="ui-content-card p-3 rounded-2xl flex items-center justify-between gap-4 hover:border-sky-500/40 transition-colors">
           
           <!-- 左侧：显示开关与列名 -->
-          <div class="flex items-center gap-3 w-40 shrink-0">
+          <div class="flex items-center gap-3 w-44 shrink-0">
             <input type="checkbox" :id="`col-vis-${col.key}`" v-model="col.visible"
-              class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer">
-            <label :for="`col-vis-${col.key}`" class="cursor-pointer">
-              <div class="text-xs font-bold text-slate-800" :class="{ 'line-through text-slate-400': !col.visible }">
+              class="w-4 h-4 rounded accent-sky-600 cursor-pointer">
+            <label :for="`col-vis-${col.key}`" class="cursor-pointer min-w-0">
+              <div class="text-xs font-bold text-(--text-primary) truncate" :class="{ 'line-through text-(--text-muted)': !col.visible }">
                 {{ col.label }}
               </div>
-              <div class="text-[10px] font-mono text-slate-400">{{ col.key }}</div>
+              <div class="text-[11px] font-mono-code text-(--text-muted) truncate">{{ col.key }}</div>
             </label>
           </div>
 
@@ -63,7 +67,7 @@
               :step="5"
               v-model.number="col.width"
               :disabled="!col.visible"
-              class="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 disabled:opacity-40">
+              class="flex-1 h-1.5 bg-(--surface-content-alt) rounded-lg appearance-none cursor-pointer accent-sky-600 disabled:opacity-40">
           </div>
 
           <!-- 右侧：数字输入与恢复默认 -->
@@ -74,32 +78,34 @@
                 :max="1200"
                 v-model.number="col.width"
                 :disabled="!col.visible"
-                class="w-16 px-2 py-1 text-right text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-40">
-              <span class="text-[10px] font-mono text-slate-400 ml-1">px</span>
+                class="ui-input ui-num font-mono-code w-16 px-2 py-1 text-right text-xs font-bold disabled:opacity-40">
+              <span class="text-[11px] font-mono-code text-(--text-muted) ml-1">px</span>
             </div>
 
             <button @click="resetSingleCol(idx)" title="恢复该字段默认宽度"
-              class="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer text-xs">
-              ⟲
+              class="ui-btn-secondary p-1.5 rounded-lg flex items-center justify-center cursor-pointer"
+              aria-label="恢复默认宽度">
+              <AppIcon name="refresh" class="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       </div>
 
       <!-- 4. 底部操作栏 -->
-      <div class="px-6 py-3 border-t border-slate-200/70 bg-white flex items-center justify-between shrink-0">
+      <div class="px-6 py-3 border-t border-(--border-subtle) bg-(--surface-content-alt) flex items-center justify-between shrink-0">
         <button @click="resetAllToDefault"
-          class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer flex items-center gap-1.5">
-          <span>⟲ 恢复全部默认</span>
+          class="ui-btn-secondary px-3 py-1.5 text-xs font-semibold cursor-pointer inline-flex items-center gap-1.5">
+          <AppIcon name="refresh" class="w-3.5 h-3.5" />
+          <span>恢复全部默认</span>
         </button>
 
         <div class="flex items-center gap-2.5">
           <button @click="$emit('close')"
-            class="px-4 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
+            class="ui-btn-secondary px-4 py-1.5 text-xs font-semibold cursor-pointer">
             取消
           </button>
           <button @click="applyAndSave"
-            class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs px-5 py-1.5 rounded-xl font-bold cursor-pointer transition-all shadow-sm active:scale-95">
+            class="ui-btn-primary text-xs px-5 py-1.5 font-bold cursor-pointer">
             应用并保存设置
           </button>
         </div>
@@ -110,6 +116,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import AppIcon from './AppIcon.vue';
 
 export interface ColumnDef {
   key: string;

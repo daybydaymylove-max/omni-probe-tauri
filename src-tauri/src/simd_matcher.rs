@@ -85,24 +85,26 @@ pub fn simd_find_byte(payload: &[u8], target: u8) -> Option<usize> {
 unsafe fn avx2_find_byte_impl(payload: &[u8], target: u8) -> Option<usize> {
     let len = payload.len();
     let mut offset = 0;
-    let target_vec = _mm256_set1_epi8(target as i8);
+    unsafe {
+        let target_vec = _mm256_set1_epi8(target as i8);
 
-    while offset + 32 <= len {
-        let chunk = _mm256_loadu_si256(payload.as_ptr().add(offset) as *const __m256i);
-        let cmp = _mm256_cmpeq_epi8(chunk, target_vec);
-        let mask = _mm256_movemask_epi8(cmp) as u32;
-        if mask != 0 {
-            let hit_idx = mask.trailing_zeros() as usize;
-            return Some(offset + hit_idx);
+        while offset + 32 <= len {
+            let chunk = _mm256_loadu_si256(payload.as_ptr().add(offset) as *const __m256i);
+            let cmp = _mm256_cmpeq_epi8(chunk, target_vec);
+            let mask = _mm256_movemask_epi8(cmp) as u32;
+            if mask != 0 {
+                let hit_idx = mask.trailing_zeros() as usize;
+                return Some(offset + hit_idx);
+            }
+            offset += 32;
         }
-        offset += 32;
-    }
 
-    while offset < len {
-        if *payload.get_unchecked(offset) == target {
-            return Some(offset);
+        while offset < len {
+            if *payload.get_unchecked(offset) == target {
+                return Some(offset);
+            }
+            offset += 1;
         }
-        offset += 1;
     }
     None
 }
@@ -112,24 +114,26 @@ unsafe fn avx2_find_byte_impl(payload: &[u8], target: u8) -> Option<usize> {
 unsafe fn sse42_find_byte_impl(payload: &[u8], target: u8) -> Option<usize> {
     let len = payload.len();
     let mut offset = 0;
-    let target_vec = _mm_set1_epi8(target as i8);
+    unsafe {
+        let target_vec = _mm_set1_epi8(target as i8);
 
-    while offset + 16 <= len {
-        let chunk = _mm_loadu_si128(payload.as_ptr().add(offset) as *const __m128i);
-        let cmp = _mm_cmpeq_epi8(chunk, target_vec);
-        let mask = _mm_movemask_epi8(cmp) as u32;
-        if mask != 0 {
-            let hit_idx = mask.trailing_zeros() as usize;
-            return Some(offset + hit_idx);
+        while offset + 16 <= len {
+            let chunk = _mm_loadu_si128(payload.as_ptr().add(offset) as *const __m128i);
+            let cmp = _mm_cmpeq_epi8(chunk, target_vec);
+            let mask = _mm_movemask_epi8(cmp) as u32;
+            if mask != 0 {
+                let hit_idx = mask.trailing_zeros() as usize;
+                return Some(offset + hit_idx);
+            }
+            offset += 16;
         }
-        offset += 16;
-    }
 
-    while offset < len {
-        if *payload.get_unchecked(offset) == target {
-            return Some(offset);
+        while offset < len {
+            if *payload.get_unchecked(offset) == target {
+                return Some(offset);
+            }
+            offset += 1;
         }
-        offset += 1;
     }
     None
 }
@@ -176,41 +180,43 @@ unsafe fn avx2_find_first_of_anchors_impl(payload: &[u8], anchors: &[u8]) -> Opt
     let len = payload.len();
     let mut offset = 0;
 
-    let chunks: Vec<[__m256i; 4]> = anchors.chunks(4).map(|c| {
-        let a0 = _mm256_set1_epi8(c[0] as i8);
-        let a1 = _mm256_set1_epi8(c.get(1).copied().unwrap_or(c[0]) as i8);
-        let a2 = _mm256_set1_epi8(c.get(2).copied().unwrap_or(c[0]) as i8);
-        let a3 = _mm256_set1_epi8(c.get(3).copied().unwrap_or(c[0]) as i8);
-        [a0, a1, a2, a3]
-    }).collect();
+    unsafe {
+        let chunks: Vec<[__m256i; 4]> = anchors.chunks(4).map(|c| {
+            let a0 = _mm256_set1_epi8(c[0] as i8);
+            let a1 = _mm256_set1_epi8(c.get(1).copied().unwrap_or(c[0]) as i8);
+            let a2 = _mm256_set1_epi8(c.get(2).copied().unwrap_or(c[0]) as i8);
+            let a3 = _mm256_set1_epi8(c.get(3).copied().unwrap_or(c[0]) as i8);
+            [a0, a1, a2, a3]
+        }).collect();
 
-    while offset + 32 <= len {
-        let chunk = _mm256_loadu_si256(payload.as_ptr().add(offset) as *const __m256i);
-        let mut any_mask: u32 = 0;
+        while offset + 32 <= len {
+            let chunk = _mm256_loadu_si256(payload.as_ptr().add(offset) as *const __m256i);
+            let mut any_mask: u32 = 0;
 
-        for group in &chunks {
-            let cmp0 = _mm256_cmpeq_epi8(chunk, group[0]);
-            let cmp1 = _mm256_cmpeq_epi8(chunk, group[1]);
-            let cmp2 = _mm256_cmpeq_epi8(chunk, group[2]);
-            let cmp3 = _mm256_cmpeq_epi8(chunk, group[3]);
-            let merged = _mm256_or_si256(_mm256_or_si256(cmp0, cmp1), _mm256_or_si256(cmp2, cmp3));
-            any_mask |= _mm256_movemask_epi8(merged) as u32;
+            for group in &chunks {
+                let cmp0 = _mm256_cmpeq_epi8(chunk, group[0]);
+                let cmp1 = _mm256_cmpeq_epi8(chunk, group[1]);
+                let cmp2 = _mm256_cmpeq_epi8(chunk, group[2]);
+                let cmp3 = _mm256_cmpeq_epi8(chunk, group[3]);
+                let merged = _mm256_or_si256(_mm256_or_si256(cmp0, cmp1), _mm256_or_si256(cmp2, cmp3));
+                any_mask |= _mm256_movemask_epi8(merged) as u32;
+            }
+
+            if any_mask != 0 {
+                let hit_idx = any_mask.trailing_zeros() as usize;
+                return Some(offset + hit_idx);
+            }
+            offset += 32;
         }
 
-        if any_mask != 0 {
-            let hit_idx = any_mask.trailing_zeros() as usize;
-            return Some(offset + hit_idx);
+        // 标量收尾
+        while offset < len {
+            let b = *payload.get_unchecked(offset);
+            if anchors.contains(&b) {
+                return Some(offset);
+            }
+            offset += 1;
         }
-        offset += 32;
-    }
-
-    // 标量收尾
-    while offset < len {
-        let b = *payload.get_unchecked(offset);
-        if anchors.contains(&b) {
-            return Some(offset);
-        }
-        offset += 1;
     }
     None
 }
@@ -221,40 +227,42 @@ unsafe fn sse42_find_first_of_anchors_impl(payload: &[u8], anchors: &[u8]) -> Op
     let len = payload.len();
     let mut offset = 0;
 
-    let chunks: Vec<[__m128i; 4]> = anchors.chunks(4).map(|c| {
-        let a0 = _mm_set1_epi8(c[0] as i8);
-        let a1 = _mm_set1_epi8(c.get(1).copied().unwrap_or(c[0]) as i8);
-        let a2 = _mm_set1_epi8(c.get(2).copied().unwrap_or(c[0]) as i8);
-        let a3 = _mm_set1_epi8(c.get(3).copied().unwrap_or(c[0]) as i8);
-        [a0, a1, a2, a3]
-    }).collect();
+    unsafe {
+        let chunks: Vec<[__m128i; 4]> = anchors.chunks(4).map(|c| {
+            let a0 = _mm_set1_epi8(c[0] as i8);
+            let a1 = _mm_set1_epi8(c.get(1).copied().unwrap_or(c[0]) as i8);
+            let a2 = _mm_set1_epi8(c.get(2).copied().unwrap_or(c[0]) as i8);
+            let a3 = _mm_set1_epi8(c.get(3).copied().unwrap_or(c[0]) as i8);
+            [a0, a1, a2, a3]
+        }).collect();
 
-    while offset + 16 <= len {
-        let chunk = _mm_loadu_si128(payload.as_ptr().add(offset) as *const __m128i);
-        let mut any_mask: u32 = 0;
+        while offset + 16 <= len {
+            let chunk = _mm_loadu_si128(payload.as_ptr().add(offset) as *const __m128i);
+            let mut any_mask: u32 = 0;
 
-        for group in &chunks {
-            let cmp0 = _mm_cmpeq_epi8(chunk, group[0]);
-            let cmp1 = _mm_cmpeq_epi8(chunk, group[1]);
-            let cmp2 = _mm_cmpeq_epi8(chunk, group[2]);
-            let cmp3 = _mm_cmpeq_epi8(chunk, group[3]);
-            let merged = _mm_or_si128(_mm_or_si128(cmp0, cmp1), _mm_or_si128(cmp2, cmp3));
-            any_mask |= _mm_movemask_epi8(merged) as u32;
+            for group in &chunks {
+                let cmp0 = _mm_cmpeq_epi8(chunk, group[0]);
+                let cmp1 = _mm_cmpeq_epi8(chunk, group[1]);
+                let cmp2 = _mm_cmpeq_epi8(chunk, group[2]);
+                let cmp3 = _mm_cmpeq_epi8(chunk, group[3]);
+                let merged = _mm_or_si128(_mm_or_si128(cmp0, cmp1), _mm_or_si128(cmp2, cmp3));
+                any_mask |= _mm_movemask_epi8(merged) as u32;
+            }
+
+            if any_mask != 0 {
+                let hit_idx = any_mask.trailing_zeros() as usize;
+                return Some(offset + hit_idx);
+            }
+            offset += 16;
         }
 
-        if any_mask != 0 {
-            let hit_idx = any_mask.trailing_zeros() as usize;
-            return Some(offset + hit_idx);
+        while offset < len {
+            let b = *payload.get_unchecked(offset);
+            if anchors.contains(&b) {
+                return Some(offset);
+            }
+            offset += 1;
         }
-        offset += 16;
-    }
-
-    while offset < len {
-        let b = *payload.get_unchecked(offset);
-        if anchors.contains(&b) {
-            return Some(offset);
-        }
-        offset += 1;
     }
     None
 }
@@ -310,29 +318,31 @@ unsafe fn avx2_find_subsequence_impl(payload: &[u8], pattern: &[u8]) -> Option<u
     let last_b = pattern[p_len - 1];
     let tail_offset = p_len - 1;
 
-    let v_first = _mm256_set1_epi8(first_b as i8);
-    let v_last = _mm256_set1_epi8(last_b as i8);
-
     let mut offset = 0;
-    while offset + 32 + tail_offset <= len {
-        let chunk_first = _mm256_loadu_si256(payload.as_ptr().add(offset) as *const __m256i);
-        let chunk_last = _mm256_loadu_si256(payload.as_ptr().add(offset + tail_offset) as *const __m256i);
+    unsafe {
+        let v_first = _mm256_set1_epi8(first_b as i8);
+        let v_last = _mm256_set1_epi8(last_b as i8);
 
-        let cmp_first = _mm256_cmpeq_epi8(chunk_first, v_first);
-        let cmp_last = _mm256_cmpeq_epi8(chunk_last, v_last);
-        let mut mask = (_mm256_movemask_epi8(_mm256_and_si256(cmp_first, cmp_last))) as u32;
+        while offset + 32 + tail_offset <= len {
+            let chunk_first = _mm256_loadu_si256(payload.as_ptr().add(offset) as *const __m256i);
+            let chunk_last = _mm256_loadu_si256(payload.as_ptr().add(offset + tail_offset) as *const __m256i);
 
-        while mask != 0 {
-            let hit_idx = mask.trailing_zeros() as usize;
-            let candidate_start = offset + hit_idx;
-            // 双锚点命中后验证中间内容
-            if &payload[candidate_start..candidate_start + p_len] == pattern {
-                return Some(candidate_start);
+            let cmp_first = _mm256_cmpeq_epi8(chunk_first, v_first);
+            let cmp_last = _mm256_cmpeq_epi8(chunk_last, v_last);
+            let mut mask = (_mm256_movemask_epi8(_mm256_and_si256(cmp_first, cmp_last))) as u32;
+
+            while mask != 0 {
+                let hit_idx = mask.trailing_zeros() as usize;
+                let candidate_start = offset + hit_idx;
+                // 双锚点命中后验证中间内容
+                if &payload[candidate_start..candidate_start + p_len] == pattern {
+                    return Some(candidate_start);
+                }
+                mask &= mask - 1; // 清除最低置位位，继续探测同块内其他候选
             }
-            mask &= mask - 1; // 清除最低置位位，继续探测同块内其他候选
-        }
 
-        offset += 32;
+            offset += 32;
+        }
     }
 
     // 标量收尾
@@ -354,28 +364,30 @@ unsafe fn sse42_find_subsequence_impl(payload: &[u8], pattern: &[u8]) -> Option<
     let last_b = pattern[p_len - 1];
     let tail_offset = p_len - 1;
 
-    let v_first = _mm_set1_epi8(first_b as i8);
-    let v_last = _mm_set1_epi8(last_b as i8);
-
     let mut offset = 0;
-    while offset + 16 + tail_offset <= len {
-        let chunk_first = _mm_loadu_si128(payload.as_ptr().add(offset) as *const __m128i);
-        let chunk_last = _mm_loadu_si128(payload.as_ptr().add(offset + tail_offset) as *const __m128i);
+    unsafe {
+        let v_first = _mm_set1_epi8(first_b as i8);
+        let v_last = _mm_set1_epi8(last_b as i8);
 
-        let cmp_first = _mm_cmpeq_epi8(chunk_first, v_first);
-        let cmp_last = _mm_cmpeq_epi8(chunk_last, v_last);
-        let mut mask = (_mm_movemask_epi8(_mm_and_si128(cmp_first, cmp_last))) as u32;
+        while offset + 16 + tail_offset <= len {
+            let chunk_first = _mm_loadu_si128(payload.as_ptr().add(offset) as *const __m128i);
+            let chunk_last = _mm_loadu_si128(payload.as_ptr().add(offset + tail_offset) as *const __m128i);
 
-        while mask != 0 {
-            let hit_idx = mask.trailing_zeros() as usize;
-            let candidate_start = offset + hit_idx;
-            if &payload[candidate_start..candidate_start + p_len] == pattern {
-                return Some(candidate_start);
+            let cmp_first = _mm_cmpeq_epi8(chunk_first, v_first);
+            let cmp_last = _mm_cmpeq_epi8(chunk_last, v_last);
+            let mut mask = (_mm_movemask_epi8(_mm_and_si128(cmp_first, cmp_last))) as u32;
+
+            while mask != 0 {
+                let hit_idx = mask.trailing_zeros() as usize;
+                let candidate_start = offset + hit_idx;
+                if &payload[candidate_start..candidate_start + p_len] == pattern {
+                    return Some(candidate_start);
+                }
+                mask &= mask - 1;
             }
-            mask &= mask - 1;
-        }
 
-        offset += 16;
+            offset += 16;
+        }
     }
 
     while offset + p_len <= len {

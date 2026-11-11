@@ -100,19 +100,18 @@ pub fn check_and_throttle(src_ip: &str) -> bool {
     if src_ip.is_empty() || src_ip == "LOCAL_SERIAL" || src_ip == "USB_CONTROLLER" {
         return false;
     }
-    let throttled = GLOBAL_THROTTLE
-        .lock()
-        .map(|mut t| t.is_throttled(src_ip))
-        .unwrap_or(false);
+    let throttled = crate::lock_guard::lock_mutex(&GLOBAL_THROTTLE, "throttle::check_and_throttle")
+        .is_throttled(src_ip);
 
     // 周期 GC 接线：每 300 秒清理一次超过 300 秒未活跃的 IP 桶
     // （修复原缺陷：gc() 从未被任何调用方触发，扫描源 IP 数量大时内存无限增长）
-    if let Ok(mut last) = LAST_GC.lock() {
+    {
+        let mut last = crate::lock_guard::lock_mutex(&LAST_GC, "throttle::check_and_throttle_gc_timer");
         if last.elapsed().as_secs() >= 300 {
             *last = Instant::now();
-            if let Ok(mut t) = GLOBAL_THROTTLE.lock() {
-                t.gc();
-            }
+            drop(last);
+            let mut t = crate::lock_guard::lock_mutex(&GLOBAL_THROTTLE, "throttle::check_and_throttle_gc");
+            t.gc();
         }
     }
 
@@ -124,10 +123,9 @@ pub fn check_and_throttle(src_ip: &str) -> bool {
 
 /// 动态更新全局限速阈值（通过 Tauri Command 下发）
 pub fn update_throttle_config(capacity: f64, fill_rate: f64) {
-    if let Ok(mut t) = GLOBAL_THROTTLE.lock() {
-        t.capacity = capacity;
-        t.fill_rate = fill_rate;
-        // 清空旧桶，以新阈值重新开始
-        t.buckets.clear();
-    }
+    let mut t = crate::lock_guard::lock_mutex(&GLOBAL_THROTTLE, "throttle::update_throttle_config");
+    t.capacity = capacity;
+    t.fill_rate = fill_rate;
+    // 清空旧桶，以新阈值重新开始
+    t.buckets.clear();
 }

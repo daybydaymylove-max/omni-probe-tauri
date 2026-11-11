@@ -171,11 +171,8 @@ pub static GLOBAL_STREAM_BUFFER: Lazy<Arc<Mutex<StreamPagingBuffer>>> = Lazy::ne
 /// 压入报文并处理自动分卷持久化
 pub fn buffer_packet_and_auto_flush(record: PacketRecord) {
     let segment_to_flush = {
-        if let Ok(mut buf) = GLOBAL_STREAM_BUFFER.lock() {
-            buf.push_packet(record)
-        } else {
-            None
-        }
+        let mut buf = crate::lock_guard::lock_mutex(&GLOBAL_STREAM_BUFFER, "stream_paging::buffer_packet_and_auto_flush");
+        buf.push_packet(record)
     };
 
     // 若触发了分卷落盘，在后台独立线程执行 PCAPng 结构化封装，不阻塞抓包主链路

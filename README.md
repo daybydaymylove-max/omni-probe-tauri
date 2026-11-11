@@ -1,22 +1,22 @@
-# Omni-Probe 工业级全能网络探针系统 (v0.2.4)
+# Omni-Probe 工业级全能网络探针系统 (v0.3.1)
 
 <div align="center">
 
 <img src="./public/logo.svg" alt="Omni-Probe Logo" width="128" height="128" />
 
-### 面向现代工业物联网、智能变电站、汽车电子与现场总线的全协议硬核网络探针与电气因果诊断平台
+### 面向现代工业物联网、智能变电站、汽车电子与现场总线的原生桌面多总线协议探针与诊断平台
 
-[![Release](https://img.shields.io/badge/Release-v0.2.4-blue.svg)](https://github.com/daybydaymylove-max/omni-probe-tauri/releases)
+[![Release](https://img.shields.io/badge/Release-v0.3.1-blue.svg)](https://github.com/daybydaymylove-max/omni-probe-tauri/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Rust](https://img.shields.io/badge/Rust-1.75%2B-orange.svg)](https://www.rust-lang.org/)
+[![Rust](https://img.shields.io/badge/Rust-Edition_2024-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-24C8DB.svg)](https://tauri.app/)
 [![Vue](https://img.shields.io/badge/Vue-3.5%2B-42b883.svg)](https://vuejs.org/)
-[![Tests](https://img.shields.io/badge/Tests-346%20Passed%20(100%25)-success.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-364_Passed-success.svg)]()
 [![Code_Style](https://img.shields.io/badge/Code%20Style-Zero%20Placeholders-brightgreen.svg)]()
 [![Architecture](https://img.shields.io/badge/Architecture-Multi--Track%20Self--Healing-indigo.svg)]()
 
 [系统架构](#-系统架构与核心组件) •
-[v0.2.4 核心演进](#-v024-核心架构演进亮点) •
+[v0.3.1 核心演进](#-v031-核心架构演进亮点) •
 [核心技术特性](#-核心技术特性) •
 [多轨自愈保障](#-底层多轨并行保障与运行时自愈架构) •
 [偏好设置与更新](#-系统偏好设置中心与在线更新) •
@@ -44,7 +44,7 @@
 
 ---
 
-## 🌟 v0.2.4 核心架构演进亮点
+## 🌟 v0.3.1 核心架构演进亮点
 
 ### 1. 全平台原生分发矩阵 (Cross-Platform Releases)
 全面支持 GitHub Releases 自动化多平台分发体系，提供各操作系统原生体验：
@@ -268,7 +268,7 @@ graph TD
 - **Node.js**：18.0.0 或更新版本 (`npm`)；
 - **底层驱动建议**（非强制，缺失时自动多轨自愈）：
   - Windows: 建议安装 [Npcap 1.70+](https://npcap.com/)（勾选 "Install Npcap in WinPcap API-compatible Mode"）与 [USBPcap](https://desowin.info/usbpcap/)；
-  - Linux: 安装 `libpcap-dev` (`sudo apt-get install libpcap-dev`)；
+  - Linux: 安装 `libpcap-dev`、`libwebkit2gtk-4.1-dev`；运行时原生文件弹窗建议确保桌面环境具备 `zenity` 或 `kdialog`，系统托盘建议安装 `libayatana-appindicator3-1`（缺失时自动优雅降级）；
   - macOS: 系统原生内置 BPF 捕获支持。
 
 ### 2. 克隆与依赖安装
@@ -282,11 +282,11 @@ cd omni-probe-tauri
 npm install
 ```
 
-### 3. 开发模式启动 (Hot-Reload)
+### 3. 纯原生桌面运行 (无 HTTP 模式)
 
 ```bash
-# 启动 Tauri 桌面热重载开发服务器
-npm run tauri dev
+# 构建静态前端并直接启动 Tauri 原生桌面窗口
+npm run desktop
 ```
 
 ### 4. 生产环境打包构建
@@ -296,9 +296,9 @@ npm run tauri dev
 npm run tauri build
 ```
 编译产物将生成在 `src-tauri/target/release/bundle/` 目录下：
-- **Windows**：`msi/omni-probe-tauri_0.2.4_x64_en-US.msi` 与 `nsis/omni-probe-tauri_0.2.4_x64-setup.exe`；
-- **macOS**：`dmg/omni-probe-tauri_0.2.4_universal.dmg`；
-- **Linux**：`appimage/omni-probe-tauri_0.2.4_amd64.AppImage` 与 `deb/omni-probe-tauri_0.2.4_amd64.deb`。
+- **Windows**：`msi/omni-probe-tauri_0.3.1_x64_en-US.msi` 与 `nsis/omni-probe-tauri_0.3.1_x64-setup.exe`；
+- **macOS**：`dmg/omni-probe-tauri_0.3.1_universal.dmg`；
+- **Linux**：`appimage/omni-probe-tauri_0.3.1_amd64.AppImage` 与 `deb/omni-probe-tauri_0.3.1_amd64.deb`。
 
 ---
 
@@ -324,23 +324,19 @@ Omni-Probe 采用**“专有原生逐字段解剖 + 声明式编译器长尾扩�
 本项目坚持学术诚信与工业生产级质量交付标准，拒绝未经测试的代码推向生产：
 
 ```bash
-# 1. 运行所有 Rust 核心库单元测试 (覆盖 10 大维度全部边界测试)
+# 1. 运行所有 Rust 核心库单元测试 (覆盖协议解剖、零拷贝引擎、串口拦截、差分算法与 RBAC 安全测试)
 cargo test --manifest-path src-tauri/Cargo.toml --lib
-# 实测输出：test result: ok. 321 passed; 0 failed; 0 ignored; finished in 0.35s
+# 实测输出：test result: ok. 355 passed; 0 failed; 0 ignored
 
 # 2. 运行端到端跨模块集成穿透测试套件
 cargo test --manifest-path src-tauri/Cargo.toml --test '*'
-# 实测输出：test result: ok. 25 passed; 0 failed; 0 ignored; finished in 0.43s
+# 实测输出：live_system_verification (1 passed) + universal_diff_exhaustive_verification (8 passed)
 
-# 3. 后端自动化测试总计：346 项测试 100% 全部通过 (0 失败，0 告警，0 panic)
+# 3. 后端自动化测试总计：364 项测试 100% 全部通过 (0 失败，0 跳过，0 panic)
 
-# 4. 编译器静态检查 (零警告)
-cargo check --manifest-path src-tauri/Cargo.toml
-# 实测输出：Finished dev profile in 0.82s (0 errors, 0 warnings)
-
-# 5. 前端 TypeScript 类型检查与 Vite 生产构建 (零错误)
-npm run build (vue-tsc --noEmit && vite build)
-# 实测输出：✓ 693 modules transformed. built in 6.84s (0 errors, 0 warnings)
+# 4. 编译器静态检查与纯原生桌面全量编译打包
+npm run build   # vue-tsc --noEmit && vite build (704 modules transformed, 0 TypeScript errors)
+npm run tauri build   # 产出原生桌面 EXE、MSI 与 NSIS 安装包
 ```
 
 ---

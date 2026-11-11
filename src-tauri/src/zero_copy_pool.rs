@@ -192,6 +192,27 @@ impl ZeroCopyPacketPool {
         }
     }
 
+    /// 供主抓包连续长稳运行管线使用：写入报文并在需要翻页且备用页尚未清理时自动执行乒乓回收，
+    /// 避免触发无谓的背压丢弃计数虚高；返回写入后的槽位 ID。
+    pub fn push_packet_with_autorecycle(&mut self, data: &[u8]) -> Result<u32, String> {
+        let active = self.active_page.load(Ordering::Acquire);
+        let (cur_cursor, nxt_cursor) = if active == 0 {
+            (self.cursor_a.load(Ordering::Acquire), self.cursor_b.load(Ordering::Acquire))
+        } else {
+            (self.cursor_b.load(Ordering::Acquire), self.cursor_a.load(Ordering::Acquire))
+        };
+        if cur_cursor >= self.page_size && nxt_cursor != 0 {
+            self.reset_inactive_page();
+        }
+
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default();
+        let sec = now.as_secs() as u32;
+        let usec = now.subsec_micros();
+        self.acquire_and_write(data, data.len() as u32, sec, usec)
+    }
+
     /// 释放非活动页的槽位游标，供下一次乒乓翻转复用
     pub fn reset_inactive_page(&mut self) {
         let active = self.active_page.load(Ordering::Acquire);
@@ -632,7 +653,7 @@ mod win_mem {
     pub const MEM_RELEASE: u32 = 0x00008000;
     pub const PAGE_READWRITE: u32 = 0x04;
 
-    extern "system" {
+    unsafe extern "system" {
         pub fn VirtualAlloc(
             lpAddress: *mut c_void,
             dwSize: usize,
@@ -1091,6 +1112,425 @@ impl ZeroCopyBridge {
 }
 
 // ============================================================
+// 十、 主抓包管线集成遥测与全局锁页统计中心
+// ============================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KernelZeroCopyTelemetry {
+    pub active_backend: String,
+    pub rio_active: bool,
+    pub npcap_pool_active: bool,
+    pub is_physically_pinned: bool,
+    pub is_large_pages: bool,
+    pub pinned_buffer_bytes: usize,
+    pub ring_packets_total: u64,
+    pub ring_bytes_total: u64,
+    pub ring_drops_total: u64,
+    pub pool_total_slots: usize,
+    pub pool_allocations: u64,
+    pub pool_deallocations: u64,
+    pub pool_exhaustion_drops: u64,
+    pub pool_utilization_percent: f64,
+    pub pool_total_memory_bytes: usize,
+    pub status_detail: String,
+}
+
+struct ZeroCopyRuntimeCounters {
+    active_backend: std::sync::RwLock<String>,
+    status_detail: std::sync::RwLock<String>,
+    rio_active: AtomicBool,
+    npcap_pool_active: AtomicBool,
+    is_physically_pinned: AtomicBool,
+    is_large_pages: AtomicBool,
+    pinned_buffer_bytes: AtomicUsize,
+    ring_packets_total: AtomicU64,
+    ring_bytes_total: AtomicU64,
+    ring_drops_total: AtomicU64,
+}
+
+static GLOBAL_RUNTIME_COUNTERS: once_cell::sync::Lazy<ZeroCopyRuntimeCounters> =
+    once_cell::sync::Lazy::new(|| ZeroCopyRuntimeCounters {
+        active_backend: std::sync::RwLock::new("Idle".to_string()),
+        status_detail: std::sync::RwLock::new("捕获引擎尚未启动或处于待机状态".to_string()),
+        rio_active: AtomicBool::new(false),
+        npcap_pool_active: AtomicBool::new(false),
+        is_physically_pinned: AtomicBool::new(false),
+        is_large_pages: AtomicBool::new(false),
+        pinned_buffer_bytes: AtomicUsize::new(0),
+        ring_packets_total: AtomicU64::new(0),
+        ring_bytes_total: AtomicU64::new(0),
+        ring_drops_total: AtomicU64::new(0),
+    });
+
+/// 对接 Npcap 或传统接收线程将真实捕获帧写入有界零拷贝大页/池化队列并推进统计
+#[inline]
+pub fn record_captured_frame_in_pool(data: &[u8]) {
+    if let Ok(mut pool) = GLOBAL_ZERO_COPY_POOL.lock() {
+        let _ = pool.push_packet_with_autorecycle(data);
+    }
+    GLOBAL_RUNTIME_COUNTERS.ring_packets_total.fetch_add(1, Ordering::Relaxed);
+    GLOBAL_RUNTIME_COUNTERS.ring_bytes_total.fetch_add(data.len() as u64, Ordering::Relaxed);
+}
+
+pub fn set_runtime_capture_backend(
+    backend: &str,
+    rio_active: bool,
+    npcap_active: bool,
+    pinned: bool,
+    large_pages: bool,
+    pinned_bytes: usize,
+    detail: &str,
+) {
+    let mut b = crate::lock_guard::write_rwlock(&GLOBAL_RUNTIME_COUNTERS.active_backend, "zero_copy_pool::backend");
+    *b = backend.to_string();
+    let mut d = crate::lock_guard::write_rwlock(&GLOBAL_RUNTIME_COUNTERS.status_detail, "zero_copy_pool::detail");
+    *d = detail.to_string();
+    GLOBAL_RUNTIME_COUNTERS.rio_active.store(rio_active, Ordering::Relaxed);
+    GLOBAL_RUNTIME_COUNTERS.npcap_pool_active.store(npcap_active, Ordering::Relaxed);
+    GLOBAL_RUNTIME_COUNTERS.is_physically_pinned.store(pinned, Ordering::Relaxed);
+    GLOBAL_RUNTIME_COUNTERS.is_large_pages.store(large_pages, Ordering::Relaxed);
+    GLOBAL_RUNTIME_COUNTERS.pinned_buffer_bytes.store(pinned_bytes, Ordering::Relaxed);
+}
+
+pub fn reset_runtime_capture_backend() {
+    set_runtime_capture_backend(
+        "Idle",
+        false,
+        false,
+        false,
+        false,
+        0,
+        "捕获流水线已停止，锁页物理资源与缓冲区已释放",
+    );
+}
+
+pub fn get_runtime_zero_copy_telemetry() -> KernelZeroCopyTelemetry {
+    let pool_metrics = crate::lock_guard::lock_mutex(&GLOBAL_ZERO_COPY_POOL, "zero_copy_pool::metrics").get_metrics();
+    let backend = crate::lock_guard::read_rwlock(&GLOBAL_RUNTIME_COUNTERS.active_backend, "zero_copy_pool::read_backend").clone();
+    let detail = crate::lock_guard::read_rwlock(&GLOBAL_RUNTIME_COUNTERS.status_detail, "zero_copy_pool::read_detail").clone();
+
+    KernelZeroCopyTelemetry {
+        active_backend: backend,
+        rio_active: GLOBAL_RUNTIME_COUNTERS.rio_active.load(Ordering::Relaxed),
+        npcap_pool_active: GLOBAL_RUNTIME_COUNTERS.npcap_pool_active.load(Ordering::Relaxed),
+        is_physically_pinned: GLOBAL_RUNTIME_COUNTERS.is_physically_pinned.load(Ordering::Relaxed),
+        is_large_pages: GLOBAL_RUNTIME_COUNTERS.is_large_pages.load(Ordering::Relaxed),
+        pinned_buffer_bytes: GLOBAL_RUNTIME_COUNTERS.pinned_buffer_bytes.load(Ordering::Relaxed),
+        ring_packets_total: GLOBAL_RUNTIME_COUNTERS.ring_packets_total.load(Ordering::Relaxed),
+        ring_bytes_total: GLOBAL_RUNTIME_COUNTERS.ring_bytes_total.load(Ordering::Relaxed),
+        ring_drops_total: GLOBAL_RUNTIME_COUNTERS.ring_drops_total.load(Ordering::Relaxed),
+        pool_total_slots: pool_metrics.total_slots,
+        pool_allocations: pool_metrics.total_allocations,
+        pool_deallocations: pool_metrics.total_deallocations,
+        pool_exhaustion_drops: pool_metrics.pool_exhaustion_drops,
+        pool_utilization_percent: pool_metrics.utilization_percent,
+        pool_total_memory_bytes: pool_metrics.total_memory_bytes,
+        status_detail: detail,
+    }
+}
+
+// ============================================================
+// 十一、 Windows 原生 Winsock2 Registered I/O (RIO) 物理锁页抓包接收器
+// 直接向 Windows 内核 afd.sys 注册 VirtualAlloc/VirtualLock 锁定大页,
+// 实现系统级零拷贝批量出队 (RIODequeueCompletion), 杜绝常规 recv 二次内核拷贝
+// ============================================================
+
+#[cfg(windows)]
+pub mod win_rio {
+    use super::*;
+    use std::ffi::c_void;
+    use std::net::Ipv4Addr;
+    use windows_sys::Win32::Networking::WinSock::{
+        bind, closesocket, WSACleanup, WSAGetLastError, WSAIoctl, WSASocketW, WSAStartup,
+        AF_INET, INVALID_SOCKET, IN_ADDR, IN_ADDR_0, IPPROTO_IP, RCVALL_ON, RIORESULT,
+        RIO_BUF, RIO_BUFFERID, RIO_CORRUPT_CQ, RIO_CQ, RIO_EXTENSION_FUNCTION_TABLE, RIO_RQ,
+        SIO_GET_MULTIPLE_EXTENSION_FUNCTION_POINTER, SIO_RCVALL, SOCKADDR, SOCKADDR_IN, SOCKET,
+        SOCKET_ERROR, SOCK_RAW, WSADATA, WSAID_MULTIPLE_RIO, WSA_FLAG_REGISTERED_IO,
+    };
+
+    const RIO_SLOT_COUNT: usize = 64;
+    const RIO_SLOT_BYTES: usize = 65536; // 兼容最大 IPv4 64KB 报文，总锁定 4MB
+    const RIO_INVALID_BUFFERID_VAL: RIO_BUFFERID = 0xFFFF_FFFFisize;
+    const RIO_INVALID_CQ_VAL: RIO_CQ = 0;
+    const RIO_INVALID_RQ_VAL: RIO_RQ = 0;
+
+    pub struct WindowsRioRawReceiver {
+        socket: SOCKET,
+        wsa_started: bool,
+        rio_table: RIO_EXTENSION_FUNCTION_TABLE,
+        hugepage: HugepageLockedBuffer,
+        buffer_id: RIO_BUFFERID,
+        cq: RIO_CQ,
+        rq: RIO_RQ,
+        pub is_physically_pinned: bool,
+        pub is_large_pages: bool,
+        pub pinned_bytes: usize,
+    }
+
+    impl WindowsRioRawReceiver {
+        /// 尝试绑定指定物理 IPv4 网卡地址并初始化 Registered I/O 零拷贝环
+        pub fn try_bind_raw(local_ip: Ipv4Addr) -> Result<Self, String> {
+            unsafe {
+                let mut wsa_data: WSADATA = std::mem::zeroed();
+                let wsa_res = WSAStartup(0x0202, &mut wsa_data);
+                if wsa_res != 0 {
+                    return Err(format!("WSAStartup 失败 (错误码: {})", wsa_res));
+                }
+
+                let socket = WSASocketW(
+                    AF_INET as i32,
+                    SOCK_RAW as i32,
+                    IPPROTO_IP as i32,
+                    std::ptr::null(),
+                    0,
+                    WSA_FLAG_REGISTERED_IO,
+                );
+                if socket == INVALID_SOCKET {
+                    let err = WSAGetLastError();
+                    WSACleanup();
+                    return Err(format!("WSASocketW(WSA_FLAG_REGISTERED_IO) 受阻 (错误码: {})", err));
+                }
+
+                let mut sin: SOCKADDR_IN = std::mem::zeroed();
+                sin.sin_family = AF_INET;
+                sin.sin_port = 0;
+                sin.sin_addr = IN_ADDR {
+                    S_un: IN_ADDR_0 {
+                        S_addr: u32::from_ne_bytes(local_ip.octets()),
+                    },
+                };
+
+                if bind(
+                    socket,
+                    &sin as *const SOCKADDR_IN as *const SOCKADDR,
+                    std::mem::size_of::<SOCKADDR_IN>() as i32,
+                ) == SOCKET_ERROR
+                {
+                    let err = WSAGetLastError();
+                    closesocket(socket);
+                    WSACleanup();
+                    return Err(format!("RIO Raw Socket 绑定 {} 失败 (错误码: {})", local_ip, err));
+                }
+
+                // 开启 SIO_RCVALL 全量 IPv4 混杂截获
+                let mut rcvall_val: u32 = RCVALL_ON as u32;
+                let mut bytes_ret: u32 = 0;
+                if WSAIoctl(
+                    socket,
+                    SIO_RCVALL,
+                    &mut rcvall_val as *mut u32 as *const c_void,
+                    std::mem::size_of::<u32>() as u32,
+                    std::ptr::null_mut(),
+                    0,
+                    &mut bytes_ret,
+                    std::ptr::null_mut(),
+                    None,
+                ) == SOCKET_ERROR
+                {
+                    let err = WSAGetLastError();
+                    closesocket(socket);
+                    WSACleanup();
+                    return Err(format!("激活 SIO_RCVALL 混杂模式受阻 (错误码: {})", err));
+                }
+
+                // 查询 Winsock2 Registered I/O (RIO) 扩展函数表指针
+                let mut rio_guid = WSAID_MULTIPLE_RIO;
+                let mut rio_table: RIO_EXTENSION_FUNCTION_TABLE = std::mem::zeroed();
+                let mut tbl_bytes: u32 = 0;
+                if WSAIoctl(
+                    socket,
+                    SIO_GET_MULTIPLE_EXTENSION_FUNCTION_POINTER,
+                    &mut rio_guid as *mut _ as *const c_void,
+                    std::mem::size_of_val(&rio_guid) as u32,
+                    &mut rio_table as *mut _ as *mut c_void,
+                    std::mem::size_of::<RIO_EXTENSION_FUNCTION_TABLE>() as u32,
+                    &mut tbl_bytes,
+                    std::ptr::null_mut(),
+                    None,
+                ) == SOCKET_ERROR
+                {
+                    let err = WSAGetLastError();
+                    closesocket(socket);
+                    WSACleanup();
+                    return Err(format!("获取 WSAID_MULTIPLE_RIO 函数表失败 (错误码: {})", err));
+                }
+
+                // 分配物理锁定的连续大页池并注册为 RIO 缓冲区
+                let hugepage = HugepageLockedBuffer::new(RIO_SLOT_COUNT, RIO_SLOT_BYTES);
+                let pinned = hugepage.is_pinned();
+                let large = hugepage.is_large_pages();
+                let total_bytes = hugepage.total_bytes();
+                let raw_ptr = hugepage.raw_ptr;
+
+                let register_fn = rio_table
+                    .RIORegisterBuffer
+                    .ok_or_else(|| "RIORegisterBuffer 指针为空".to_string())?;
+                let buffer_id = register_fn(raw_ptr as *const u8, total_bytes as u32);
+                if buffer_id == RIO_INVALID_BUFFERID_VAL {
+                    let err = WSAGetLastError();
+                    closesocket(socket);
+                    WSACleanup();
+                    return Err(format!("RIORegisterBuffer 锁页注册失败 (错误码: {})", err));
+                }
+
+                let create_cq_fn = rio_table
+                    .RIOCreateCompletionQueue
+                    .ok_or_else(|| "RIOCreateCompletionQueue 指针为空".to_string())?;
+                let cq = create_cq_fn((RIO_SLOT_COUNT * 2) as u32, std::ptr::null());
+                if cq == RIO_INVALID_CQ_VAL {
+                    let err = WSAGetLastError();
+                    if let Some(dereg) = rio_table.RIODeregisterBuffer {
+                        dereg(buffer_id);
+                    }
+                    closesocket(socket);
+                    WSACleanup();
+                    return Err(format!("RIOCreateCompletionQueue 失败 (错误码: {})", err));
+                }
+
+                let create_rq_fn = rio_table
+                    .RIOCreateRequestQueue
+                    .ok_or_else(|| "RIOCreateRequestQueue 指针为空".to_string())?;
+                let rq = create_rq_fn(
+                    socket,
+                    RIO_SLOT_COUNT as u32,
+                    1,
+                    0,
+                    1,
+                    cq,
+                    cq,
+                    std::ptr::null(),
+                );
+                if rq == RIO_INVALID_RQ_VAL {
+                    let err = WSAGetLastError();
+                    if let Some(close_cq) = rio_table.RIOCloseCompletionQueue {
+                        close_cq(cq);
+                    }
+                    if let Some(dereg) = rio_table.RIODeregisterBuffer {
+                        dereg(buffer_id);
+                    }
+                    closesocket(socket);
+                    WSACleanup();
+                    return Err(format!("RIOCreateRequestQueue 失败 (错误码: {})", err));
+                }
+
+                let mut receiver = Self {
+                    socket,
+                    wsa_started: true,
+                    rio_table,
+                    hugepage,
+                    buffer_id,
+                    cq,
+                    rq,
+                    is_physically_pinned: pinned,
+                    is_large_pages: large,
+                    pinned_bytes: total_bytes,
+                };
+
+                // 预先把所有大页槽位投递至 Windows 内核 RIO 接收环
+                for slot_idx in 0..RIO_SLOT_COUNT {
+                    receiver.post_receive(slot_idx)?;
+                }
+
+                Ok(receiver)
+            }
+        }
+
+        fn post_receive(&mut self, slot_idx: usize) -> Result<(), String> {
+            let recv_fn = self
+                .rio_table
+                .RIOReceive
+                .ok_or_else(|| "RIOReceive 指针为空".to_string())?;
+            let buf_desc = RIO_BUF {
+                BufferId: self.buffer_id,
+                Offset: (slot_idx * RIO_SLOT_BYTES) as u32,
+                Length: RIO_SLOT_BYTES as u32,
+            };
+            unsafe {
+                let ok = recv_fn(
+                    self.rq,
+                    &buf_desc,
+                    1,
+                    0,
+                    slot_idx as *const c_void,
+                );
+                if ok == 0 {
+                    let err = WSAGetLastError();
+                    return Err(format!("RIOReceive 投递槽位 {} 失败 (错误码: {})", slot_idx, err));
+                }
+            }
+            Ok(())
+        }
+
+        /// 零拷贝批处理出队已到达物理大页槽位的报文切片
+        pub fn poll_batch<F>(&mut self, mut on_packet: F) -> usize
+        where
+            F: FnMut(&[u8]),
+        {
+            let dequeue_fn = match self.rio_table.RIODequeueCompletion {
+                Some(f) => f,
+                None => return 0,
+            };
+
+            let mut results: [RIORESULT; 64] = unsafe { std::mem::zeroed() };
+            let count = unsafe { dequeue_fn(self.cq, results.as_mut_ptr(), 64) };
+            if count == 0 || count == RIO_CORRUPT_CQ {
+                return 0;
+            }
+
+            let n = (count as usize).min(64);
+            let mut processed = 0usize;
+
+            for item in &results[..n] {
+                let slot_idx = item.RequestContext as usize;
+                if slot_idx >= RIO_SLOT_COUNT {
+                    continue;
+                }
+                if item.Status == 0 && item.BytesTransferred > 0 {
+                    let len = item.BytesTransferred as usize;
+                    if let Some(slice) = self.hugepage.get_slot_slice(slot_idx, len) {
+                        GLOBAL_RUNTIME_COUNTERS.ring_packets_total.fetch_add(1, Ordering::Relaxed);
+                        GLOBAL_RUNTIME_COUNTERS.ring_bytes_total.fetch_add(len as u64, Ordering::Relaxed);
+                        on_packet(slice);
+                        processed += 1;
+                    }
+                }
+                // 槽位消费完毕立即原地重投归还给 Windows afd.sys 零拷贝内核队列
+                let _ = self.post_receive(slot_idx);
+            }
+
+            processed
+        }
+    }
+
+    impl Drop for WindowsRioRawReceiver {
+        fn drop(&mut self) {
+            unsafe {
+                if self.socket != INVALID_SOCKET {
+                    closesocket(self.socket);
+                    self.socket = INVALID_SOCKET;
+                }
+                if self.cq != RIO_INVALID_CQ_VAL {
+                    if let Some(close_cq) = self.rio_table.RIOCloseCompletionQueue {
+                        close_cq(self.cq);
+                    }
+                    self.cq = RIO_INVALID_CQ_VAL;
+                }
+                if self.buffer_id != RIO_INVALID_BUFFERID_VAL {
+                    if let Some(dereg) = self.rio_table.RIODeregisterBuffer {
+                        dereg(self.buffer_id);
+                    }
+                    self.buffer_id = RIO_INVALID_BUFFERID_VAL;
+                }
+                if self.wsa_started {
+                    WSACleanup();
+                    self.wsa_started = false;
+                }
+            }
+        }
+    }
+}
+
+// ============================================================
 // 单元测试与验证套件 (Unit Tests & DoD Validation)
 // ============================================================
 
@@ -1447,5 +1887,32 @@ mod tests {
 
         let direct_slice = adapter.read_packet_slice(&desc).unwrap();
         assert_eq!(direct_slice, ip_payload);
+    }
+
+    #[test]
+    fn test_autorecycle_continuous_10k_frames_zero_drops() {
+        let mut pool = ZeroCopyPacketPool::new(64);
+        let sample = vec![0xABu8; 256];
+        for _ in 0..10_000 {
+            pool.push_packet_with_autorecycle(&sample)
+                .expect("持续自回收乒乓翻转写入 10,000 包不应耗尽报错");
+        }
+        let m = pool.get_metrics();
+        assert_eq!(m.total_allocations, 10_000);
+        assert_eq!(m.pool_exhaustion_drops, 0);
+        assert!(m.total_deallocations > 0);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_win_rio_receiver_init_or_graceful_permission_fallback() {
+        // 无论是否管理员权限，尝试初始化 RIO 原生大页接收器必须安全成功或精确返回系统错误，严禁 panic/泄漏
+        let res = win_rio::WindowsRioRawReceiver::try_bind_raw(std::net::Ipv4Addr::new(127, 0, 0, 1));
+        if let Ok(mut rio) = res {
+            let count = rio.poll_batch(|_| {});
+            assert_eq!(count, 0);
+        } else if let Err(msg) = res {
+            assert!(!msg.is_empty());
+        }
     }
 }

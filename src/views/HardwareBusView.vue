@@ -1,215 +1,365 @@
 <template>
-  <div class="flex-1 flex flex-col gap-2.5 overflow-hidden min-w-0 font-sans text-slate-200">
-    
-    <!-- 1. 顶部状态栏与物理总线控制中枢 (深色全息玻璃控制台) -->
-    <header class="glass-surface backdrop-blur-2xl rounded-2xl border border-white/10 shadow-xl px-3.5 py-2 flex items-center justify-between shrink-0 gap-3 select-none">
-      
+  <div class="flex-1 flex flex-col gap-2.5 overflow-hidden min-w-0 font-sans" style="color: var(--text-primary);">
+
+    <!-- 1. 顶部状态栏与物理总线控制栏 (真 Liquid Glass 控制层) -->
+    <header class="ui-nav-glass rounded-2xl px-3.5 py-2 flex items-center justify-between shrink-0 gap-3 select-none flex-wrap">
+      <span class="lens-edge-lip" aria-hidden="true"></span>
+
       <!-- 1.1 左侧：核心标题与总线启停控制 -->
-      <div class="flex items-center gap-3 shrink-0">
+      <div class="flex items-center gap-3 shrink-0 flex-wrap">
         <div class="flex items-center gap-2">
-          <div class="w-6 h-6 rounded-lg bg-gradient-to-tr from-purple-500 to-indigo-600 flex items-center justify-center shadow-md shadow-purple-500/20 shrink-0">
-            <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
-            </svg>
+          <div class="w-7 h-7 rounded-lg bg-[var(--accent-primary-soft)] text-[var(--accent-primary-text)] border border-[var(--accent-primary)]/20 flex items-center justify-center shrink-0">
+            <AppIcon name="cpu" :size="15" />
           </div>
-          <h2 class="text-xs font-bold text-white tracking-tight whitespace-nowrap">
-            物理外设画像与端口出入中心
+          <h2 class="text-[13px] font-semibold tracking-tight whitespace-nowrap" style="color: var(--text-primary);">
+            物理外设与端口出入中心
           </h2>
         </div>
 
-        <div class="h-4 w-px bg-white/10 shrink-0"></div>
+        <div class="h-4 w-px shrink-0" style="background: var(--border-strong);"></div>
 
         <!-- USB 总线嗅探启停控制 -->
         <div class="flex items-center gap-1.5 text-xs whitespace-nowrap shrink-0">
-          <span class="text-[11px] text-slate-400 font-medium">USB总线:</span>
-          <button v-if="!isUsbRunning" @click="$emit('startUsbCapture')"
-            class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-[11px] px-2.5 py-1 rounded-xl font-bold transition-all flex items-center gap-1 cursor-pointer shadow-md shadow-purple-600/20 active:scale-95 whitespace-nowrap shrink-0">
-            <svg class="w-3 h-3 fill-current text-purple-200 shrink-0" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-            <span>挂钩 USB 总线</span>
+          <span class="text-[11px] font-medium" style="color: var(--text-muted);">USB:</span>
+          <button v-if="!isUsbRunning" @click="$emit('startUsbCapture')" class="ui-btn-primary px-2.5 py-1 text-[11px]">
+            <AppIcon name="play" :size="11" />
+            <span>挂钩 USB</span>
           </button>
-          <button v-else @click="$emit('stopUsbCapture')"
-            class="bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 text-[11px] px-2.5 py-1 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap shrink-0">
-            <span class="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
-            <span>停止 USB 嗅探</span>
+          <button v-else @click="$emit('stopUsbCapture')" class="ui-btn-danger px-2.5 py-1 text-[11px]">
+            <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+            <span>停止 USB</span>
           </button>
         </div>
 
-        <div class="h-4 w-px bg-white/10 shrink-0"></div>
+        <div class="h-4 w-px shrink-0" style="background: var(--border-strong);"></div>
 
-        <!-- 物理串口嗅探启停控制 -->
+        <!-- 物理 COM 串口直选与嗅探启停控制 -->
         <div class="flex items-center gap-1.5 text-xs whitespace-nowrap shrink-0">
-          <span class="text-[11px] text-slate-400 font-medium">串口总线:</span>
-          <button v-if="!isSerialRunning" @click="$emit('startSerialCapture', selectedSerial, serialBaudRate)" :disabled="!selectedSerial"
-            class="bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white text-[11px] px-2.5 py-1 rounded-xl font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-40 shadow-md shadow-indigo-600/20 active:scale-95 whitespace-nowrap shrink-0">
-            <svg class="w-3 h-3 fill-current text-indigo-200 shrink-0" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <span class="text-[11px] font-medium" style="color: var(--text-muted);">COM 串口:</span>
+          <select
+            :value="localSerial"
+            @change="onSelectSerial(($event.target as HTMLSelectElement).value)"
+            class="ui-input w-auto max-w-[140px] px-2 py-0.5 text-[11px] font-mono cursor-pointer"
+            title="选择目标 COM 物理或虚拟串口"
+          >
+            <option v-if="serialPorts.length === 0" value="">未检出 COM</option>
+            <option v-for="p in serialPorts" :key="p" :value="p">{{ p }}</option>
+          </select>
+          <select
+            :value="localBaudRate"
+            @change="onSelectBaudRate(Number(($event.target as HTMLSelectElement).value))"
+            class="ui-input w-auto px-1.5 py-0.5 text-[11px] ui-num cursor-pointer"
+            title="选择串口通信波特率"
+          >
+            <option :value="9600">9600</option>
+            <option :value="19200">19200</option>
+            <option :value="38400">38400</option>
+            <option :value="57600">57600</option>
+            <option :value="115200">115200</option>
+          </select>
+          <button
+            v-if="!isPortActive(localSerial)"
+            @click="startPortMonitor(localSerial)"
+            :disabled="!localSerial"
+            class="ui-btn-secondary px-2.5 py-1 text-[11px]"
+          >
+            <AppIcon name="play" :size="11" />
             <span>监听串口</span>
           </button>
-          <button v-else @click="$emit('stopSerialCapture')"
-            class="bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 text-[11px] px-2.5 py-1 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap shrink-0">
-            <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-            <span>停止串口监听</span>
+          <button
+            v-else
+            @click="$emit('stopSerialCapture', localSerial)"
+            class="ui-btn-danger px-2.5 py-1 text-[11px]"
+          >
+            <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+            <span>停止 {{ localSerial }}</span>
           </button>
         </div>
       </div>
 
-      <!-- 1.2 中间与右侧：状态指示胶囊与高级工具组 (横向自适应、强制绝不折行) -->
-      <div class="flex items-center gap-1.5 text-xs font-mono overflow-x-auto custom-scrollbar-x py-0.5 shrink min-w-0">
-        
-        <!-- 核心计数指标胶囊 -->
-        <div class="bg-purple-500/10 text-purple-300 border border-purple-500/25 px-2 py-0.5 rounded-lg whitespace-nowrap shrink-0 font-bold flex items-center gap-1">
-          <span class="text-[10px] text-purple-400/80 font-sans">USB设备</span>
-          <span class="text-xs text-white">{{ usbDevices.length }}</span>
+      <!-- 1.2 中间与右侧：四总线计数微囊与专业工具组 -->
+      <div class="flex items-center gap-1.5 text-xs overflow-x-auto custom-scrollbar-x py-0.5 shrink min-w-0">
+        <div class="ui-pill px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0 font-semibold flex items-center gap-1.5 ui-num" title="已识别物理 USB 设备数">
+          <span class="text-[11px]" style="color: var(--text-muted);">USB</span>
+          <span class="text-xs" style="color: var(--text-primary);">{{ usbDevices.length }}</span>
         </div>
-        <div class="bg-indigo-500/10 text-indigo-300 border border-indigo-500/25 px-2 py-0.5 rounded-lg whitespace-nowrap shrink-0 font-bold flex items-center gap-1">
-          <span class="text-[10px] text-indigo-400/80 font-sans">串口/CDC</span>
-          <span class="text-xs text-white">{{ usbSerialCount }}</span>
+        <div class="ui-pill px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0 font-semibold flex items-center gap-1.5 ui-num" title="系统已检出 COM 物理/虚拟/蓝牙串口总数">
+          <span class="text-[11px]" style="color: var(--text-muted);">COM</span>
+          <span class="text-xs" style="color: var(--text-primary);">{{ serialPorts.length }}</span>
         </div>
-        <div class="bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 px-2 py-0.5 rounded-lg whitespace-nowrap shrink-0 font-bold flex items-center gap-1">
-          <span class="text-[10px] text-emerald-400/80 font-sans">出入留痕</span>
-          <span class="text-xs text-white">{{ transceiveHistory.length }}</span>
+        <div class="ui-pill px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0 font-semibold flex items-center gap-1.5 ui-num">
+          <span class="text-[11px]" style="color: var(--text-muted);">留痕</span>
+          <span class="text-xs" style="color: var(--text-primary);">{{ transceiveHistory.length }}</span>
         </div>
 
-        <div class="h-3.5 w-px bg-white/10 shrink-0 mx-0.5"></div>
+        <div class="h-3.5 w-px shrink-0 mx-0.5" style="background: var(--border-strong);"></div>
 
-        <!-- 串口高级参数入口 -->
-        <button @click="isSerialConfigOpen = true"
-          class="bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-[11px] px-2 py-0.5 rounded-lg font-medium shadow-2xs transition-all flex items-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap shrink-0">
-          <span>📟 串口高级参数</span>
+        <button @click="$emit('openWireless')" class="ui-btn-secondary px-2.5 py-1 text-[11px] whitespace-nowrap shrink-0" title="打开无线 Wi-Fi / VLAN / 蓝牙近场监控控制台">
+          <AppIcon name="wifi" :size="12" />
+          <span>Wi-Fi/蓝牙</span>
         </button>
 
-        <!-- Modem 引脚电平控制 -->
-        <button @click="showModemPins = !showModemPins"
-          :class="['text-[11px] px-2 py-0.5 rounded-lg font-medium shadow-2xs transition-all flex items-center gap-1 cursor-pointer active:scale-95 border whitespace-nowrap shrink-0',
-            showModemPins ? 'bg-indigo-600 text-white border-indigo-500' : 'bg-white/5 hover:bg-white/10 text-indigo-300 border-indigo-500/30']">
-          <span>💡 引脚电平</span>
+        <button @click="isSerialConfigOpen = true" class="ui-btn-secondary px-2.5 py-1 text-[11px] whitespace-nowrap shrink-0">
+          <AppIcon name="sliders" :size="12" />
+          <span>串口参数</span>
         </button>
 
-        <!-- 双串口中继 -->
-        <button @click="isSerialBridgeOpen = true"
-          class="bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-[11px] px-2 py-0.5 rounded-lg font-medium shadow-2xs transition-all flex items-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap shrink-0">
-          <span>🔀 双串口中继</span>
+        <button
+          @click="showModemPins = !showModemPins"
+          :class="['text-[11px] px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1 cursor-pointer border whitespace-nowrap shrink-0',
+            showModemPins ? 'bg-[var(--accent-primary)] text-white border-transparent shadow-xs' : 'ui-btn-secondary']"
+        >
+          <AppIcon name="activity" :size="12" />
+          <span>引脚电平</span>
         </button>
 
-        <!-- USB 描述符树查看器 -->
-        <button @click="isUsbDescriptorTreeOpen = true"
-          class="bg-white/5 hover:bg-white/10 text-purple-300 hover:text-purple-200 border border-purple-500/30 text-[11px] px-2 py-0.5 rounded-lg font-medium shadow-2xs transition-all flex items-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap shrink-0">
-          <span>🌲 描述符树</span>
+        <button @click="isSerialBridgeOpen = true" class="ui-btn-secondary px-2.5 py-1 text-[11px] whitespace-nowrap shrink-0">
+          <AppIcon name="link" :size="12" />
+          <span>串口中继</span>
         </button>
 
-        <!-- 跨总线因果看板 -->
-        <button @click="isCrossBusCausalityOpen = true"
-          class="bg-white/5 hover:bg-white/10 text-cyan-300 hover:text-cyan-200 border border-cyan-500/30 text-[11px] px-2 py-0.5 rounded-lg font-medium shadow-2xs transition-all flex items-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap shrink-0">
-          <span>⚡ 跨总线因果</span>
+        <button @click="isUsbDescriptorTreeOpen = true" class="ui-btn-secondary px-2.5 py-1 text-[11px] whitespace-nowrap shrink-0">
+          <AppIcon name="layers" :size="12" />
+          <span>描述符树</span>
         </button>
 
-        <!-- 硬件基线白名单与合规审计 -->
-        <button @click="showComplianceWorkbench = !showComplianceWorkbench"
-          :class="['text-[11px] px-2.5 py-0.5 rounded-lg font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 border whitespace-nowrap shrink-0',
-            showComplianceWorkbench ? 'bg-purple-600 text-white border-purple-500 shadow-purple-900/40' : 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border-purple-500/30']">
-          <span>🛡️ 白名单审计</span>
-          <span v-if="complianceReport" :class="['px-1.5 py-0.2 rounded text-[9px] font-mono font-bold',
-            complianceReport.unauthorized_count > 0 ? 'bg-rose-500 text-white' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40']">
+        <button @click="isCrossBusCausalityOpen = true" class="ui-btn-secondary px-2.5 py-1 text-[11px] whitespace-nowrap shrink-0">
+          <AppIcon name="zap" :size="12" />
+          <span>跨总线因果</span>
+        </button>
+
+        <button
+          @click="toggleCanDrawer"
+          :class="['text-[11px] px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1 cursor-pointer border whitespace-nowrap shrink-0',
+            showCanDiagnosticDrawer ? 'bg-[var(--accent-primary)] text-white border-transparent shadow-xs' : 'ui-btn-secondary']"
+        >
+          <AppIcon name="cpu" :size="12" />
+          <span>CAN 诊断</span>
+        </button>
+
+        <button
+          @click="showUartLogicDrawer = !showUartLogicDrawer"
+          :class="['text-[11px] px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1 cursor-pointer border whitespace-nowrap shrink-0',
+            showUartLogicDrawer ? 'bg-[var(--accent-primary)] text-white border-transparent shadow-xs' : 'ui-btn-secondary']"
+        >
+          <AppIcon name="activity" :size="12" />
+          <span>UART 解调</span>
+        </button>
+
+        <button
+          @click="showComplianceWorkbench = !showComplianceWorkbench"
+          :class="['text-[11px] px-2.5 py-1 rounded-lg font-semibold transition-all flex items-center gap-1.5 cursor-pointer border whitespace-nowrap shrink-0',
+            showComplianceWorkbench ? 'bg-[var(--accent-primary)] text-white border-transparent shadow-xs' : 'ui-btn-secondary']"
+        >
+          <AppIcon name="shield" :size="12" />
+          <span>白名单审计</span>
+          <span
+            v-if="complianceReport"
+            :class="['px-1.5 py-0.5 rounded-full text-[11px] ui-num font-semibold',
+              complianceReport.unauthorized_count > 0
+                ? (showComplianceWorkbench ? 'bg-rose-500/80 text-white' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400')
+                : (showComplianceWorkbench ? 'bg-white/20 text-white' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300')]"
+          >
             {{ complianceReport.unauthorized_count > 0 ? `未授权:${complianceReport.unauthorized_count}` : `${complianceReport.compliance_rate.toFixed(0)}%` }}
           </span>
         </button>
 
-        <!-- 刷新外设按钮 -->
-        <button @click="$emit('refreshUsb')" title="重新扫描系统物理 USB 与 COM 串口"
-          class="bg-white/5 hover:bg-white/15 text-slate-300 hover:text-white border border-white/10 px-2 py-0.5 rounded-lg font-sans font-semibold transition-all cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap shrink-0">
-          刷新外设
+        <button @click="refreshAllHardwareBuses" title="重新扫描系统物理 USB 外设与 COM 串口" class="ui-btn-secondary px-2.5 py-1 text-[11px] whitespace-nowrap shrink-0">
+          <AppIcon name="refresh" :size="12" />
+          <span>刷新外设</span>
         </button>
       </div>
     </header>
 
-    <!-- 2. 物理外设基线白名单与即插即用合规差分工作台 (展开抽屉) -->
-    <section v-if="showComplianceWorkbench" class="glass-surface backdrop-blur-2xl rounded-2xl border border-purple-500/30 shadow-2xl p-3 flex flex-col gap-2.5 shrink-0">
-      <div class="flex items-center justify-between border-b border-white/10 pb-2 flex-wrap gap-2">
+    <!-- 1.5 CAN / CAN-FD 总线健康监控抽屉 -->
+    <section v-if="showCanDiagnosticDrawer" class="ui-content-card border-amber-500/35 p-3 flex flex-col gap-2.5 shrink-0 text-xs select-text">
+      <div class="flex items-center justify-between border-b pb-2 gap-2 flex-wrap" style="border-color: var(--border-subtle);">
         <div class="flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
-          <span class="text-xs font-bold text-purple-200">物理外设基线白名单固化与即插即用合规差分审计</span>
-          <span class="text-[10px] text-slate-400 font-mono">
+          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+          <span class="font-semibold text-amber-700 dark:text-amber-300">CAN 2.0 / CAN-FD 现场总线深度诊断与健康评估</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button @click="fetchCanDiagnostics" class="ui-btn-secondary px-2.5 py-1 text-[11px]">
+            <AppIcon name="refresh" :size="11" />
+            <span>刷新快照</span>
+          </button>
+          <button @click="showCanDiagnosticDrawer = false" class="p-1 rounded-lg hover:bg-[var(--surface-hover)] cursor-pointer" style="color: var(--text-muted);">
+            <AppIcon name="close" :size="13" />
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+        <div class="lg:col-span-5 space-y-2">
+          <div class="grid grid-cols-3 gap-1.5 text-[11px]">
+            <div class="ui-sub-card p-2">
+              <div style="color: var(--text-muted);">总线负载率</div>
+              <div class="text-amber-600 dark:text-amber-300 font-semibold text-sm ui-num mt-0.5">{{ (canHealth?.bus_load_percentage ?? 0).toFixed(2) }}%</div>
+            </div>
+            <div class="ui-sub-card p-2">
+              <div style="color: var(--text-muted);">帧速率 / 错误帧</div>
+              <div class="font-semibold text-xs ui-num mt-0.5" style="color: var(--text-primary);">{{ (canHealth?.frames_per_second ?? 0).toFixed(1) }} fps / <span class="text-rose-600 dark:text-rose-400">{{ canHealth?.total_error_frames ?? 0 }}</span></div>
+            </div>
+            <div class="ui-sub-card p-2">
+              <div style="color: var(--text-muted);">总线健康等级</div>
+              <div class="text-emerald-600 dark:text-emerald-400 font-semibold text-xs mt-0.5">{{ canHealth?.health_status ?? 'Idle (无总线帧)' }}</div>
+            </div>
+          </div>
+          <div class="max-h-24 overflow-y-auto rounded-xl border p-2 text-[11px]" style="border-color: var(--border-subtle); background: var(--surface-content-alt); color: var(--text-muted);">
+            <div v-if="canCausalRecords.length === 0">暂无以太网-CAN 网关因果事务记录 ({{ canHealth?.total_frames_dissected ?? 0 }} 帧已解析)</div>
+            <div v-for="rec in canCausalRecords" :key="rec.transaction_id" class="py-0.5 border-b flex justify-between ui-num" style="border-color: var(--border-subtle);">
+              <span style="color: var(--text-primary);">{{ rec.eth_protocol }} → CAN ID: {{ rec.can_frame_id ?? '--' }}</span>
+              <span class="text-blue-600 dark:text-sky-300">{{ rec.verdict }} ({{ rec.gateway_latency_us?.toFixed(1) ?? '--' }}us)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-7 flex flex-col gap-2">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <input v-model="canRawHex" placeholder="输入 CAN SocketCAN/PCAN 帧 Hex (如 0000012304000000deadbeef)" class="ui-input flex-1 min-w-[210px] px-2.5 py-1 text-xs font-mono" />
+            <input v-model.number="canNominalBps" type="number" title="标称波特率 (bps)" class="ui-input w-24 px-2 py-1 text-xs ui-num" />
+            <input v-model.number="canDataBps" type="number" title="CAN-FD 数据段波特率 (bps)" class="ui-input w-24 px-2 py-1 text-xs ui-num" />
+            <button @click="runCanDissection" :disabled="!canRawHex.trim()" class="ui-btn-primary bg-amber-600 hover:bg-amber-500 px-3 py-1 text-xs">解剖 CAN 帧</button>
+          </div>
+          <div v-if="dissectedCan" class="ui-sub-card p-2.5 text-[11px] flex flex-wrap gap-x-4 gap-y-1 ui-num" style="color: var(--text-primary);">
+            <span>CAN ID: <b class="text-amber-600 dark:text-amber-300">0x{{ dissectedCan.can_id.toString(16).toUpperCase() }}</b> ({{ dissectedCan.is_extended_id ? '29-bit EXT' : '11-bit STD' }})</span>
+            <span>协议: <b class="text-blue-600 dark:text-sky-300">{{ dissectedCan.protocol_type }}</b> ({{ dissectedCan.frame_class }})</span>
+            <span>DLC: <b>{{ dissectedCan.dlc }}</b> · 载荷: <b>{{ dissectedCan.payload_len }}B</b></span>
+            <span>线占时: <b>{{ dissectedCan.wire_duration_us.toFixed(2) }} μs</b></span>
+            <span v-if="dissectedCan.error_detail" class="text-rose-600 dark:text-rose-400 font-semibold">故障: {{ dissectedCan.error_detail }}</span>
+            <span class="w-full text-emerald-600 dark:text-emerald-400 font-mono">Payload Hex: {{ dissectedCan.payload.map((b) => b.toString(16).padStart(2, '0')).join(' ') || 'EMPTY' }}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 1.6 物理逻辑分析仪：UART 电平解调与信号完整性评估抽屉 -->
+    <section v-if="showUartLogicDrawer" class="ui-content-card border-emerald-500/35 p-3 flex flex-col gap-2.5 shrink-0 text-xs select-text">
+      <div class="flex items-center justify-between border-b pb-2 gap-2 flex-wrap" style="border-color: var(--border-subtle);">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span class="font-semibold text-emerald-700 dark:text-emerald-300">物理逻辑分析仪 · 亚微秒级毛刺滤波 / UART 电平解调 / 抖动评估</span>
+        </div>
+        <button @click="showUartLogicDrawer = false" class="p-1 rounded-lg hover:bg-[var(--surface-hover)] cursor-pointer" style="color: var(--text-muted);">
+          <AppIcon name="close" :size="13" />
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2 flex-wrap">
+        <input v-model="uartSamplesHex" placeholder="输入数字采样比特流 Hex (MSB 先行, 每字节表示8个采样点电平)" class="ui-input flex-1 min-w-[240px] px-2.5 py-1 text-xs font-mono" />
+        <label class="text-[11px]" style="color: var(--text-muted);">采样间隔(ns):</label>
+        <input v-model.number="uartIntervalNs" type="number" min="1" class="ui-input w-20 px-2 py-1 text-xs ui-num" />
+        <label class="text-[11px]" style="color: var(--text-muted);">波特率:</label>
+        <input v-model.number="uartBaudRate" type="number" min="300" class="ui-input w-24 px-2 py-1 text-xs ui-num" />
+        <label class="text-[11px]" style="color: var(--text-muted);">滤波门限(ns):</label>
+        <input v-model.number="uartMinGlitchNs" type="number" min="0" class="ui-input w-20 px-2 py-1 text-xs ui-num" />
+        <button @click="runUartDemodulate" :disabled="!uartSamplesHex.trim()" class="ui-btn-primary bg-emerald-600 hover:bg-emerald-500 px-3 py-1 text-xs">UART 电平解码</button>
+        <button @click="runSignalIntegrity" :disabled="!uartSamplesHex.trim()" class="ui-btn-primary px-3 py-1 text-xs">信号完整性评估</button>
+      </div>
+
+      <div v-if="uartBytes.length > 0 || signalSnapshot" class="grid grid-cols-1 lg:grid-cols-12 gap-2.5 text-[11px]">
+        <div v-if="uartBytes.length > 0" class="lg:col-span-6 ui-sub-card p-2.5 max-h-28 overflow-y-auto">
+          <div class="text-emerald-600 dark:text-emerald-300 font-semibold mb-1 ui-num">解码出 {{ uartBytes.length }} 字节 UART 数据:</div>
+          <div class="flex flex-wrap gap-1.5 font-mono">
+            <span
+              v-for="(u, i) in uartBytes"
+              :key="i"
+              :class="u.framing_error || u.parity_error ? 'border-rose-500/40 text-rose-700 dark:text-rose-300 bg-rose-500/15' : 'border-emerald-500/30 bg-emerald-500/10'"
+              :style="u.framing_error || u.parity_error ? {} : { color: 'var(--text-primary)' }"
+              class="px-1.5 py-0.5 rounded border"
+            >
+              0x{{ u.byte_value.toString(16).padStart(2, '0').toUpperCase() }}<template v-if="u.char_representation"> ('{{ u.char_representation }}')</template>
+            </span>
+          </div>
+        </div>
+        <div v-if="signalSnapshot" :class="uartBytes.length > 0 ? 'lg:col-span-6' : 'lg:col-span-12'" class="ui-sub-card p-2.5 flex flex-wrap gap-x-4 gap-y-1 ui-num" style="color: var(--text-primary);">
+          <span>信号质量定性: <b class="text-blue-600 dark:text-sky-300">{{ signalSnapshot.integrity_grade }}</b></span>
+          <span>占空比: <b>{{ signalSnapshot.duty_cycle_percentage.toFixed(1) }}%</b></span>
+          <span>抖动标准差: <b>{{ signalSnapshot.jitter_stddev_ns.toFixed(1) }} ns</b></span>
+          <span>滤除毛刺数: <b class="text-amber-600 dark:text-amber-300">{{ signalSnapshot.glitches_detected }}</b></span>
+          <span>正/负均宽: <b>{{ signalSnapshot.mean_high_pulse_width_ns.toFixed(1) }} / {{ signalSnapshot.mean_low_pulse_width_ns.toFixed(1) }} ns</b></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. 物理外设基线白名单工作台 -->
+    <section v-if="showComplianceWorkbench" class="ui-content-card border-purple-500/35 p-3 flex flex-col gap-2.5 shrink-0 select-text">
+      <div class="flex items-center justify-between border-b pb-2 flex-wrap gap-2" style="border-color: var(--border-subtle);">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+          <span class="text-xs font-semibold text-purple-700 dark:text-purple-300">物理外设基线白名单固化与即插即用合规差分审计</span>
+          <span class="text-[11px]" style="color: var(--text-muted);">
             对标 GB/T 22239 等保三级物理与环境安全接入控制
           </span>
         </div>
 
-        <div class="flex items-center gap-2 text-xs">
-          <button @click="doSaveCurrentAsWhitelist" :disabled="isSavingWhitelist"
-            class="bg-purple-600 hover:bg-purple-500 text-white text-[11px] px-2.5 py-1 rounded-xl font-bold shadow-md transition-all flex items-center gap-1 cursor-pointer disabled:opacity-40 active:scale-95 whitespace-nowrap">
-            <span v-if="isSavingWhitelist" class="animate-spin">⏳</span>
-            <span v-else>🔒</span>
-            <span>固化当前在线外设为基线白名单</span>
+        <div class="flex items-center gap-2 text-xs flex-wrap">
+          <button @click="doSaveCurrentAsWhitelist" :disabled="isSavingWhitelist" class="ui-btn-primary bg-purple-600 hover:bg-purple-500 px-3 py-1 text-xs">
+            <AppIcon v-if="isSavingWhitelist" name="refresh" :size="12" class="animate-spin" />
+            <AppIcon v-else name="lock" :size="12" />
+            <span>固化当前在线外设为基线</span>
           </button>
-          <button @click="doVerifyCompliance" :disabled="isAuditingCompliance"
-            class="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] px-2.5 py-1 rounded-xl font-bold shadow-md transition-all flex items-center gap-1 cursor-pointer disabled:opacity-40 active:scale-95 whitespace-nowrap">
-            <span v-if="isAuditingCompliance" class="animate-spin">⏳</span>
-            <span v-else>🔍</span>
+          <button @click="doVerifyCompliance" :disabled="isAuditingCompliance" class="ui-btn-primary px-3 py-1 text-xs">
+            <AppIcon v-if="isAuditingCompliance" name="refresh" :size="12" class="animate-spin" />
+            <AppIcon v-else name="search" :size="12" />
             <span>执行合规差分比对</span>
           </button>
-          <button @click="doClearWhitelist" title="清空现有白名单"
-            class="bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 px-2 py-1 rounded-xl font-bold transition-all cursor-pointer text-[11px] active:scale-95 whitespace-nowrap">
+          <button @click="doClearWhitelist" title="清空现有白名单" class="ui-btn-danger px-2.5 py-1 text-xs">
             清空白名单
           </button>
         </div>
       </div>
 
-      <!-- 合规状态仪表看板 -->
       <div v-if="complianceReport" class="flex flex-col gap-2">
         <div class="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
-          <div class="bg-purple-500/10 border border-purple-500/20 p-2 rounded-xl">
-            <div class="text-[9px] text-purple-400 font-bold uppercase">受信任基线 / 当前在线</div>
-            <div class="text-sm font-bold text-purple-200 font-mono mt-0.5">{{ complianceReport.total_whitelist }} 基准 / {{ complianceReport.total_online }} 在线</div>
+          <div class="bg-purple-500/10 border border-purple-500/25 p-2 rounded-xl">
+            <div class="text-[11px] text-purple-600 dark:text-purple-300 font-semibold">受信任基线 / 当前在线</div>
+            <div class="text-sm font-semibold ui-num mt-0.5" style="color: var(--text-primary);">{{ complianceReport.total_whitelist }} 基准 / {{ complianceReport.total_online }} 在线</div>
           </div>
-          <div class="bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-xl">
-            <div class="text-[9px] text-emerald-400 font-bold uppercase">合规受控外设</div>
-            <div class="text-sm font-bold text-emerald-300 font-mono mt-0.5">✓ {{ complianceReport.compliant_count }} 个</div>
+          <div class="bg-emerald-500/10 border border-emerald-500/25 p-2 rounded-xl">
+            <div class="text-[11px] text-emerald-600 dark:text-emerald-300 font-semibold">合规受控外设</div>
+            <div class="text-sm font-semibold text-emerald-600 dark:text-emerald-400 ui-num mt-0.5">{{ complianceReport.compliant_count }} 个</div>
           </div>
-          <div class="bg-rose-500/10 border border-rose-500/20 p-2 rounded-xl">
-            <div class="text-[9px] text-rose-400 font-bold uppercase">未授权非法外设</div>
-            <div class="text-sm font-bold text-rose-300 font-mono mt-0.5">🚨 {{ complianceReport.unauthorized_count }} 个</div>
+          <div class="bg-rose-500/10 border border-rose-500/25 p-2 rounded-xl">
+            <div class="text-[11px] text-rose-600 dark:text-rose-300 font-semibold">未授权非法外设</div>
+            <div class="text-sm font-semibold text-rose-600 dark:text-rose-400 ui-num mt-0.5 flex items-center gap-1">
+              <AppIcon name="alert" :size="13" />
+              <span>{{ complianceReport.unauthorized_count }} 个</span>
+            </div>
           </div>
-          <div class="bg-amber-500/10 border border-amber-500/20 p-2 rounded-xl">
-            <div class="text-[9px] text-amber-400 font-bold uppercase">基线设备离线缺失</div>
-            <div class="text-sm font-bold text-amber-300 font-mono mt-0.5">⚠️ {{ complianceReport.missing_count }} 个</div>
+          <div class="bg-amber-500/10 border border-amber-500/25 p-2 rounded-xl">
+            <div class="text-[11px] text-amber-600 dark:text-amber-300 font-semibold">基线设备离线缺失</div>
+            <div class="text-sm font-semibold text-amber-600 dark:text-amber-400 ui-num mt-0.5">{{ complianceReport.missing_count }} 个</div>
           </div>
-          <div class="bg-slate-800/60 border border-white/10 p-2 rounded-xl">
-            <div class="text-[9px] text-slate-400 font-bold uppercase">物理安全合规率</div>
-            <div :class="['text-sm font-bold font-mono mt-0.5', complianceReport.compliance_rate >= 100 ? 'text-emerald-400' : 'text-rose-400']">
+          <div class="ui-sub-card p-2 rounded-xl">
+            <div class="text-[11px] font-semibold" style="color: var(--text-muted);">物理安全合规率</div>
+            <div :class="['text-sm font-semibold ui-num mt-0.5', complianceReport.compliance_rate >= 100 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400']">
               {{ complianceReport.compliance_rate.toFixed(1) }}%
             </div>
           </div>
         </div>
 
-        <!-- 差异过滤与明细列表 -->
-        <div class="flex items-center justify-between text-xs pt-1">
-          <span class="font-bold text-slate-300 text-[11px]">硬件合规审计明细 ({{ filteredComplianceItems.length }} / {{ complianceReport.items.length }})</span>
-          <div class="flex gap-1 text-[10px] font-bold">
-            <button @click="whitelistFilter = 'ALL'"
-              :class="['px-2 py-0.5 rounded-lg border transition-all cursor-pointer',
-                whitelistFilter === 'ALL' ? 'bg-purple-600 text-white border-purple-500' : 'bg-white/5 text-slate-300 border-white/10']">
+        <div class="flex items-center justify-between text-xs pt-1 flex-wrap gap-2">
+          <span class="font-semibold ui-num" style="color: var(--text-secondary);">硬件合规审计明细 ({{ filteredComplianceItems.length }} / {{ complianceReport.items.length }})</span>
+          <div class="flex gap-1 text-[11px] font-semibold">
+            <button @click="whitelistFilter = 'ALL'" :class="['px-2.5 py-0.5 rounded-lg border transition-all cursor-pointer', whitelistFilter === 'ALL' ? 'bg-purple-600 text-white border-purple-600' : 'ui-pill']">
               全部 ({{ complianceReport.items.length }})
             </button>
-            <button @click="whitelistFilter = 'UNAUTHORIZED'"
-              :class="['px-2 py-0.5 rounded-lg border transition-all cursor-pointer',
-                whitelistFilter === 'UNAUTHORIZED' ? 'bg-rose-600 text-white border-rose-500' : 'bg-white/5 text-rose-300 border-white/10']">
+            <button @click="whitelistFilter = 'UNAUTHORIZED'" :class="['px-2.5 py-0.5 rounded-lg border transition-all cursor-pointer', whitelistFilter === 'UNAUTHORIZED' ? 'bg-rose-600 text-white border-rose-600' : 'border-rose-500/25 text-rose-600 dark:text-rose-300 bg-rose-500/10']">
               未授权 ({{ complianceReport.unauthorized_count }})
             </button>
-            <button @click="whitelistFilter = 'MISSING'"
-              :class="['px-2 py-0.5 rounded-lg border transition-all cursor-pointer',
-                whitelistFilter === 'MISSING' ? 'bg-amber-600 text-white border-amber-500' : 'bg-white/5 text-amber-300 border-white/10']">
+            <button @click="whitelistFilter = 'MISSING'" :class="['px-2.5 py-0.5 rounded-lg border transition-all cursor-pointer', whitelistFilter === 'MISSING' ? 'bg-amber-600 text-white border-amber-600' : 'border-amber-500/25 text-amber-600 dark:text-amber-300 bg-amber-500/10']">
               离线缺失 ({{ complianceReport.missing_count }})
             </button>
-            <button @click="whitelistFilter = 'COMPLIANT'"
-              :class="['px-2 py-0.5 rounded-lg border transition-all cursor-pointer',
-                whitelistFilter === 'COMPLIANT' ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-white/5 text-emerald-300 border-white/10']">
+            <button @click="whitelistFilter = 'COMPLIANT'" :class="['px-2.5 py-0.5 rounded-lg border transition-all cursor-pointer', whitelistFilter === 'COMPLIANT' ? 'bg-emerald-600 text-white border-emerald-600' : 'border-emerald-500/25 text-emerald-600 dark:text-emerald-300 bg-emerald-500/10']">
               合规受控 ({{ complianceReport.compliant_count }})
             </button>
           </div>
         </div>
 
-        <!-- 明细表格 -->
-        <div class="max-h-48 overflow-auto custom-scrollbar border border-white/10 rounded-xl bg-black/40">
-          <table class="w-full text-left text-xs font-mono border-collapse table-fixed">
-            <thead class="bg-white/5 border-b border-white/10 text-[10px] font-bold text-slate-400 uppercase sticky top-0 z-10 backdrop-blur-md">
+        <div class="max-h-48 overflow-auto custom-scrollbar border rounded-xl" style="border-color: var(--border-subtle); background: var(--surface-content-alt);">
+          <table class="w-full text-left text-xs border-collapse table-fixed">
+            <thead class="ui-table-head sticky top-0 z-10 select-none">
               <tr>
                 <th class="p-2 w-[12%]">总线类型</th>
                 <th class="p-2 w-[24%]">硬件唯一标识 (VID/PID/COM)</th>
@@ -218,37 +368,40 @@
                 <th class="p-2 w-[28%]">合规审计结论与用途备注</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-white/5 text-[11px]">
-              <tr v-for="item in filteredComplianceItems" :key="item.identifier"
-                :class="['hover:bg-white/[0.03] transition-colors',
-                  item.status === 'UNAUTHORIZED' ? 'bg-rose-500/10' : '']">
-                <td class="p-2 truncate font-bold">
-                  <span :class="['px-1.5 py-0.2 rounded text-[9px]',
-                    item.category === 'USB' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30']">
+            <tbody class="divide-y text-xs" style="border-color: var(--border-subtle);">
+              <tr
+                v-for="item in filteredComplianceItems"
+                :key="item.identifier"
+                :class="['hover:bg-[var(--surface-hover)] transition-colors', item.status === 'UNAUTHORIZED' ? 'bg-rose-500/8' : '']"
+              >
+                <td class="p-2 truncate font-semibold">
+                  <span :class="['px-1.5 py-0.5 rounded text-[11px]', item.category === 'USB' ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300' : 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300']">
                     {{ item.category }}
                   </span>
                 </td>
-                <td class="p-2 font-bold text-slate-200 truncate" :title="item.identifier">{{ item.identifier }}</td>
-                <td class="p-2 text-slate-300 truncate" :title="item.name">{{ item.name }}</td>
+                <td class="p-2 font-semibold font-mono truncate" style="color: var(--text-primary);" :title="item.identifier">{{ item.identifier }}</td>
+                <td class="p-2 truncate" style="color: var(--text-secondary);" :title="item.name">{{ item.name }}</td>
                 <td class="p-2 text-center truncate">
-                  <span :class="['px-2 py-0.5 rounded text-[9px] font-bold',
-                    item.status === 'COMPLIANT' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                    item.status === 'UNAUTHORIZED' ? 'bg-rose-600 text-white shadow-2xs' :
-                    'bg-amber-500/20 text-amber-300 border border-amber-500/30']">
-                    {{ item.status === 'COMPLIANT' ? '合规受控' : item.status === 'UNAUTHORIZED' ? '🚨 未授权外设' : '⚠️ 离线缺失' }}
+                  <span
+                    :class="['px-2 py-0.5 rounded text-[11px] font-semibold',
+                      item.status === 'COMPLIANT' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' :
+                      item.status === 'UNAUTHORIZED' ? 'bg-rose-600 text-white' :
+                      'bg-amber-500/15 text-amber-700 dark:text-amber-300']"
+                  >
+                    {{ item.status === 'COMPLIANT' ? '合规受控' : item.status === 'UNAUTHORIZED' ? '未授权外设' : '离线缺失' }}
                   </span>
                 </td>
                 <td class="p-2 truncate">
                   <div class="flex items-center gap-1.5 truncate" :title="item.alert_desc">
-                    <span class="truncate text-[10px]" :class="item.status === 'UNAUTHORIZED' ? 'text-rose-400 font-semibold' : 'text-slate-400'">
+                    <span class="truncate text-[11px]" :class="item.status === 'UNAUTHORIZED' ? 'text-rose-600 dark:text-rose-400 font-semibold' : ''" :style="item.status === 'UNAUTHORIZED' ? {} : { color: 'var(--text-secondary)' }">
                       {{ item.alert_desc }}
                     </span>
-                    <span v-if="item.description" class="text-slate-500 text-[10px] shrink-0">({{ item.description }})</span>
+                    <span v-if="item.description" class="text-[11px] shrink-0" style="color: var(--text-muted);">({{ item.description }})</span>
                   </div>
                 </td>
               </tr>
               <tr v-if="filteredComplianceItems.length === 0">
-                <td colspan="5" class="p-6 text-center text-slate-500 text-xs">
+                <td colspan="5" class="p-6 text-center text-xs" style="color: var(--text-muted);">
                   暂无匹配的硬件审计项
                 </td>
               </tr>
@@ -256,184 +409,264 @@
           </table>
         </div>
       </div>
-      <div v-else class="p-3 text-center text-slate-400 text-xs bg-black/30 rounded-xl border border-dashed border-white/10">
-        尚未执行硬件合规比对。请点击【固化当前在线外设为基线白名单】建立受信任基准，或点击【执行合规差分比对】。
+      <div v-else class="ui-sub-card p-3 text-center text-xs border-dashed" style="color: var(--text-muted);">
+        尚未执行硬件合规比对。请点击【固化当前在线外设为基线】建立受信任基准，或点击【执行合规差分比对】。
       </div>
     </section>
 
-    <!-- Modem 硬件引脚状态与电平控制面板 (SerialModemPinsPanel) -->
-    <SerialModemPinsPanel
-      v-if="showModemPins"
-      :serialPorts="serialPorts"
-      :defaultPort="selectedSerial"
-    />
+    <SerialModemPinsPanel v-if="showModemPins" :serialPorts="serialPorts" :defaultPort="localSerial" />
 
-    <!-- 3. 主体工作区：左栏 USB 设备与 PnP 实时流水 + 右栏 端口全双工双向出入执行器 -->
-    <main class="flex-1 flex gap-2.5 overflow-hidden min-h-0">
-      
-      <!-- 3.1 左栏：物理 USB 画像与 PnP 实时审计流水线 (占比 50%) -->
-      <div class="flex-1 flex flex-col gap-2.5 overflow-hidden min-w-0">
-        
-        <!-- 物理 USB 设备画像清单 -->
-        <div class="flex-[3] glass-surface backdrop-blur-2xl rounded-2xl border border-white/10 shadow-xl flex flex-col overflow-hidden min-h-0">
-          <div class="px-3.5 py-2 border-b border-white/10 bg-white/[0.02] flex items-center justify-between text-xs font-bold text-slate-200 shrink-0">
-            <div class="flex items-center gap-2">
-              <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
-              <span>物理 USB 设备画像清单</span>
-              <span class="text-[10px] font-mono text-purple-400/80 bg-purple-500/10 px-1.5 py-0.2 rounded border border-purple-500/20">
-                {{ filteredUsbDevices.length }} 活跃端点
+    <!-- 3. 主体工作区 (实体稳态衬底，开放选区) -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-2.5 overflow-hidden min-h-0 select-text">
+
+      <!-- 3.1 左栏：物理 COM 串口资产 + USB 外设画像 + 总线实时审计流 -->
+      <div class="flex flex-col gap-2.5 overflow-hidden min-w-0 min-h-0">
+
+        <!-- 3.1.1 物理 / 虚拟 COM 串口资产清单 -->
+        <div class="flex-[2] ui-content-card flex flex-col overflow-hidden min-h-0">
+          <div class="px-3.5 py-2 border-b flex items-center justify-between text-xs font-semibold shrink-0 gap-2" style="border-color: var(--border-subtle); color: var(--text-primary);">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0"></span>
+              <span class="truncate">物理 / 虚拟 COM 串口清单</span>
+              <span class="text-[11px] ui-num text-indigo-700 dark:text-indigo-300 bg-indigo-500/12 px-2 py-0.5 rounded border border-indigo-500/25 shrink-0">
+                {{ filteredSerialList.length }} 通信端口
+              </span>
+              <span v-if="activeSerialCount > 0" class="text-[11px] ui-num text-emerald-700 dark:text-emerald-300 bg-emerald-500/12 px-2 py-0.5 rounded border border-emerald-500/25 shrink-0">
+                {{ activeSerialCount }} 监听中
               </span>
             </div>
-            <div class="relative">
-              <input v-model="usbFilter" placeholder="过滤设备名 / VID / PID / 类别"
-                class="w-48 bg-black/50 border border-white/10 rounded-xl px-2.5 py-1 text-[11px] font-mono text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-purple-500/60 focus:ring-1 focus:ring-purple-500/30 transition-all">
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button @click="isMultiSerialCompareOpen = true"
+                title="开启 2~4 路 COM 串口 LCS 实时交叉比对终端"
+                class="px-2 py-1 rounded-lg bg-indigo-500/12 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/25 text-[11px] font-semibold cursor-pointer flex items-center gap-1 whitespace-nowrap">
+                <AppIcon name="scale" :size="11" />
+                <span>多路交叉比对</span>
+              </button>
+              <input v-model="serialFilter" placeholder="过滤 COM / 芯片 / 蓝牙" class="ui-input w-36 px-2.5 py-1 text-xs" />
+              <button @click="$emit('refreshSerial')" title="重新扫描系统 COM 物理与蓝牙虚拟串口" class="ui-pill p-1.5 rounded-lg cursor-pointer">
+                <AppIcon name="refresh" :size="12" />
+              </button>
             </div>
           </div>
 
           <div class="flex-1 overflow-auto custom-scrollbar p-2.5 space-y-2">
-            <div v-for="dev in filteredUsbDevices" :key="dev.instance_id"
-              class="bg-[#121824]/90 border border-white/5 hover:border-purple-500/40 p-2.5 rounded-xl flex flex-col gap-1.5 text-xs transition-all shadow-sm group">
+            <div v-for="sp in filteredSerialList" :key="sp.port_name" class="ui-sub-card hover:border-indigo-500/40 p-2.5 flex flex-col gap-1.5 text-xs transition-all">
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="px-2 py-0.5 rounded-md font-mono font-bold text-xs bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 shrink-0">
+                    {{ sp.port_name }}
+                  </span>
+                  <span class="font-semibold truncate" style="color: var(--text-primary);" :title="sp.description">
+                    {{ sp.product || sp.description }}
+                  </span>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <span :class="['text-[11px] font-semibold px-2 py-0.5 rounded-lg border', getSerialTypeBadge(sp)]">
+                    {{ sp.port_type }}
+                  </span>
+                  <button
+                    @click="togglePortCapture(sp.port_name)"
+                    :class="isPortActive(sp.port_name) ? 'ui-btn-danger px-2 py-0.5 text-[11px]' : 'ui-btn-secondary px-2 py-0.5 text-[11px]'"
+                  >
+                    <span>{{ isPortActive(sp.port_name) ? '停止' : '监听' }}</span>
+                  </button>
+                  <button
+                    @click="focusSerialTransceive(sp.port_name)"
+                    title="切换到串口双向发包调试"
+                    class="ui-btn-primary px-2 py-0.5 text-[11px]"
+                  >
+                    <span>调试</span>
+                  </button>
+                  <button
+                    @click="addSerialPortToDiffQueue(sp)"
+                    title="将此串口硬件属性与驱动配置加入比对队列"
+                    class="px-2 py-0.5 rounded-lg bg-emerald-500/12 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 font-semibold text-[11px] cursor-pointer"
+                  >
+                    + 入队
+                  </button>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-1.5 text-[11px] font-mono px-2 py-1.5 rounded-lg border bg-[var(--surface-glass-pill)]" style="border-color: var(--border-subtle); color: var(--text-muted);">
+                <div class="truncate" :title="sp.hardware_id">
+                  <span>硬件标识: </span>
+                  <strong class="text-indigo-600 dark:text-indigo-300">{{ sp.hardware_id || 'STANDARD_COM' }}</strong>
+                </div>
+                <div class="truncate" :title="sp.manufacturer || '通用串口控制器'">
+                  <span>驱动厂商: </span>
+                  <span class="font-medium" style="color: var(--text-primary);">{{ sp.manufacturer || '系统标准驱动' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <EmptyState
+              v-if="filteredSerialList.length === 0"
+              icon="serial"
+              title="未检测到在线物理或虚拟 COM 串口"
+              description="连接 USB 转串口适配器 (CH340/CP210x/FT232)、RS-485 板卡或已配对蓝牙 SPP 串口后，点击右上角刷新即可自动纳管。"
+            />
+          </div>
+        </div>
+
+        <!-- 3.1.2 物理 USB 设备画像清单 -->
+        <div class="flex-[2] ui-content-card flex flex-col overflow-hidden min-h-0">
+          <div class="px-3.5 py-2 border-b flex items-center justify-between text-xs font-semibold shrink-0 gap-2" style="border-color: var(--border-subtle); color: var(--text-primary);">
+            <div class="flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+              <span>物理 USB 设备画像清单</span>
+              <span class="text-[11px] ui-num text-purple-600 dark:text-purple-300 bg-purple-500/12 px-2 py-0.5 rounded border border-purple-500/25">
+                {{ filteredUsbDevices.length }} 活跃端点
+              </span>
+            </div>
+            <input v-model="usbFilter" placeholder="过滤设备名 / VID / PID / 类别" class="ui-input w-44 px-2.5 py-1 text-xs" />
+          </div>
+
+          <div class="flex-1 overflow-auto custom-scrollbar p-2.5 space-y-2">
+            <div v-for="dev in filteredUsbDevices" :key="dev.instance_id" class="ui-sub-card hover:border-purple-500/40 p-2.5 flex flex-col gap-1.5 text-xs transition-all group">
               <div class="flex items-center justify-between gap-2">
-                <span class="font-bold text-slate-100 truncate flex-1 group-hover:text-purple-300 transition-colors" :title="dev.device_name">
+                <span class="font-semibold truncate flex-1 group-hover:text-purple-600 dark:group-hover:text-purple-300 transition-colors" style="color: var(--text-primary);" :title="dev.device_name">
                   {{ dev.device_name }}
                 </span>
                 <div class="flex items-center gap-1.5 shrink-0">
-                  <button @click="openUsbDescriptorTree(dev)" title="解析并展开此设备的四级标准描述符树"
-                    class="text-[9px] font-bold text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 px-1.5 py-0.5 rounded-md cursor-pointer transition-colors shadow-2xs">
-                    🌲 描述符
+                  <button
+                    @click="openUsbDescriptorTree(dev)"
+                    title="解析并展开此设备的四级标准描述符树"
+                    class="text-[11px] font-medium text-purple-700 dark:text-purple-300 bg-purple-500/12 hover:bg-purple-500/20 border border-purple-500/25 px-2 py-0.5 rounded-md cursor-pointer transition-colors flex items-center gap-1"
+                  >
+                    <AppIcon name="layers" :size="11" />
+                    <span>描述符</span>
                   </button>
-                  <!-- 设备类别彩色徽章 -->
-                  <span :class="['text-[9px] font-bold px-2 py-0.5 rounded-lg border shadow-2xs backdrop-blur-sm', getUsbClassBadge(dev.class_desc)]">
+                  <button
+                    @click="addUsbDeviceToDiffQueue(dev)"
+                    title="将此 USB 外设参数指纹加入全局比对队列"
+                    class="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-500/12 hover:bg-emerald-500/20 border border-emerald-500/25 px-2 py-0.5 rounded-md cursor-pointer transition-colors"
+                  >
+                    + 入队
+                  </button>
+                  <span :class="['text-[11px] font-semibold px-2 py-0.5 rounded-lg border', getUsbClassBadge(dev.class_desc)]">
                     {{ dev.class_desc }}
                   </span>
                 </div>
               </div>
 
-              <!-- 硬件元数据网格 -->
-              <div class="grid grid-cols-2 gap-1.5 text-[10px] font-mono bg-black/40 p-2 rounded-lg border border-white/5 text-slate-400">
+              <div class="grid grid-cols-2 gap-1.5 text-[11px] font-mono p-2 rounded-lg border bg-[var(--surface-glass-pill)]" style="border-color: var(--border-subtle); color: var(--text-muted);">
                 <div class="truncate">
                   <span>硬件 ID: </span>
-                  <strong class="text-purple-400 font-bold">VID_{{ dev.vid }} & PID_{{ dev.pid }}</strong>
+                  <strong class="text-purple-600 dark:text-purple-300">VID_{{ dev.vid }} &amp; PID_{{ dev.pid }}</strong>
                 </div>
                 <div class="truncate">
                   <span>驱动服务: </span>
-                  <span class="text-slate-200 font-medium">{{ dev.service || 'N/A' }}</span>
+                  <span class="font-medium" style="color: var(--text-primary);">{{ dev.service || 'N/A' }}</span>
                 </div>
                 <div class="truncate" :title="dev.manufacturer">
                   <span>制造商: </span>
-                  <span class="text-slate-200 font-medium">{{ dev.manufacturer || '未知' }}</span>
+                  <span class="font-medium" style="color: var(--text-primary);">{{ dev.manufacturer || '未知' }}</span>
                 </div>
                 <div class="truncate" :title="dev.location_info">
                   <span>物理位置: </span>
-                  <span class="text-slate-200 font-medium">{{ dev.location_info || 'Root' }}</span>
+                  <span class="font-medium" style="color: var(--text-primary);">{{ dev.location_info || 'Root' }}</span>
                 </div>
               </div>
             </div>
 
-            <!-- 空状态 -->
-            <div v-if="filteredUsbDevices.length === 0" class="flex flex-col items-center justify-center py-16 text-slate-500 text-xs gap-2">
-              <svg class="w-8 h-8 text-slate-600 stroke-current fill-none" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
-              </svg>
-              <span>未检索到匹配的物理 USB 外设</span>
-            </div>
+            <EmptyState v-if="filteredUsbDevices.length === 0" icon="usb" title="未检索到匹配的物理 USB 外设" description="挂钩 USB 引擎或刷新外设后，将自动扫描物理主机控制器下的外设端点。" />
           </div>
         </div>
 
-        <!-- 物理 USB PnP 实时事件审计流水线 -->
-        <div class="flex-[2] glass-surface backdrop-blur-2xl rounded-2xl border border-white/10 shadow-xl flex flex-col overflow-hidden min-h-0">
-          <div class="px-3.5 py-2 border-b border-white/10 bg-white/[0.02] flex items-center justify-between text-xs font-bold text-slate-200 shrink-0">
+        <!-- 3.1.3 USB 与串口总线实时事件及 PnP 审计流水线 -->
+        <div class="flex-[2] ui-content-card flex flex-col overflow-hidden min-h-0">
+          <div class="px-3.5 py-2 border-b flex items-center justify-between text-xs font-semibold shrink-0" style="border-color: var(--border-subtle); color: var(--text-primary);">
             <div class="flex items-center gap-2">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-              <span>物理 USB 即插即用 (PnP) 实时审计流水线</span>
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              <span>USB / COM 总线帧与 PnP 热插拔审计流</span>
             </div>
-            <span class="text-[10px] text-slate-400 font-mono">{{ usbAuditEvents.length }} 条审计事件</span>
+            <span class="text-[11px] ui-num" style="color: var(--text-muted);">{{ usbAuditEvents.length }} 条实时记录</span>
           </div>
 
           <div class="flex-1 overflow-auto custom-scrollbar p-2.5 space-y-1.5">
-            <div v-for="ev in usbAuditEvents" :key="ev.id"
-              :class="['flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs font-mono border backdrop-blur-md shadow-2xs transition-colors',
-                ev.direction === 'USB_ATTACH' ? 'bg-emerald-500/10 text-emerald-200 border-emerald-500/30' :
-                ev.direction === 'USB_DETACH' ? 'bg-amber-500/10 text-amber-200 border-amber-500/30' :
-                'bg-slate-900/60 text-slate-300 border-white/5']">
-              <span class="text-[10px] text-slate-500 w-16 shrink-0">{{ ev.timestamp }}</span>
-              <span :class="['px-2 py-0.5 rounded-md text-[9px] font-bold shrink-0 shadow-2xs',
-                ev.direction === 'USB_ATTACH' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40']">
-                {{ ev.direction === 'USB_ATTACH' ? '接入 ATTACH' : '拔出 DETACH' }}
+            <div
+              v-for="ev in usbAuditEvents"
+              :key="ev.id"
+              :class="['flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs font-mono border transition-colors',
+                ev.direction === 'USB_ATTACH' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-200 border-emerald-500/25' :
+                ev.direction === 'USB_DETACH' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-200 border-amber-500/25' :
+                ev.transport === 'SERIAL' ? 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-200 border-indigo-500/25' :
+                'ui-sub-card']"
+            >
+              <span class="text-[11px] ui-num w-16 shrink-0" style="color: var(--text-muted);">{{ ev.timestamp }}</span>
+              <span
+                :class="['px-2 py-0.5 rounded-md text-[11px] font-semibold shrink-0',
+                  ev.direction === 'USB_ATTACH' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' :
+                  ev.direction === 'USB_DETACH' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300' :
+                  ev.transport === 'SERIAL' ? 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300' :
+                  'bg-purple-500/15 text-purple-700 dark:text-purple-300']"
+              >
+                {{ ev.direction === 'USB_ATTACH' ? 'USB 接入' : ev.direction === 'USB_DETACH' ? 'USB 拔出' : ev.transport === 'SERIAL' ? `COM ${ev.protocol || '帧'}` : (ev.protocol || 'USB URB') }}
               </span>
-              <span class="truncate flex-1 text-[11px] text-slate-300 font-mono">{{ ev.raw_text || ev.payload_hex }}</span>
+              <span class="truncate flex-1 text-[11px]" style="color: var(--text-primary);">{{ ev.raw_text || ev.payload_hex }}</span>
+              <div class="flex items-center gap-1 shrink-0">
+                <button @click="setBusEventDiffSlot('A', ev)" class="px-1.5 py-0.5 rounded bg-blue-500/12 hover:bg-blue-500/20 text-blue-700 dark:text-sky-300 border border-blue-500/25 text-[11px] font-semibold cursor-pointer" title="设为比对基准 A">A</button>
+                <button @click="setBusEventDiffSlot('B', ev)" class="px-1.5 py-0.5 rounded bg-purple-500/12 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/25 text-[11px] font-semibold cursor-pointer" title="设为比对项 B 并对比">B</button>
+                <button @click="addBusEventToDiffQueue(ev)" class="px-1.5 py-0.5 rounded bg-emerald-500/12 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-[11px] font-semibold cursor-pointer" title="加入全局多组比对队列">+入队</button>
+              </div>
             </div>
 
-            <!-- 空状态 -->
-            <div v-if="usbAuditEvents.length === 0" class="flex flex-col items-center justify-center h-full py-8 text-slate-500 text-xs gap-1.5">
-              <span class="text-sm">🔌</span>
-              <span>USB 物理插拔守护进程待命中，暂无动态即插即用事件</span>
-            </div>
+            <EmptyState
+              v-if="usbAuditEvents.length === 0"
+              icon="usb"
+              title="USB / COM 物理总线审计待命中"
+              description="开启【挂钩 USB】或【监听串口】后，热插拔与串口/URB 报文将实时呈现于此。"
+            />
           </div>
         </div>
       </div>
 
-      <!-- 3.2 右栏：端口全双工双向出入执行器 (TX ➔ RX) (占比 50%) -->
-      <div class="flex-1 glass-surface backdrop-blur-2xl rounded-2xl border border-white/10 shadow-xl flex flex-col overflow-hidden min-h-0 min-w-0">
-        
-        <!-- 执行器头部：信道模式切换 (TCP/UDP 网络端口 vs 物理串口 COM) -->
-        <div class="px-3.5 py-2 border-b border-white/10 bg-white/[0.02] flex items-center justify-between shrink-0">
+      <!-- 3.2 右栏：端口全双工双向出入执行器 -->
+      <div class="ui-content-card flex flex-col overflow-hidden min-h-0 min-w-0">
+        <div class="px-3.5 py-2 border-b flex items-center justify-between shrink-0 flex-wrap gap-2" style="border-color: var(--border-subtle);">
           <div class="flex items-center gap-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
-            <span class="text-xs font-bold text-white tracking-tight">端口数据双向出入执行器 (TX ➔ RX)</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+            <span class="text-xs font-semibold tracking-tight" style="color: var(--text-primary);">端口数据双向出入执行器 (TX → RX)</span>
           </div>
 
-          <div class="flex bg-black/60 p-0.5 rounded-xl text-xs font-semibold border border-white/10 shadow-inner">
-            <button @click="portOpChannel = 'network'"
-              :class="['px-3 py-1 rounded-lg transition-all cursor-pointer font-bold text-[11px]',
-                portOpChannel === 'network' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200']">
+          <div class="glass-pill flex p-0.5 rounded-xl text-xs font-medium">
+            <button @click="portOpChannel = 'network'" :class="['px-3 py-1 rounded-lg transition-all cursor-pointer text-[11px]', portOpChannel === 'network' ? 'bg-blue-600 text-white font-semibold' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">
               网络端口 (TCP/UDP)
             </button>
-            <button @click="portOpChannel = 'serial'"
-              :class="['px-3 py-1 rounded-lg transition-all cursor-pointer font-bold text-[11px]',
-                portOpChannel === 'serial' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200']">
+            <button @click="portOpChannel = 'serial'" :class="['px-3 py-1 rounded-lg transition-all cursor-pointer text-[11px]', portOpChannel === 'serial' ? 'bg-indigo-600 text-white font-semibold' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">
               物理串口 (COM)
             </button>
           </div>
         </div>
 
-        <!-- 执行配置控制台表单 -->
-        <div class="p-3.5 border-b border-white/10 space-y-2.5 text-xs shrink-0 bg-black/30">
-          
-          <!-- 渠道 A: 网络端口参数 -->
+        <div class="p-3.5 border-b space-y-2.5 text-xs shrink-0 bg-[var(--surface-glass-pill)]" style="border-color: var(--border-subtle);">
           <template v-if="portOpChannel === 'network'">
-            <div class="grid grid-cols-[1fr_80px_75px_80px] gap-2 items-center">
+            <div class="grid grid-cols-1 sm:grid-cols-[1fr_80px_75px_85px] gap-2 items-center">
               <div>
-                <label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">目标 IP 地址</label>
-                <input v-model="portOpIp" placeholder="例如: 192.168.1.100"
-                  class="w-full bg-[#131B26] border border-white/15 rounded-xl px-2.5 py-1.5 text-xs font-mono text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 transition-all">
+                <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">目标 IP 地址</label>
+                <input v-model="portOpIp" placeholder="例如: 192.168.1.100" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono" />
               </div>
               <div>
-                <label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">端口</label>
-                <input v-model.number="portOpPort" type="number" min="1" max="65535"
-                  class="w-full bg-[#131B26] border border-white/15 rounded-xl px-2.5 py-1.5 text-xs font-mono text-slate-100 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 transition-all">
+                <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">端口</label>
+                <input v-model.number="portOpPort" type="number" min="1" max="65535" class="ui-input w-full px-2.5 py-1.5 text-xs ui-num" />
               </div>
               <div>
-                <label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">规约总线</label>
-                <select v-model="portOpTransport"
-                  class="w-full bg-[#131B26] border border-white/15 rounded-xl px-2 py-1.5 text-xs font-bold text-cyan-300 focus:outline-none focus:border-cyan-500 transition-all">
+                <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">规约总线</label>
+                <select v-model="portOpTransport" class="ui-input w-full px-2 py-1.5 text-xs font-semibold text-blue-600 dark:text-sky-300">
                   <option value="TCP">TCP</option>
                   <option value="UDP">UDP</option>
                 </select>
               </div>
               <div>
-                <label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">超时(ms)</label>
-                <input v-model.number="portOpTimeout" type="number" min="200" max="10000"
-                  class="w-full bg-[#131B26] border border-white/15 rounded-xl px-2.5 py-1.5 text-xs font-mono text-slate-100 focus:outline-none focus:border-cyan-500 transition-all">
+                <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">超时(ms)</label>
+                <input v-model.number="portOpTimeout" type="number" min="200" max="10000" class="ui-input w-full px-2.5 py-1.5 text-xs ui-num" />
               </div>
             </div>
 
-            <!-- 载荷与预设模板 -->
             <div class="space-y-1">
               <div class="flex items-center justify-between text-[11px]">
-                <span class="font-bold text-slate-400 uppercase">出向操作载荷 (Payload Hex)</span>
-                <select @change="onPresetSelect($event)"
-                  class="bg-[#131B26] border border-white/15 rounded-lg px-2 py-0.5 text-[10px] text-cyan-300 focus:outline-none cursor-pointer">
+                <span class="font-semibold" style="color: var(--text-muted);">出向操作载荷 (Payload Hex)</span>
+                <select @change="onPresetSelect($event)" class="ui-input px-2 py-0.5 text-[11px] text-blue-600 dark:text-sky-300 cursor-pointer">
                   <option value="">-- 选择标准工业规约探测模板 --</option>
                   <option value="modbus_read_holding">Modbus-TCP: 读保持寄存器 0-1 (Func 03)</option>
                   <option value="http_get">HTTP/1.1: 基础心跳 GET 探测请求</option>
@@ -441,34 +674,36 @@
                   <option value="iec104_test">IEC 60870-5-104: U 格式测试激活帧</option>
                 </select>
               </div>
-              <textarea v-model="portOpPayload" rows="2" placeholder="输入十六进制报文 (如: 00 01 00 00 00 06 01 03 00 00 00 02) 或明文字符串"
-                class="w-full bg-[#131B26] border border-white/15 rounded-xl p-2 text-xs font-mono text-cyan-200 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 transition-all resize-none custom-scrollbar"></textarea>
+              <textarea v-model="portOpPayload" rows="2" placeholder="输入十六进制报文 (如: 00 01 00 00 00 06 01 03 00 00 00 02) 或明文字符串" class="ui-input w-full p-2 text-xs font-mono resize-none custom-scrollbar"></textarea>
             </div>
 
-            <!-- 写出并回捕按钮 -->
-            <button @click="executePortTransceive" :disabled="portOpExecuting || !portOpPayload.trim()"
-              class="w-full bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-600 hover:from-blue-500 hover:via-cyan-500 hover:to-teal-500 text-white text-xs py-2 rounded-xl font-bold shadow-lg shadow-cyan-600/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 active:scale-98">
-              <span v-if="portOpExecuting" class="animate-spin">⏳</span>
-              <span v-else>⚡</span>
-              <span>执行写出与回包捕获 (TX ➔ RX)</span>
+            <button @click="executePortTransceive" :disabled="portOpExecuting || !portOpPayload.trim()" class="ui-btn-primary w-full py-2 text-xs justify-center">
+              <AppIcon v-if="portOpExecuting" name="refresh" :size="13" class="animate-spin" />
+              <AppIcon v-else name="zap" :size="13" />
+              <span>执行写出与回包捕获 (TX → RX)</span>
             </button>
           </template>
 
-          <!-- 渠道 B: 物理串口参数 -->
           <template v-else-if="portOpChannel === 'serial'">
             <div class="grid grid-cols-2 gap-2">
               <div>
-                <label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">目标物理串口</label>
-                <select v-model="selectedSerial"
-                  class="w-full bg-[#131B26] border border-white/15 rounded-xl px-2.5 py-1.5 text-xs font-mono text-indigo-300 focus:outline-none focus:border-indigo-500 transition-all">
+                <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">目标物理串口</label>
+                <select
+                  :value="localSerial"
+                  @change="onSelectSerial(($event.target as HTMLSelectElement).value)"
+                  class="ui-input w-full px-2.5 py-1.5 text-xs font-mono"
+                >
                   <option v-for="p in serialPorts" :key="p" :value="p">{{ p }}</option>
                   <option v-if="serialPorts.length === 0" value="">未发现串口</option>
                 </select>
               </div>
               <div>
-                <label class="text-[10px] font-bold text-slate-400 uppercase block mb-1">通信波特率</label>
-                <select v-model.number="serialBaudRate"
-                  class="w-full bg-[#131B26] border border-white/15 rounded-xl px-2.5 py-1.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-indigo-500 transition-all">
+                <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">通信波特率</label>
+                <select
+                  :value="localBaudRate"
+                  @change="onSelectBaudRate(Number(($event.target as HTMLSelectElement).value))"
+                  class="ui-input w-full px-2.5 py-1.5 text-xs ui-num"
+                >
                   <option :value="9600">9600 bps</option>
                   <option :value="19200">19200 bps</option>
                   <option :value="38400">38400 bps</option>
@@ -480,130 +715,108 @@
 
             <div class="space-y-1">
               <div class="flex items-center justify-between text-[11px]">
-                <span class="font-bold text-slate-400 uppercase">串口写出指令</span>
+                <span class="font-semibold" style="color: var(--text-muted);">串口写出指令</span>
                 <label class="flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" v-model="portOpSerialIsHex" class="accent-indigo-500">
-                  <span class="font-mono text-[10px] font-bold text-indigo-400">按 HEX 模式发送</span>
+                  <input type="checkbox" v-model="portOpSerialIsHex" class="accent-indigo-600" />
+                  <span class="text-[11px] font-semibold text-indigo-600 dark:text-indigo-300">按 HEX 模式发送</span>
                 </label>
               </div>
-              <textarea v-model="portOpSerialPayload" rows="2" placeholder="输入待写出到串口的指令 (如: 01 03 00 00 00 02 C4 0B)"
-                class="w-full bg-[#131B26] border border-white/15 rounded-xl p-2 text-xs font-mono text-indigo-200 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all resize-none custom-scrollbar"></textarea>
+              <textarea v-model="portOpSerialPayload" rows="2" placeholder="输入待写出到串口的指令 (如: 01 03 00 00 00 02 C4 0B)" class="ui-input w-full p-2 text-xs font-mono resize-none custom-scrollbar"></textarea>
             </div>
 
-            <button @click="executePortTransceive" :disabled="portOpExecuting || !portOpSerialPayload.trim() || !selectedSerial"
-              class="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white text-xs py-2 rounded-xl font-bold shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 active:scale-98">
-              <span v-if="portOpExecuting" class="animate-spin">⏳</span>
-              <span v-else>📡</span>
+            <button @click="executePortTransceive" :disabled="portOpExecuting || !portOpSerialPayload.trim() || !localSerial" class="ui-btn-primary w-full py-2 text-xs justify-center">
+              <AppIcon v-if="portOpExecuting" name="refresh" :size="13" class="animate-spin" />
+              <AppIcon v-else name="serial" :size="13" />
               <span>执行串口写出与双向侦测</span>
             </button>
           </template>
         </div>
 
-        <!-- 双向操作流水历史终端 (Terminal Output) -->
-        <div class="flex-1 overflow-auto custom-scrollbar p-3 space-y-2 bg-black/40 min-h-0">
-          <div v-for="item in transceiveHistory" :key="item.id"
-            class="bg-[#121824]/90 border border-white/10 rounded-xl p-2.5 text-xs font-mono space-y-1.5 shadow-md">
-            <div class="flex items-center justify-between text-[10px] text-slate-400 border-b border-white/5 pb-1">
-              <span class="font-bold text-slate-200">{{ item.channel }} | {{ item.target }}</span>
-              <div class="flex items-center gap-1.5">
-                <span class="font-mono">{{ item.time }} (RTT: {{ item.latencyMs.toFixed(1) }}ms)</span>
-                <button v-if="item.bytesReceived > 0" @click="compareSerialTxRx(item)"
-                  class="px-2 py-0.5 rounded bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 border border-indigo-500/40 font-bold text-[9px] cursor-pointer transition-colors"
-                  title="比对本次交互发送帧与回复帧的差分与波形">
-                  ⚖️ 对比 TX vs RX
+        <!-- 双向操作流水历史终端 -->
+        <div class="flex-1 overflow-auto custom-scrollbar p-3 space-y-2 min-h-0 bg-transparent">
+          <div v-for="item in transceiveHistory" :key="item.id" class="ui-sub-card p-2.5 text-xs space-y-1.5">
+            <div class="flex items-center justify-between text-[11px] border-b pb-1.5 flex-wrap gap-1.5" style="border-color: var(--border-subtle); color: var(--text-muted);">
+              <span class="font-semibold" style="color: var(--text-primary);">{{ item.channel }} | {{ item.target }}</span>
+              <div class="flex items-center gap-1.5 flex-wrap ui-num">
+                <span>{{ item.time }} (RTT: {{ item.latencyMs.toFixed(1) }}ms)</span>
+                <button
+                  v-if="item.bytesReceived > 0"
+                  @click="compareSerialTxRx(item)"
+                  class="px-2 py-0.5 rounded bg-indigo-500/12 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/25 font-semibold text-[11px] cursor-pointer flex items-center gap-1"
+                  title="比对发送帧与回复帧的差分与波形"
+                >
+                  <AppIcon name="scale" :size="11" />
+                  <span>TX vs RX</span>
                 </button>
-                <button @click="setDiffSlotA(item)"
-                  class="px-1.5 py-0.5 rounded bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 border border-blue-500/30 text-[9px] font-bold cursor-pointer transition-colors"
-                  title="将本帧存入全局比对槽位 A">
+                <button @click="setDiffSlotA(item)" class="px-1.5 py-0.5 rounded bg-blue-500/12 hover:bg-blue-500/20 text-blue-700 dark:text-sky-300 border border-blue-500/25 text-[11px] font-semibold cursor-pointer">
                   设为 A
                 </button>
-                <button @click="setDiffSlotB(item)"
-                  class="px-1.5 py-0.5 rounded bg-purple-500/20 hover:bg-purple-500/40 text-purple-300 border border-purple-500/30 text-[9px] font-bold cursor-pointer transition-colors"
-                  title="将本帧存入全局比对槽位 B 并启动比对">
+                <button @click="setDiffSlotB(item)" class="px-1.5 py-0.5 rounded bg-purple-500/12 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/25 text-[11px] font-semibold cursor-pointer">
                   设为 B
+                </button>
+                <button @click="addTransceiveToDiffQueue(item)" class="px-1.5 py-0.5 rounded bg-emerald-500/12 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-[11px] font-semibold cursor-pointer" title="加入全局多组比对队列">
+                  + 入队
                 </button>
               </div>
             </div>
-            
-            <!-- TX 出向 -->
-            <div class="text-[11px] text-blue-200 break-all bg-blue-500/10 p-2 rounded-lg border border-blue-500/20">
-              <strong class="text-blue-400 font-bold mr-1.5">[TX 发送 {{ item.bytesSent }}B]:</strong>
-              <span class="font-mono">{{ item.txPayload }}</span>
+
+            <div class="text-[11px] font-mono break-all bg-blue-500/10 p-2 rounded-lg border border-blue-500/20 text-blue-800 dark:text-blue-200">
+              <strong class="font-semibold mr-1.5">[TX 发送 {{ item.bytesSent }}B]:</strong>
+              <span>{{ item.txPayload }}</span>
             </div>
-            
-            <!-- RX 入向 -->
-            <div v-if="item.bytesReceived > 0" class="text-[11px] text-emerald-200 break-all bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/20">
-              <div class="text-emerald-400 font-bold mb-0.5">[RX 接收 {{ item.bytesReceived }}B] 协议: {{ item.detectedProto || 'RAW' }}</div>
-              <div><strong class="text-emerald-400">HEX:</strong> {{ item.rxPayload }}</div>
-              <div v-if="item.rxText" class="text-slate-300 mt-0.5"><strong class="text-emerald-400">ASCII:</strong> {{ item.rxText }}</div>
+
+            <div v-if="item.bytesReceived > 0" class="text-[11px] font-mono break-all bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/20 text-emerald-800 dark:text-emerald-200">
+              <div class="font-semibold mb-0.5">[RX 接收 {{ item.bytesReceived }}B] 协议: {{ item.detectedProto || 'RAW' }}</div>
+              <div><strong>HEX:</strong> {{ item.rxPayload }}</div>
+              <div v-if="item.rxText" class="mt-0.5" style="color: var(--text-primary);"><strong>ASCII:</strong> {{ item.rxText }}</div>
             </div>
-            
-            <!-- ERR 错误 -->
-            <div v-else-if="item.error" class="bg-rose-500/15 text-[11px] text-rose-300 p-2 rounded-lg border border-rose-500/30">
-              <strong class="font-bold text-rose-400">ERR:</strong> {{ item.error }}
+
+            <div v-else-if="item.error" class="bg-rose-500/12 text-[11px] text-rose-700 dark:text-rose-300 p-2 rounded-lg border border-rose-500/25">
+              <strong>ERR:</strong> {{ item.error }}
             </div>
           </div>
 
-          <!-- 空状态与引导操作 -->
-          <div v-if="transceiveHistory.length === 0" class="flex flex-col items-center justify-center h-full py-12 text-slate-500 text-xs gap-2">
-            <div class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-lg text-cyan-400">
-              ⚡
-            </div>
-            <span class="font-medium text-slate-400">暂无双向端口交互出入流水</span>
-            <span class="text-[10px] text-slate-600 max-w-xs text-center font-mono">
-              配置目标 IP/端口或物理串口，点击上方【执行写出与回包捕获】即可开始双向交互探针作业
-            </span>
-          </div>
+          <EmptyState
+            v-if="transceiveHistory.length === 0"
+            icon="zap"
+            title="暂无双向端口交互出入流水"
+            description="配置目标 IP/端口或物理串口，点击上方【执行写出与回包捕获】即可开始双向交互。"
+          />
         </div>
       </div>
     </main>
 
-    <!-- 4. 工业级外设与总线扩展模态框集 -->
-    
-    <!-- 串口工业通信参数与动态分帧配置模态框 -->
-    <SerialExtendedConfigModal
-      :isOpen="isSerialConfigOpen"
-      :serialPorts="serialPorts"
-      :defaultPort="selectedSerial"
-      @close="isSerialConfigOpen = false"
-      @started="onSerialConfigStarted"
-      @log="$emit('appendLog', $event)"
+    <SerialExtendedConfigModal :isOpen="isSerialConfigOpen" :serialPorts="serialPorts" :defaultPort="localSerial" @close="isSerialConfigOpen = false" @started="onSerialConfigStarted" @log="$emit('appendLog', $event)" />
+    <SerialBridgeModal :isOpen="isSerialBridgeOpen" :serialPorts="serialPorts" @close="isSerialBridgeOpen = false" @log="$emit('appendLog', $event)" />
+    <UsbDescriptorTreeModal :isOpen="isUsbDescriptorTreeOpen" :initialHex="usbDescriptorHex" @close="isUsbDescriptorTreeOpen = false" />
+    <CrossBusCausalityModal :isOpen="isCrossBusCausalityOpen" @close="isCrossBusCausalityOpen = false" />
+    <MultiSerialCompareModal
+      :isOpen="isMultiSerialCompareOpen"
+      :packets="packets"
+      :availablePorts="serialPorts"
+      :defaultPortA="activeSerialPorts && activeSerialPorts[0] ? activeSerialPorts[0] : (serialPorts[0] || '')"
+      :defaultPortB="activeSerialPorts && activeSerialPorts[1] ? activeSerialPorts[1] : (serialPorts[1] || serialPorts[0] || '')"
+      @close="isMultiSerialCompareOpen = false"
     />
-
-    <!-- 双串口工业级透明中继器模态框 -->
-    <SerialBridgeModal
-      :isOpen="isSerialBridgeOpen"
-      :serialPorts="serialPorts"
-      @close="isSerialBridgeOpen = false"
-      @log="$emit('appendLog', $event)"
-    />
-
-    <!-- USB 标准描述符树深度展开分析器模态框 -->
-    <UsbDescriptorTreeModal
-      :isOpen="isUsbDescriptorTreeOpen"
-      :initialHex="usbDescriptorHex"
-      @close="isUsbDescriptorTreeOpen = false"
-    />
-
-    <!-- 跨总线网关协议转换因果关联追踪看板模态框 -->
-    <CrossBusCausalityModal
-      :isOpen="isCrossBusCausalityOpen"
-      @close="isCrossBusCausalityOpen = false"
-    />
-
   </div>
 </template>
 
 <script setup lang="ts">
 import { notifySuccess, notifyWarning, notifyError } from '../composables/useNotification';
+import { uiConfirm } from '../composables/useConfirmDialog';
 import { useUniversalDiff } from '../composables/useUniversalDiff';
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import AppIcon from '../components/AppIcon.vue';
+import EmptyState from '../components/EmptyState.vue';
 import SerialModemPinsPanel from '../components/SerialModemPinsPanel.vue';
 import SerialExtendedConfigModal from '../components/SerialExtendedConfigModal.vue';
 import SerialBridgeModal from '../components/SerialBridgeModal.vue';
 import UsbDescriptorTreeModal from '../components/UsbDescriptorTreeModal.vue';
 import CrossBusCausalityModal from '../components/CrossBusCausalityModal.vue';
+import MultiSerialCompareModal from '../components/MultiSerialCompareModal.vue';
+
+const isMultiSerialCompareOpen = ref(false);
 
 export interface HardwareWhitelistItem {
   category: string;
@@ -671,19 +884,185 @@ interface TransceiveHistoryItem {
   error?: string;
 }
 
+export interface SerialPortDetail {
+  port_name: string;
+  description: string;
+  hardware_id: string;
+  manufacturer?: string;
+  product?: string;
+  port_type: string;
+  is_usb: boolean;
+  is_available: boolean;
+  is_in_use_by_us: boolean;
+}
+
 const props = defineProps<{
   usbDevices: UsbDeviceInfo[];
   packets: any[];
   serialPorts: string[];
+  serialPortsDetail?: SerialPortDetail[];
+  activeSerialPorts?: string[];
+  selectedSerial?: string;
+  serialBaudRate?: number;
   isUsbRunning?: boolean;
   isSerialRunning?: boolean;
 }>();
 
-const emit = defineEmits(['refreshUsb', 'startUsbCapture', 'stopUsbCapture', 'startSerialCapture', 'stopSerialCapture', 'appendLog']);
+const emit = defineEmits([
+  'refreshUsb',
+  'refreshSerial',
+  'updateSerial',
+  'updateBaudRate',
+  'startUsbCapture',
+  'stopUsbCapture',
+  'startSerialCapture',
+  'stopSerialCapture',
+  'appendLog',
+  'openWireless',
+]);
 
 // 硬件基线白名单与合规审计状态
 const showComplianceWorkbench = ref(false);
 const complianceReport = ref<HardwareComplianceReport | null>(null);
+
+// CAN 总线与逻辑分析仪抽屉状态 (全量强类型声明)
+interface DissectedCanFrame {
+  timestamp_ns: number;
+  raw_id: number;
+  can_id: number;
+  protocol_type: string;
+  frame_class: string;
+  is_extended_id: boolean;
+  is_remote_frame: boolean;
+  is_fd: boolean;
+  bit_rate_switch: boolean;
+  error_state_indicator: boolean;
+  dlc: number;
+  payload_len: number;
+  payload: number[];
+  error_detail?: string | null;
+  wire_duration_us: number;
+}
+interface CanBusHealthSnapshot {
+  bus_load_percentage: number;
+  frames_per_second: number;
+  error_frames_per_second: number;
+  total_frames_dissected: number;
+  total_error_frames: number;
+  health_status: string;
+}
+interface EthernetCanTransaction {
+  transaction_id: string;
+  eth_packet_id: number;
+  eth_timestamp_ns: number;
+  eth_protocol: string;
+  can_frame_id?: number | null;
+  can_timestamp_ns?: number | null;
+  gateway_latency_us?: number | null;
+  verdict: string;
+  root_cause_diagnosis: string;
+  remedy_suggestion: string;
+}
+interface DemodulatedUartByte {
+  byte_value: number;
+  char_representation?: string | null;
+  start_sample_index: number;
+  timestamp_ns: number;
+  parity_error: boolean;
+  framing_error: boolean;
+}
+interface SignalIntegritySnapshot {
+  duty_cycle_percentage: number;
+  mean_high_pulse_width_ns: number;
+  mean_low_pulse_width_ns: number;
+  jitter_stddev_ns: number;
+  glitches_detected: number;
+  integrity_grade: string;
+}
+
+const showCanDiagnosticDrawer = ref(false);
+const canHealth = ref<CanBusHealthSnapshot | null>(null);
+const canCausalRecords = ref<EthernetCanTransaction[]>([]);
+const canRawHex = ref('');
+const canNominalBps = ref(500000);
+const canDataBps = ref(2000000);
+const dissectedCan = ref<DissectedCanFrame | null>(null);
+
+const showUartLogicDrawer = ref(false);
+const uartSamplesHex = ref('');
+const uartIntervalNs = ref(100);
+const uartBaudRate = ref(115200);
+const uartMinGlitchNs = ref(500);
+const uartBytes = ref<DemodulatedUartByte[]>([]);
+const signalSnapshot = ref<SignalIntegritySnapshot | null>(null);
+
+async function fetchCanDiagnostics() {
+  try {
+    const [health, records] = await Promise.all([
+      invoke<CanBusHealthSnapshot>('get_can_bus_health_cmd'),
+      invoke<EthernetCanTransaction[]>('get_can_causal_records_cmd'),
+    ]);
+    canHealth.value = health;
+    canCausalRecords.value = records;
+  } catch (e) {
+    console.error('获取 CAN 总线快照失败:', e);
+  }
+}
+
+async function toggleCanDrawer() {
+  showCanDiagnosticDrawer.value = !showCanDiagnosticDrawer.value;
+  if (showCanDiagnosticDrawer.value) {
+    await fetchCanDiagnostics();
+  }
+}
+
+async function runCanDissection() {
+  const cleaned = canRawHex.value.trim().replace(/\s+/g, '');
+  if (!cleaned) return;
+  try {
+    dissectedCan.value = await invoke<DissectedCanFrame>('dissect_can_packet_cmd', {
+      rawHex: cleaned,
+      timestampNs: Date.now() * 1_000_000,
+      nominalBps: canNominalBps.value,
+      dataBps: canDataBps.value,
+    });
+    await fetchCanDiagnostics();
+  } catch (e) {
+    notifyError('CAN 二进制帧解码失败', e);
+  }
+}
+
+async function runUartDemodulate() {
+  const cleaned = uartSamplesHex.value.trim().replace(/\s+/g, '');
+  if (!cleaned) return;
+  try {
+    uartBytes.value = await invoke<DemodulatedUartByte[]>('demodulate_physical_uart_cmd', {
+      samplesBinaryHex: cleaned,
+      sampleIntervalNs: uartIntervalNs.value,
+      baudRate: uartBaudRate.value,
+      minGlitchNs: uartMinGlitchNs.value,
+    });
+    if (uartBytes.value.length === 0) {
+      notifyWarning('UART 解调无起止字符', '未检测到符合选定波特率的有效 Start/Stop 帧序列');
+    }
+  } catch (e) {
+    notifyError('UART 电平解调失败', e);
+  }
+}
+
+async function runSignalIntegrity() {
+  const cleaned = uartSamplesHex.value.trim().replace(/\s+/g, '');
+  if (!cleaned) return;
+  try {
+    signalSnapshot.value = await invoke<SignalIntegritySnapshot>('evaluate_signal_integrity_cmd', {
+      samplesBinaryHex: cleaned,
+      sampleIntervalNs: uartIntervalNs.value,
+      expectedBaud: uartBaudRate.value,
+    });
+  } catch (e) {
+    notifyError('信号完整性评估失败', e);
+  }
+}
 const whitelistConfig = ref<HardwareWhitelistConfig | null>(null);
 const isSavingWhitelist = ref(false);
 const isAuditingCompliance = ref(false);
@@ -757,7 +1136,11 @@ async function doVerifyCompliance() {
 }
 
 async function doClearWhitelist() {
-  if (!confirm('确定要清空现有硬件白名单基线吗？清空后所有在线外设都将被标记为未授权外设！')) return;
+  const confirmed = await uiConfirm(
+    '确定要清空现有硬件白名单基线吗？清空后所有在线外设都将被标记为未授权外设！',
+    { title: '确认清空硬件白名单', confirmText: '确认清空', danger: true }
+  );
+  if (!confirmed) return;
   try {
     await invoke('clear_hardware_whitelist_cmd');
     await loadWhitelist();
@@ -811,26 +1194,163 @@ function openUsbDescriptorTree(dev?: UsbDeviceInfo) {
 }
 
 function onSerialConfigStarted(payload: { port: string; baudRate: number }) {
-  selectedSerial.value = payload.port;
-  serialBaudRate.value = payload.baudRate;
+  onSelectSerial(payload.port);
+  onSelectBaudRate(payload.baudRate);
 }
 
 const usbFilter = ref('');
+const serialFilter = ref('');
 const portOpChannel = ref<'network' | 'serial'>('network');
 const portOpIp = ref('');
 const portOpPort = ref(502);
 const portOpTransport = ref<'TCP' | 'UDP'>('TCP');
 const portOpTimeout = ref(2000);
 const portOpPayload = ref('00 01 00 00 00 06 01 03 00 00 00 02');
-const selectedSerial = ref(props.serialPorts.length > 0 ? props.serialPorts[0] : '');
-const serialBaudRate = ref(9600);
+const localSerial = ref(props.selectedSerial || (props.serialPorts.length > 0 ? props.serialPorts[0] : ''));
+const localBaudRate = ref(props.serialBaudRate || 9600);
 const portOpSerialPayload = ref('01 03 00 00 00 02 C4 0B');
 const portOpSerialIsHex = ref(true);
 const portOpExecuting = ref(false);
 const transceiveHistory = ref<TransceiveHistoryItem[]>([]);
 
+watch(
+  () => props.selectedSerial,
+  (val) => {
+    if (val && val !== localSerial.value) {
+      localSerial.value = val;
+    }
+  }
+);
+
+watch(
+  () => props.serialPorts,
+  (ports) => {
+    if ((!localSerial.value || !ports.includes(localSerial.value)) && ports.length > 0) {
+      localSerial.value = ports[0];
+      emit('updateSerial', ports[0]);
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => props.serialBaudRate,
+  (rate) => {
+    if (rate && rate !== localBaudRate.value) {
+      localBaudRate.value = rate;
+    }
+  }
+);
+
+function onSelectSerial(port: string) {
+  localSerial.value = port;
+  emit('updateSerial', port);
+}
+
+function onSelectBaudRate(rate: number) {
+  localBaudRate.value = rate;
+  emit('updateBaudRate', rate);
+}
+
+function refreshAllHardwareBuses() {
+  emit('refreshUsb');
+  emit('refreshSerial');
+}
+
+const normalizedSerialList = computed<SerialPortDetail[]>(() => {
+  if (props.serialPortsDetail && props.serialPortsDetail.length > 0) {
+    return props.serialPortsDetail;
+  }
+  return props.serialPorts.map((portName) => ({
+    port_name: portName,
+    description: `${portName} (系统通信端口)`,
+    hardware_id: 'STANDARD_COM',
+    port_type: '标准硬件串口',
+    is_usb: false,
+    is_available: true,
+    is_in_use_by_us: (props.activeSerialPorts || []).includes(portName),
+  }));
+});
+
+const filteredSerialList = computed(() => {
+  const q = serialFilter.value.trim().toLowerCase();
+  if (!q) return normalizedSerialList.value;
+  return normalizedSerialList.value.filter((sp) =>
+    sp.port_name.toLowerCase().includes(q) ||
+    sp.description.toLowerCase().includes(q) ||
+    sp.port_type.toLowerCase().includes(q) ||
+    (sp.manufacturer || '').toLowerCase().includes(q) ||
+    (sp.product || '').toLowerCase().includes(q) ||
+    sp.hardware_id.toLowerCase().includes(q)
+  );
+});
+
+const activeSerialCount = computed(() => {
+  if (props.activeSerialPorts && props.activeSerialPorts.length > 0) {
+    return props.activeSerialPorts.length;
+  }
+  return props.isSerialRunning ? 1 : 0;
+});
+
+function isPortActive(portName: string): boolean {
+  if (!portName) return false;
+  if (props.activeSerialPorts && props.activeSerialPorts.length > 0) {
+    return props.activeSerialPorts.includes(portName);
+  }
+  return !!props.isSerialRunning && localSerial.value === portName;
+}
+
+function startPortMonitor(portName: string) {
+  if (!portName) return;
+  onSelectSerial(portName);
+  emit('startSerialCapture', portName, localBaudRate.value);
+}
+
+function togglePortCapture(portName: string) {
+  if (isPortActive(portName)) {
+    emit('stopSerialCapture', portName);
+  } else {
+    startPortMonitor(portName);
+  }
+}
+
+function focusSerialTransceive(portName: string) {
+  onSelectSerial(portName);
+  portOpChannel.value = 'serial';
+}
+
+function getSerialTypeBadge(sp: SerialPortDetail): string {
+  if (sp.port_type.includes('蓝牙') || sp.hardware_id.includes('BTH')) {
+    return 'bg-sky-500/12 text-sky-700 dark:text-sky-300 border-sky-500/25';
+  }
+  if (sp.is_usb || sp.port_type.includes('USB')) {
+    return 'bg-purple-500/12 text-purple-700 dark:text-purple-300 border-purple-500/25';
+  }
+  return 'bg-indigo-500/12 text-indigo-700 dark:text-indigo-300 border-indigo-500/25';
+}
+
 // 全局通用数据比对总线
 const diffBus = useUniversalDiff();
+
+function buildTransceiveItem(item: TransceiveHistoryItem) {
+  return {
+    id: `SER_${item.id}`,
+    label: `[总线] ${item.channel} ${item.target}`,
+    timestamp: item.time,
+    protocol: item.detectedProto || 'BUS_IO',
+    src: item.channel,
+    dst: item.target,
+    payloadHex: (item.rxPayload || item.txPayload).replace(/\s+/g, ''),
+    rawText: item.rxText,
+    length: item.bytesReceived || item.bytesSent,
+    extraFields: {
+      channel: item.channel,
+      transport: item.transport,
+      latency_ms: String(item.latencyMs),
+      status: item.status
+    }
+  };
+}
 
 function compareSerialTxRx(item: TransceiveHistoryItem) {
   const txItem = {
@@ -838,57 +1358,122 @@ function compareSerialTxRx(item: TransceiveHistoryItem) {
     label: `[硬件发送] ${item.channel} ➔ ${item.target}`,
     timestamp: item.time,
     protocol: item.detectedProto || 'BUS_TX',
-    endpoint_src: '本地总线主机',
-    endpoint_dst: item.target,
+    src: '本地总线主机',
+    dst: item.target,
     payloadHex: item.txPayload.replace(/\s+/g, ''),
-    byteLength: item.bytesSent
+    length: item.bytesSent
   };
   const rxItem = {
     id: `SER_RX_${item.id}`,
     label: `[硬件回包] ${item.channel} ➔ ${item.target}`,
     timestamp: item.time,
     protocol: item.detectedProto || 'BUS_RX',
-    endpoint_src: item.target,
-    endpoint_dst: '本地总线主机',
+    src: item.target,
+    dst: '本地总线主机',
     payloadHex: item.rxPayload.replace(/\s+/g, ''),
     rawText: item.rxText,
-    byteLength: item.bytesReceived
+    length: item.bytesReceived
   };
   diffBus.openUniversalDiff(txItem, rxItem, 'hex');
 }
 
 function setDiffSlotA(item: TransceiveHistoryItem) {
-  diffBus.setSlotA({
-    id: `SER_${item.id}`,
-    label: `[总线] ${item.channel} ${item.target}`,
-    timestamp: item.time,
-    protocol: item.detectedProto || 'BUS_IO',
-    endpoint_src: item.channel,
-    endpoint_dst: item.target,
-    payloadHex: (item.rxPayload || item.txPayload).replace(/\s+/g, ''),
-    rawText: item.rxText,
-    byteLength: item.bytesReceived || item.bytesSent
-  }, `总线 ${item.channel}`);
+  diffBus.setSlotA(buildTransceiveItem(item), `总线 ${item.channel}`);
 }
 
 function setDiffSlotB(item: TransceiveHistoryItem) {
-  diffBus.setSlotB({
-    id: `SER_${item.id}`,
-    label: `[总线] ${item.channel} ${item.target}`,
-    timestamp: item.time,
-    protocol: item.detectedProto || 'BUS_IO',
-    endpoint_src: item.channel,
-    endpoint_dst: item.target,
-    payloadHex: (item.rxPayload || item.txPayload).replace(/\s+/g, ''),
-    rawText: item.rxText,
-    byteLength: item.bytesReceived || item.bytesSent
-  }, `总线 ${item.channel}`);
+  diffBus.setSlotB(buildTransceiveItem(item), `总线 ${item.channel}`);
   if (diffBus.slotA.value) {
     diffBus.compareSlots();
   }
 }
 
-const usbSerialCount = computed(() => props.usbDevices.filter(d => d.class_desc.includes('串口') || d.class_desc.includes('CDC')).length);
+function addTransceiveToDiffQueue(item: TransceiveHistoryItem) {
+  diffBus.addToQueue(buildTransceiveItem(item), `总线 #${item.id} ${item.channel}`, false);
+}
+
+function addSerialPortToDiffQueue(sp: SerialPortDetail) {
+  const summary = `PORT=${sp.port_name};TYPE=${sp.port_type};HWID=${sp.hardware_id || 'N/A'};MFG=${sp.manufacturer || 'STD'}`;
+  diffBus.addToQueue({
+    id: `COM_${sp.port_name}`,
+    label: `[COM 串口] ${sp.port_name} (${sp.port_type})`,
+    protocol: 'SERIAL-COM',
+    src: sp.port_name,
+    dst: sp.manufacturer || '标准串口控制器',
+    format: 'ASCII',
+    isRawText: true,
+    payloadHex: '',
+    rawText: summary,
+    length: summary.length,
+    extraFields: {
+      port_name: sp.port_name,
+      port_type: sp.port_type,
+      hardware_id: sp.hardware_id || '-',
+      product: sp.product || sp.description || '-',
+      manufacturer: sp.manufacturer || '-',
+      is_usb: String(sp.is_usb)
+    }
+  }, `COM ${sp.port_name}`, false);
+}
+
+function addUsbDeviceToDiffQueue(dev: UsbDeviceInfo) {
+  const summary = `VID=${dev.vid};PID=${dev.pid};CLASS=${dev.class_desc};SVC=${dev.service || 'N/A'};LOC=${dev.location_info || 'Root'}`;
+  diffBus.addToQueue({
+    id: `USB_${dev.vid}_${dev.pid}`,
+    label: `[USB] ${dev.device_name}`,
+    protocol: `USB-${dev.class_desc || 'DEV'}`,
+    src: `VID_${dev.vid}:PID_${dev.pid}`,
+    dst: dev.location_info || 'USB Root Hub',
+    format: 'ASCII',
+    isRawText: true,
+    payloadHex: '',
+    rawText: summary,
+    length: summary.length,
+    extraFields: {
+      vid: dev.vid,
+      pid: dev.pid,
+      manufacturer: dev.manufacturer || '-',
+      service: dev.service || '-',
+      class_desc: dev.class_desc || '-',
+      instance_id: dev.instance_id
+    }
+  }, `USB ${dev.vid}:${dev.pid}`, false);
+}
+
+function buildBusEventItem(ev: any) {
+  const cleanHex = typeof ev.payload_hex === 'string' ? ev.payload_hex.replace(/\s+/g, '') : '';
+  return {
+    id: `BUS_EV_${ev.id}`,
+    label: `[${ev.transport || 'BUS'}] ${ev.protocol || ev.direction || 'EVENT'} #${ev.id}`,
+    timestamp: ev.timestamp,
+    protocol: ev.protocol || ev.transport || 'BUS',
+    src: ev.src_ip || ev.direction || 'LOCAL_BUS',
+    dst: ev.dst_ip || 'HOST',
+    payloadHex: cleanHex,
+    rawText: ev.raw_text || '',
+    length: ev.length || (cleanHex ? cleanHex.length / 2 : (ev.raw_text?.length || 0)),
+    extraFields: {
+      transport: ev.transport || '-',
+      direction: ev.direction || '-',
+      info: ev.info || '-'
+    }
+  };
+}
+
+function setBusEventDiffSlot(slot: 'A' | 'B', ev: any) {
+  const item = buildBusEventItem(ev);
+  if (slot === 'A') {
+    diffBus.setSlotA(item, item.label);
+  } else {
+    diffBus.setSlotB(item, item.label);
+    if (diffBus.slotA.value) diffBus.compareSlots();
+  }
+}
+
+function addBusEventToDiffQueue(ev: any) {
+  const item = buildBusEventItem(ev);
+  diffBus.addToQueue(item, item.label, false);
+}
 
 const filteredUsbDevices = computed(() => {
   if (!usbFilter.value.trim()) return props.usbDevices;
@@ -902,19 +1487,19 @@ const filteredUsbDevices = computed(() => {
   );
 });
 
-const usbAuditEvents = computed(() => props.packets.filter(p => p.direction === 'USB_ATTACH' || p.direction === 'USB_DETACH' || p.transport === 'USB').slice(-80).reverse());
+const usbAuditEvents = computed(() => props.packets.filter(p => p.direction === 'USB_ATTACH' || p.direction === 'USB_DETACH' || p.transport === 'USB' || p.transport === 'SERIAL').slice(-80).reverse());
 
 function getUsbClassBadge(classDesc: string): string {
   if (classDesc.includes('串口') || classDesc.includes('CDC') || classDesc.includes('RS485')) {
-    return 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30';
+    return 'bg-indigo-500/12 text-indigo-700 dark:text-indigo-300 border-indigo-500/25';
   } else if (classDesc.includes('存储') || classDesc.includes('U盘')) {
-    return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+    return 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/25';
   } else if (classDesc.includes('HID') || classDesc.includes('人机交互')) {
-    return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
+    return 'bg-cyan-500/12 text-cyan-700 dark:text-cyan-300 border-cyan-500/25';
   } else if (classDesc.includes('视觉') || classDesc.includes('相机')) {
-    return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+    return 'bg-blue-500/12 text-blue-700 dark:text-sky-300 border-blue-500/25';
   }
-  return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+  return 'bg-purple-500/12 text-purple-700 dark:text-purple-300 border-purple-500/25';
 }
 
 function onPresetSelect(e: Event) {
@@ -973,8 +1558,8 @@ async function executePortTransceive() {
     } else if (portOpChannel.value === 'serial') {
       const start = performance.now();
       const bytesSent = await invoke<number>('send_serial_data_cmd', {
-        port: selectedSerial.value,
-        baudRate: serialBaudRate.value,
+        port: localSerial.value,
+        baudRate: localBaudRate.value,
         payload: portOpSerialPayload.value.trim(),
         isHex: portOpSerialIsHex.value
       });
@@ -984,7 +1569,7 @@ async function executePortTransceive() {
         id: Date.now(),
         time: ts,
         channel: '物理串口',
-        target: `${selectedSerial.value} @ ${serialBaudRate.value} bps`,
+        target: `${localSerial.value} @ ${localBaudRate.value} bps`,
         transport: 'SERIAL',
         status: 'SUCCESS',
         bytesSent,
@@ -1002,7 +1587,7 @@ async function executePortTransceive() {
       id: Date.now(),
       time: ts,
       channel: portOpChannel.value === 'network' ? '网络端口' : '物理串口',
-      target: portOpChannel.value === 'network' ? `${portOpIp.value}:${portOpPort.value}` : selectedSerial.value,
+      target: portOpChannel.value === 'network' ? `${portOpIp.value}:${portOpPort.value}` : localSerial.value,
       transport: 'N/A',
       status: 'ERROR',
       bytesSent: 0,

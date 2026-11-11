@@ -1400,13 +1400,14 @@ impl CompiledFilter {
                 match value {
                     FilterValue::String(s) => apply_comp_slice(slice, s.as_bytes(), *op),
                     FilterValue::Number(n) => {
+                        if slice.is_empty() || slice.len() > 8 {
+                            return false;
+                        }
                         let target_val = *n as u64;
-                        let slice_val = match slice.len() {
-                            1 => slice[0] as u64,
-                            2 => u16::from_be_bytes([slice[0], slice[1]]) as u64,
-                            4 => u32::from_be_bytes([slice[0], slice[1], slice[2], slice[3]]) as u64,
-                            _ => 0,
-                        };
+                        let mut slice_val: u64 = 0;
+                        for &b in slice {
+                            slice_val = (slice_val << 8) | (b as u64);
+                        }
                         apply_comp_scalar(slice_val, target_val, *op)
                     }
                     _ => false,
@@ -1738,7 +1739,13 @@ fn apply_comp_slice(slice: &[u8], target: &[u8], op: CompOp) -> bool {
     match op {
         CompOp::Eq => slice == target,
         CompOp::Neq => slice != target,
-        CompOp::Contains => slice.windows(target.len()).any(|w| w == target),
+        CompOp::Contains => {
+            if target.is_empty() {
+                true
+            } else {
+                slice.windows(target.len()).any(|w| w == target)
+            }
+        }
         _ => false,
     }
 }
@@ -2169,5 +2176,21 @@ mod tests {
             let res_opt = opt.matches(src_ip, dst_ip, sport, dport, proto, len, entropy, payload);
             assert_eq!(res_opt, res_unopt, "优化前后求值逻辑必须 100% 绝对一致");
         }
+    }
+
+    #[test]
+    fn test_slice_arbitrary_length_and_empty_needle_safety() {
+        // 极限用例 1: 非 1/2/4 字节长度 (3 字节 = 0x414243) 大端无符号数值比对
+        let f_3b = CompiledFilter::compile("payload[0:3] == 0x414243").unwrap();
+        assert!(f_3b.matches("1.1.1.1", "2.2.2.2", 80, 80, "TCP", 64, 1.0, "ABCdef"));
+        assert!(!f_3b.matches("1.1.1.1", "2.2.2.2", 80, 80, "TCP", 64, 1.0, "ABXdef"));
+
+        // 极限用例 2: 超过 8 字节切片数值比较稳健拦截返回 false 而非截断误判
+        let f_over8 = CompiledFilter::compile("payload[0:10] == 0").unwrap();
+        assert!(!f_over8.matches("1.1.1.1", "2.2.2.2", 80, 80, "TCP", 64, 1.0, "0123456789AB"));
+
+        // 极限用例 3: 空针串 slice contains 防 windows(0) Panic 崩溃验证
+        let f_empty_needle = CompiledFilter::compile(r#"payload[0:4] contains """#).unwrap();
+        assert!(f_empty_needle.matches("1.1.1.1", "2.2.2.2", 80, 80, "TCP", 64, 1.0, "TEST"));
     }
 }

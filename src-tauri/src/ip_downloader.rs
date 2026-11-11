@@ -11,7 +11,7 @@
 
 use std::fs::{self, File};
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
 use crate::ip_intelligence::GLOBAL_IP_ENGINE;
@@ -51,16 +51,12 @@ pub async fn download_xdb_database(app: AppHandle, custom_url: Option<String>) -
         }
     }
 
-    // 确保本地目标目录存在
-    let target_dirs = [PathBuf::from("data"), PathBuf::from("src-tauri/data")];
-    for d in &target_dirs {
-        if !d.exists() {
-            let _ = fs::create_dir_all(d);
-        }
+    // 锚定至 OS 标准持久化数据目录（避免依赖工作目录 CWD 或因 Program Files 权限不足写入失败）
+    let primary_target = crate::forensics::data_path("ip2region.xdb");
+    let temp_path = crate::forensics::data_path("ip2region.xdb.tmp");
+    if let Some(parent) = primary_target.parent() {
+        let _ = fs::create_dir_all(parent);
     }
-
-    let primary_target = PathBuf::from("data/ip2region.xdb");
-    let temp_path = PathBuf::from("data/ip2region.xdb.tmp");
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(60))
@@ -90,26 +86,18 @@ pub async fn download_xdb_database(app: AppHandle, custom_url: Option<String>) -
                     continue;
                 }
 
-                // 成功下载，固化到 primary_target 与 backup_target
+                // 成功下载，固化到操作系统标准数据目录 (OS AppData)
                 if primary_target.exists() {
                     let _ = fs::remove_file(&primary_target);
                 }
                 if let Err(e) = fs::rename(&temp_path, &primary_target) {
-                    return Err(format!("固化 IP 库至主目录失败: {}", e));
-                }
-
-                // 尝试同步拷贝到 src-tauri/data 目录
-                let secondary_target = PathBuf::from("src-tauri/data/ip2region.xdb");
-                if let Some(parent) = secondary_target.parent() {
-                    if parent.exists() {
-                        let _ = fs::copy(&primary_target, &secondary_target);
-                    }
+                    return Err(format!("固化 IP 库至数据目录失败: {}", e));
                 }
 
                 // 立即触发全局内存引擎热重载
                 let reload_res = {
-                    let mut engine = GLOBAL_IP_ENGINE.lock().unwrap();
-                    engine.load_xdb(primary_target.to_str().unwrap_or("data/ip2region.xdb"))
+                    let mut engine = crate::lock_guard::lock_mutex(&GLOBAL_IP_ENGINE, "ip_downloader::download_xdb_database");
+                    engine.load_xdb(&primary_target.to_string_lossy())
                 };
 
                 let _ = app.emit("ip-db-download-progress", DownloadProgressPayload {

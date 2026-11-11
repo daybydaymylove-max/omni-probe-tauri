@@ -117,12 +117,11 @@ impl ConcurrentKeyringCache {
     pub fn insert_secrets(&self, secrets: TlsSessionSecrets) {
         let cr = secrets.client_random.to_lowercase();
         let idx = Self::shard_index(&cr);
-        if let Ok(mut bucket) = self.shards[idx].write() {
-            let was_new = !bucket.map.contains_key(&cr);
-            bucket.insert(cr, secrets);
-            if was_new {
-                self.total_keys_count.fetch_add(1, Ordering::Relaxed);
-            }
+        let mut bucket = crate::lock_guard::write_rwlock(&self.shards[idx], "tls_keyring::insert_secrets");
+        let was_new = !bucket.map.contains_key(&cr);
+        bucket.insert(cr, secrets);
+        if was_new {
+            self.total_keys_count.fetch_add(1, Ordering::Relaxed);
         }
     }
 
@@ -130,20 +129,16 @@ impl ConcurrentKeyringCache {
     pub fn lookup_secrets(&self, client_random: &str) -> Option<TlsSessionSecrets> {
         let cr = client_random.to_lowercase();
         let idx = Self::shard_index(&cr);
-        if let Ok(bucket) = self.shards[idx].read() {
-            bucket.get(&cr)
-        } else {
-            None
-        }
+        let bucket = crate::lock_guard::read_rwlock(&self.shards[idx], "tls_keyring::lookup_secrets");
+        bucket.get(&cr)
     }
 
     /// 获取全局缓存有效密钥总数
     pub fn total_keys(&self) -> usize {
         let mut sum = 0;
         for s in &self.shards {
-            if let Ok(b) = s.read() {
-                sum += b.len();
-            }
+            let b = crate::lock_guard::read_rwlock(s, "tls_keyring::total_keys");
+            sum += b.len();
         }
         sum
     }
@@ -156,11 +151,11 @@ impl ConcurrentKeyringCache {
         }
 
         {
-            let mut w = self.watched_file_path.lock().unwrap();
+            let mut w = crate::lock_guard::lock_mutex(&self.watched_file_path, "tls_keyring::set_keylog_file_path");
             *w = Some(p.clone());
         }
         {
-            let mut off = self.last_file_offset.lock().unwrap();
+            let mut off = crate::lock_guard::lock_mutex(&self.last_file_offset, "tls_keyring::set_keylog_file_offset");
             *off = 0;
         }
 
@@ -170,7 +165,7 @@ impl ConcurrentKeyringCache {
     /// 增量读取文件追加内容 (毫秒级热加载，极低 IO 开销)
     pub fn ingest_incremental(&self) -> Result<usize, String> {
         let path = {
-            let guard = self.watched_file_path.lock().unwrap();
+            let guard = crate::lock_guard::lock_mutex(&self.watched_file_path, "tls_keyring::ingest_incremental_path");
             match guard.as_ref() {
                 Some(p) => p.clone(),
                 None => return Ok(0),
@@ -181,7 +176,7 @@ impl ConcurrentKeyringCache {
         let metadata = file.metadata().map_err(|e| format!("读取文件元数据失败: {}", e))?;
         let file_len = metadata.len();
 
-        let mut offset_guard = self.last_file_offset.lock().unwrap();
+        let mut offset_guard = crate::lock_guard::lock_mutex(&self.last_file_offset, "tls_keyring::ingest_incremental_offset");
         if file_len < *offset_guard {
             // 文件被清空或轮转，重置游标从头读取
             *offset_guard = 0;
@@ -286,7 +281,7 @@ impl TlsHandshakeReassembler {
             return None;
         }
 
-        let mut streams = self.streams.lock().unwrap();
+        let mut streams = crate::lock_guard::lock_mutex(&self.streams, "tls_keyring::feed_segment");
 
         // 周期性清理超时流 (防止慢速 DoS 内存驻留)
         let now = Instant::now();

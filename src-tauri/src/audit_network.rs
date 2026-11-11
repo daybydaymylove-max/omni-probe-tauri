@@ -159,7 +159,11 @@ pub fn record_network_audit_event(
     }
 
     // 2. 更新内存活跃状态与度量统计
-    if let Ok(mut state) = NETWORK_AUDIT_STATE.lock() {
+    {
+        let mut state = crate::lock_guard::lock_mutex(
+            &NETWORK_AUDIT_STATE,
+            "audit_network::record_network_audit_event",
+        );
         state.stats.total_events += 1;
         match event_type {
             "INDUSTRIAL_WRITE_VIOLATION" => state.stats.industrial_write_violations += 1,
@@ -190,13 +194,12 @@ pub fn inspect_industrial_commands(
     }
 
     // 白名单校验：若是已授权的 SCADA 调度总站或指定工程师站，放行并标记为合规运维
-    let is_authorized_engineer = {
-        if let Ok(state) = NETWORK_AUDIT_STATE.lock() {
-            state.authorized_engineers.contains(src_ip)
-        } else {
-            false
-        }
-    };
+    let is_authorized_engineer = crate::lock_guard::lock_mutex(
+        &NETWORK_AUDIT_STATE,
+        "audit_network::inspect_industrial_commands_auth_check",
+    )
+    .authorized_engineers
+    .contains(src_ip);
 
     // -------------------------------------------------------------------------
     // 1. Modbus-TCP 完整 MBAP 报头与写控制功能码深度审计
@@ -228,6 +231,17 @@ pub fn inspect_industrial_commands(
                     let addr = if payload.len() >= 10 { u16::from_be_bytes([payload[8], payload[9]]) } else { 0 };
                     let qty = if payload.len() >= 12 { u16::from_be_bytes([payload[10], payload[11]]) } else { 0 };
                     Some(("Write Multiple Registers (批量写多寄存器)", addr, qty, format!("数量: {}", qty)))
+                }
+                0x15 => {
+                    let data_len = payload.get(8).copied().unwrap_or(0);
+                    let file_no = if payload.len() >= 12 { u16::from_be_bytes([payload[10], payload[11]]) } else { 0 };
+                    Some(("Write File Record (写入 PLC 文件/配方记录)", file_no, 1, format!("文件号: {}, 字节数: {}", file_no, data_len)))
+                }
+                0x16 => {
+                    let addr = if payload.len() >= 10 { u16::from_be_bytes([payload[8], payload[9]]) } else { 0 };
+                    let and_mask = if payload.len() >= 12 { u16::from_be_bytes([payload[10], payload[11]]) } else { 0 };
+                    let or_mask = if payload.len() >= 14 { u16::from_be_bytes([payload[12], payload[13]]) } else { 0 };
+                    Some(("Mask Write Register (按位掩码写保持寄存器)", addr, 1, format!("AND: 0x{:04X}, OR: 0x{:04X}", and_mask, or_mask)))
                 }
                 0x17 => {
                     let read_addr = if payload.len() >= 10 { u16::from_be_bytes([payload[8], payload[9]]) } else { 0 };
@@ -355,7 +369,11 @@ pub fn inspect_industrial_commands(
     // -------------------------------------------------------------------------
     // 4. 专有工业插件及长尾协议写控制/机台启停/固件下发审计
     // -------------------------------------------------------------------------
-    if let Ok(reg) = crate::industrial_plugin::INDUSTRIAL_PLUGIN_REGISTRY.read() {
+    {
+        let reg = crate::lock_guard::read_rwlock(
+            &crate::industrial_plugin::INDUSTRIAL_PLUGIN_REGISTRY,
+            "audit_network::inspect_industrial_commands_plugin",
+        );
         if let Some(dissected) = reg.inspect(src_port, dst_port, payload) {
             if dissected.is_dangerous_write && !is_authorized_engineer {
                 let detail = serde_json::json!({
@@ -449,7 +467,11 @@ pub fn inspect_dns_tunnel(
     let mut triggered_covert_alarm = false;
     let mut stats_snapshot = None;
 
-    if let Ok(mut state) = NETWORK_AUDIT_STATE.lock() {
+    {
+        let mut state = crate::lock_guard::lock_mutex(
+            &NETWORK_AUDIT_STATE,
+            "audit_network::inspect_dns_tunnel",
+        );
         // 清理超期滑窗记录 (> 120 秒)
         state.dns_stats.retain(|_, v| now.duration_since(v.last_seen) < Duration::from_secs(120));
 
@@ -569,20 +591,29 @@ pub fn inspect_icmp_tunnel(
 
 /// 获取网络安全审查事件列表 (从持久化缓存与活跃队列联合读取)
 pub fn get_network_audit_events(limit: Option<usize>) -> Vec<NetworkAuditEvent> {
-    let state = NETWORK_AUDIT_STATE.lock().unwrap();
+    let state = crate::lock_guard::lock_mutex(
+        &NETWORK_AUDIT_STATE,
+        "audit_network::get_network_audit_events",
+    );
     let lim = limit.unwrap_or(100);
     state.events.iter().rev().take(lim).cloned().collect()
 }
 
 /// 获取网络安全审查综合统计
 pub fn get_network_audit_statistics() -> NetworkAuditStatistics {
-    let state = NETWORK_AUDIT_STATE.lock().unwrap();
+    let state = crate::lock_guard::lock_mutex(
+        &NETWORK_AUDIT_STATE,
+        "audit_network::get_network_audit_statistics",
+    );
     state.stats.clone()
 }
 
 /// 清空网络安全审查事件 (仅清空当前内存视图，满足审计员指令)
 pub fn clear_network_audit_events() {
-    let mut state = NETWORK_AUDIT_STATE.lock().unwrap();
+    let mut state = crate::lock_guard::lock_mutex(
+        &NETWORK_AUDIT_STATE,
+        "audit_network::clear_network_audit_events",
+    );
     state.events.clear();
     state.stats = NetworkAuditStatistics::default();
     state.dns_stats.clear();

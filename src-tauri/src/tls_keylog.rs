@@ -106,7 +106,8 @@ pub fn import_keylog_file(file_path: &str) -> Result<usize, String> {
     let count = parsed.len();
     let now_str = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
-    if let Ok(mut map) = GLOBAL_KEYLOG_MAP.write() {
+    {
+        let mut map = crate::lock_guard::write_rwlock(&GLOBAL_KEYLOG_MAP, "tls_keylog::load_keylog_file_map");
         for entry in parsed {
             let session = map.entry(entry.client_random.clone()).or_insert_with(|| TlsSessionSecrets {
                 client_random: entry.client_random.clone(),
@@ -125,11 +126,13 @@ pub fn import_keylog_file(file_path: &str) -> Result<usize, String> {
         }
     }
 
-    if let Ok(mut active_path) = ACTIVE_KEYLOG_PATH.write() {
+    {
+        let mut active_path = crate::lock_guard::write_rwlock(&ACTIVE_KEYLOG_PATH, "tls_keylog::load_keylog_file_path");
         *active_path = Some(file_path.to_string());
     }
 
-    if let Ok(mut last_time) = LAST_IMPORT_TIME.write() {
+    {
+        let mut last_time = crate::lock_guard::write_rwlock(&LAST_IMPORT_TIME, "tls_keylog::load_keylog_file_time");
         *last_time = Some(now_str);
     }
 
@@ -139,11 +142,10 @@ pub fn import_keylog_file(file_path: &str) -> Result<usize, String> {
 /// 依据 Client Random (64 字符十六进制) 检索对应的完整会话密钥实体
 pub fn lookup_session_secrets(client_random_hex: &str) -> Option<TlsSessionSecrets> {
     let key = client_random_hex.to_lowercase();
-    if let Ok(map) = GLOBAL_KEYLOG_MAP.read() {
-        if let Some(entry) = map.get(&key) {
-            MATCHED_SESSIONS_COUNT.fetch_add(1, Ordering::Relaxed);
-            return Some(entry.clone());
-        }
+    let map = crate::lock_guard::read_rwlock(&GLOBAL_KEYLOG_MAP, "tls_keylog::lookup_session_secrets");
+    if let Some(entry) = map.get(&key) {
+        MATCHED_SESSIONS_COUNT.fetch_add(1, Ordering::Relaxed);
+        return Some(entry.clone());
     }
     None
 }
@@ -160,23 +162,9 @@ pub fn lookup_master_secret(client_random_hex: &str) -> Option<KeyLogEntry> {
 
 /// 获取当前密钥库运行状态
 pub fn get_keylog_status() -> TlsKeyLogStatus {
-    let total_keys = if let Ok(map) = GLOBAL_KEYLOG_MAP.read() {
-        map.len()
-    } else {
-        0
-    };
-
-    let active_file_path = if let Ok(path) = ACTIVE_KEYLOG_PATH.read() {
-        path.clone()
-    } else {
-        None
-    };
-
-    let last_imported_time = if let Ok(time) = LAST_IMPORT_TIME.read() {
-        time.clone()
-    } else {
-        None
-    };
+    let total_keys = crate::lock_guard::read_rwlock(&GLOBAL_KEYLOG_MAP, "tls_keylog::get_keylog_status_map").len();
+    let active_file_path = crate::lock_guard::read_rwlock(&ACTIVE_KEYLOG_PATH, "tls_keylog::get_keylog_status_path").clone();
+    let last_imported_time = crate::lock_guard::read_rwlock(&LAST_IMPORT_TIME, "tls_keylog::get_keylog_status_time").clone();
 
     let matched_sessions_count = MATCHED_SESSIONS_COUNT.load(Ordering::Relaxed);
 
@@ -190,13 +178,16 @@ pub fn get_keylog_status() -> TlsKeyLogStatus {
 
 /// 清空所有已加载的密钥日志
 pub fn clear_keylog_cache() -> bool {
-    if let Ok(mut map) = GLOBAL_KEYLOG_MAP.write() {
+    {
+        let mut map = crate::lock_guard::write_rwlock(&GLOBAL_KEYLOG_MAP, "tls_keylog::clear_keylog_cache_map");
         map.clear();
     }
-    if let Ok(mut path) = ACTIVE_KEYLOG_PATH.write() {
+    {
+        let mut path = crate::lock_guard::write_rwlock(&ACTIVE_KEYLOG_PATH, "tls_keylog::clear_keylog_cache_path");
         *path = None;
     }
-    if let Ok(mut time) = LAST_IMPORT_TIME.write() {
+    {
+        let mut time = crate::lock_guard::write_rwlock(&LAST_IMPORT_TIME, "tls_keylog::clear_keylog_cache_time");
         *time = None;
     }
     MATCHED_SESSIONS_COUNT.store(0, Ordering::Relaxed);

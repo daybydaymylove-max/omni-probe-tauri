@@ -1,188 +1,179 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-150">
-    <div class="w-full max-w-2xl bg-white/95 backdrop-blur-2xl rounded-3xl border border-white/60 shadow-2xl flex flex-col overflow-hidden max-h-[88vh]">
+  <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 ui-modal-backdrop animate-in fade-in duration-150">
+    <div class="w-full max-w-2xl ui-modal-surface rounded-3xl flex flex-col overflow-hidden max-h-[88vh]">
       
-      <!-- 1. 顶栏 -->
-      <div class="px-6 py-4 border-b border-slate-200/60 bg-white/40 flex items-center justify-between shrink-0">
+      <!-- 1. 顶栏 (Liquid Glass) -->
+      <header class="ui-nav-glass border-b px-6 py-4 flex items-center justify-between shrink-0 flex-wrap gap-3">
         <div class="flex items-center gap-2.5">
-          <span class="w-3.5 h-3.5 rounded-full bg-blue-600 shadow-sm animate-pulse"></span>
+          <span class="w-3 h-3 rounded-full bg-sky-500 shrink-0"></span>
           <div>
-            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <h3 class="text-sm font-bold flex items-center gap-2 flex-wrap" style="color: var(--text-primary)">
               <span>离线 IP 归属地与地理情报库 (IP2Region xdb)</span>
-              <span v-if="dbStatus.loaded" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+              <span v-if="dbStatus.loaded" class="text-[11px] ui-num px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-semibold">
                 已就绪 (微秒级)
               </span>
-              <span v-else class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+              <span v-else class="text-[11px] ui-num px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-semibold">
                 未就绪 (基础字典)
               </span>
             </h3>
-            <p class="text-[11px] text-slate-500 font-mono mt-0.5">
-              100% 物理隔离内存索引，单次查询小于 5 微秒，精准解析全球国家、省份、城市与 ISP
+            <p class="text-[11px] ui-num mt-0.5" style="color: var(--text-muted)">
+              物理隔离内存索引，单次查询小于 5 微秒，解析全球国家、省份、城市与 ISP
             </p>
           </div>
         </div>
-        <button @click="$emit('close')" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer">
-          ✕
+        <button @click="$emit('close')" class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer" title="关闭">
+          <AppIcon name="close" :size="15" />
         </button>
-      </div>
+      </header>
 
       <!-- 2. 内容区 -->
-      <div class="p-6 overflow-auto custom-scrollbar space-y-4 text-xs font-mono">
+      <div class="p-6 overflow-auto custom-scrollbar space-y-4 text-xs select-text" style="background: var(--surface-content)">
         
-        <!-- 2.1 状态概览卡片 -->
-        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="p-4 ui-sub-card grid grid-cols-2 md:grid-cols-4 gap-3 ui-num">
           <div>
-            <div class="text-[10px] text-slate-400">运行状态</div>
-            <div class="font-bold mt-0.5" :class="dbStatus.loaded ? 'text-emerald-700' : 'text-amber-700'">
-              {{ dbStatus.loaded ? '✅ 内存已加载' : '⚠️ 未加载 (需下载/导入)' }}
+            <div class="text-[11px] font-sans" style="color: var(--text-muted)">运行状态</div>
+            <div class="font-bold mt-0.5 flex items-center gap-1" :class="dbStatus.loaded ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'">
+              <AppIcon :name="dbStatus.loaded ? 'check' : 'alert'" :size="13" />
+              <span>{{ dbStatus.loaded ? '内存已加载' : '未加载 (需下载/导入)' }}</span>
             </div>
           </div>
           <div>
-            <div class="text-[10px] text-slate-400">数据库体积</div>
-            <div class="font-bold text-slate-800 mt-0.5">
+            <div class="text-[11px] font-sans" style="color: var(--text-muted)">数据库体积</div>
+            <div class="font-bold mt-0.5" style="color: var(--text-primary)">
               {{ dbStatus.file_size > 0 ? (dbStatus.file_size / (1024 * 1024)).toFixed(2) + ' MB' : '0 MB' }}
             </div>
           </div>
           <div>
-            <div class="text-[10px] text-slate-400">生成时间戳</div>
-            <div class="font-bold text-slate-800 mt-0.5">
+            <div class="text-[11px] font-sans" style="color: var(--text-muted)">生成时间戳</div>
+            <div class="font-bold mt-0.5" style="color: var(--text-primary)">
               {{ dbStatus.created_at > 0 ? formatDate(dbStatus.created_at) : 'N/A' }}
             </div>
           </div>
           <div>
-            <div class="text-[10px] text-slate-400">存储路径</div>
-            <div class="font-bold text-slate-800 truncate mt-0.5" :title="dbStatus.file_path">
+            <div class="text-[11px] font-sans" style="color: var(--text-muted)">存储路径</div>
+            <div class="font-bold truncate mt-0.5" style="color: var(--text-primary)" :title="dbStatus.file_path">
               {{ dbStatus.file_path || '未指定' }}
             </div>
           </div>
         </div>
 
-        <!-- 2.2 双模供给控制区 (在线一键下载 vs 离线手动导入) -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          
-          <!-- 模式 A: 在线一键更新 (联网环境) -->
-          <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-3 flex flex-col justify-between">
+          <div class="ui-content-card p-4 space-y-3 flex flex-col justify-between">
             <div>
-              <div class="font-bold text-slate-800 flex items-center gap-1.5 mb-1">
-                <span>⚡ 模式 A: 在线一键下载 / 更新</span>
+              <div class="font-bold flex items-center gap-1.5 mb-1" style="color: var(--text-primary)">
+                <AppIcon name="zap" :size="14" class="text-sky-600 dark:text-sky-400" />
+                <span>模式 A: 在线一键下载 / 更新</span>
               </div>
-              <p class="text-[11px] text-slate-500 font-normal leading-relaxed">
-                从官方权威源或镜像拉取最新编译的 ip2region.xdb 库 (约 11MB)，下载完成自动热加载。
+              <p class="text-[11px] leading-relaxed" style="color: var(--text-secondary)">
+                从官方源或镜像拉取最新编译的 ip2region.xdb 库 (约 11MB)，下载完成自动热加载。
               </p>
             </div>
 
-            <!-- 下载源选择 -->
             <div>
-              <label class="block text-[10px] text-slate-500 mb-1">下载通道:</label>
-              <select v-model="downloadUrl" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none">
-                <option value="auto">
-                  ⚡ 智能多源自动容灾轮询 (推荐，国内多源 CDN + 官方直连)
-                </option>
+              <label class="block text-[11px] mb-1 font-medium" style="color: var(--text-muted)">下载通道:</label>
+              <select v-model="downloadUrl" class="ui-input ui-num px-2.5 py-1.5 text-xs cursor-pointer">
+                <option value="auto">智能多源自动容灾轮询 (CDN + 官方直连)</option>
                 <option value="https://cdn.jsdelivr.net/gh/lionsoul2014/ip2region@master/data/ip2region_v4.xdb">
-                  JsDelivr 全球高速 CDN (国内稳定推荐)
+                  JsDelivr 全球高速 CDN
                 </option>
                 <option value="https://ghfast.top/https://raw.githubusercontent.com/lionsoul2014/ip2region/master/data/ip2region_v4.xdb">
                   GHFast 国内加速代理
                 </option>
                 <option value="https://raw.githubusercontent.com/lionsoul2014/ip2region/master/data/ip2region_v4.xdb">
-                  GitHub 官方原始仓库直链 (需良好国际网络)
+                  GitHub 官方原始仓库直链
                 </option>
               </select>
             </div>
 
-            <!-- 进度条 -->
-            <div v-if="isDownloading" class="space-y-1.5 bg-blue-50/80 p-2.5 rounded-xl border border-blue-200">
-              <div class="flex justify-between text-[10px] text-blue-900 font-bold">
+            <div v-if="isDownloading" class="space-y-1.5 bg-blue-500/10 p-2.5 rounded-xl border border-blue-500/25 ui-num">
+              <div class="flex justify-between text-[11px] text-blue-700 dark:text-sky-300 font-bold">
                 <span>{{ downloadStatusText }}</span>
                 <span>{{ downloadProgress.percent }}% ({{ downloadProgress.speed_kbps }} KB/s)</span>
               </div>
-              <div class="w-full bg-blue-200/60 rounded-full h-2 overflow-hidden">
-                <div class="bg-blue-600 h-2 transition-all duration-200" :style="{ width: `${downloadProgress.percent}%` }"></div>
+              <div class="w-full rounded-full h-2 overflow-hidden" style="background: var(--surface-elevated)">
+                <div class="bg-sky-500 h-2 transition-all duration-200" :style="{ width: `${downloadProgress.percent}%` }"></div>
               </div>
-              <div class="text-[9px] text-slate-500 flex justify-between">
+              <div class="text-[11px] flex justify-between" style="color: var(--text-muted)">
                 <span>已接收: {{ (downloadProgress.downloaded_bytes / (1024 * 1024)).toFixed(2) }} MB</span>
                 <span>总大小: {{ (downloadProgress.total_bytes / (1024 * 1024)).toFixed(2) }} MB</span>
               </div>
             </div>
 
-            <button @click="startDownload" :disabled="isDownloading"
-              class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-2 rounded-xl font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50 text-center">
-              <span v-if="isDownloading">⏳ 正在安全下载并校验...</span>
-              <span v-else>⬇ 一键下载最新 IP 归属地库</span>
+            <button @click="startDownload" :disabled="isDownloading" class="w-full ui-btn-primary justify-center py-2 rounded-xl font-bold">
+              <AppIcon :name="isDownloading ? 'refresh' : 'download'" :size="13" :class="isDownloading ? 'animate-spin' : ''" />
+              <span>{{ isDownloading ? '正在安全下载并校验...' : '一键下载最新 IP 归属地库' }}</span>
             </button>
           </div>
 
-          <!-- 模式 B: 离线导入 (严格物理隔离内网) -->
-          <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-3 flex flex-col justify-between">
+          <div class="ui-content-card p-4 space-y-3 flex flex-col justify-between">
             <div>
-              <div class="font-bold text-slate-800 flex items-center gap-1.5 mb-1">
-                <span>🛡 模式 B: 离线手动导入 / 加载</span>
+              <div class="font-bold flex items-center gap-1.5 mb-1" style="color: var(--text-primary)">
+                <AppIcon name="shield" :size="14" class="text-emerald-600 dark:text-emerald-400" />
+                <span>模式 B: 离线手动导入 / 加载</span>
               </div>
-              <p class="text-[11px] text-slate-500 font-normal leading-relaxed">
-                适用于严禁联网的涉密/工业控制网，手动指定本地已下载的 ip2region.xdb 文件路径。
+              <p class="text-[11px] leading-relaxed" style="color: var(--text-secondary)">
+                适用于严禁联网的隔离内网，手动指定本地已准备的 ip2region.xdb 文件路径。
               </p>
             </div>
 
             <div>
-              <label class="block text-[10px] text-slate-500 mb-1">本地 xdb 文件路径:</label>
-              <input v-model="localFilePath" placeholder="如: E:\tools\data\ip2region.xdb"
-                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-mono text-slate-800 focus:outline-none">
+              <label class="block text-[11px] mb-1 font-medium" style="color: var(--text-muted)">本地 xdb 文件路径:</label>
+              <input v-model="localFilePath" placeholder="如: E:\tools\data\ip2region.xdb" class="ui-input ui-num px-2.5 py-1.5 text-xs">
             </div>
 
-            <div v-if="loadResultMsg" :class="['p-2 rounded-xl text-[11px] border', isLoadError ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200']">
+            <div v-if="loadResultMsg" :class="['p-2 rounded-xl text-[11px] border', isLoadError ? 'bg-rose-500/12 text-rose-700 dark:text-rose-300 border-rose-500/30' : 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/30']">
               {{ loadResultMsg }}
             </div>
 
-            <button @click="loadLocalFile" :disabled="!localFilePath.trim() || isLoadingLocal"
-              class="w-full bg-slate-800 hover:bg-slate-900 text-white py-2 rounded-xl font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50 text-center">
-              <span v-if="isLoadingLocal">正在验证并加载内存...</span>
-              <span v-else>📂 导入并热加载本地库</span>
+            <button @click="loadLocalFile" :disabled="!localFilePath.trim() || isLoadingLocal" class="w-full ui-btn-secondary justify-center py-2 rounded-xl font-bold">
+              <AppIcon :name="isLoadingLocal ? 'refresh' : 'folder'" :size="13" :class="isLoadingLocal ? 'animate-spin' : ''" />
+              <span>{{ isLoadingLocal ? '正在验证并加载内存...' : '导入并热加载本地库' }}</span>
             </button>
           </div>
-
         </div>
 
-        <!-- 2.3 实时归属地测试小工具 (零网络延迟验证) -->
-        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
-          <div class="font-bold text-slate-800 flex items-center justify-between">
-            <span>🔬 实时 IP 归属地与安全域探测测试 (Microsecond Query)</span>
-            <span class="text-[10px] text-slate-400 font-normal">单次耗时 &lt; 5 微秒</span>
+        <!-- 实时归属地测试工具 -->
+        <div class="ui-sub-card p-4 space-y-3">
+          <div class="font-bold flex items-center justify-between flex-wrap gap-2" style="color: var(--text-primary)">
+            <span class="flex items-center gap-1.5">
+              <AppIcon name="search" :size="14" />
+              <span>实时 IP 归属地与安全域探测测试</span>
+            </span>
+            <span class="text-[11px] font-normal ui-num" style="color: var(--text-muted)">单次耗时 &lt; 5 微秒</span>
           </div>
 
           <div class="flex gap-2">
-            <input v-model="testIp" placeholder="输入任意 IPv4 地址 (如: 114.114.114.114 或 120.24.78.129)"
-              class="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-mono text-slate-800 focus:outline-none">
-            <button @click="runTestLookup" :disabled="!testIp.trim()"
-              class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-xl font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-40">
+            <input v-model="testIp" placeholder="输入任意 IPv4 地址 (如: 114.114.114.114)" class="flex-1 ui-input ui-num px-3 py-1.5 text-xs">
+            <button @click="runTestLookup" :disabled="!testIp.trim()" class="ui-btn-primary px-4 py-1.5 rounded-xl font-bold shrink-0">
               测试解析
             </button>
           </div>
 
-          <div v-if="testResult" class="p-3 bg-white border border-slate-200 rounded-xl space-y-1.5">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-1.5">
-              <div class="font-bold text-slate-900 flex items-center gap-2">
+          <div v-if="testResult" class="ui-content-card p-3 space-y-1.5 ui-num">
+            <div class="flex items-center justify-between border-b pb-1.5 flex-wrap gap-2" style="border-color: var(--border-subtle)">
+              <div class="font-bold flex items-center gap-2" style="color: var(--text-primary)">
                 <span>{{ testResult.ip }}</span>
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-500/12 text-blue-700 dark:text-sky-300 border border-blue-500/25">
                   {{ testResult.zone_name }}
                 </span>
-                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-700">
+                <span class="px-1.5 py-0.5 rounded text-[11px] font-bold ui-pill">
                   {{ testResult.security_level }}
                 </span>
               </div>
-              <span class="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                100% 离线命中
+              <span class="text-[11px] text-emerald-700 dark:text-emerald-300 font-bold bg-emerald-500/12 px-2 py-0.5 rounded border border-emerald-500/25">
+                离线命中
               </span>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-slate-600 text-[11px] pt-1">
-              <div>国家: <strong class="text-slate-800">{{ testResult.country || 'N/A' }}</strong></div>
-              <div>省份: <strong class="text-slate-800">{{ testResult.province || 'N/A' }}</strong></div>
-              <div>城市: <strong class="text-slate-800">{{ testResult.city || 'N/A' }}</strong></div>
-              <div>运营商 (ISP): <strong class="text-indigo-700 font-bold">{{ testResult.isp || 'N/A' }}</strong></div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px] pt-1" style="color: var(--text-secondary)">
+              <div>国家: <strong style="color: var(--text-primary)">{{ testResult.country || 'N/A' }}</strong></div>
+              <div>省份: <strong style="color: var(--text-primary)">{{ testResult.province || 'N/A' }}</strong></div>
+              <div>城市: <strong style="color: var(--text-primary)">{{ testResult.city || 'N/A' }}</strong></div>
+              <div>运营商: <strong class="text-indigo-700 dark:text-indigo-300 font-bold">{{ testResult.isp || 'N/A' }}</strong></div>
             </div>
 
-            <div class="text-[11px] text-slate-500 pt-1">
-              归属摘要: <strong class="text-slate-900">{{ testResult.geo_summary }}</strong>
+            <div class="text-[11px] pt-1" style="color: var(--text-muted)">
+              归属摘要: <strong style="color: var(--text-primary)">{{ testResult.geo_summary }}</strong>
             </div>
           </div>
         </div>
@@ -190,12 +181,12 @@
       </div>
 
       <!-- 3. 底栏 -->
-      <div class="px-6 py-3 border-t border-slate-200/60 bg-white/40 flex items-center justify-between shrink-0">
-        <span class="text-[11px] text-slate-400 font-mono">数据来源: Lionsoul IP2Region (Apache 2.0)</span>
-        <button @click="$emit('close')" class="px-4 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
+      <footer class="px-6 py-3 border-t flex items-center justify-between shrink-0" style="background: var(--surface-content-alt); border-color: var(--border-subtle)">
+        <span class="text-[11px] ui-num" style="color: var(--text-muted)">数据来源: Lionsoul IP2Region (Apache 2.0)</span>
+        <button @click="$emit('close')" class="ui-btn-secondary px-4 py-1.5 rounded-xl text-xs font-semibold">
           完成并关闭
         </button>
-      </div>
+      </footer>
 
     </div>
   </div>
@@ -203,6 +194,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted } from 'vue';
+import AppIcon from './AppIcon.vue';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 
@@ -323,22 +315,28 @@ watch(() => props.isOpen, (open) => {
 });
 
 onMounted(async () => {
+  const isTauriEnv = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+  if (!isTauriEnv) return;
   await refreshStatus();
-  unlistenProgress = await listen<any>('ip-db-download-progress', (event) => {
-    downloadProgress.value = event.payload;
-    const s = event.payload.status || '';
-    if (s.startsWith('connecting')) {
-      downloadStatusText.value = `正在连接网络源 (${s})...`;
-    } else if (s.startsWith('downloading')) {
-      downloadStatusText.value = `正在高速下载数据流 (${event.payload.speed_kbps} KB/s)...`;
-    } else if (s === 'fallback') {
-      downloadStatusText.value = event.payload.error || '正在自动尝试下一个备选源...';
-    } else if (s === 'completed') {
-      downloadStatusText.value = '下载完成，已安全热重载进入全局内存！';
-    } else if (s === 'error') {
-      downloadStatusText.value = `下载出错: ${event.payload.error || '未知网络错误'}`;
-    }
-  });
+  try {
+    unlistenProgress = await listen<any>('ip-db-download-progress', (event) => {
+      downloadProgress.value = event.payload;
+      const s = event.payload.status || '';
+      if (s.startsWith('connecting')) {
+        downloadStatusText.value = `正在连接网络源 (${s})...`;
+      } else if (s.startsWith('downloading')) {
+        downloadStatusText.value = `正在高速下载数据流 (${event.payload.speed_kbps} KB/s)...`;
+      } else if (s === 'fallback') {
+        downloadStatusText.value = event.payload.error || '正在自动尝试下一个备选源...';
+      } else if (s === 'completed') {
+        downloadStatusText.value = '下载完成，已安全热重载进入全局内存！';
+      } else if (s === 'error') {
+        downloadStatusText.value = `下载出错: ${event.payload.error || '未知网络错误'}`;
+      }
+    });
+  } catch (err) {
+    console.warn('[IpDatabaseModal] 注册事件监听跳过:', err);
+  }
 });
 
 onUnmounted(() => {

@@ -1,84 +1,147 @@
 <template>
   <div class="flex-1 flex flex-col gap-2 overflow-hidden min-w-0 h-full">
 
-    <!-- 1. UPPER SECTION: GRAND TELEMETRY HORIZON (宏大工业态势大盘 - 35% 高度) -->
-    <div v-show="isHorizonExpanded" class="h-[35%] flex gap-2.5 shrink-0 min-h-[240px] transition-all duration-300">
-      
-      <!-- 1.1 左侧：工业控制通信全息态势动态大屏 (Live Canvas Topology) -->
-      <div class="flex-1 glass-surface rounded-2xl p-3 flex flex-col relative overflow-hidden">
+    <!-- 1. UPPER SECTION: TOPOLOGY HORIZON -->
+    <div v-show="isHorizonExpanded" class="h-[32%] flex flex-col lg:flex-row gap-2.5 shrink-0 min-h-[210px] transition-all duration-300">
+
+      <!-- 1.1 左侧：工业控制通信拓扑画布 -->
+      <div class="flex-1 ui-content-card p-3 flex flex-col relative overflow-hidden">
         <!-- 标题行与节点状态指示 -->
-        <div class="flex items-center justify-between mb-1.5 z-10">
+        <div class="flex items-center justify-between mb-1.5 z-10 flex-wrap gap-2">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-200">工业控制通信全息态势</span>
-            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-950 dark:bg-cyan-500/10 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-500/20 font-bold">
-              5 个活跃核心工控单元
+            <span class="text-xs font-semibold tracking-tight" style="color: var(--text-primary);">多总线物理通信拓扑</span>
+            <span class="text-[11px] ui-num px-2 py-0.5 rounded-full bg-blue-500/12 text-blue-700 dark:text-sky-300 border border-blue-500/25 font-medium">
+              {{ topoNodes.length }} 个活跃通信节点
             </span>
           </div>
-          <div class="flex items-center gap-3">
-            <div class="flex items-center gap-2 text-[11px] text-slate-400">
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_6px_#00F2FE]"></span>SCADA 调度中心</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_6px_#F59E0B]"></span>S7-1500 PLC</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#10B981]"></span>Modbus 网关</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-violet-400 shadow-[0_0_6px_#7F5AF0]"></span>EtherCAT 伺服</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_6px_#4FACFE]"></span>DNP3 RTU</span>
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <!-- 物理外设总线切换 -->
+            <div class="flex glass-pill p-0.5 rounded-xl text-[11px] font-mono">
+              <button @click="activeBus = 'nic'" :class="['px-2.5 py-0.5 rounded-lg transition-all cursor-pointer', activeBus === 'nic' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">NIC</button>
+              <button @click="activeBus = 'serial'" :class="['px-2.5 py-0.5 rounded-lg transition-all cursor-pointer', activeBus === 'serial' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">COM</button>
+              <button @click="activeBus = 'usb'" :class="['px-2.5 py-0.5 rounded-lg transition-all cursor-pointer', activeBus === 'usb' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">USB</button>
             </div>
-            <!-- 一键收起大屏按钮 -->
-            <button @click="isHorizonExpanded = false" title="收起全息态势大盘，最大化报文流水线"
-              class="w-6 h-6 rounded-lg glass-pill hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center transition-all cursor-pointer text-[10px]">
-              ▲
+
+            <!-- 串口控制微组件 -->
+            <div v-if="activeBus === 'serial'" class="flex items-center gap-1.5 text-xs font-mono glass-pill px-2 py-0.5 rounded-xl">
+              <select
+                :value="selectedSerial"
+                @change="$emit('updateSerial', ($event.target as HTMLSelectElement).value)"
+                class="bg-transparent text-xs focus:outline-none max-w-[120px] truncate"
+                style="color: var(--text-primary);"
+                :title="getSerialDetailTitle(selectedSerial)"
+              >
+                <option v-for="p in serialPorts" :key="p" :value="p">
+                  {{ getSerialOptionLabel(p) }}
+                </option>
+              </select>
+              <select
+                :value="serialBaudRate"
+                @change="onBaudRateChange(Number(($event.target as HTMLSelectElement).value))"
+                class="bg-transparent text-xs focus:outline-none"
+                style="color: var(--text-primary);"
+              >
+                <option :value="9600">9600</option>
+                <option :value="19200">19200</option>
+                <option :value="115200">115200</option>
+              </select>
+              <button
+                @click="triggerStartSerial(selectedSerial, serialBaudRate)"
+                class="text-indigo-600 dark:text-indigo-300 hover:underline text-[11px] px-1.5 py-0.5 rounded border border-indigo-500/30 cursor-pointer"
+              >
+                {{ isSerialRunning ? '重置' : '监听' }}
+              </button>
+              <button
+                @click="triggerSendProbeFrame"
+                :disabled="!selectedSerial || isSendingProbe"
+                class="text-amber-600 dark:text-amber-300 hover:underline text-[11px] px-1.5 py-0.5 rounded border border-amber-500/30 cursor-pointer"
+              >
+                探活
+              </button>
+            </div>
+
+            <!-- USB 控制微组件 -->
+            <div v-else-if="activeBus === 'usb'" class="flex items-center gap-1.5 text-xs font-mono glass-pill px-2 py-0.5 rounded-xl">
+              <span class="text-purple-600 dark:text-purple-300 text-[11px]">USB: {{ usbDevices.length }}</span>
+              <button
+                @click="triggerStartUsb"
+                class="text-purple-600 dark:text-purple-300 hover:underline text-[11px] px-1.5 py-0.5 rounded border border-purple-500/30 cursor-pointer"
+              >
+                {{ isUsbRunning ? '重启' : '挂钩' }}
+              </button>
+            </div>
+
+            <div class="hidden xl:flex items-center gap-2.5 text-[11px]" style="color: var(--text-muted);">
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span>安全告警</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Modbus 节点</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span>S7 PLC 节点</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-cyan-400"></span>源端节点</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-400"></span>目的节点</span>
+            </div>
+
+            <button
+              @click="isHorizonExpanded = false"
+              title="收起拓扑面板，最大化报文流水线"
+              class="w-6 h-6 rounded-lg glass-pill hover:bg-[var(--surface-hover)] flex items-center justify-center transition-all cursor-pointer"
+              style="color: var(--text-secondary);"
+            >
+              <AppIcon name="chevron-up" :size="12" />
             </button>
           </div>
         </div>
 
-        <!-- Canvas 动态渲染容器 -->
-        <div class="relative flex-1 rounded-xl bg-slate-900/10 dark:bg-black/40 border border-slate-300/30 dark:border-white/5 overflow-hidden flex items-center justify-center">
+        <!-- Canvas 动态渲染容器 (双模态自适应半透液态玻璃视口) -->
+        <div class="relative flex-1 rounded-xl border overflow-hidden flex items-center justify-center" style="background: var(--surface-content-alt); border-color: var(--border-subtle);">
           <canvas ref="topologyCanvasRef" class="w-full h-full absolute inset-0"></canvas>
 
-          <!-- 画布内嵌高精物理遥测条 -->
-          <div class="absolute bottom-2.5 left-3 flex items-center gap-5 pointer-events-none z-10 glass-pill px-3.5 py-1.5 rounded-xl shadow-lg font-mono">
+          <!-- 画布内嵌遥测条 (跟随双模态语义液态玻璃胶囊) -->
+          <div class="ui-nav-glass absolute bottom-2.5 left-3 flex items-center gap-4 pointer-events-none z-10 px-3.5 py-1.5 rounded-xl font-mono">
             <div>
-              <div class="text-[9px] text-slate-400 uppercase tracking-wider font-medium font-sans">实时吞吐率 (RX/TX)</div>
-              <div class="text-base font-bold text-white flex items-center gap-1">
+              <div class="text-[11px] font-sans" style="color: var(--text-muted);">实时吞吐率</div>
+              <div class="text-sm font-bold flex items-center gap-1 ui-num" style="color: var(--text-primary);">
                 <span>{{ telemetryThroughputMbps }}</span>
-                <span class="text-xs text-cyan-400 font-normal">Mbps</span>
+                <span class="text-xs text-[var(--accent-primary-text)] font-normal">Mbps</span>
               </div>
             </div>
-            <div class="h-5 w-px bg-white/10"></div>
+            <div class="h-5 w-px" style="background: var(--border-subtle);"></div>
             <div>
-              <div class="text-[9px] text-slate-400 uppercase tracking-wider font-medium font-sans">瞬时包率 (PPS)</div>
-              <div class="text-base font-bold text-white flex items-center gap-1">
+              <div class="text-[11px] font-sans" style="color: var(--text-muted);">瞬时包率</div>
+              <div class="text-sm font-bold flex items-center gap-1 ui-num" style="color: var(--text-primary);">
                 <span>{{ telemetryPps.toLocaleString() }}</span>
-                <span class="text-xs text-emerald-400 font-normal">pkts/s</span>
+                <span class="text-xs text-emerald-600 dark:text-emerald-400 font-normal">pps</span>
               </div>
             </div>
-            <div class="h-5 w-px bg-white/10"></div>
+            <div class="h-5 w-px" style="background: var(--border-subtle);"></div>
             <div>
-              <div class="text-[9px] text-slate-400 uppercase tracking-wider font-medium font-sans">平均抖动 (Jitter)</div>
-              <div class="text-base font-bold text-white flex items-center gap-1">
+              <div class="text-[11px] font-sans" style="color: var(--text-muted);">平均抖动</div>
+              <div class="text-sm font-bold flex items-center gap-1 ui-num" style="color: var(--text-primary);">
                 <span>{{ telemetryJitterMs }}</span>
-                <span class="text-xs text-slate-400 font-normal">ms</span>
+                <span class="text-xs font-normal" style="color: var(--text-secondary);">ms</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 1.2 右侧：雕塑级高精大屏指标中心 (Sculpted Executive Metric Hub) -->
-      <div class="w-96 glass-surface rounded-2xl p-3.5 flex flex-col justify-between shrink-0 shadow-2xl">
+      <!-- 1.2 右侧：核心运行指标统计面板 -->
+      <div class="w-full lg:w-80 xl:w-96 ui-content-card p-3.5 flex flex-col justify-between shrink-0">
         <!-- Header -->
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-300">工业合规与系统健康矩阵</span>
-          <span class="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 shadow-[0_0_6px_rgba(16,185,129,0.2)]">
-            IEC-62443 等保三级达标
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-(--text-secondary)">工业合规与系统健康矩阵</span>
+          <span
+            class="text-[11px] font-mono-code font-bold px-2 py-0.5 rounded-full border shrink-0 ui-num"
+            :class="complianceHealthSummary.badgeClass"
+          >
+            {{ complianceHealthSummary.headerBadge }}
           </span>
         </div>
 
         <!-- Big Metric 1: 累计解包帧数 (Total Frames Audited) -->
-        <div class="flex flex-col py-1 border-b border-white/5">
-          <span class="text-[11px] text-slate-400 font-medium">累计解包帧数 (Total Frames Audited)</span>
+        <div class="flex flex-col py-1 border-b border-(--border-subtle)">
+          <span class="text-[11px] text-(--text-muted) font-medium">累计解包帧数 (Total Frames Audited)</span>
           <div class="flex items-baseline gap-2 mt-0.5">
-            <span class="metric-display">{{ packets.length.toLocaleString() }}</span>
-            <span class="text-xs font-mono text-emerald-400 font-semibold">{{ telemetryRateText }}</span>
+            <span class="metric-display ui-num">{{ packets.length.toLocaleString() }}</span>
+            <span class="text-xs font-mono-code ui-num text-emerald-600 dark:text-emerald-400 font-semibold">{{ telemetryRateText }}</span>
           </div>
         </div>
 
@@ -89,298 +152,450 @@
             <span class="font-mono text-cyan-950 dark:text-cyan-300 font-bold">{{ industrialRatioText }}</span>
           </div>
           <!-- 分段彩色胶囊条 -->
-          <div class="w-full h-2.5 rounded-full bg-white/5 overflow-hidden flex p-0.5 gap-0.5 border border-white/10">
-            <div class="h-full rounded-sm bg-cyan-400 transition-all duration-300" :style="{ width: `${protocolStats.modbus}%` }" title="Modbus TCP"></div>
-            <div class="h-full rounded-sm bg-amber-400 transition-all duration-300" :style="{ width: `${protocolStats.s7}%` }" title="Siemens S7Comm"></div>
-            <div class="h-full rounded-sm bg-violet-400 transition-all duration-300" :style="{ width: `${protocolStats.ethercat}%` }" title="EtherCAT"></div>
-            <div class="h-full rounded-sm bg-emerald-400 transition-all duration-300" :style="{ width: `${protocolStats.iec104}%` }" title="IEC 60870-5-104 / DNP3"></div>
+          <div class="w-full h-2.5 rounded-full overflow-hidden flex p-0.5 gap-0.5 border" style="background: var(--surface-input); border-color: var(--border-subtle);">
+            <div class="h-full rounded-sm bg-cyan-500 transition-all duration-300" :style="{ width: `${protocolStats.modbus}%` }" title="Modbus TCP"></div>
+            <div class="h-full rounded-sm bg-amber-500 transition-all duration-300" :style="{ width: `${protocolStats.s7}%` }" title="Siemens S7Comm"></div>
+            <div class="h-full rounded-sm bg-violet-500 transition-all duration-300" :style="{ width: `${protocolStats.ethercat}%` }" title="EtherCAT"></div>
+            <div class="h-full rounded-sm bg-emerald-500 transition-all duration-300" :style="{ width: `${protocolStats.iec104}%` }" title="IEC 60870-5-104 / DNP3"></div>
           </div>
-          <div class="grid grid-cols-4 gap-1 text-[10px] font-mono text-slate-400 pt-0.5">
-            <span class="flex items-center gap-1 truncate"><span class="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0"></span>Modbus {{ protocolStats.modbus }}%</span>
-            <span class="flex items-center gap-1 truncate"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>S7 {{ protocolStats.s7 }}%</span>
-            <span class="flex items-center gap-1 truncate"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0"></span>EtherCAT {{ protocolStats.ethercat }}%</span>
-            <span class="flex items-center gap-1 truncate"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>其他 {{ protocolStats.iec104 }}%</span>
+          <div class="grid grid-cols-4 gap-1 text-[11px] ui-num pt-0.5" style="color: var(--text-muted);">
+            <span class="flex items-center gap-1 truncate"><span class="w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0"></span>Modbus {{ protocolStats.modbus }}%</span>
+            <span class="flex items-center gap-1 truncate"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>S7 {{ protocolStats.s7 }}%</span>
+            <span class="flex items-center gap-1 truncate"><span class="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0"></span>EtherCAT {{ protocolStats.ethercat }}%</span>
+            <span class="flex items-center gap-1 truncate"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>其他 {{ protocolStats.iec104 }}%</span>
           </div>
         </div>
 
-        <!-- Big Metric 3: 指令白名单合规卡片 -->
-        <div class="glass-pill rounded-xl p-2 border border-white/10 flex items-center justify-between">
-          <div class="flex items-center gap-2.5">
-            <div class="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.2)]">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M5 13l4 4L19 7"/>
-              </svg>
+        <!-- Big Metric 3: 指令白名单合规卡片（动态关联实时捕获与违规拦截记录） -->
+        <div class="ui-sub-card p-2.5 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div
+              class="w-7 h-7 rounded-lg border flex items-center justify-center shrink-0"
+              :class="complianceHealthSummary.iconBoxClass"
+            >
+              <AppIcon :name="complianceHealthSummary.iconName" :size="15" />
             </div>
-            <div>
-              <div class="text-xs font-bold text-white">指令白名单合规</div>
-              <div class="text-[10px] text-slate-400">未发现未授权 PLC 停机或写线圈指令</div>
+            <div class="min-w-0">
+              <div class="text-xs font-semibold truncate" style="color: var(--text-primary);">{{ complianceHealthSummary.title }}</div>
+              <div class="text-[11px] truncate" style="color: var(--text-muted);" :title="complianceHealthSummary.subtitle">
+                {{ complianceHealthSummary.subtitle }}
+              </div>
             </div>
           </div>
-          <span class="text-xs font-mono font-bold text-emerald-400">0 违规</span>
+          <span class="text-xs ui-num font-semibold shrink-0" :class="complianceHealthSummary.countClass">
+            {{ complianceHealthSummary.countLabel }}
+          </span>
         </div>
       </div>
     </div>
 
-    <!-- 展开大盘的快捷药丸（仅在收起态显示） -->
-    <div v-if="!isHorizonExpanded" class="flex justify-between items-center px-4 py-1.5 glass-surface rounded-2xl shrink-0">
-      <div class="flex items-center gap-3 text-xs">
-        <span class="text-cyan-800 dark:text-cyan-400 font-bold">全息工业控制态势大盘已折叠</span>
-        <span class="text-slate-600 dark:text-slate-400 font-mono text-[11px]">吞吐: {{ telemetryThroughputMbps }} Mbps | 包率: {{ telemetryPps }} PPS | 累计解包: {{ packets.length }} 帧</span>
-      </div>
-      <button @click="isHorizonExpanded = true" class="text-xs font-bold text-cyan-800 dark:text-cyan-300 hover:text-cyan-900 dark:hover:text-white glass-pill px-3 py-1 rounded-xl transition-all cursor-pointer">
-        ▼ 展开全息态势大盘
-      </button>
-    </div>
+    <!-- 2. LOWER SECTION: 实体稳态主舞台 + 随行解构抽屉 -->
+    <div class="flex-1 ui-content-card flex overflow-hidden min-h-0 relative">
 
-    <!-- 2. 控制栏与微胶囊快捷协议过滤 (高清晰、分类有致，告别拥挤横排) -->
-    <div class="glass-surface rounded-2xl px-3.5 py-1.5 flex items-center justify-between gap-3 shrink-0 shadow-lg">
-      <!-- 左翼：高频流控与协议微胶囊 -->
-      <div class="flex items-center gap-2">
-        <span class="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 shrink-0">报文流水线</span>
-        <!-- 协议微胶囊切换标签群 -->
-        <div class="flex items-center gap-1 glass-pill p-0.5 rounded-xl text-[11px]">
-          <button v-for="tag in quickProtocolTags" :key="tag.value" @click="filterProtocol = tag.value"
-            :title="tag.title || tag.label"
-            :class="[
-              'px-2.5 py-0.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0',
-              filterProtocol === tag.value
-                ? 'bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 font-bold shadow-2xs border border-cyan-500/40'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            ]">
-            {{ tag.label }}
-          </button>
-          <!-- 更多规约完整下拉框 -->
-          <select v-model="filterProtocol" class="bg-transparent text-slate-700 dark:text-slate-300 text-[11px] rounded-lg px-1.5 py-0.5 focus:outline-none border-l border-slate-300/60 dark:border-white/10 ml-0.5">
-            <option value="" class="bg-white dark:bg-[#181820]">全部规约</option>
-            <option v-for="p in protocolList" :key="p" :value="p" class="bg-white dark:bg-[#181820]">{{ p }}</option>
-          </select>
+      <!-- 2.1 中央主舞台：实时报文全景流 -->
+      <div class="flex-1 flex flex-col overflow-hidden min-w-0 relative">
+        <!-- 悬空穿透液态玻璃控制栏 (Floating Liquid Toolbar Over Scrollable Grid) -->
+        <div class="stage-header-bar absolute top-2.5 left-3 right-3 z-40 rounded-2xl flex items-center justify-between gap-1.5 flex-wrap gap-y-1">
+          <span class="lens-edge-lip" aria-hidden="true"></span>
+          <!-- 左翼：指示灯、精简标题、高频协议胶囊与拓扑切换 -->
+          <div class="flex items-center gap-1.5 shrink-0">
+            <span class="live-pulse-dot shrink-0"></span>
+            <span class="text-xs font-semibold tracking-tight shrink-0 whitespace-nowrap" style="color: var(--text-primary);">
+              <span class="hidden 2xl:inline">实时报文全景流</span>
+              <span class="2xl:hidden">报文流</span>
+            </span>
+
+            <!-- 协议快速微胶囊群 -->
+            <div class="flex items-center gap-0.5 glass-pill p-0.5 rounded-xl text-[11px] shrink-0">
+              <button
+                v-for="tag in quickProtocolTags.slice(0, 3)"
+                :key="tag.value"
+                @click="filterProtocol = tag.value"
+                :title="tag.title || tag.label"
+                :class="[
+                  'px-2 py-0.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap text-[11px]',
+                  filterProtocol === tag.value
+                    ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                ]"
+              >
+                {{ tag.label }}
+              </button>
+              <select v-model="filterProtocol" class="bg-transparent text-[11px] rounded-lg px-1 py-0.5 focus:outline-none border-l cursor-pointer max-w-[78px]" style="color: var(--text-primary); border-color: var(--border-subtle);">
+                <option value="">更多</option>
+                <option v-for="p in protocolList" :key="p" :value="p">{{ p }}</option>
+              </select>
+            </div>
+
+            <!-- 多总线拓扑面板展开/折叠胶囊 (包含 NIC / COM 串口 / USB 快速切换) -->
+            <button
+              @click="isHorizonExpanded = !isHorizonExpanded"
+              title="展开/收起多总线控制与实时通信拓扑 (NIC / COM 串口 / USB)"
+              :class="['text-[11px] font-medium px-2 py-0.5 rounded-xl transition-all cursor-pointer flex items-center gap-1 glass-pill whitespace-nowrap shrink-0',
+                isHorizonExpanded ? 'text-blue-600 dark:text-sky-400 border-blue-500/40 bg-blue-500/12' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']"
+            >
+              <AppIcon :name="isHorizonExpanded ? 'chevron-up' : 'chevron-down'" :size="12" />
+              <span>{{ isHorizonExpanded ? '收起总线' : '总线拓扑' }}</span>
+            </button>
+          </div>
+
+          <!-- 中腹：Display Filter 胶囊 -->
+          <div class="flex-1 min-w-[68px] max-w-[160px] flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] focus-within:border-blue-500 transition-all" style="background: var(--surface-input); border-color: var(--border-subtle);">
+            <AppIcon name="search" :size="12" style="color: var(--text-muted);" class="shrink-0" />
+            <input
+              v-model="filterInput"
+              @keydown.enter="applyDisplayFilter"
+              @input="onFilterInputDebounced"
+              placeholder="过滤 (s7comm)..."
+              class="bg-transparent text-[11px] outline-none w-full min-w-0 font-mono"
+              style="color: var(--text-primary);"
+            />
+            <button v-if="filterInput" @click="clearDisplayFilter" class="cursor-pointer p-0.5 shrink-0" style="color: var(--text-muted);" title="清空过滤">
+              <AppIcon name="close" :size="11" />
+            </button>
+            <button v-if="filterInput" @click="applyDisplayFilter" class="text-[11px] font-semibold text-blue-600 dark:text-sky-400 px-1.5 py-0.5 rounded bg-blue-500/12 cursor-pointer shrink-0">
+              过滤
+            </button>
+          </div>
+
+          <!-- 右翼：三大点击式工具菜单 + 遥测数据 + 随行解构抽屉开关 -->
+          <div class="flex items-center gap-1 text-xs shrink-0 whitespace-nowrap">
+            <!-- 1. 深度分析工具下拉菜单 (Click Popover) -->
+            <div class="relative">
+              <button
+                @click.stop="toggleDropdown('analyze')"
+                :class="['glass-pill px-2 py-1 rounded-xl font-medium transition-all cursor-pointer flex items-center gap-1 text-[11px]',
+                  activeDropdown === 'analyze' ? 'border-blue-500/50 text-blue-600 dark:text-sky-300' : 'text-[var(--text-primary)]']"
+              >
+                <AppIcon name="activity" :size="12" class="text-blue-500" />
+                <span>分析</span>
+                <AppIcon name="chevron-down" :size="11" />
+              </button>
+              <div
+                v-if="activeDropdown === 'analyze'"
+                @click.stop
+                class="ui-modal-surface absolute right-0 top-full mt-1.5 w-48 rounded-2xl p-1.5 z-50 space-y-0.5 font-medium"
+              >
+                <button @click="openWaveTab(); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
+                  <AppIcon name="activity" :size="13" class="text-blue-500" />
+                  <span>示波波形追踪</span>
+                </button>
+                <button @click="openIoGraphsTab(); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
+                  <AppIcon name="traffic" :size="13" class="text-indigo-500" />
+                  <span>IO Graphs 点阵</span>
+                </button>
+                <button @click="diffBus.compareSlots(); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
+                  <AppIcon name="scale" :size="13" class="text-emerald-500" />
+                  <span>双组/多组精密差分</span>
+                </button>
+                <button @click="openGlobalMultiDiffWithSelected(); closeAllDropdowns()" :disabled="selectedPackets.size < 2" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer disabled:opacity-40" style="color: var(--text-primary);">
+                  <AppIcon name="git-branch" :size="13" class="text-indigo-500" />
+                  <span>送入 Center-Star 多组对齐</span>
+                </button>
+                <button @click="isMultiCompareOpen = true; closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
+                  <AppIcon name="usb" :size="13" class="text-cyan-500" />
+                  <span>多串口实时交叉对比 (2-4路)</span>
+                </button>
+                <button @click="openMatrixTab(); closeAllDropdowns()" :disabled="selectedPackets.size < 2" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer disabled:opacity-40" style="color: var(--text-primary);">
+                  <AppIcon name="layers" :size="13" class="text-purple-500" />
+                  <span>多报文矩阵</span>
+                </button>
+                <button @click="openTraceroute(''); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
+                  <AppIcon name="globe" :size="13" class="text-sky-500" />
+                  <span>可视路由追踪</span>
+                </button>
+                <button @click="toggleIndustrialTxPanel(); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
+                  <AppIcon name="cpu" :size="13" class="text-amber-500" />
+                  <span>工控主从事务时延</span>
+                </button>
+                <button @click="toggleTimeseriesHeatmapPanel(); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
+                  <AppIcon name="radar" :size="13" class="text-indigo-500" />
+                  <span>时序聚合与热力矩阵</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 2. 链路执行工具下拉菜单 -->
+            <div class="relative">
+              <button
+                @click.stop="toggleDropdown('control')"
+                :class="['glass-pill px-2 py-1 rounded-xl font-medium transition-all cursor-pointer flex items-center gap-1 text-[11px]',
+                  activeDropdown === 'control' ? 'border-amber-500/50 text-amber-600 dark:text-amber-300' : 'text-[var(--text-primary)]']"
+              >
+                <AppIcon name="zap" :size="12" class="text-amber-500" />
+                <span>控制</span>
+                <AppIcon name="chevron-down" :size="11" />
+              </button>
+              <div
+                v-if="activeDropdown === 'control'"
+                @click.stop
+                class="ui-modal-surface absolute right-0 top-full mt-1.5 w-52 rounded-2xl p-1.5 z-50 space-y-0.5 font-medium"
+              >
+                <button @click="$emit('switchWorkbench', 'net_assist'); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs font-semibold cursor-pointer" style="color: var(--text-primary);">
+                  <AppIcon name="terminal" :size="13" class="text-sky-500" />
+                  <span>网络通信调试</span>
+                </button>
+                <button @click="isTargetProbeOpen = true; closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
+                  <AppIcon name="radar" :size="13" class="text-amber-500" />
+                  <span>靶向主动反探</span>
+                </button>
+                <button @click="openInjectModal(selectedPacket?.payload_hex); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
+                  <AppIcon name="zap" :size="13" class="text-rose-500" />
+                  <span>链路层帧注入</span>
+                </button>
+                <button @click="toggleReplayConsole(); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
+                  <AppIcon name="play" :size="13" class="text-emerald-500" />
+                  <span>PCAP 线速重放控制台</span>
+                </button>
+                <button @click="isColumnSettingsOpen = true; closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
+                  <AppIcon name="sliders" :size="13" class="text-slate-500" />
+                  <span>调整字段列宽</span>
+                </button>
+                <button @click="resetAllColWidths(); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-muted);">
+                  <AppIcon name="refresh" :size="13" />
+                  <span>重置默认列宽</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 3. 数据归档与基线下拉菜单 -->
+            <div class="relative">
+              <button
+                @click.stop="toggleDropdown('archive')"
+                :class="['glass-pill px-2 py-1 rounded-xl font-medium transition-all cursor-pointer flex items-center gap-1 text-[11px]',
+                  activeDropdown === 'archive' ? 'border-emerald-500/50 text-emerald-600 dark:text-emerald-300' : 'text-[var(--text-primary)]']"
+              >
+                <AppIcon name="archive" :size="12" class="text-emerald-500" />
+                <span>归档</span>
+                <AppIcon name="chevron-down" :size="11" />
+              </button>
+              <div
+                v-if="activeDropdown === 'archive'"
+                @click.stop
+                class="ui-modal-surface absolute right-0 top-full mt-1.5 w-48 rounded-2xl p-1.5 z-50 space-y-0.5 font-medium"
+              >
+                <button @click="saveSelectedAsBaseline(); closeAllDropdowns()" :disabled="!selectedPacket" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer disabled:opacity-40" style="color: var(--text-primary);">
+                  <AppIcon name="archive" :size="13" class="text-emerald-500" />
+                  <span>存为历史基线</span>
+                </button>
+                <button @click="runJointBaselineCompare(); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
+                  <AppIcon name="scale" :size="13" class="text-indigo-500" />
+                  <span>联合基线比对</span>
+                </button>
+                <button @click="loadHistoricalBaseline(); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
+                  <AppIcon name="folder" :size="13" class="text-amber-500" />
+                  <span>载入历史基线库</span>
+                </button>
+                <button @click="isExportOpen = true; closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
+                  <AppIcon name="download" :size="13" class="text-blue-500" />
+                  <span>导出 PCAP/CSV</span>
+                </button>
+                <button @click="isImportOpen = true; closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
+                  <AppIcon name="upload" :size="13" class="text-sky-500" />
+                  <span>导入离线 PCAP</span>
+                </button>
+                <button @click="$emit('clearData'); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-rose-500/12 text-rose-600 dark:text-rose-400 flex items-center gap-2 transition-colors text-xs cursor-pointer">
+                  <AppIcon name="trash" :size="13" />
+                  <span>清空捕获缓冲池</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 吞吐与包率微指标 -->
+            <div class="hidden 2xl:flex items-center gap-1.5 ui-num text-[11px] glass-pill px-2.5 py-1 rounded-xl" style="color: var(--text-muted);">
+              <span>吞吐: <b style="color: var(--text-primary);">{{ formatBytes(totalBytes) }}</b></span>
+              <span v-if="criticalCount > 0" class="text-rose-600 dark:text-rose-400 font-semibold bg-rose-500/15 px-1.5 rounded text-[11px]">高熵: {{ criticalCount }}</span>
+            </div>
+
+            <!-- 随行解构抽屉开关 -->
+            <button
+              @click="isInspectorOpen = !isInspectorOpen"
+              :class="['px-2 py-1 rounded-xl glass-pill transition-colors flex items-center gap-1 text-[11px] font-semibold cursor-pointer shrink-0 whitespace-nowrap',
+                isInspectorOpen ? 'bg-[var(--accent-primary)] text-white border-transparent shadow-xs' : 'text-[var(--text-primary)] hover:bg-[var(--surface-hover)]']"
+            >
+              <AppIcon name="code" :size="12" />
+              <span>{{ isInspectorOpen ? '收起解构' : '随行解构' }}</span>
+              <span class="kbd-badge hidden 2xl:inline-block">R</span>
+            </button>
+          </div>
         </div>
 
-        <div class="h-4 w-px bg-slate-300/60 dark:bg-white/10"></div>
+        <!-- 上部扩展控制台容器 (当任意分析控制台开启时自动预留悬浮条避让空间) -->
+        <div v-if="isReplayPanelOpen || isIndustrialTxOpen || isTimeseriesHeatmapOpen" class="pt-[62px] shrink-0 flex flex-col">
+        <!-- PCAP 线速重放控制台 -->
+        <div v-if="isReplayPanelOpen" class="px-3 py-2 border-b flex flex-wrap items-center justify-between gap-2 text-xs shrink-0" style="background: var(--surface-content-alt); border-color: var(--border-subtle); color: var(--text-primary);">
+          <div class="flex items-center gap-1.5 flex-1 min-w-[260px]">
+            <span class="text-blue-600 dark:text-sky-400 font-semibold shrink-0 flex items-center gap-1">
+              <AppIcon name="play" :size="12" />
+              <span>线速重放</span>
+            </span>
+            <input
+              v-model="replayFilePath"
+              placeholder="输入本地 .pcap / .pcapng 文件绝对路径..."
+              class="ui-input flex-1 min-w-[160px] px-2.5 py-1 text-[11px] font-mono"
+            />
+            <button @click="loadReplayFile" :disabled="replayLoading || !replayFilePath.trim()" class="ui-btn-primary px-2.5 py-1 text-[11px] shrink-0">
+              <AppIcon name="folder" :size="12" />
+              <span>载入文件</span>
+            </button>
+          </div>
 
-        <!-- 物理总线快速切换 -->
-        <div class="flex glass-pill p-0.5 rounded-xl text-[11px] font-mono">
-          <button @click="activeBus = 'nic'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer', activeBus === 'nic' ? 'bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white']">NIC</button>
-          <button @click="activeBus = 'serial'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer', activeBus === 'serial' ? 'bg-indigo-500/20 text-indigo-800 dark:text-indigo-300 font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white']">COM</button>
-          <button @click="activeBus = 'usb'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer', activeBus === 'usb' ? 'bg-purple-500/20 text-purple-800 dark:text-purple-300 font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white']">USB</button>
-        </div>
-
-        <!-- 串口/USB 控制 -->
-        <template v-if="activeBus === 'serial'">
-          <div class="flex items-center gap-1.5 text-xs font-mono glass-pill px-2 py-0.5 rounded-xl">
-            <select :value="selectedSerial" @change="$emit('updateSerial', ($event.target as HTMLSelectElement).value)"
-              class="bg-transparent text-slate-200 text-xs focus:outline-none max-w-[130px] truncate"
-              :title="getSerialDetailTitle(selectedSerial)">
-              <option v-for="p in serialPorts" :key="p" :value="p" class="bg-[#181820] text-slate-200">
-                {{ getSerialOptionLabel(p) }}
-              </option>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <select v-model="replayMode" class="ui-input px-2 py-1 text-[11px]">
+              <option value="paced">原速/倍速 (Paced)</option>
+              <option value="top_speed">全速突发 (TopSpeed)</option>
+              <option value="step">单步精确 (Step)</option>
             </select>
-            <select :value="serialBaudRate" @change="onBaudRateChange(Number(($event.target as HTMLSelectElement).value))"
-              class="bg-transparent text-slate-200 text-xs focus:outline-none">
-              <option :value="9600" class="bg-[#181820]">9600</option>
-              <option :value="19200" class="bg-[#181820]">19200</option>
-              <option :value="115200" class="bg-[#181820]">115200</option>
-            </select>
-            <button @click="triggerStartSerial(selectedSerial, serialBaudRate)"
-              class="text-indigo-300 hover:text-white text-[10px] px-1.5 py-0.5 rounded border border-indigo-400/30 cursor-pointer">
-              {{ isSerialRunning ? '重置' : '监听' }}
-            </button>
-            <button @click="triggerSendProbeFrame" :disabled="!selectedSerial || isSendingProbe"
-              class="text-amber-300 hover:text-white text-[10px] px-1 py-0.2 rounded border border-amber-400/30 cursor-pointer">
-              探活
-            </button>
-          </div>
-        </template>
-        <template v-else-if="activeBus === 'usb'">
-          <div class="flex items-center gap-1.5 text-xs font-mono glass-pill px-2 py-0.5 rounded-xl">
-            <span class="text-purple-300 text-[10px]">USB 在线: {{ usbDevices.length }}</span>
-            <button @click="triggerStartUsb"
-              class="text-purple-300 hover:text-white text-[10px] px-1.5 py-0.5 rounded border border-purple-400/30 cursor-pointer">
-              {{ isUsbRunning ? '重启总线' : '挂钩总线' }}
-            </button>
-          </div>
-        </template>
-      </div>
+            <input
+              v-if="replayMode === 'paced'"
+              v-model.number="replaySpeed"
+              type="number"
+              step="0.5"
+              min="0.1"
+              max="100"
+              title="重放倍速 (如 1.0 表示原时间戳)"
+              class="ui-input w-14 px-1.5 py-1 text-[11px] text-center ui-num"
+            />
+            <input
+              v-model.number="replayLoops"
+              type="number"
+              min="1"
+              max="9999"
+              title="循环次数"
+              class="ui-input w-12 px-1.5 py-1 text-[11px] text-center ui-num"
+            />
 
-      <!-- 右翼：3 个规整的流体功能胶囊菜单 + 吞吐统计 -->
-      <div class="flex items-center gap-2 text-xs">
-        <!-- 统计 -->
-        <div class="flex items-center gap-2 font-mono text-[11px] glass-pill px-2.5 py-1 rounded-xl text-slate-400">
-          <span>吞吐: <strong class="text-white">{{ formatBytes(totalBytes) }}</strong></span>
-          <span v-if="criticalCount > 0" class="text-rose-400 font-bold bg-rose-500/20 px-1 py-0.2 rounded">高熵: {{ criticalCount }}</span>
-        </div>
+            <button @click="startReplay" :disabled="!replayFileInfo && replayTelemetry.total_packets === 0" class="ui-btn-primary bg-emerald-600 hover:bg-emerald-500 px-2.5 py-1 text-[11px]">开始</button>
+            <button v-if="replayTelemetry.state === 'Playing'" @click="pauseReplay" class="ui-btn-primary bg-amber-600 hover:bg-amber-500 px-2.5 py-1 text-[11px]">暂停</button>
+            <button v-if="replayTelemetry.state === 'Paused'" @click="resumeReplay" class="ui-btn-primary px-2.5 py-1 text-[11px]">恢复</button>
+            <button v-if="replayMode === 'step' || replayTelemetry.state === 'Paused'" @click="stepReplay" class="ui-btn-primary bg-indigo-600 hover:bg-indigo-500 px-2.5 py-1 text-[11px]">单步</button>
+            <button @click="stopReplay" class="ui-btn-danger px-2.5 py-1 text-[11px]">停止</button>
+          </div>
 
-        <!-- 1. 深度分析工具下拉菜单 -->
-        <div class="relative group">
-          <button class="glass-pill text-cyan-900 dark:text-cyan-300 hover:text-cyan-950 dark:hover:text-white px-2.5 py-1 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1">
-            <span class="whitespace-nowrap">📊 专业分析</span>
-            <span class="text-[9px]">▾</span>
-          </button>
-          <div class="absolute right-0 top-full mt-1.5 w-48 glass-surface rounded-2xl p-1.5 hidden group-hover:block z-50 border border-white/15 shadow-2xl space-y-1 font-medium">
-            <button @click="openWaveTab" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-cyan-500/15 text-slate-200 hover:text-cyan-300 flex items-center gap-2 transition-colors">
-              <span>📈 示波波形追踪</span>
-            </button>
-            <button @click="openIoGraphsTab" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-cyan-500/15 text-slate-200 hover:text-cyan-300 flex items-center gap-2 transition-colors">
-              <span>📊 IO Graphs 时序点阵</span>
-            </button>
-            <button @click="isPacketDiffOpen = true" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-cyan-500/15 text-slate-200 hover:text-cyan-300 flex items-center gap-2 transition-colors">
-              <span>⚖️ 双报文协议差分</span>
-            </button>
-            <button @click="openMatrixTab" :disabled="selectedPackets.size < 2" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-cyan-500/15 text-slate-200 hover:text-cyan-300 flex items-center gap-2 transition-colors disabled:opacity-40">
-              <span>⚖ 多报文矩阵比对</span>
-            </button>
-            <button @click="openTraceroute('')" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-cyan-500/15 text-slate-200 hover:text-cyan-300 flex items-center gap-2 transition-colors">
-              <span>🌐 测地可视路由追踪</span>
+          <div class="flex items-center gap-2 text-[11px] ui-num shrink-0" style="color: var(--text-secondary);">
+            <span class="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-sky-300 font-semibold">{{ replayTelemetry.state }}</span>
+            <span>{{ replayTelemetry.current_index }}/{{ replayTelemetry.total_packets }} ({{ replayTelemetry.progress_percent.toFixed(1) }}%)</span>
+            <span class="text-emerald-600 dark:text-emerald-400">{{ replayTelemetry.current_pps.toFixed(0) }} pps · {{ replayTelemetry.current_mbps.toFixed(2) }} Mbps</span>
+            <button @click="isReplayPanelOpen = false" class="p-1 cursor-pointer hover:opacity-75" style="color: var(--text-muted);" title="折叠重放面板">
+              <AppIcon name="close" :size="12" />
             </button>
           </div>
         </div>
 
-        <!-- 2. 链路执行工具下拉菜单 -->
-        <div class="relative group">
-          <button class="glass-pill text-amber-800 dark:text-amber-300 hover:text-amber-900 px-2.5 py-1 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1">
-            <span class="whitespace-nowrap">⚡ 链路控制</span>
-            <span class="text-[9px]">▾</span>
-          </button>
-          <div class="absolute right-0 top-full mt-1.5 w-48 glass-surface rounded-2xl p-1.5 hidden group-hover:block z-50 border border-slate-200/80 dark:border-white/15 shadow-2xl space-y-1 font-medium">
-            <button @click="$emit('switchWorkbench', 'net_assist')" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-sky-500/15 text-slate-800 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 flex items-center gap-2 transition-colors font-bold">
-              <span>🔌 网络通信调试工作台</span>
-            </button>
-            <button @click="isTargetProbeOpen = true" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-amber-500/15 text-slate-700 dark:text-slate-200 hover:text-amber-700 flex items-center gap-2 transition-colors">
-              <span>📡 靶向主动反探</span>
-            </button>
-            <button @click="openInjectModal(selectedPacket?.payload_hex)" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-rose-500/15 text-slate-700 dark:text-slate-200 hover:text-rose-700 flex items-center gap-2 transition-colors">
-              <span>💉 链路层帧注入</span>
-            </button>
-            <button @click="isColumnSettingsOpen = true" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-white/10 text-slate-200 flex items-center gap-2 transition-colors">
-              <span>📐 调整字段与列宽</span>
-            </button>
-            <button @click="resetAllColWidths" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-white/10 text-slate-400 hover:text-white flex items-center gap-2 transition-colors text-[11px]">
-              <span>⟲ 重置默认列宽</span>
-            </button>
+        <!-- 工控主从事务配对与微秒时延分析抽屉 -->
+        <div v-if="isIndustrialTxOpen" class="px-3 py-2.5 border-b flex flex-col gap-2 text-xs shrink-0 max-h-56 overflow-hidden" style="background: var(--surface-content-alt); border-color: var(--border-subtle); color: var(--text-primary);">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center gap-3 flex-wrap ui-num">
+              <span class="text-amber-600 dark:text-amber-300 font-semibold flex items-center gap-1">
+                <AppIcon name="cpu" :size="13" />
+                <span>工控主从事务与往返时延追踪</span>
+              </span>
+              <span>总事务: <b>{{ txStats?.total_transactions_recorded ?? 0 }}</b></span>
+              <span>成功: <b class="text-emerald-600 dark:text-emerald-400">{{ txStats?.successful_transactions ?? 0 }}</b></span>
+              <span>异常/超时: <b class="text-rose-600 dark:text-rose-400">{{ txStats?.exception_transactions ?? 0 }} / {{ txStats?.timeout_transactions ?? 0 }}</b></span>
+              <span>平均/最大时延: <b class="text-blue-600 dark:text-sky-300">{{ (txStats?.avg_plc_latency_ms ?? 0).toFixed(2) }} / {{ (txStats?.max_plc_latency_ms ?? 0).toFixed(2) }} ms</b></span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button @click="fetchIndustrialTxData" class="ui-btn-secondary px-2 py-0.5 text-[11px]">
+                <AppIcon name="refresh" :size="11" />
+                <span>刷新</span>
+              </button>
+              <button @click="isIndustrialTxOpen = false" class="p-1 cursor-pointer" style="color: var(--text-muted);">
+                <AppIcon name="close" :size="12" />
+              </button>
+            </div>
+          </div>
+          <div class="overflow-y-auto custom-scrollbar max-h-36 border rounded-lg p-1.5 space-y-1" style="background: var(--surface-content); border-color: var(--border-subtle);">
+            <div v-if="recentIndustrialTxs.length === 0" class="text-center py-3 text-[11px]" style="color: var(--text-muted);">
+              暂无完整配对工控事务记录（捕获 Modbus / S7 等主从请求与响应包后将自动计算微秒级往返时延）。
+            </div>
+            <div v-for="tx in recentIndustrialTxs" :key="tx.id" class="flex items-center justify-between px-2 py-1 rounded bg-[var(--surface-sub)] text-[11px] ui-num">
+              <span class="text-blue-600 dark:text-sky-300">{{ tx.req_time }} | {{ tx.client_ip }} → {{ tx.server_ip }} [{{ tx.protocol }} FC:0x{{ tx.function_code.toString(16) }}]</span>
+              <span class="truncate max-w-xs mx-2" style="color: var(--text-secondary);">{{ tx.summary }}</span>
+              <span :class="tx.status === 'SUCCESS' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'" class="font-semibold shrink-0">
+                {{ tx.status }} ({{ tx.plc_latency_ms.toFixed(2) }}ms)
+              </span>
+            </div>
           </div>
         </div>
 
-        <!-- 3. 数据归档与基线下拉菜单 -->
-        <div class="relative group">
-          <button class="glass-pill text-emerald-300 hover:text-white px-2.5 py-1 rounded-xl font-medium transition-all cursor-pointer flex items-center gap-1">
-            <span class="whitespace-nowrap">💾 归档与基线</span>
-            <span class="text-[9px]">▾</span>
-          </button>
-          <div class="absolute right-0 top-full mt-1.5 w-48 glass-surface rounded-2xl p-1.5 hidden group-hover:block z-50 border border-white/15 shadow-2xl space-y-1 font-medium">
-            <button @click="saveSelectedAsBaseline" :disabled="!selectedPacket" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-emerald-500/15 text-slate-200 hover:text-emerald-300 flex items-center gap-2 transition-colors disabled:opacity-40">
-              <span>💾 存为历史基线</span>
-            </button>
-            <button @click="runJointBaselineCompare" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-indigo-500/15 text-slate-200 hover:text-indigo-300 flex items-center gap-2 transition-colors">
-              <span>📊 联合基线比对</span>
-            </button>
-            <button @click="loadHistoricalBaseline" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-slate-700/40 text-slate-200 flex items-center gap-2 transition-colors">
-              <span>📂 载入历史基线库</span>
-            </button>
-            <button @click="isExportOpen = true" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-cyan-500/15 text-slate-200 hover:text-cyan-300 flex items-center gap-2 transition-colors">
-              <span>📥 导出 PCAP/CSV</span>
-            </button>
-            <button @click="isImportOpen = true" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-sky-500/15 text-slate-200 hover:text-sky-300 flex items-center gap-2 transition-colors">
-              <span>📂 导入离线 PCAP</span>
-            </button>
-            <button @click="isIpDbOpen = true" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-blue-500/15 text-slate-200 hover:text-blue-300 flex items-center gap-2 transition-colors">
-              <span>🌐 IP 归属地情报库 (xdb)</span>
-            </button>
-            <button @click="isCidrAssetOpen = true" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-emerald-500/15 text-slate-200 hover:text-emerald-300 flex items-center gap-2 transition-colors">
-              <span>🏷️ 内网 CIDR 资产字典</span>
-            </button>
-            <button @click="$emit('clearData')" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-rose-500/15 text-rose-300 flex items-center gap-2 transition-colors">
-              <span>🗑️ 清空捕获缓冲池</span>
-            </button>
+        <!-- 多分辨率时序桶与高频交互通信对热力矩阵抽屉 -->
+        <div v-if="isTimeseriesHeatmapOpen" class="px-3 py-2.5 border-b flex flex-col gap-2 text-xs shrink-0 max-h-56 overflow-hidden" style="background: var(--surface-content-alt); border-color: var(--border-subtle); color: var(--text-primary);">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center gap-3 flex-wrap ui-num">
+              <span class="text-indigo-600 dark:text-indigo-300 font-semibold flex items-center gap-1">
+                <AppIcon name="radar" :size="13" />
+                <span>多分辨率时序与交互通信矩阵热力榜</span>
+              </span>
+              <select v-model="tsResolution" @change="fetchTimeseriesHeatmapData" class="ui-input px-2 py-0.5 text-[11px]">
+                <option value="1s">1 秒粒度桶</option>
+                <option value="10s">10 秒粒度桶</option>
+                <option value="60s">60 秒粒度桶</option>
+              </select>
+              <span style="color: var(--text-muted);">活跃时间桶: <b style="color: var(--text-primary);">{{ tsBuckets.length }}</b> 个</span>
+              <span style="color: var(--text-muted);">热点通信对: <b class="text-blue-600 dark:text-sky-300">{{ heatmapCells.length }}</b> 组</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button @click="fetchTimeseriesHeatmapData" class="ui-btn-secondary px-2 py-0.5 text-[11px]">
+                <AppIcon name="refresh" :size="11" />
+                <span>刷新</span>
+              </button>
+              <button @click="isTimeseriesHeatmapOpen = false" class="p-1 cursor-pointer" style="color: var(--text-muted);">
+                <AppIcon name="close" :size="12" />
+              </button>
+            </div>
+          </div>
+          <div class="grid grid-cols-12 gap-2 overflow-hidden">
+            <div class="col-span-7 overflow-y-auto custom-scrollbar max-h-36 border rounded-lg p-1.5 space-y-1" style="background: var(--surface-content); border-color: var(--border-subtle);">
+              <div v-if="heatmapCells.length === 0" class="text-center py-3 text-[11px]" style="color: var(--text-muted);">暂无统计窗口通信矩阵数据</div>
+              <div v-for="(c, idx) in heatmapCells" :key="idx" class="flex items-center justify-between px-2 py-1 rounded text-[11px] ui-num">
+                <span style="color: var(--text-primary);">{{ c.source_ip }} → {{ c.dest_ip }}</span>
+                <span style="color: var(--text-muted);">交互 {{ c.interaction_count }} 次 | {{ (c.total_bytes / 1024).toFixed(1) }} KB</span>
+                <span :class="c.error_count > 0 ? 'text-rose-600 dark:text-rose-400' : (c.is_industrial ? 'text-amber-600 dark:text-amber-300' : 'text-emerald-600 dark:text-emerald-400')">
+                  {{ c.is_industrial ? '工控流' : '通用流' }} (写:{{ c.write_operation_count }}/错:{{ c.error_count }})
+                </span>
+              </div>
+            </div>
+            <div class="col-span-5 overflow-y-auto custom-scrollbar max-h-36 border rounded-lg p-1.5 space-y-1" style="background: var(--surface-content); border-color: var(--border-subtle);">
+              <div v-if="tsBuckets.length === 0" class="text-center py-3 text-[11px]" style="color: var(--text-muted);">暂无时序聚合桶记录</div>
+              <div v-for="(b, idx) in tsBuckets.slice(-12).reverse()" :key="idx" class="flex items-center justify-between px-2 py-0.5 rounded text-[11px] ui-num">
+                <span style="color: var(--text-muted);">@{{ new Date(b.slot_timestamp_s * 1000).toLocaleTimeString() }}</span>
+                <span class="text-blue-600 dark:text-sky-300">{{ b.packet_count }} 帧 / {{ b.byte_count }} B</span>
+                <span class="text-amber-600 dark:text-amber-300">工控 {{ b.industrial_packet_count }}</span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- 2.5 编译型 Display Filter 语法搜索栏 (Wireshark 工业级语法 AST 编译器) -->
-    <div class="glass-surface rounded-2xl px-3.5 py-2 flex items-center justify-between gap-3 shrink-0 shadow-md border border-white/40">
-      <div class="flex-1 flex items-center gap-2">
-        <span class="text-xs font-mono font-bold text-teal-700 flex items-center gap-1 shrink-0">
-          <svg class="w-3.5 h-3.5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-          </svg>
-          Display Filter:
-        </span>
-        <div class="relative flex-1">
-          <input
-            v-model="filterInput"
-            @keydown.enter="applyDisplayFilter"
-            @input="onFilterInputDebounced"
-            placeholder="键入 Wireshark 过滤式，如: ip.src == 192.168.1.1 && tcp.port == 80 或 frame.len > 1000 (亦兼容模糊关键字)"
-            class="w-full bg-white/70 border rounded-xl px-3 py-1.5 text-xs font-mono text-slate-800 placeholder-slate-400 focus:outline-none transition-all"
-            :class="[
-              filterValidation.error ? 'border-amber-400 focus:ring-2 focus:ring-amber-400/30' :
-              filterValidation.valid ? 'border-teal-500 focus:ring-2 focus:ring-teal-500/30' :
-              'border-slate-200 focus:ring-2 focus:ring-teal-500/20'
-            ]"
-          />
-          <button v-if="filterInput" @click="clearDisplayFilter" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer">
-            ✕
-          </button>
-        </div>
-        
-        <!-- 语法验证状态胶囊 -->
-        <div v-if="filterValidation.valid" class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-700 text-[11px] font-mono shrink-0 animate-in fade-in">
-          <span class="w-1.5 h-1.5 rounded-full bg-teal-500 shadow-[0_0_6px_#10B981]"></span>
-          <span>AST 语法合规</span>
-        </div>
-        <div v-else-if="filterValidation.error" class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 text-[11px] font-mono shrink-0 animate-in fade-in" :title="filterValidation.error">
-          <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-          <span class="max-w-[200px] truncate">{{ filterValidation.error }}</span>
         </div>
 
-        <button
-          @click="applyDisplayFilter"
-          class="bg-teal-600 hover:bg-teal-700 text-white text-xs px-3.5 py-1.5 rounded-xl font-bold font-mono transition-all shadow-sm active:scale-95 shrink-0 cursor-pointer">
-          应用过滤
-        </button>
-      </div>
-        <!-- 工业常用 Display Filter 快捷药丸 (自适应 lg 屏幕展开) -->
-        <div class="hidden lg:flex items-center gap-1.5 text-[10px] font-mono shrink-0 pl-1 border-l border-slate-200/60">
-          <button @click="quickApplyAstFilter('tcp.flags.syn == 1')" class="px-2 py-0.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 transition-colors cursor-pointer" title="筛选 TCP 握手发起包">SYN</button>
-          <button @click="quickApplyAstFilter('modbus.func_code == 3')" class="px-2 py-0.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-colors cursor-pointer" title="筛选 Modbus 读保持寄存器">Modbus读</button>
-          <button @click="quickApplyAstFilter('payload[0:4] == &quot;GET &quot;')" class="px-2 py-0.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-colors cursor-pointer" title="切片语法筛选 HTTP GET">GET切片</button>
-          <button @click="quickApplyAstFilter('ip.src in &quot;192.168.1.0/24&quot;')" class="px-2 py-0.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-colors cursor-pointer" title="CIDR掩码子网筛选">内网CIDR</button>
-        </div>
-
-      <!-- 流式缓冲区健康度指示器 -->
-      <div v-if="streamBufferStats" class="flex items-center gap-3 text-[10px] font-mono text-slate-500 border-l border-slate-200/80 pl-3 shrink-0">
-        <span title="内核级环形缓冲区水位">环形缓冲: <strong class="text-teal-700">{{ streamBufferStats.current_buffered }}</strong> / {{ streamBufferStats.max_capacity }}</span>
-        <span title="自动滚动落盘分卷数">分卷落盘: <strong class="text-slate-700">{{ streamBufferStats.flushed_segments_count }}</strong> 卷</span>
-      </div>
-    </div>
-
-    <!-- 3. LOWER SECTION: 左右分栏宏大报文流与深度解构视窗 (65% : 35% 空间无界) -->
-    <div class="flex-1 glass-surface rounded-2xl flex overflow-hidden min-h-0 shadow-2xl border border-white/10">
-      
-      <!-- 3.1 左侧：高密度原生报文流表格 (宽约 65%~70%) -->
-      <div class="flex-1 flex flex-col overflow-hidden border-r border-white/10 min-w-0 relative">
-        <!-- 虚拟滚动表格容器 -->
-        <div ref="tableContainer" @scroll="onScroll" class="flex-1 overflow-auto custom-scrollbar relative min-h-0">
+        <!-- 全贯穿虚拟滚动表格容器 (透明透景底衬 + 顶底渐变羽化 + 滚动穿越悬浮栏) -->
+        <div ref="tableContainer" @scroll="onScroll" class="flex-1 overflow-auto custom-scrollbar relative min-h-0 select-text bg-transparent liquid-scroll-fade">
           <div :style="{ minWidth: totalTableMinWidth }">
-            <!-- 精准规范表头 (去除粗糙的硬编码文字竖线 |) -->
-            <div class="sticky top-0 z-20 px-3.5 py-2 glass-surface border-b border-slate-200/80 dark:border-white/10 text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase font-mono backdrop-blur-md items-center tracking-wider"
-              :style="gridTemplateStyle">
-              <div v-for="(col, idx) in visibleColumns" :key="col.key"
-                class="relative group flex items-center justify-between pr-2.5 h-full min-w-0">
-                <div @click="col.sortable ? toggleSort(col.key) : null"
-                  :class="['truncate flex items-center gap-0.5 min-w-0 flex-1', col.sortable ? 'cursor-pointer hover:text-cyan-700 dark:hover:text-cyan-400' : '']"
-                  :title="`${getColumnLabel(col)} (点击排序)`">
+            <!-- 顶部穿透让位垫片：未开上部工具抽屉时确保初始表头对齐悬浮控制栏下方 -->
+            <div v-if="!(isReplayPanelOpen || isIndustrialTxOpen || isTimeseriesHeatmapOpen)" class="h-[60px] shrink-0 pointer-events-none"></div>
+            <!-- 表头 (悬浮停靠在控制栏下方，允许下方滚动数据行穿透上方玻璃条) -->
+            <div
+              :class="['ui-table-head sticky z-20 px-3.5 py-2.5 items-center tracking-wider select-none', (isReplayPanelOpen || isIndustrialTxOpen || isTimeseriesHeatmapOpen) ? 'top-0' : 'top-[60px]']"
+              :style="gridTemplateStyle"
+            >
+              <div v-for="(col, idx) in visibleColumns" :key="col.key" class="relative group flex items-center justify-between pr-2.5 h-full min-w-0">
+                <div
+                  @click="col.sortable ? toggleSort(col.key) : null"
+                  :class="['truncate flex items-center gap-0.5 min-w-0 flex-1', col.sortable ? 'cursor-pointer hover:text-blue-500' : '']"
+                  :title="`${getColumnLabel(col)} (点击排序)`"
+                >
                   <span class="truncate">{{ getColumnLabel(col) }}</span>
-                  <span v-if="col.sortable && sortKey === col.key" class="text-cyan-700 dark:text-cyan-400 font-bold ml-0.5 shrink-0">
+                  <span v-if="col.sortable && sortKey === col.key" class="text-blue-500 font-bold ml-0.5 shrink-0">
                     {{ sortAsc ? '▲' : '▼' }}
                   </span>
                 </div>
-                <!-- 列宽拖拽指示线 (微边框) -->
-                <div class="absolute -right-1 top-0 bottom-0 w-3 cursor-col-resize flex items-center justify-center hover:bg-cyan-500/20 active:bg-cyan-500 transition-colors z-30 select-none"
-                  :class="resizingColumnKey === col.key ? 'bg-cyan-500/30' : ''"
+                <div
+                  class="absolute -right-1 top-0 bottom-0 w-3 cursor-col-resize flex items-center justify-center hover:bg-blue-500/20 active:bg-blue-500 transition-colors z-30 select-none"
+                  :class="resizingColumnKey === col.key ? 'bg-blue-500/30' : ''"
                   @mousedown.stop.prevent="startColResize($event, idx)"
-                  @dblclick.stop.prevent="resetColWidth(idx)">
-                  <div class="w-[1px] h-3 bg-slate-300 dark:bg-white/10 group-hover:bg-cyan-500 transition-colors"></div>
+                  @dblclick.stop.prevent="resetColWidth(idx)"
+                >
+                  <div class="w-[1px] h-3 group-hover:bg-blue-500 transition-colors" style="background: var(--border-strong);"></div>
                 </div>
               </div>
             </div>
@@ -388,318 +603,495 @@
             <!-- 虚拟滚动行 -->
             <div :style="{ height: totalHeight + 'px', position: 'relative' }">
               <div :style="{ transform: `translateY(${offsetY}px)`, position: 'absolute', top: 0, left: 0, right: 0 }">
-                <div v-for="(pkt, vIdx) in visiblePackets" :key="pkt.id"
+                <div
+                  v-for="(pkt, vIdx) in visiblePackets"
+                  :key="pkt.id"
                   @click="handleRowClick($event, pkt, startIdx + vIdx)"
                   @dblclick="openDetailModal(pkt)"
                   @contextmenu.prevent="openContextMenu($event, pkt)"
-                  :style="gridTemplateStyle"
+                  :style="{ ...gridTemplateStyle, borderColor: 'var(--border-subtle)' }"
                   :class="[
-                    'px-3.5 py-1.5 text-xs font-mono border-b border-slate-200/60 dark:border-white/[0.04] cursor-pointer items-center transition-colors',
-                    selectedPacket?.id === pkt.id ? 'bg-cyan-500/15 border-l-2 border-cyan-600 dark:border-cyan-400 font-semibold text-slate-900 dark:text-white shadow-inner' :
-                    selectedPackets.has(pkt.id) ? 'bg-indigo-500/15 text-slate-900 dark:text-slate-100' :
-                    pkt.entropy_level === 'critical' ? 'bg-rose-500/10 hover:bg-rose-500/15 text-rose-900 dark:text-rose-200' :
-                    pkt.id % 2 === 0 ? 'bg-slate-500/[0.02] dark:bg-white/[0.015] hover:bg-slate-500/[0.06] dark:hover:bg-white/[0.04] text-slate-800 dark:text-slate-200' :
-                    'hover:bg-slate-500/[0.06] dark:hover:bg-white/[0.04] text-slate-800 dark:text-slate-200'
-                  ]">
-                  <!-- 1. 序号 (经典 7 列之 1 - 墨青高对比度，支持勾选) -->
-                  <div v-if="isColVisible('id')" class="font-bold text-cyan-800 dark:text-cyan-300 font-mono min-w-0 truncate flex items-center gap-1.5" :title="`报文帧序号 #${pkt.id} (点击勾选)`">
-                    <input type="checkbox" :checked="selectedPackets.has(pkt.id)" @click.stop="togglePacketCheck(pkt)"
-                      class="rounded text-indigo-600 focus:ring-0 cursor-pointer w-3 h-3 shrink-0 accent-indigo-600">
+                    'h-[34px] px-3.5 text-xs border-b cursor-pointer items-center transition-colors overflow-hidden',
+                    selectedPacket?.id === pkt.id ? 'bg-blue-500/12 border-l-[3px] border-blue-500 font-semibold' :
+                    selectedPackets.has(pkt.id) ? 'bg-indigo-500/12' :
+                    pkt.entropy_level === 'critical' ? 'bg-rose-500/8 hover:bg-rose-500/15' :
+                    'hover:bg-[var(--surface-hover)]'
+                  ]"
+                >
+                  <!-- 1. 序号 -->
+                  <div v-if="isColVisible('id')" class="font-semibold text-blue-600 dark:text-sky-400 ui-num min-w-0 truncate flex items-center gap-1.5" :title="`报文帧序号 #${pkt.id}`">
+                    <input
+                      type="checkbox"
+                      :checked="selectedPackets.has(pkt.id)"
+                      @click.stop="togglePacketCheck(pkt)"
+                      class="rounded focus:ring-0 cursor-pointer w-3.5 h-3.5 shrink-0 accent-blue-600"
+                    />
                     <span class="truncate">#{{ pkt.id }}</span>
                   </div>
 
-                  <!-- 2. 精准时间 (经典 7 列之 2 - 沉稳灰阶) -->
-                  <div v-if="isColVisible('timestamp')" class="text-[11px] text-slate-600 dark:text-slate-300 font-mono truncate min-w-0" :title="pkt.timestamp">
+                  <!-- 2. 精准时间 -->
+                  <div v-if="isColVisible('timestamp')" class="text-[11px] ui-num truncate min-w-0" style="color: var(--text-muted);" :title="pkt.timestamp">
                     {{ pkt.timestamp }}
                   </div>
 
-                  <!-- 3. 源端点 (经典 7 列之 3) -->
-                  <div v-if="isColVisible('src_endpoint')" class="text-[11px] truncate font-mono flex items-center gap-1 min-w-0" :title="formatEndpointTitle(pkt.src_ip, pkt.src_port, pkt)">
+                  <!-- 3. 源端点 -->
+                  <div v-if="isColVisible('src_endpoint')" class="text-[11px] truncate ui-num flex items-center gap-1 min-w-0" :title="formatEndpointTitle(pkt.src_ip, pkt.src_port, pkt)">
                     <template v-if="pkt.transport === 'SERIAL' || pkt.direction?.startsWith('SERIAL')">
-                      <span :class="['font-bold shrink-0 font-mono flex items-center gap-1 px-1.5 py-0.2 rounded border text-[10px] shadow-2xs', getSerialBadgeStyle(pkt.src_ip || 'COM')]">
-                        <span>📟</span>
+                      <span :class="['font-semibold shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded border text-[11px]', getSerialBadgeStyle(pkt.src_ip || 'COM')]">
+                        <AppIcon name="serial" :size="11" />
                         <span>{{ pkt.src_ip || 'COM' }}</span>
                       </span>
                     </template>
                     <template v-else-if="pkt.transport === 'USB' || pkt.direction?.startsWith('USB')">
-                      <span class="font-bold text-purple-800 dark:text-purple-300 shrink-0 font-mono flex items-center gap-1">
-                        <span>🔌</span>
+                      <span class="font-semibold text-purple-600 dark:text-purple-300 shrink-0 flex items-center gap-1">
+                        <AppIcon name="usb" :size="11" />
                         <span>{{ pkt.src_ip || 'USB' }}</span>
                       </span>
                     </template>
                     <template v-else>
-                      <span class="font-bold text-slate-800 dark:text-slate-200 truncate hover:text-cyan-700 dark:hover:text-cyan-300 hover:underline cursor-pointer transition-colors"
-                        @click.stop="openIpDossier(pkt.src_ip)" title="点击查阅该 IP 全息档案">
+                      <span
+                        class="font-semibold truncate hover:text-blue-500 hover:underline cursor-pointer transition-colors"
+                        style="color: var(--text-primary);"
+                        @click.stop="openIpDossier(pkt.src_ip)"
+                        title="点击查阅该 IP 全息档案"
+                      >
                         {{ formatEndpoint(pkt.src_ip, pkt.src_port) }}
                       </span>
-                      <span v-if="getRemoteIpTag(pkt)" class="text-[9px] text-cyan-900 dark:text-cyan-300 font-sans px-1 py-0.2 rounded bg-cyan-100/90 dark:bg-cyan-500/15 border border-cyan-300/80 dark:border-cyan-500/25 shrink-0 font-bold" :title="getRemoteIpLocation(pkt)">
+                      <span
+                        v-if="getRemoteIpTag(pkt)"
+                        class="text-[11px] text-blue-700 dark:text-sky-300 px-1.5 py-0.5 rounded bg-blue-500/12 border border-blue-500/25 shrink-0 font-medium"
+                        :title="getRemoteIpLocation(pkt)"
+                      >
                         {{ getRemoteIpTag(pkt) }}
                       </span>
                     </template>
                   </div>
 
-                  <!-- 4. 目标端点 (经典 7 列之 4) -->
-                  <div v-if="isColVisible('dst_endpoint')" class="text-[11px] font-mono text-slate-800 dark:text-slate-200 truncate min-w-0" :title="formatEndpointTitle(pkt.dst_ip, pkt.dst_port, pkt)">
-                    <span class="truncate hover:text-cyan-700 dark:hover:text-cyan-300 hover:underline cursor-pointer transition-colors font-medium"
-                      @click.stop="openIpDossier(pkt.dst_ip)">
+                  <!-- 4. 目标端点 -->
+                  <div v-if="isColVisible('dst_endpoint')" class="text-[11px] ui-num truncate min-w-0" :title="formatEndpointTitle(pkt.dst_ip, pkt.dst_port, pkt)">
+                    <span
+                      class="truncate hover:text-blue-500 hover:underline cursor-pointer transition-colors font-medium"
+                      style="color: var(--text-primary);"
+                      @click.stop="openIpDossier(pkt.dst_ip)"
+                    >
                       {{ formatEndpoint(pkt.dst_ip, pkt.dst_port) }}
                     </span>
                   </div>
 
-                  <!-- 5. 规约协议 (经典 7 列之 5) -->
+                  <!-- 5. 规约协议 -->
                   <div v-if="isColVisible('protocol')" class="min-w-0 truncate">
-                    <span :class="['px-2 py-0.5 rounded text-[9px] font-bold truncate block max-w-full shadow-2xs', protocolColor(pkt.protocol)]">
+                    <span :class="['px-2 py-0.5 rounded text-[11px] font-semibold truncate block max-w-full', protocolColor(pkt.protocol)]">
                       {{ pkt.protocol }}
                     </span>
                   </div>
 
-                  <!-- 6. 载荷大小 (经典 7 列之 6) -->
-                  <div v-if="isColVisible('length')" class="text-[11px] text-slate-600 dark:text-slate-300 font-mono truncate min-w-0 text-right pr-2 font-medium">
+                  <!-- 6. 载荷大小 -->
+                  <div v-if="isColVisible('length')" class="text-[11px] ui-num truncate min-w-0 text-right pr-2 font-medium" style="color: var(--text-secondary);">
                     {{ pkt.length }} B
                   </div>
 
-                  <!-- 7. 应用层解析关键信息 (经典 7 列之 7 - 结构化人机工程学高反差渲染，彻底告别浅白发飘) -->
-                  <div v-if="isColVisible('l7_summary')" class="text-[11px] font-mono truncate min-w-0 flex items-center gap-1.5"
-                    :title="getPacketL7Summary(pkt)">
-                    <span v-if="pkt.entropy_level === 'critical'" class="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_6px_#F43F5E] shrink-0"></span>
+                  <!-- 7. 应用层解析关键信息 -->
+                  <div v-if="isColVisible('l7_summary')" class="text-[11px] font-mono truncate min-w-0 flex items-center gap-1.5" :title="getPacketL7Summary(pkt)">
+                    <span v-if="pkt.entropy_level === 'critical'" class="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
 
-                    <!-- 模式 A: SYS_CTRL 系统控制事件 -->
                     <template v-if="parseL7StructuredSummary(pkt).kind === 'sys_ctrl'">
-                      <span :class="['px-1.5 py-0.2 rounded text-[9px] border shadow-2xs font-mono shrink-0', parseL7StructuredSummary(pkt).badgeClass]">
+                      <span :class="['px-1.5 py-0.5 rounded text-[11px] border font-mono shrink-0', parseL7StructuredSummary(pkt).badgeClass]">
                         {{ parseL7StructuredSummary(pkt).badge }}
                       </span>
-                      <span :class="['px-1.5 py-0.2 rounded text-[10px] font-bold font-mono shrink-0', parseL7StructuredSummary(pkt).actionClass]">
+                      <span :class="['px-1.5 py-0.5 rounded text-[11px] font-semibold font-mono shrink-0', parseL7StructuredSummary(pkt).actionClass]">
                         {{ parseL7StructuredSummary(pkt).action }}
                       </span>
-                      <span class="truncate text-slate-900 dark:text-slate-100 font-mono font-semibold">
+                      <span class="truncate font-mono font-medium" style="color: var(--text-primary);">
                         {{ parseL7StructuredSummary(pkt).detail }}
                       </span>
                     </template>
 
-                    <!-- 模式 B: ASCII + HEX 双模快速预览 (高对比度清晰色彩，彻底告别浅白反光) -->
                     <template v-else-if="parseL7StructuredSummary(pkt).kind === 'ascii_hex'">
-                      <span class="px-1.5 py-0.2 rounded text-[9px] font-bold font-mono bg-sky-100 text-sky-950 border border-sky-300 dark:bg-sky-950 dark:text-sky-300 dark:border-sky-800 shrink-0">
+                      <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold font-mono bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/25 shrink-0">
                         ASCII
                       </span>
-                      <span class="truncate max-w-[220px] text-slate-900 dark:text-slate-100 font-mono font-medium">
+                      <span class="truncate max-w-[220px] font-mono font-medium" style="color: var(--text-primary);">
                         {{ parseL7StructuredSummary(pkt).asciiText }}
                       </span>
-                      <span class="text-slate-400 dark:text-slate-500 font-sans">|</span>
-                      <span class="px-1.5 py-0.2 rounded text-[9px] font-bold font-mono bg-purple-100 text-purple-950 border border-purple-300 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800 shrink-0">
+                      <span style="color: var(--text-muted);">|</span>
+                      <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold font-mono bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/25 shrink-0">
                         HEX
                       </span>
-                      <span class="truncate text-slate-700 dark:text-slate-300 font-mono text-[10px]">
+                      <span class="truncate font-mono text-[11px]" style="color: var(--text-secondary);">
                         {{ parseL7StructuredSummary(pkt).hexText }}
                       </span>
                     </template>
 
-                    <!-- 模式 C: 规约语义前缀 + 详情 -->
                     <template v-else-if="parseL7StructuredSummary(pkt).kind === 'key_val'">
-                      <span class="font-bold text-sky-950 dark:text-sky-300 shrink-0">
+                      <span class="font-semibold text-blue-700 dark:text-sky-300 shrink-0">
                         {{ parseL7StructuredSummary(pkt).prefix }}
                       </span>
-                      <span class="text-slate-400 dark:text-slate-500 font-sans">|</span>
-                      <span class="truncate text-slate-900 dark:text-slate-100 font-mono font-medium">
+                      <span style="color: var(--text-muted);">|</span>
+                      <span class="truncate font-mono font-medium" style="color: var(--text-primary);">
                         {{ parseL7StructuredSummary(pkt).body }}
                       </span>
                     </template>
 
-                    <!-- 模式 D: 常规纯文本 -->
                     <template v-else>
-                      <span :class="[
-                        'truncate font-mono',
-                        pkt.entropy_level === 'critical' ? 'text-rose-950 dark:text-rose-300 font-bold' : 'text-slate-900 dark:text-slate-100 font-semibold'
-                      ]">
+                      <span :class="['truncate font-mono font-medium', pkt.entropy_level === 'critical' ? 'text-rose-600 dark:text-rose-300 font-semibold' : '']" :style="pkt.entropy_level === 'critical' ? {} : { color: 'var(--text-primary)' }">
                         {{ parseL7StructuredSummary(pkt).plainText }}
                       </span>
                     </template>
                   </div>
 
-                  <!-- 以下为高级兼容扩展列 (用户可通过列配置自由选择开启) -->
+                  <!-- 高级扩展列 -->
                   <div v-if="isColVisible('direction')" class="min-w-0 truncate">
-                    <span :class="['px-1.5 py-0.2 rounded text-[9px] font-bold border shadow-2xs inline-block truncate max-w-full', directionBadgeClass(pkt.direction)]">
-                      {{ pkt.direction === 'HONEYPOT_RECV' ? '🍯 诱捕' : pkt.direction }}
+                    <span :class="['px-1.5 py-0.5 rounded text-[11px] font-semibold border inline-block truncate max-w-full', directionBadgeClass(pkt.direction)]">
+                      {{ pkt.direction === 'HONEYPOT_RECV' ? '诱捕' : pkt.direction }}
                     </span>
                   </div>
 
-                  <div v-if="isColVisible('transport')" class="text-[11px] font-bold truncate min-w-0"
-                    :class="pkt.transport === 'SERIAL' ? 'text-indigo-700 dark:text-indigo-400' : pkt.transport === 'USB' ? 'text-purple-700 dark:text-purple-400' : 'text-slate-700 dark:text-slate-300'">
+                  <div
+                    v-if="isColVisible('transport')"
+                    class="text-[11px] font-semibold truncate min-w-0"
+                    :class="pkt.transport === 'SERIAL' ? 'text-indigo-600 dark:text-indigo-300' : pkt.transport === 'USB' ? 'text-purple-600 dark:text-purple-300' : ''"
+                    :style="pkt.transport === 'SERIAL' || pkt.transport === 'USB' ? {} : { color: 'var(--text-secondary)' }"
+                  >
                     {{ pkt.transport }}
                   </div>
 
-                  <div v-if="isColVisible('src_ip')" class="text-[11px] truncate font-mono flex items-center gap-1 min-w-0" :title="formatRemoteIp(pkt)">
-                    <span class="font-bold text-slate-800 dark:text-slate-200 truncate hover:text-cyan-700 dark:hover:text-cyan-300 cursor-pointer" @click.stop="openIpDossier(pkt.src_ip)">{{ pkt.src_ip || 'LOCAL' }}</span>
-                    <span v-if="getRemoteIpTag(pkt)" class="text-[9px] text-cyan-900 dark:text-cyan-300 font-sans px-1 py-0.2 rounded bg-cyan-100/90 dark:bg-cyan-500/15 border border-cyan-300/80 dark:border-cyan-500/25 shrink-0 font-bold">{{ getRemoteIpTag(pkt) }}</span>
-                  </div>
-
-                  <div v-if="isColVisible('src_port')" class="text-[11px] font-mono text-slate-700 dark:text-slate-300 truncate min-w-0">
-                    {{ pkt.src_port > 0 ? pkt.src_port : '-' }}
-                  </div>
-
-                  <div v-if="isColVisible('dst_port')" class="text-[11px] font-mono text-slate-700 dark:text-slate-300 truncate min-w-0">
-                    {{ pkt.dst_port > 0 ? pkt.dst_port : '-' }}
-                  </div>
-
-                  <div v-if="isColVisible('entropy')" class="text-[11px] truncate min-w-0">
-                    <span :class="[
-                      pkt.entropy >= 7.5 ? 'text-rose-800 dark:text-rose-300 font-bold bg-rose-500/15 px-1 py-0.2 rounded border border-rose-500/30' :
-                      pkt.entropy >= 6.0 ? 'text-amber-800 dark:text-amber-300 font-bold bg-amber-500/15 px-1 py-0.2 rounded border border-amber-500/30' :
-                      'text-slate-600 dark:text-slate-400 font-mono']">
+                  <div v-if="isColVisible('entropy')" class="text-[11px] ui-num truncate min-w-0">
+                    <span
+                      :class="[
+                        pkt.entropy >= 7.5 ? 'text-rose-700 dark:text-rose-300 font-semibold bg-rose-500/15 px-1.5 py-0.5 rounded border border-rose-500/25' :
+                        pkt.entropy >= 6.0 ? 'text-amber-700 dark:text-amber-300 font-semibold bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-500/25' :
+                        'text-[var(--text-muted)]'
+                      ]"
+                    >
                       {{ pkt.entropy ? pkt.entropy.toFixed(2) : '0.00' }}
                     </span>
                   </div>
 
-                  <div v-if="isColVisible('mac_src')" class="text-[10px] text-slate-600 dark:text-slate-400 truncate min-w-0" :title="pkt.mac_src">
+                  <div v-if="isColVisible('mac_src')" class="text-[11px] font-mono truncate min-w-0" style="color: var(--text-muted);" :title="pkt.mac_src">
                     {{ pkt.mac_src || 'N/A' }}
                   </div>
 
-                  <div v-if="isColVisible('payload')" class="text-[11px] text-slate-700 dark:text-slate-300 truncate font-mono min-w-0" :title="pkt.raw_text || pkt.payload_hex">
+                  <div v-if="isColVisible('payload')" class="text-[11px] truncate font-mono min-w-0" style="color: var(--text-secondary);" :title="pkt.raw_text || pkt.payload_hex">
                     {{ pkt.raw_text || pkt.payload_hex }}
                   </div>
                 </div>
               </div>
             </div>
-
+            <!-- 底部穿透垫片：仅在存在报文列表时撑开末尾，确保最底行可滚动越过 Dock 完整查阅 -->
+            <div v-if="filteredPackets.length > 0" class="h-[68px] shrink-0 pointer-events-none"></div>
           </div>
         </div>
 
-        <!-- 空状态提示 (严格锚定可视视口中央，彻底消除超宽 minWidth 导致的偏右问题) -->
-        <div v-if="filteredPackets.length === 0"
-          class="absolute inset-x-0 top-10 bottom-0 flex flex-col items-center justify-center text-slate-400 text-xs gap-2 select-none pointer-events-none z-10 px-4 text-center">
-          <div class="w-12 h-12 rounded-2xl glass-surface border border-slate-200/60 dark:border-white/10 flex items-center justify-center text-xl mb-1 shadow-lg text-cyan-500 dark:text-cyan-400 pointer-events-auto">
-            🌐
+        <!-- 空状态引导工作台 (严格零造假，避让上下悬浮玻璃栏居中，直显四大物理/无线总线入口) -->
+        <div
+          v-if="filteredPackets.length === 0"
+          class="absolute inset-x-0 top-20 bottom-20 flex items-center justify-center z-10 px-6"
+        >
+          <div v-if="packets.length === 0" class="max-w-3xl w-full flex flex-col items-center text-center gap-4">
+            <div class="w-12 h-12 rounded-2xl ui-nav-glass flex items-center justify-center text-[var(--accent-primary-text)] shadow-sm">
+              <AppIcon name="radar" :size="24" />
+            </div>
+            <div class="space-y-1">
+              <h3 class="text-[15px] font-semibold tracking-tight" style="color: var(--text-primary);">
+                全总线工业网络分析引擎已就绪
+              </h3>
+              <p class="text-xs max-w-xl mx-auto leading-relaxed" style="color: var(--text-muted);">
+                同时支持物理网卡、COM 串口、USB 描述符/URB 及无线 Wi-Fi / 蓝牙四大物理通信通道，请选择下方任一总线入口直接启动：
+              </p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full text-left">
+              <!-- 1. NIC 网卡捕获 -->
+              <button @click="$emit('startCapture')"
+                class="ui-sub-card p-3.5 rounded-2xl hover:border-[var(--accent-primary)]/45 hover:bg-[var(--surface-hover)] transition-all cursor-pointer group flex flex-col gap-2">
+                <div class="flex items-center justify-between">
+                  <div class="w-8 h-8 rounded-xl bg-[var(--accent-primary-soft)] text-[var(--accent-primary-text)] flex items-center justify-center">
+                    <AppIcon name="play" :size="15" />
+                  </div>
+                  <span class="ui-pill text-[11px] ui-num px-2 py-0.5 rounded-full">
+                    {{ interfaces.length }} 网卡
+                  </span>
+                </div>
+                <div>
+                  <div class="text-xs font-semibold flex items-center justify-between" style="color: var(--text-primary);">
+                    <span>网卡捕获 (NIC)</span>
+                    <AppIcon name="arrow-right" :size="12" class="opacity-50 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+                  <p class="text-[11px] mt-1 leading-snug" style="color: var(--text-muted);">启用 Npcap / Raw Socket 实时抓取 L2–L7 流量</p>
+                </div>
+              </button>
+
+              <!-- 2. COM 物理串口 -->
+              <button @click="$emit('switchWorkbench', 'hardware')"
+                class="ui-sub-card p-3.5 rounded-2xl hover:border-indigo-500/45 hover:bg-[var(--surface-hover)] transition-all cursor-pointer group flex flex-col gap-2">
+                <div class="flex items-center justify-between">
+                  <div class="w-8 h-8 rounded-xl bg-indigo-500/14 text-indigo-600 dark:text-indigo-300 border border-indigo-500/20 flex items-center justify-center">
+                    <AppIcon name="serial" :size="15" />
+                  </div>
+                  <span class="ui-pill text-[11px] ui-num px-2 py-0.5 rounded-full">
+                    {{ serialPorts.length }} 串口
+                  </span>
+                </div>
+                <div>
+                  <div class="text-xs font-semibold flex items-center justify-between" style="color: var(--text-primary);">
+                    <span>COM 串口总线</span>
+                    <AppIcon name="arrow-right" :size="12" class="opacity-50 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+                  <p class="text-[11px] mt-1 leading-snug" style="color: var(--text-muted);">
+                    {{ serialPorts.length > 0 ? `已就绪 ${selectedSerial || serialPorts[0]}，支持 RS-232/485 监听与收发` : '查看物理串口清单、波特率配置与双向交互' }}
+                  </p>
+                </div>
+              </button>
+
+              <!-- 3. USB 总线与 URB -->
+              <button @click="$emit('switchWorkbench', 'hardware')"
+                class="ui-sub-card p-3.5 rounded-2xl hover:border-purple-500/45 hover:bg-[var(--surface-hover)] transition-all cursor-pointer group flex flex-col gap-2">
+                <div class="flex items-center justify-between">
+                  <div class="w-8 h-8 rounded-xl bg-purple-500/14 text-purple-600 dark:text-purple-300 border border-purple-500/20 flex items-center justify-center">
+                    <AppIcon name="usb" :size="15" />
+                  </div>
+                  <span class="ui-pill text-[11px] ui-num px-2 py-0.5 rounded-full">
+                    {{ usbDevices.length }} 设备
+                  </span>
+                </div>
+                <div>
+                  <div class="text-xs font-semibold flex items-center justify-between" style="color: var(--text-primary);">
+                    <span>USB 外设总线</span>
+                    <AppIcon name="arrow-right" :size="12" class="opacity-50 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+                  <p class="text-[11px] mt-1 leading-snug" style="color: var(--text-muted);">物理 USB 设备画像、PnP 热插拔审计与 URB 解析</p>
+                </div>
+              </button>
+
+              <!-- 4. Wi-Fi 与蓝牙无线 -->
+              <button @click="$emit('openWireless')"
+                class="ui-sub-card p-3.5 rounded-2xl hover:border-sky-500/45 hover:bg-[var(--surface-hover)] transition-all cursor-pointer group flex flex-col gap-2">
+                <div class="flex items-center justify-between">
+                  <div class="w-8 h-8 rounded-xl bg-sky-500/14 text-sky-600 dark:text-sky-300 border border-sky-500/20 flex items-center justify-center">
+                    <AppIcon name="wifi" :size="15" />
+                  </div>
+                  <span class="ui-pill text-[11px] ui-num px-2 py-0.5 rounded-full">
+                    Wi-Fi · BLE
+                  </span>
+                </div>
+                <div>
+                  <div class="text-xs font-semibold flex items-center justify-between" style="color: var(--text-primary);">
+                    <span>无线 Wi-Fi / 蓝牙</span>
+                    <AppIcon name="arrow-right" :size="12" class="opacity-50 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+                  <p class="text-[11px] mt-1 leading-snug" style="color: var(--text-muted);">802.11 频谱热力、BLE HCI 距离雷达与单帧解码</p>
+                </div>
+              </button>
+            </div>
+
+            <button @click="isImportOpen = true"
+              class="ui-pill px-4 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 cursor-pointer hover:bg-[var(--surface-glass-pill-hover)]">
+              <AppIcon name="upload" :size="13" />
+              <span>或导入本地 .pcap / .pcapng 离线数据包执行还原分析</span>
+            </button>
           </div>
-          <span class="text-sm font-bold text-slate-800 dark:text-slate-100">暂无匹配的数据包流</span>
-          <span class="text-[11px] text-slate-500 dark:text-slate-400 font-mono max-w-md">
-            请检查过滤条件，或点击顶部 HUD 动态岛【启动网卡嗅探】
-          </span>
+
+          <EmptyState
+            v-else
+            icon="search"
+            title="未找到匹配当前条件的报文"
+            description="已捕获的报文均不符合当前过滤条件，请调整关键词或切换协议范围。"
+          >
+            <template #actions>
+              <button @click="clearDisplayFilter(); filterProtocol = ''" class="ui-btn-secondary px-3 py-1 text-xs">
+                重置所有筛选条件
+              </button>
+            </template>
+          </EmptyState>
         </div>
 
-        <!-- 多选快捷操作悬浮舱 (Floating Action Capsule) -->
-        <div v-if="selectedPackets.size >= 2"
-          class="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-2xl bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-xl border border-indigo-500/60 shadow-[0_10px_35px_rgba(0,0,0,0.5)] flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
-          <div class="flex items-center gap-2 text-xs font-mono font-bold text-indigo-300">
-            <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
-            <span>已选定 <strong class="text-white">{{ selectedPackets.size }}</strong> 帧报文</span>
+        <!-- 多选快捷操作悬浮舱 -->
+        <div
+          v-if="selectedPackets.size >= 2"
+          class="ui-modal-surface absolute bottom-14 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-2xl flex items-center gap-3 select-none"
+        >
+          <span class="lens-edge-lip" aria-hidden="true"></span>
+          <div class="flex items-center gap-2 text-xs font-semibold text-indigo-600 dark:text-indigo-300 ui-num">
+            <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+            <span>已选定 <strong style="color: var(--text-primary);">{{ selectedPackets.size }}</strong> 帧报文</span>
           </div>
 
-          <div class="h-4 w-px bg-slate-700"></div>
+          <div class="h-4 w-px" style="background: var(--border-strong);"></div>
 
-          <!-- 动作按钮组 -->
           <div class="flex items-center gap-2 text-xs">
-            <!-- 恰好选定 2 帧：一键双报文差分 -->
-            <button v-if="selectedPackets.size === 2" @click="openDiffWithSelected2"
-              class="px-3 py-1 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
-              title="一键对比已勾选的 2 帧报文">
-              <span>⚖️</span>
-              <span>双报文协议差分 (A vs B)</span>
+            <button v-if="selectedPackets.size === 2" @click="openDiffWithSelected2" class="ui-btn-primary px-3 py-1 text-xs">
+              <AppIcon name="scale" :size="13" />
+              <span>双报文差分 (A vs B)</span>
             </button>
-
-            <!-- 选定 >= 2 帧：多报文矩阵比对 -->
-            <button @click="openMatrixTab"
-              class="px-3 py-1 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
-              title="切换至矩阵比对工作台">
-              <span>🔲</span>
-              <span>多报文矩阵比对</span>
+            <button @click="openGlobalMultiDiffWithSelected" class="ui-btn-primary px-3 py-1 text-xs">
+              <AppIcon name="git-branch" :size="13" />
+              <span>送入全局多组精密比对 ({{ selectedPackets.size }})</span>
             </button>
-
-            <!-- 批量存为基线 -->
-            <button @click="saveSelectedPacketsAsBaseline"
-              class="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold flex items-center gap-1 transition-all cursor-pointer"
-              title="将已选报文载荷持久化存入基线库">
-              <span>💾</span>
+            <button @click="openMatrixTab" class="ui-btn-secondary px-2.5 py-1 text-xs">
+              <AppIcon name="layers" :size="13" />
+              <span>侧栏矩阵</span>
+            </button>
+            <button @click="saveSelectedPacketsAsBaseline" class="ui-btn-secondary px-2.5 py-1 text-xs">
+              <AppIcon name="archive" :size="13" />
               <span>存为特征基线</span>
             </button>
-
-            <!-- 清空选择 -->
-            <button @click="clearSelectedPackets"
-              class="px-2 py-1 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer text-xs"
-              title="清空已选数据包">
-              ✕ 取消
+            <button @click="clearSelectedPackets" class="ui-btn-secondary px-2 py-1 text-xs">
+              <AppIcon name="close" :size="12" />
+              <span>取消</span>
             </button>
+          </div>
+        </div>
+
+        <!-- 底部悬浮贯穿控制岛 (Floating Liquid Glass Dock Over Stream) -->
+        <div class="pointer-events-none absolute bottom-3 inset-x-3 flex justify-center z-40 overflow-x-auto custom-scrollbar-none">
+          <div class="bottom-liquid-dock pointer-events-auto relative">
+            <span class="lens-edge-lip" aria-hidden="true"></span>
+            <div class="scope-group">
+              <button class="scope-btn" :class="{ active: currentScopeFilter === 'all' }" @click="setScope('all')" title="全量流量 (快捷键 0)">
+                <span>全量流</span>
+                <span class="kbd-badge">0</span>
+              </button>
+              <button class="scope-btn" :class="{ active: currentScopeFilter === 'alert' }" @click="setScope('alert')" title="告警与高熵快筛 (快捷键 A)">
+                <AppIcon name="alert" :size="12" class="text-rose-500" />
+                <span>告警</span>
+                <span class="kbd-badge">A</span>
+              </button>
+              <button class="scope-btn" :class="{ active: currentScopeFilter === 'industrial' }" @click="setScope('industrial')" title="仅显示工控 OT 规约 (快捷键 I)">
+                <AppIcon name="zap" :size="12" class="text-amber-500" />
+                <span>工控</span>
+                <span class="kbd-badge">I</span>
+              </button>
+              <button class="scope-btn" :class="{ active: currentScopeFilter === 'serial_usb' }" @click="setScope('serial_usb')" title="仅显示物理总线 (快捷键 B)">
+                <AppIcon name="usb" :size="12" class="text-indigo-500" />
+                <span>总线</span>
+                <span class="kbd-badge">B</span>
+              </button>
+            </div>
+
+            <div class="telemetry-capsule shrink-0">
+              <div class="flex items-center gap-1">
+                <span class="opacity-65 text-[11px] hidden xl:inline">速率:</span>
+                <b class="ui-num" style="color: var(--text-primary);">{{ telemetryThroughputMbps }}M</b>
+              </div>
+              <span class="opacity-20">|</span>
+              <div class="flex items-center gap-1">
+                <span class="opacity-65 text-[11px] hidden xl:inline">包率:</span>
+                <b class="ui-num" style="color: var(--text-primary);">{{ telemetryPps.toLocaleString() }}pps</b>
+              </div>
+              <span class="opacity-20">|</span>
+              <div class="flex items-center gap-1">
+                <span class="opacity-65 text-[11px] hidden xl:inline">总帧:</span>
+                <b class="text-blue-600 dark:text-sky-400 ui-num">{{ packets.length.toLocaleString() }}</b>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1 shrink-0">
+              <button class="action-deck-btn" :class="{ active: isAutoScroll }" @click="isAutoScroll = !isAutoScroll" title="开启/关闭随流滚屏 (快捷键 S)">
+                <span>随流滚屏</span>
+                <span class="kbd-badge">S</span>
+              </button>
+              <button class="action-deck-btn" :class="{ active: isPaused }" @click="isPaused ? $emit('resumeCapture') : $emit('pauseCapture')" title="暂停/恢复嗅探 (快捷键 Space)">
+                <AppIcon :name="isPaused ? 'play' : 'pause'" :size="12" />
+                <span>{{ isPaused ? '恢复' : '暂停' }}</span>
+                <span class="kbd-badge">Space</span>
+              </button>
+              <button class="action-deck-btn" @click="$emit('clearData')" title="清空缓冲区 (快捷键 ⌥K)">
+                <span>清空</span>
+                <span class="kbd-badge">⌥K</span>
+              </button>
+              <button class="action-deck-btn" @click="isExportOpen = true" title="导出当前 PCAPng 原始包 (快捷键 ⌘E)">
+                <span>导出</span>
+                <span class="kbd-badge">⌘E</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- 3.2 右侧：常驻【全维深度解构与智能分析工坊】 (宽约 480px) -->
-      <div class="w-[480px] flex flex-col bg-black/40 shrink-0 overflow-hidden">
-        <!-- 视窗标题栏与子视图分段切换 -->
-        <div class="px-3 py-1.5 border-b border-white/10 flex items-center justify-between bg-white/[0.02] shrink-0">
-          <!-- 分段切换器 -->
-          <div class="flex glass-pill p-0.5 rounded-xl text-[10px]">
-            <button @click="activeBottomTab = 'hexdump'" :class="['px-2.5 py-1 rounded-lg transition-all cursor-pointer', activeBottomTab === 'hexdump' ? 'bg-cyan-500/25 text-cyan-300 font-bold' : 'text-slate-400 hover:text-white']">
-              L7深度解构
-            </button>
-            <button @click="activeBottomTab = 'dialogue'" :class="['px-2.5 py-1 rounded-lg transition-all cursor-pointer', activeBottomTab === 'dialogue' ? 'bg-indigo-500/25 text-indigo-300 font-bold' : 'text-slate-400 hover:text-white']">
-              会话观测
-            </button>
-            <button @click="activeBottomTab = 'iographs'" :class="['px-2.5 py-1 rounded-lg transition-all cursor-pointer', activeBottomTab === 'iographs' ? 'bg-purple-500/25 text-purple-300 font-bold' : 'text-slate-400 hover:text-white']">
-              IO时序
-            </button>
-            <button @click="activeBottomTab = 'wave'" :class="['px-2.5 py-1 rounded-lg transition-all cursor-pointer', activeBottomTab === 'wave' ? 'bg-amber-500/25 text-amber-300 font-bold' : 'text-slate-400 hover:text-white']">
-              示波追踪
-            </button>
-            <button @click="openMatrixTab" :class="['px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1', activeBottomTab === 'matrix' ? 'bg-indigo-600 text-white font-bold shadow-xs' : 'text-slate-400 hover:text-white']"
-              title="多报文矩阵特征比对">
-              <span>矩阵比对</span>
-              <span v-if="selectedPackets.size >= 2" class="px-1.5 py-0.2 rounded-full text-[9px] bg-indigo-500 text-white font-mono font-bold">{{ selectedPackets.size }}</span>
-            </button>
+      <!-- 3.2 随行协议解构抽屉 (Adaptive Inspector Drawer) -->
+      <aside
+        :class="[
+          'flex flex-col border-l shrink-0 overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] z-30 select-text',
+          isInspectorOpen ? 'w-[300px] xl:w-[350px] 2xl:w-[400px] max-w-[38%] opacity-100' : 'w-0 opacity-0 pointer-events-none'
+        ]"
+        style="background: var(--surface-content-alt); border-color: var(--border-subtle); color: var(--text-primary);"
+      >
+        <div class="px-4 py-2.5 border-b flex items-center justify-between shrink-0" style="border-color: var(--border-subtle);">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="drawer-icon-capsule text-blue-500">
+              <AppIcon name="code" :size="14" />
+            </div>
+            <div class="min-w-0">
+              <div class="text-xs font-semibold tracking-tight truncate" style="color: var(--text-primary);">随行协议解构 (Inspector)</div>
+              <div class="text-[11px] ui-num truncate max-w-[180px]" style="color: var(--text-muted);" v-if="selectedPacket">
+                帧 #{{ selectedPacket.id }} · {{ selectedPacket.protocol }} · {{ selectedPacket.length }}B
+              </div>
+            </div>
           </div>
 
-          <div v-if="selectedPacket && activeBottomTab === 'hexdump'" class="flex items-center gap-1.5">
-            <span class="text-[10px] font-mono text-cyan-950 dark:text-cyan-300 bg-cyan-100/90 dark:bg-cyan-400/10 px-2 py-0.5 rounded border border-cyan-300 dark:border-cyan-400/20 font-bold">
-              #{{ selectedPacket.id }} {{ selectedPacket.protocol }}
-            </span>
-            <button @click="openDetailModal(selectedPacket)" class="text-[10px] text-slate-400 hover:text-white transition-colors" title="全屏全景剖析">
-              ↗ 全景
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button v-if="selectedPacket" @click="queuePacketForDiff(selectedPacket)"
+              class="px-2 py-1 rounded-lg bg-emerald-500/12 hover:bg-emerald-500 text-emerald-700 dark:text-emerald-300 hover:text-white border border-emerald-500/30 text-[11px] font-semibold cursor-pointer transition-colors"
+              title="加入全局多组比对队列">
+              + 入队比对
+            </button>
+            <div class="flex glass-pill p-0.5 rounded-xl text-[11px]">
+              <button @click="activeBottomTab = 'hexdump'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer font-medium', activeBottomTab === 'hexdump' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">L7</button>
+              <button @click="activeBottomTab = 'dialogue'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer font-medium', activeBottomTab === 'dialogue' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">会话</button>
+              <button @click="activeBottomTab = 'wave'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer font-medium', activeBottomTab === 'wave' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">示波</button>
+            </div>
+            <button @click="isInspectorOpen = false" class="drawer-close-btn" title="收起随行解构抽屉 (ESC 或 R)">
+              <AppIcon name="close" :size="13" />
             </button>
           </div>
-          <span v-else class="text-[10px] text-slate-500 font-mono">
-            {{ activeBottomTab === 'dialogue' ? '双向交互' : activeBottomTab === 'iographs' ? '纳秒聚合' : activeBottomTab === 'wave' ? '载荷波形' : activeBottomTab === 'matrix' ? '矩阵特征对齐' : '待命' }}
-          </span>
         </div>
 
         <!-- 子视图 1: 默认 L7 深度解构与 HexDump -->
-        <div v-if="activeBottomTab === 'hexdump'" class="flex-1 overflow-y-auto p-3 space-y-2.5 font-mono text-[11px] custom-scrollbar">
+        <div v-if="activeBottomTab === 'hexdump'" class="flex-1 overflow-y-auto p-3.5 space-y-3 text-xs custom-scrollbar">
           <template v-if="selectedPacket">
-            <!-- 卡片 1: 传输与网络层拓扑 (L2 - L4) -->
-            <div class="glass-pill rounded-xl p-2.5 border border-white/10 space-y-1">
-              <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-sans">传输与网络层拓扑 (L2 - L4)</div>
-              <div class="text-slate-300 text-[10px]">
-                Ethernet II · Src: {{ selectedPacket.mac_src || '00:1B:21:A4:B0:12' }} ➔ Dst: {{ selectedPacket.mac_dst || '00:50:56:C0:00:08' }}
+            <div class="apple-group-card space-y-1.5">
+              <div class="group-card-title">
+                <span>传输与网络层拓扑 (L2 - L4)</span>
+                <span class="badge-subtle">{{ selectedPacket.transport || 'TCP' }}</span>
               </div>
-              <div class="text-slate-300 text-[10px]">
-                IPv4 · {{ selectedPacket.src_ip || '192.168.1.100' }} ➔ {{ selectedPacket.dst_ip || '192.168.1.20' }}
-              </div>
-              <div class="text-cyan-800 dark:text-cyan-300 text-[10px] font-medium">
-                {{ selectedPacket.transport || 'TCP' }} · 端口: {{ selectedPacket.src_port || '-' }} ➔ {{ selectedPacket.dst_port || '-' }}
+              <div class="text-[11px] leading-relaxed ui-num space-y-0.5" style="color: var(--text-secondary);">
+                <div>Ethernet II · <span class="font-mono">{{ selectedPacket.mac_src || '--' }}</span> → <span class="font-mono">{{ selectedPacket.mac_dst || '--' }}</span></div>
+                <div>IP · <span class="font-semibold" style="color: var(--text-primary);">{{ selectedPacket.src_ip || '--' }}</span> → <span class="font-semibold" style="color: var(--text-primary);">{{ selectedPacket.dst_ip || '--' }}</span></div>
+                <div class="text-blue-600 dark:text-sky-300 font-medium">端口: <span>{{ selectedPacket.src_port || '-' }}</span> → <span>{{ selectedPacket.dst_port || '-' }}</span></div>
               </div>
             </div>
 
-            <!-- 卡片 2: L7 工业协议深度解构树 -->
-            <div class="glass-pill rounded-xl p-2.5 border border-amber-400/25 bg-amber-500/[0.02] space-y-1.5">
-              <div class="flex items-center justify-between text-[10px] font-bold text-amber-900 dark:text-amber-400 uppercase tracking-wider font-sans">
-                <span>{{ l7DecodedTree.protocolTitle }}</span>
-                <span class="text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-300 dark:border-emerald-500/30 text-[9px] font-mono font-semibold">{{ l7DecodedTree.statusBadge }}</span>
+            <div class="apple-group-card space-y-2">
+              <div class="group-card-title">
+                <span style="color: var(--text-primary);">{{ l7DecodedTree.protocolTitle }}</span>
+                <span class="badge-subtle text-emerald-600 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/10">{{ l7DecodedTree.statusBadge }}</span>
               </div>
-              <div class="space-y-1 text-slate-800 dark:text-slate-200 text-[10px] font-mono">
-                <div v-for="(item, idx) in l7DecodedTree.nodes" :key="idx"
+              <div class="space-y-1 text-[11px] font-mono">
+                <div
+                  v-for="(item, idx) in l7DecodedTree.nodes"
+                  :key="idx"
                   :class="[
-                    'transition-colors group relative flex items-center justify-between py-0.5 rounded px-1 hover:bg-slate-500/5 dark:hover:bg-white/5',
-                    item.level === 1 ? 'pl-2 border-l border-amber-500/50 text-slate-800 dark:text-slate-200 font-semibold' :
-                    item.level === 2 ? 'pl-4 border-l border-cyan-500/50 text-cyan-900 dark:text-cyan-200 font-medium' :
-                    'pl-6 border-l border-emerald-500/40 text-emerald-900 dark:text-emerald-300'
-                  ]">
+                    'transition-colors group relative flex items-center justify-between py-1 rounded-lg px-2 hover:bg-[var(--surface-hover)]',
+                    item.level === 1 ? 'border-l-2 border-amber-500 font-semibold' :
+                    item.level === 2 ? 'pl-4 border-l border-blue-500 text-blue-700 dark:text-sky-300' :
+                    'pl-6 border-l border-emerald-500 text-emerald-700 dark:text-emerald-300'
+                  ]"
+                  :style="item.level === 1 ? { color: 'var(--text-primary)' } : {}"
+                >
                   <span class="truncate mr-2">{{ item.text }}</span>
                   <div v-if="item.fieldKey" class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 shrink-0">
-                    <button @click.stop="quickApplyFieldFilter(item.fieldKey, item.fieldValue, '==')"
-                      class="text-[9px] px-1 py-0.2 rounded bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 hover:bg-cyan-500/40 border border-cyan-500/30 cursor-pointer"
-                      title="作为过滤条件应用 (==)">
+                    <button
+                      @click.stop="quickApplyFieldFilter(item.fieldKey, item.fieldValue, '==')"
+                      class="text-[11px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-sky-300 border border-blue-500/25 cursor-pointer"
+                      title="作为过滤条件应用 (==)"
+                    >
                       过滤
                     </button>
-                    <button @click.stop="quickApplyFieldFilter(item.fieldKey, item.fieldValue, '!=')"
-                      class="text-[9px] px-1 py-0.2 rounded bg-rose-500/20 text-rose-800 dark:text-rose-300 hover:bg-rose-500/40 border border-rose-500/30 cursor-pointer"
-                      title="排除此字段 (!=)">
+                    <button
+                      @click.stop="quickApplyFieldFilter(item.fieldKey, item.fieldValue, '!=')"
+                      class="text-[11px] px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/25 cursor-pointer"
+                      title="排除此字段 (!=)"
+                    >
                       排除
                     </button>
                   </div>
@@ -707,37 +1099,36 @@
               </div>
             </div>
 
-            <!-- 卡片 3: 十六进制 Hex Payload Wireshark 对齐转储视窗 -->
-            <div class="glass-pill rounded-xl p-2.5 border border-white/10 space-y-1 bg-black/60">
-              <div class="flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-wider font-sans">
+            <div class="apple-group-card space-y-1.5">
+              <div class="group-card-title">
                 <span>Raw Hex Payload ({{ selectedPacket.length }} Bytes)</span>
-                <button @click="copyHex(selectedPacket.payload_hex)" class="text-cyan-800 dark:text-cyan-400 hover:underline cursor-pointer transition-colors text-[9px] flex items-center gap-1">
-                  <span>📋 复制十六进制</span>
+                <button @click="copyHex(selectedPacket.payload_hex)" class="text-blue-600 dark:text-sky-400 hover:underline cursor-pointer text-[11px] flex items-center gap-1">
+                  <AppIcon name="document" :size="12" />
+                  <span>复制 Hex</span>
                 </button>
               </div>
-              <div class="text-[10px] text-slate-800 dark:text-slate-300 leading-relaxed font-mono max-h-48 overflow-y-auto custom-scrollbar select-text">
+              <div class="hex-container max-h-52 overflow-y-auto custom-scrollbar select-text text-[11px]">
                 <div v-for="(line, idx) in formatAlignedHexDump(selectedPacket.payload_hex)" :key="idx" class="leading-relaxed whitespace-pre font-mono">
-                  <span class="text-slate-500 dark:text-slate-400">{{ line.slice(0, 6) }}</span>
-                  <span class="text-slate-700 dark:text-slate-200">{{ line.slice(6, 54) }}</span>
-                  <span class="text-cyan-800 dark:text-cyan-300 font-bold font-mono">{{ line.slice(54) }}</span>
+                  <span style="color: var(--text-muted);">{{ line.slice(0, 6) }}</span>
+                  <span style="color: var(--text-primary);">{{ line.slice(6, 54) }}</span>
+                  <span class="text-blue-600 dark:text-sky-300 font-semibold">{{ line.slice(54) }}</span>
                 </div>
-                <div v-if="!selectedPacket.payload_hex" class="text-slate-500 text-[10px] py-1">
+                <div v-if="!selectedPacket.payload_hex" class="text-[11px] py-1" style="color: var(--text-muted);">
                   (无应用层载荷)
                 </div>
               </div>
             </div>
           </template>
 
-          <div v-else class="flex-1 flex flex-col items-center justify-center py-20 text-center text-slate-500 text-xs">
-            <div class="w-10 h-10 rounded-xl glass-pill flex items-center justify-center text-slate-400 mb-2">
-              🔬
-            </div>
-            <span class="font-bold text-slate-300">报文深度语义解构视窗</span>
-            <span class="text-[10px] text-slate-500 mt-1">在左侧列表中点击任意报文<br>即可实时在此处展开 L2-L7 深度解构与 Hex 对齐视窗</span>
-          </div>
+          <EmptyState
+            v-else
+            icon="code"
+            title="报文深度语义解构视窗"
+            description="在左侧列表中点击任意报文，即可实时展开 L2-L7 深度解构与 Hex 对齐视窗。"
+          />
         </div>
 
-        <!-- 子视图 2: 双向会话交互流 (FlowDialogueInspector) -->
+        <!-- 子视图 2: 双向会话交互流 -->
         <div v-else-if="activeBottomTab === 'dialogue'" class="flex-1 overflow-hidden p-2">
           <FlowDialogueInspector
             :packets="packets"
@@ -748,148 +1139,126 @@
           />
         </div>
 
-        <!-- 子视图 3: IO Graphs 高精纳秒时序曲线 (IoGraphsPanel) -->
+        <!-- 子视图 3: IO Graphs -->
         <div v-else-if="activeBottomTab === 'iographs'" class="flex-1 overflow-hidden p-2">
           <IoGraphsPanel />
         </div>
 
-        <!-- 子视图 4: 实时示波波形追踪与解析 -->
-        <div v-else-if="activeBottomTab === 'wave'" class="flex-1 overflow-y-auto p-3 space-y-3 font-mono text-xs custom-scrollbar">
-          <div class="flex items-center justify-between text-[11px]">
-            <span class="font-bold text-slate-200">载荷示波波形追踪</span>
+        <!-- 子视图 4: 实时示波波形追踪 -->
+        <div v-else-if="activeBottomTab === 'wave'" class="flex-1 overflow-y-auto p-3 space-y-3 text-xs custom-scrollbar">
+          <div class="flex items-center justify-between">
+            <span class="font-semibold" style="color: var(--text-primary);">载荷示波波形追踪</span>
             <div class="flex items-center gap-1.5">
-              <button @click="startWave" :disabled="waveActive" class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] cursor-pointer disabled:opacity-40">
-                ▶ 开始采样
+              <button @click="startWave" :disabled="waveActive" class="ui-btn-primary bg-emerald-600 hover:bg-emerald-500 px-2.5 py-1 text-[11px]">
+                <AppIcon name="play" :size="11" />
+                <span>开始采样</span>
               </button>
-              <button @click="stopWave" :disabled="!waveActive" class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] cursor-pointer disabled:opacity-40">
-                ⏹ 停止
+              <button @click="stopWave" :disabled="!waveActive" class="ui-btn-danger px-2.5 py-1 text-[11px]">
+                <AppIcon name="stop" :size="11" />
+                <span>停止</span>
               </button>
             </div>
           </div>
-          <div class="h-44 bg-black/70 rounded-xl border border-white/10 relative overflow-hidden flex items-center justify-center">
+          <div class="h-44 rounded-xl border relative overflow-hidden flex items-center justify-center" style="background: var(--surface-input); border-color: var(--border-subtle);">
             <canvas ref="waveCanvasRef" class="w-full h-full"></canvas>
-            <div v-if="wavePoints.length === 0" class="absolute text-slate-500 text-[11px]">
+            <div v-if="wavePoints.length === 0" class="absolute text-[11px]" style="color: var(--text-muted);">
               等待采样数据点流入...
             </div>
           </div>
-          <div class="text-[10px] text-slate-400 flex justify-between">
+          <div class="text-[11px] ui-num flex justify-between" style="color: var(--text-muted);">
             <span>峰值: {{ waveMax }}</span>
             <span>谷值: {{ waveMin }}</span>
             <span>点数: {{ wavePoints.length }}</span>
           </div>
         </div>
 
-        <!-- 子视图 5: 多报文矩阵特征比对与对齐工坊 (Matrix Diff Inspector) -->
-        <div v-else-if="activeBottomTab === 'matrix'" class="flex-1 overflow-y-auto p-3 space-y-3 font-mono text-xs custom-scrollbar">
-          <!-- 顶部状态与操作条 -->
-          <div class="flex items-center justify-between text-[11px] pb-2 border-b border-white/10 flex-wrap gap-2">
+        <!-- 子视图 5: 多报文矩阵特征比对 -->
+        <div v-else-if="activeBottomTab === 'matrix'" class="flex-1 overflow-y-auto p-3 space-y-3 text-xs custom-scrollbar">
+          <div class="flex items-center justify-between pb-2 border-b flex-wrap gap-2" style="border-color: var(--border-subtle);">
             <div class="flex items-center gap-2">
-              <span class="font-bold text-slate-200">多报文矩阵特征比对</span>
-              <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold">
-                已载入 {{ matrixPayloads.length }} 组载荷
+              <span class="font-semibold" style="color: var(--text-primary);">多报文矩阵特征比对</span>
+              <span class="text-[11px] ui-num px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-semibold">
+                已载入 {{ matrixPayloads.length }} 组
               </span>
             </div>
             <div class="flex items-center gap-1.5">
-              <button @click="runMatrixCompare" :disabled="selectedPackets.size < 2"
-                class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 border border-indigo-500/30 text-[10px] cursor-pointer disabled:opacity-40 transition-colors">
-                ⟳ 重新计算
+              <button @click="openGlobalMultiDiffWithSelected" :disabled="selectedPackets.size < 2" class="ui-btn-primary px-2 py-1 text-[11px]" title="将选中报文组送入全局 Center-Star 居中精密对齐工作台">
+                <AppIcon name="git-branch" :size="11" />
+                <span>全局 Center-Star</span>
               </button>
-              <button @click="runJointBaselineCompare"
-                class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/30 text-[10px] cursor-pointer transition-colors"
-                title="与已固化的历史基线进行多维度联合比对">
-                📊 联合历史基线
+              <button @click="runMatrixCompare" :disabled="selectedPackets.size < 2" class="ui-btn-secondary px-2 py-1 text-[11px]">
+                <AppIcon name="refresh" :size="11" />
+                <span>重算</span>
               </button>
-              <button @click="exportMatrixReport" :disabled="!matrixResult"
-                class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700 text-[10px] cursor-pointer disabled:opacity-40 transition-colors"
-                title="导出矩阵特征分析报告 (Markdown)">
-                📥 导出
+              <button @click="runJointBaselineCompare" class="ui-btn-secondary px-2 py-1 text-[11px]" title="与已固化的历史基线联合比对">
+                <span>联合基线</span>
+              </button>
+              <button @click="exportMatrixReport" :disabled="!matrixResult" class="ui-btn-secondary px-2 py-1 text-[11px]" title="导出矩阵特征分析报告">
+                <AppIcon name="download" :size="11" />
+                <span>导出</span>
               </button>
             </div>
           </div>
 
-          <!-- 比对结果或空状态 -->
           <template v-if="matrixResult && matrixResult.payloads && matrixResult.payloads.length > 0">
-            <!-- 摘要卡片 -->
-            <div class="glass-pill rounded-xl p-2.5 border border-indigo-500/30 bg-indigo-500/10 space-y-1">
-              <div class="flex items-center justify-between text-[10px] text-indigo-300">
-                <span class="font-bold">比对分析概要</span>
+            <div class="rounded-xl p-2.5 border bg-indigo-500/10 border-indigo-500/25 space-y-1">
+              <div class="flex items-center justify-between text-[11px] text-indigo-700 dark:text-indigo-300">
+                <span class="font-semibold">比对分析概要</span>
                 <span>模式: {{ matrixResult.mode || 'LCS 特征对齐' }}</span>
               </div>
-              <div class="text-[11px] text-slate-200">
-                {{ matrixResult.summary }}
-              </div>
+              <div class="text-xs" style="color: var(--text-primary);">{{ matrixResult.summary }}</div>
             </div>
 
-            <!-- 变异波率柱状谱与局部信息熵波形图 -->
-            <div v-if="matrixResult?.mutation_spectrum && matrixResult.mutation_spectrum.length > 0"
-              class="glass-pill rounded-xl p-3 border border-indigo-500/20 bg-slate-950/80 space-y-2">
-              <div class="flex items-center justify-between text-[10px]">
+            <div v-if="matrixResult?.mutation_spectrum && matrixResult.mutation_spectrum.length > 0" class="ui-sub-card p-3 space-y-2">
+              <div class="flex items-center justify-between text-[11px]">
                 <div class="flex items-center gap-2">
-                  <span class="font-bold text-white">多样本变异波率谱与局部信息熵</span>
-                  <span class="text-[9px] text-slate-500 font-mono">跨度 {{ matrixResult.mutation_spectrum.length }} 字节</span>
+                  <span class="font-semibold" style="color: var(--text-primary);">多样本变异波率谱与局部信息熵</span>
+                  <span class="ui-num" style="color: var(--text-muted);">跨度 {{ matrixResult.mutation_spectrum.length }} 字节</span>
                 </div>
-                <div v-if="hoverSpectrumBin" class="text-[10px] font-mono text-cyan-950 dark:text-cyan-300 font-bold">
-                  偏移 0x{{ hoverSpectrumBin.offset.toString(16).toUpperCase() }} | 波率: {{ hoverSpectrumBin.mutation_rate.toFixed(1) }}% | 局部熵: {{ hoverSpectrumBin.entropy.toFixed(2) }} | 优势码: 0x{{ hoverSpectrumBin.dominant_hex }}
+                <div v-if="hoverSpectrumBin" class="ui-num text-blue-600 dark:text-sky-300 font-semibold">
+                  0x{{ hoverSpectrumBin.offset.toString(16).toUpperCase() }} | 波率 {{ hoverSpectrumBin.mutation_rate.toFixed(1) }}% | 熵 {{ hoverSpectrumBin.entropy.toFixed(2) }}
                 </div>
-                <span v-else class="text-[9px] text-slate-500 font-mono">悬停查看各偏移突变波率与熵</span>
+                <span v-else class="text-[11px]" style="color: var(--text-muted);">悬停查看偏移统计</span>
               </div>
               <div class="h-28 relative overflow-hidden flex items-center justify-center">
                 <canvas ref="matrixSpectrumCanvas" @mousemove="onMatrixSpectrumHover" @mouseleave="hoverSpectrumBin = null" class="w-full h-full cursor-crosshair"></canvas>
               </div>
             </div>
 
-            <!-- 图例说明条 -->
-            <div class="flex items-center gap-3 text-[10px] text-slate-400 px-1 font-sans">
-              <span class="flex items-center gap-1">
-                <span class="w-2 h-2 rounded bg-emerald-500"></span>
-                <span>0% 变异 (特征基线)</span>
-              </span>
-              <span class="flex items-center gap-1">
-                <span class="w-2 h-2 rounded bg-amber-500"></span>
-                <span>1~50% 低频抖动</span>
-              </span>
-              <span class="flex items-center gap-1">
-                <span class="w-2 h-2 rounded bg-rose-500"></span>
-                <span>>50% 高频突变</span>
-              </span>
-              <span class="flex items-center gap-1">
-                <span class="w-3 h-0.5 bg-purple-400 inline-block"></span>
-                <span>信息熵折线 (0~8)</span>
-              </span>
+            <div class="flex items-center gap-3 text-[11px] px-1 flex-wrap" style="color: var(--text-muted);">
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-emerald-500"></span>0% 变异</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-amber-500"></span>1~50% 抖动</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-rose-500"></span>&gt;50% 突变</span>
+              <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-purple-500 inline-block"></span>熵折线</span>
             </div>
 
-            <!-- 逐个报文特征比对视窗 -->
             <div class="space-y-3">
-              <div v-for="(p, pIdx) in matrixResult.payloads" :key="pIdx"
-                class="bg-slate-950/80 rounded-xl border border-white/10 p-2.5 space-y-1.5">
-                <div class="flex items-center justify-between text-[10px] border-b border-white/10 pb-1">
-                  <span class="font-bold text-cyan-950 dark:text-cyan-300 font-mono truncate mr-2">{{ p.label }}</span>
-                  <span class="text-slate-400 font-mono shrink-0">{{ p.byte_length }} 字节</span>
+              <div v-for="(p, pIdx) in matrixResult.payloads" :key="pIdx" class="ui-sub-card p-2.5 space-y-1.5">
+                <div class="flex items-center justify-between text-[11px] border-b pb-1" style="border-color: var(--border-subtle);">
+                  <span class="font-semibold text-blue-600 dark:text-sky-300 font-mono truncate mr-2">{{ p.label }}</span>
+                  <span class="ui-num shrink-0" style="color: var(--text-muted);">{{ p.byte_length }} 字节</span>
                 </div>
 
-                <div class="space-y-1 font-mono text-[10px]">
-                  <div v-for="row in p.hex_rows" :key="row.offset"
-                    class="flex items-center justify-between hover:bg-white/[0.04] px-1 py-0.5 rounded">
-                    <!-- 偏移量 -->
-                    <span class="text-slate-500 w-10 shrink-0 select-none">{{ row.offset }}</span>
-
-                    <!-- 16 字节 Hex 列 -->
+                <div class="space-y-1 font-mono text-[11px]">
+                  <div v-for="row in p.hex_rows" :key="row.offset" class="flex items-center justify-between hover:bg-[var(--surface-hover)] px-1 py-0.5 rounded">
+                    <span class="w-11 shrink-0 select-none" style="color: var(--text-muted);">{{ row.offset }}</span>
                     <div class="flex items-center gap-1 flex-1 mx-1.5 overflow-x-auto">
-                      <span v-for="(c, cIdx) in row.cells" :key="cIdx"
+                      <span
+                        v-for="(c, cIdx) in row.cells"
+                        :key="cIdx"
                         :class="[
-                          'px-0.5 rounded-xs text-center min-w-[17px]',
-                          c.diff_type === 'mutation' || c.diff_type === 'replace' ? 'bg-rose-500 text-white font-bold' :
-                          c.diff_type === 'insert' ? 'bg-emerald-500 text-white font-bold' :
-                          c.diff_type === 'missing' ? 'text-slate-600' :
-                          'text-slate-400'
+                          'px-0.5 rounded-xs text-center min-w-[18px]',
+                          c.diff_type === 'mutation' || c.diff_type === 'replace' ? 'bg-rose-500 text-white font-semibold' :
+                          c.diff_type === 'insert' ? 'bg-emerald-500 text-white font-semibold' :
+                          ''
                         ]"
-                        :title="c.diff_type !== 'equal' ? `突变类型: ${c.diff_type} (${c.hex})` : c.hex">
+                        :style="c.diff_type === 'equal' || c.diff_type === 'missing' ? { color: c.diff_type === 'missing' ? 'var(--text-muted)' : 'var(--text-secondary)' } : {}"
+                        :title="c.diff_type !== 'equal' ? `突变类型: ${c.diff_type} (${c.hex})` : c.hex"
+                      >
                         {{ c.hex }}
                       </span>
                     </div>
-
-                    <!-- ASCII 预览 -->
-                    <span class="text-slate-400 w-24 shrink-0 truncate pl-1 border-l border-white/10 select-none text-[9px]">
+                    <span class="w-24 shrink-0 truncate pl-1.5 border-l select-none text-[11px]" style="border-color: var(--border-subtle); color: var(--text-muted);">
                       {{ row.ascii_repr }}
                     </span>
                   </div>
@@ -898,26 +1267,15 @@
             </div>
           </template>
 
-          <!-- 空状态或提示引导 -->
-          <div v-else class="flex flex-col items-center justify-center py-16 text-center text-slate-400 space-y-2">
-            <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-300 text-lg">
-              🔲
-            </div>
-            <div class="text-xs font-bold text-slate-200">请选择至少 2 帧报文进行特征矩阵比对</div>
-            <div class="text-[11px] text-slate-400 max-w-[320px] font-sans leading-relaxed">
-              您可以在左侧表格按住 <kbd class="px-1 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[10px]">Ctrl</kbd> 或 <kbd class="px-1 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[10px]">Shift</kbd> 点选多帧报文，系统将自动对齐多报文并高亮变异字节位。
-            </div>
-            <div class="pt-2 flex items-center gap-2">
-              <button v-if="filteredPackets.length >= 2" @click="quickSelectFirstTwoAndCompare"
-                class="px-3 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-semibold cursor-pointer transition-colors shadow-xs">
-                ⚡ 快速对比前两帧
+          <EmptyState v-else icon="layers" title="请选择至少 2 帧报文" description="按住 Ctrl 或 Shift 点选多帧报文即可开启特征矩阵比对。">
+            <template #actions>
+              <button v-if="filteredPackets.length >= 2" @click="quickSelectFirstTwoAndCompare" class="ui-btn-primary px-3 py-1 text-xs mt-2">
+                快速对比前两帧
               </button>
-            </div>
-          </div>
+            </template>
+          </EmptyState>
         </div>
-
-      </div>
-
+      </aside>
     </div>
 <!-- 4. 全景深度解剖模态框 -->
     <PacketDetailModal
@@ -943,63 +1301,63 @@
       @close="isTransceiverModalOpen = false"
     />
 
-    <!-- 7. 原始帧物理注入模态框 (B10: inject_raw_packet) -->
-    <div v-if="isInjectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xl">
-      <div class="w-full max-w-xl glass-apple-dark rounded-3xl border border-white/15 shadow-2xl flex flex-col overflow-hidden">
-        <div class="px-6 py-4 border-b border-white/10 bg-white/[0.02] flex items-center justify-between shrink-0">
+    <!-- 7. 原始帧物理注入模态框 -->
+    <div v-if="isInjectModalOpen" class="ui-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="ui-modal-surface w-full max-w-xl rounded-3xl flex flex-col overflow-hidden">
+        <div class="px-6 py-4 border-b flex items-center justify-between shrink-0" style="border-color: var(--border-subtle);">
           <div class="flex items-center gap-2.5">
-            <span class="w-3 h-3 rounded-full bg-rose-500 shadow-[0_0_8px_#F43F5E]"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
             <div>
-              <h3 class="text-sm font-bold text-white">链路层原始帧物理注入 (Raw Packet Injection)</h3>
-              <p class="text-[11px] text-slate-400 font-mono">底层非阻塞原始套接字直接构造并下发报文帧</p>
+              <h3 class="text-sm font-semibold" style="color: var(--text-primary);">链路层原始帧物理注入 (Raw Packet Injection)</h3>
+              <p class="text-[11px] font-mono" style="color: var(--text-muted);">底层非阻塞原始套接字直接构造并下发报文帧</p>
             </div>
           </div>
-          <button @click="isInjectModalOpen = false" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
-            ✕
+          <button @click="isInjectModalOpen = false" class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[var(--surface-hover)] transition-colors cursor-pointer" style="color: var(--text-secondary);">
+            <AppIcon name="close" :size="14" />
           </button>
         </div>
 
         <div class="p-6 space-y-4 overflow-auto">
           <div>
-            <label class="block text-xs font-bold text-slate-300 mb-1">选择目标网络接口 (Interface):</label>
-            <select v-model="injectIface"
-              class="w-full glass-pill-dark rounded-xl px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:ring-1 focus:ring-rose-500/50">
-              <option v-for="iface in interfaces" :key="iface" :value="iface" class="bg-[#181820] text-slate-200">{{ iface }}</option>
-              <option v-if="interfaces.length === 0" value="" class="bg-[#181820] text-slate-400">未发现物理网卡接口</option>
+            <label class="block text-xs font-semibold mb-1.5" style="color: var(--text-secondary);">选择目标网络接口 (Interface):</label>
+            <select v-model="injectIface" class="ui-input w-full px-3 py-2 text-xs font-mono">
+              <option v-for="iface in interfaces" :key="iface" :value="iface">{{ iface }}</option>
+              <option v-if="interfaces.length === 0" value="">未发现物理网卡接口</option>
             </select>
           </div>
 
           <div>
-            <div class="flex items-center justify-between mb-1">
-              <label class="text-xs font-bold text-slate-300">原始帧十六进制载荷 (Raw Hex Payload):</label>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-xs font-semibold" style="color: var(--text-secondary);">原始帧十六进制载荷 (Raw Hex Payload):</label>
               <div class="flex items-center gap-2">
-                <button @click="formatInjectHex" class="text-[10px] text-cyan-800 dark:text-cyan-300 hover:text-cyan-600 dark:hover:text-cyan-200 font-semibold cursor-pointer">
+                <button @click="formatInjectHex" class="text-[11px] text-blue-600 dark:text-sky-400 hover:underline font-semibold cursor-pointer">
                   清洗并格式化
                 </button>
-                <span class="text-[10px] font-mono text-slate-500">
+                <span class="text-[11px] ui-num" style="color: var(--text-muted);">
                   {{ injectByteLength }} 字节 ({{ injectHexClean.length }} 字符)
                 </span>
               </div>
             </div>
-            <textarea v-model="injectHex" rows="5" placeholder="例如: 00 11 22 33 44 55 66 77 88 99 AA BB 08 00 45 00 ..."
-              class="w-full bg-black/60 text-emerald-400 border border-white/10 rounded-xl p-3 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-rose-500/50 shadow-inner custom-scrollbar"></textarea>
-            <p v-if="injectError" class="text-[11px] text-rose-400 font-semibold mt-1">{{ injectError }}</p>
+            <textarea
+              v-model="injectHex"
+              rows="5"
+              placeholder="例如: 00 11 22 33 44 55 66 77 88 99 AA BB 08 00 45 00 ..."
+              class="ui-input w-full p-3 text-xs font-mono text-emerald-700 dark:text-emerald-400 custom-scrollbar"
+            ></textarea>
+            <p v-if="injectError" class="text-[11px] text-rose-600 dark:text-rose-400 font-semibold mt-1">{{ injectError }}</p>
           </div>
 
-          <div v-if="injectResult" class="p-3 rounded-xl bg-white/[0.04] border border-white/10 text-xs font-mono text-slate-200">
+          <div v-if="injectResult" class="ui-sub-card p-3 text-xs font-mono" style="color: var(--text-primary);">
             {{ injectResult }}
           </div>
         </div>
 
-        <div class="px-6 py-3 border-t border-white/10 bg-white/[0.02] flex items-center justify-between shrink-0">
-          <span class="text-[11px] text-slate-400 font-mono">请确保十六进制帧格式包含完整二/三层报头</span>
+        <div class="px-6 py-3 border-t flex items-center justify-between shrink-0" style="border-color: var(--border-subtle);">
+          <span class="text-[11px]" style="color: var(--text-muted);">请确保十六进制帧格式包含完整二/三层报头</span>
           <div class="flex items-center gap-2">
-            <button @click="isInjectModalOpen = false" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
-              取消
-            </button>
-            <button @click="doInjectRawPacket" :disabled="isInjecting || !isInjectValid"
-              class="bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-700 hover:to-rose-800 text-white text-xs px-4 py-1.5 rounded-xl font-bold cursor-pointer transition-all shadow-lg shadow-rose-600/30 active:scale-95 disabled:opacity-40">
-              <span v-if="isInjecting" class="animate-spin">⏳ </span>
+            <button @click="isInjectModalOpen = false" class="ui-btn-secondary px-3.5 py-1.5 text-xs">取消</button>
+            <button @click="doInjectRawPacket" :disabled="isInjecting || !isInjectValid" class="ui-btn-danger bg-rose-600 text-white border-rose-600 hover:bg-rose-500 px-4 py-1.5 text-xs">
+              <AppIcon v-if="isInjecting" name="refresh" :size="13" class="animate-spin" />
               <span>执行物理注入</span>
             </button>
           </div>
@@ -1058,75 +1416,102 @@
     />
 
     <!-- 13. 表格行右键上下文菜单浮层 -->
-    <div v-if="contextMenu.visible"
+    <div
+      v-if="contextMenu.visible"
       :style="{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }"
-      class="fixed z-50 bg-white/95 backdrop-blur-xl border border-white/80 rounded-2xl shadow-xl py-1.5 w-48 text-xs font-medium text-slate-700 select-none animate-in fade-in duration-100">
-      <div class="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase border-b border-slate-100/80 mb-1">
+      class="ui-modal-surface fixed z-50 rounded-2xl py-1.5 w-52 text-xs font-medium select-none"
+    >
+      <div class="px-3 py-1.5 text-[11px] font-semibold border-b mb-1 ui-num" style="color: var(--text-muted); border-color: var(--border-subtle);">
         报文 #{{ contextMenu.packet?.id }}
       </div>
-      <!-- 多选快速比对入口 -->
       <template v-if="selectedPackets.size === 2">
-        <button @click="openDiffWithSelected2(); closeContextMenu()" class="w-full text-left px-3 py-1.5 hover:bg-indigo-500/10 hover:text-indigo-700 flex items-center gap-2 cursor-pointer transition-colors font-bold text-indigo-900 bg-indigo-50/70 border-b border-indigo-100">
-          <span>⚖️</span> 比对选中的 2 帧报文 (双报文差分)
+        <button @click="openDiffWithSelected2(); closeContextMenu()" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors font-semibold text-indigo-600 dark:text-indigo-300 border-b" style="border-color: var(--border-subtle);">
+          <AppIcon name="scale" :size="13" />
+          <span>比对选中的 2 帧报文</span>
         </button>
       </template>
       <template v-if="selectedPackets.size >= 2">
-        <button @click="openMatrixTab(); closeContextMenu()" class="w-full text-left px-3 py-1.5 hover:bg-purple-500/10 hover:text-purple-700 flex items-center gap-2 cursor-pointer transition-colors font-bold text-purple-900 bg-purple-50/70 border-b border-purple-100">
-          <span>🔲</span> 开启选中的 {{ selectedPackets.size }} 帧矩阵比对
+        <button @click="openGlobalMultiDiffWithSelected(); closeContextMenu()" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors font-semibold text-emerald-600 dark:text-emerald-300 border-b" style="border-color: var(--border-subtle);">
+          <AppIcon name="git-branch" :size="13" />
+          <span>全局 Center-Star {{ selectedPackets.size }} 组对齐</span>
+        </button>
+        <button @click="openMatrixTab(); closeContextMenu()" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors font-semibold text-purple-600 dark:text-purple-300 border-b" style="border-color: var(--border-subtle);">
+          <AppIcon name="layers" :size="13" />
+          <span>侧栏 {{ selectedPackets.size }} 帧矩阵</span>
         </button>
       </template>
-      <button v-if="contextMenu.packet?.src_ip" @click="quickApplyFieldFilter('ip.src', contextMenu.packet?.src_ip, '=='); closeContextMenu()" class="w-full text-left px-3 py-1.5 hover:bg-blue-500/10 hover:text-blue-700 flex items-center gap-2 cursor-pointer transition-colors font-semibold text-slate-800">
-        <span>🔍 按源 IP 过滤 (ip.src == {{ contextMenu.packet?.src_ip }})</span>
+      <button v-if="contextMenu.packet?.src_ip" @click="quickApplyFieldFilter('ip.src', contextMenu.packet?.src_ip, '=='); closeContextMenu()" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors" style="color: var(--text-primary);">
+        <AppIcon name="filter" :size="13" class="text-blue-500" />
+        <span class="truncate">按源 IP 过滤 ({{ contextMenu.packet?.src_ip }})</span>
       </button>
-      <button v-if="contextMenu.packet?.dst_ip" @click="quickApplyFieldFilter('ip.dst', contextMenu.packet?.dst_ip, '=='); closeContextMenu()" class="w-full text-left px-3 py-1.5 hover:bg-blue-500/10 hover:text-blue-700 flex items-center gap-2 cursor-pointer transition-colors font-semibold text-slate-800">
-        <span>🔍 按目的 IP 过滤 (ip.dst == {{ contextMenu.packet?.dst_ip }})</span>
+      <button v-if="contextMenu.packet?.dst_ip" @click="quickApplyFieldFilter('ip.dst', contextMenu.packet?.dst_ip, '=='); closeContextMenu()" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors" style="color: var(--text-primary);">
+        <AppIcon name="filter" :size="13" class="text-blue-500" />
+        <span class="truncate">按目的 IP 过滤 ({{ contextMenu.packet?.dst_ip }})</span>
       </button>
-      <button v-if="contextMenu.packet?.protocol" @click="quickApplyFieldFilter('ip.proto', contextMenu.packet?.protocol, '=='); closeContextMenu()" class="w-full text-left px-3 py-1.5 hover:bg-blue-500/10 hover:text-blue-700 flex items-center gap-2 cursor-pointer transition-colors font-semibold text-slate-800">
-        <span>🔍 按规约过滤 (ip.proto == "{{ contextMenu.packet?.protocol }}")</span>
+      <button v-if="contextMenu.packet?.protocol" @click="quickApplyFieldFilter('ip.proto', contextMenu.packet?.protocol, '=='); closeContextMenu()" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors" style="color: var(--text-primary);">
+        <AppIcon name="filter" :size="13" class="text-blue-500" />
+        <span class="truncate">按规约过滤 ({{ contextMenu.packet?.protocol }})</span>
       </button>
-      <div class="h-px bg-slate-200 my-1"></div>
-      <button v-if="contextMenu.packet?.transport === 'TCP'" @click="menuAction('tcp_stream')" class="w-full text-left px-3 py-1.5 hover:bg-blue-500/10 hover:text-blue-700 flex items-center gap-2 cursor-pointer transition-colors font-semibold text-blue-800">
-        <span>🌊</span> 追踪 TCP 会话流
+      <div class="h-px my-1" style="background: var(--border-subtle);"></div>
+      <button v-if="contextMenu.packet?.transport === 'TCP'" @click="menuAction('tcp_stream')" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors text-blue-600 dark:text-sky-300 font-semibold">
+        <AppIcon name="link" :size="13" />
+        <span>追踪 TCP 会话流</span>
       </button>
-      <!-- 双报文深度差分对比入口 -->
-      <button @click="menuAction('set_diff_a')" class="w-full text-left px-3 py-1.5 hover:bg-indigo-500/10 hover:text-indigo-700 flex items-center gap-2 cursor-pointer transition-colors font-semibold text-indigo-900">
-        <span>⚖️</span> 设为对比基准报文 A
+      <button @click="menuAction('add_diff_queue')" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors text-emerald-600 dark:text-emerald-300 font-semibold">
+        <AppIcon name="plus" :size="13" />
+        <span>加入全局多组比对队列</span>
       </button>
-      <button v-if="packetDiffBaselineA" @click="menuAction('diff_with_a')" class="w-full text-left px-3 py-1.5 hover:bg-purple-500/10 hover:text-purple-700 flex items-center gap-2 cursor-pointer transition-colors font-bold text-purple-900 bg-purple-50/50">
-        <span>🔍</span> 与基准报文 #{{ packetDiffBaselineA.id }} 差分比对
+      <button @click="menuAction('set_diff_a')" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors text-indigo-600 dark:text-indigo-300 font-semibold">
+        <AppIcon name="scale" :size="13" />
+        <span>设为对比基准报文 A</span>
       </button>
-      <button @click="menuAction('save_sample')" class="w-full text-left px-3 py-1.5 hover:bg-indigo-500/10 hover:text-indigo-700 flex items-center gap-2 cursor-pointer transition-colors">
-        <span>📦</span> 存入报文特征样本库
+      <button v-if="diffBus.currentItemA.value" @click="menuAction('diff_with_a')" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors font-semibold text-purple-600 dark:text-purple-300">
+        <AppIcon name="search" :size="13" />
+        <span>与基准 ({{ diffBus.currentItemA.value.label }}) 差分比对</span>
       </button>
-      <button @click="menuAction('inject')" class="w-full text-left px-3 py-1.5 hover:bg-blue-500/10 hover:text-blue-700 flex items-center gap-2 cursor-pointer transition-colors">
-        <span>💉</span> 注入此帧载荷
+      <button @click="menuAction('save_sample')" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors" style="color: var(--text-primary);">
+        <AppIcon name="archive" :size="13" class="text-emerald-500" />
+        <span>存入报文特征样本库</span>
       </button>
-      <button @click="sendPayloadToNetAssist(contextMenu.packet); closeContextMenu()" class="w-full text-left px-3 py-1.5 hover:bg-sky-500/10 hover:text-sky-700 flex items-center gap-2 cursor-pointer transition-colors font-bold text-sky-800">
-        <span>🔌</span> 推送此载荷至网络通信调试工作台
+      <button @click="menuAction('inject')" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors" style="color: var(--text-primary);">
+        <AppIcon name="zap" :size="13" class="text-rose-500" />
+        <span>注入此帧载荷</span>
       </button>
-      <button @click="menuAction('detail')" class="w-full text-left px-3 py-1.5 hover:bg-blue-500/10 hover:text-blue-700 flex items-center gap-2 cursor-pointer transition-colors">
-        <span>🔬</span> 全景深度解剖
+      <button @click="sendPayloadToNetAssist(contextMenu.packet); closeContextMenu()" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors font-semibold text-sky-600 dark:text-sky-300">
+        <AppIcon name="terminal" :size="13" />
+        <span>推送至网络通信调试</span>
       </button>
-      <button @click="menuAction('baseline')" class="w-full text-left px-3 py-1.5 hover:bg-blue-500/10 hover:text-blue-700 flex items-center gap-2 cursor-pointer transition-colors">
-        <span>💾</span> 固化为历史基线
+      <button @click="menuAction('detail')" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors" style="color: var(--text-primary);">
+        <AppIcon name="code" :size="13" />
+        <span>全景深度解剖</span>
       </button>
-      <button @click="menuAction('replay')" class="w-full text-left px-3 py-1.5 hover:bg-blue-500/10 hover:text-blue-700 flex items-center gap-2 cursor-pointer transition-colors">
-        <span>🔁</span> 重放传输层报文
+      <button @click="menuAction('baseline')" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors" style="color: var(--text-primary);">
+        <AppIcon name="shield" :size="13" />
+        <span>固化为历史基线</span>
       </button>
-      <button v-if="contextMenu.packet?.src_ip" @click="menuAction('dossier_src')" class="w-full text-left px-3 py-1.5 hover:bg-blue-500/10 hover:text-blue-700 flex items-center gap-2 cursor-pointer transition-colors font-semibold text-sky-800">
-        <span>🔍</span> 源 IP 全息档案溯源
+      <button @click="menuAction('replay')" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors" style="color: var(--text-primary);">
+        <AppIcon name="refresh" :size="13" />
+        <span>重放传输层报文</span>
       </button>
-      <button v-if="contextMenu.packet?.dst_ip" @click="menuAction('dossier_dst')" class="w-full text-left px-3 py-1.5 hover:bg-blue-500/10 hover:text-blue-700 flex items-center gap-2 cursor-pointer transition-colors font-semibold text-sky-800">
-        <span>🔍</span> 目的 IP 全息档案溯源
+      <button v-if="contextMenu.packet?.src_ip" @click="menuAction('dossier_src')" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors text-blue-600 dark:text-sky-300">
+        <AppIcon name="search" :size="13" />
+        <span>源 IP 全息档案溯源</span>
       </button>
-      <button v-if="contextMenu.packet?.src_ip" @click="menuAction('traceroute_src')" class="w-full text-left px-3 py-1.5 hover:bg-cyan-500/10 hover:text-cyan-700 flex items-center gap-2 cursor-pointer transition-colors font-semibold text-cyan-800">
-        <span>🌐</span> 源 IP 测地路由追踪 (Trace)
+      <button v-if="contextMenu.packet?.dst_ip" @click="menuAction('dossier_dst')" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors text-blue-600 dark:text-sky-300">
+        <AppIcon name="search" :size="13" />
+        <span>目的 IP 全息档案溯源</span>
       </button>
-      <button v-if="contextMenu.packet?.dst_ip" @click="menuAction('traceroute_dst')" class="w-full text-left px-3 py-1.5 hover:bg-cyan-500/10 hover:text-cyan-700 flex items-center gap-2 cursor-pointer transition-colors font-semibold text-cyan-800">
-        <span>🌐</span> 目的 IP 测地路由追踪 (Trace)
+      <button v-if="contextMenu.packet?.src_ip" @click="menuAction('traceroute_src')" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors text-emerald-600 dark:text-emerald-300">
+        <AppIcon name="globe" :size="13" />
+        <span>源 IP 测地路由追踪</span>
       </button>
-      <button @click="menuAction('copy')" class="w-full text-left px-3 py-1.5 hover:bg-blue-500/10 hover:text-blue-700 flex items-center gap-2 cursor-pointer transition-colors">
-        <span>📋</span> 复制十六进制载荷
+      <button v-if="contextMenu.packet?.dst_ip" @click="menuAction('traceroute_dst')" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors text-emerald-600 dark:text-emerald-300">
+        <AppIcon name="globe" :size="13" />
+        <span>目的 IP 测地路由追踪</span>
+      </button>
+      <button @click="menuAction('copy')" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors" style="color: var(--text-primary);">
+        <AppIcon name="document" :size="13" />
+        <span>复制十六进制载荷</span>
       </button>
     </div>
 
@@ -1151,16 +1536,7 @@
       @drillDown="dossierIp = $event"
     />
 
-    <!-- 16. 专业报文协议与 Hex 双栏差分工作台模态框 (Beyond Compare + Wireshark) -->
-    <PacketDiffModal
-      :isOpen="isPacketDiffOpen"
-      :packetA="packetDiffBaselineA"
-      :packetB="packetDiffCompareB"
-      @close="isPacketDiffOpen = false"
-      @selectAsA="packetDiffBaselineA = $event"
-      @selectAsB="packetDiffCompareB = $event"
-      @appendLog="$emit('appendLog', $event)"
-    />
+    <!-- 16. 统一由 App.vue 挂载唯一全局 <PacketDiffModal /> 响应 diffBus，消除双实例死锁 -->
 
     <!-- 17. 测地线可视路由追踪与地球地理情报工作台模态框 (TASK-43) -->
     <GeodesicTracerouteModal
@@ -1172,36 +1548,117 @@
 </template>
 
 <script setup lang="ts">
-import { notifyError, notifySuccess } from '../composables/useNotification';
-function copyHex(hex?: string) {
-  if (hex && navigator.clipboard) {
-    navigator.clipboard.writeText(hex);
-  }
+import { ref, computed, watch, defineAsyncComponent, nextTick, onMounted, onUnmounted } from 'vue';
+import { invoke } from '@tauri-apps/api/core';
+import { notifyError, notifyInfo, notifySuccess } from '../composables/useNotification';
+import { useUniversalDiff } from '../composables/useUniversalDiff';
+import { saveTextViaNativeDesktop } from '../composables/useDesktopSave';
+import { uiPrompt } from '../composables/useConfirmDialog';
+import PacketDetailModal from '../components/PacketDetailModal.vue';
+import AppIcon from '../components/AppIcon.vue';
+import EmptyState from '../components/EmptyState.vue';
+
+export interface SerialPortDetail {
+  port_name: string;
+  description: string;
+  hardware_id: string;
+  manufacturer?: string;
+  product?: string;
+  port_type: string;
+  is_usb: boolean;
+  is_available: boolean;
+  is_in_use_by_us: boolean;
 }
 
-const telemetryRateText = computed(() => {
-  if (props.packets.length === 0 || !props.isRunning || props.isPaused) {
-    return '待命热备';
-  }
-  return telemetryPps.value > 0 ? `+${(telemetryPps.value / 1000).toFixed(1)}k/s` : '实时监听';
-});
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
-import { invoke } from '@tauri-apps/api/core';
-import PacketDetailModal from '../components/PacketDetailModal.vue';
-import TargetProbeModal from '../components/TargetProbeModal.vue';
-import PortTransceiverModal from '../components/PortTransceiverModal.vue';
-import FlowDialogueInspector from '../components/FlowDialogueInspector.vue';
-import TcpStreamModal from '../components/TcpStreamModal.vue';
-import ExportCaptureModal from '../components/ExportCaptureModal.vue';
-import ImportPcapModal from '../components/ImportPcapModal.vue';
-import CidrAssetModal from '../components/CidrAssetModal.vue';
-import IpDatabaseModal from '../components/IpDatabaseModal.vue';
-import ColumnSettingsModal from '../components/ColumnSettingsModal.vue';
-import MultiSerialCompareModal from '../components/MultiSerialCompareModal.vue';
-import IpDossierModal from '../components/IpDossierModal.vue';
-import PacketDiffModal from '../components/PacketDiffModal.vue';
-import IoGraphsPanel from '../components/IoGraphsPanel.vue';
-import GeodesicTracerouteModal from '../components/GeodesicTracerouteModal.vue';
+interface PacketRecord {
+  id: number;
+  timestamp: string;
+  timestamp_ns?: number;
+  direction: string;
+  transport: string;
+  protocol: string;
+  src_ip: string;
+  dst_ip: string;
+  src_port: number;
+  dst_port: number;
+  length: number;
+  payload_hex: string;
+  entropy: number;
+  entropy_level: string;
+  mac_src: string;
+  mac_dst: string;
+  chain_hash: string;
+  business_data?: Record<string, any>;
+  raw_text?: string;
+}
+
+export interface MutationWaveBin {
+  offset: number;
+  mutation_rate: number;
+  unique_values_count: number;
+  entropy: number;
+  dominant_hex: string;
+}
+
+interface MatrixResult {
+  mode?: string;
+  summary: string;
+  mutation_spectrum?: MutationWaveBin[];
+  payloads: Array<{
+    label: string;
+    byte_length: number;
+    hex_rows: Array<{
+      offset: string;
+      cells: Array<{ hex: string; ascii: string; diff_type: string }>;
+      ascii_repr: string;
+    }>;
+  }>;
+}
+
+const props = defineProps<{
+  packets: PacketRecord[];
+  assets?: any[];
+  isRunning: boolean;
+  isPaused?: boolean;
+  isSerialRunning?: boolean;
+  isUsbRunning?: boolean;
+  selectedIface: string;
+  bpfFilter: string;
+  interfaces: string[];
+  serialPorts: string[];
+  serialPortsDetail?: SerialPortDetail[];
+  activeSerialPorts?: string[];
+  serialPortBaudRates?: Record<string, number>;
+  selectedSerial: string;
+  serialBaudRate: number;
+  usbDevices: any[];
+}>();
+
+const emit = defineEmits([
+  'startCapture', 'pauseCapture', 'resumeCapture', 'stopCapture',
+  'startSerialCapture', 'stopSerialCapture',
+  'startUsbCapture', 'stopUsbCapture', 'refreshUsb', 'refreshSerial',
+  'updateSerial', 'updateBaudRate', 'updatePortBaudRate',
+  'clearData',
+  'updateBpf', 'updateIface', 'replayPacket', 'saveBaseline',
+  'appendLog', 'importPackets', 'openHoneypot', 'openWireless', 'switchWorkbench'
+]);
+
+const TargetProbeModal = defineAsyncComponent(() => import('../components/TargetProbeModal.vue'));
+const PortTransceiverModal = defineAsyncComponent(() => import('../components/PortTransceiverModal.vue'));
+const FlowDialogueInspector = defineAsyncComponent(() => import('../components/FlowDialogueInspector.vue'));
+const TcpStreamModal = defineAsyncComponent(() => import('../components/TcpStreamModal.vue'));
+const ExportCaptureModal = defineAsyncComponent(() => import('../components/ExportCaptureModal.vue'));
+const ImportPcapModal = defineAsyncComponent(() => import('../components/ImportPcapModal.vue'));
+const CidrAssetModal = defineAsyncComponent(() => import('../components/CidrAssetModal.vue'));
+const IpDatabaseModal = defineAsyncComponent(() => import('../components/IpDatabaseModal.vue'));
+const ColumnSettingsModal = defineAsyncComponent(() => import('../components/ColumnSettingsModal.vue'));
+const MultiSerialCompareModal = defineAsyncComponent(() => import('../components/MultiSerialCompareModal.vue'));
+const IpDossierModal = defineAsyncComponent(() => import('../components/IpDossierModal.vue'));
+const IoGraphsPanel = defineAsyncComponent(() => import('../components/IoGraphsPanel.vue'));
+const GeodesicTracerouteModal = defineAsyncComponent(() => import('../components/GeodesicTracerouteModal.vue'));
+
+const diffBus = useUniversalDiff();
 
 // 测地线可视路由追踪与地球地理情报 (TASK-43)
 const isTracerouteOpen = ref(false);
@@ -1211,8 +1668,10 @@ function openTraceroute(target?: string) {
   isTracerouteOpen.value = true;
 }
 
-// 2026 Grand Horizon 宏大工业态势大盘与全息拓扑动画引擎
-const isHorizonExpanded = ref(true);
+// 工业网络运行监控看板与网络拓扑动画引擎
+// 默认收起监控看板，释放 85% 以上空间给中央主舞台报文流 (对标 apple_liquid_drawer_showcase)
+const isHorizonExpanded = ref(false);
+const isInspectorOpen = ref(false); // 默认收起空白右抽屉，单击帧或按 R / 点击随行解构随时展开
 const topologyCanvasRef = ref<HTMLCanvasElement | null>(null);
 
 const quickProtocolTags = [
@@ -1225,75 +1684,165 @@ const quickProtocolTags = [
   { label: 'MQTT', value: 'MQTT', title: '工业物联网传输 MQTT' },
 ];
 
-// 动态协议载荷占比统计
+// 动态协议载荷占比统计 (100% 源自真实捕获帧统计，绝不伪造占比)
 const protocolStats = computed(() => {
   const pkts = props.packets;
   if (!pkts || pkts.length === 0) {
-    return { modbus: 42, s7: 26, ethercat: 18, iec104: 14 };
+    return { modbus: 0, s7: 0, ethercat: 0, iec104: 0 };
   }
   let modbusCount = 0;
   let s7Count = 0;
   let ecatCount = 0;
-  let otherCount = 0;
+  let iec104Count = 0;
   const recent = pkts.slice(-500);
   for (const p of recent) {
     const proto = (p.protocol || '').toUpperCase();
     if (proto.includes('MODBUS')) modbusCount++;
     else if (proto.includes('S7')) s7Count++;
     else if (proto.includes('ETHERCAT') || proto.includes('ECAT')) ecatCount++;
-    else otherCount++;
+    else if (proto.includes('IEC') || proto.includes('104')) iec104Count++;
   }
   const total = recent.length || 1;
   const modbus = Math.round((modbusCount / total) * 100);
   const s7 = Math.round((s7Count / total) * 100);
   const ethercat = Math.round((ecatCount / total) * 100);
-  const iec104 = Math.max(0, 100 - modbus - s7 - ethercat);
+  const iec104 = Math.round((iec104Count / total) * 100);
   return { modbus, s7, ethercat, iec104 };
 });
 
 const industrialRatioText = computed(() => {
-  const total = protocolStats.value.modbus + protocolStats.value.s7 + protocolStats.value.ethercat;
-  return total > 0 ? `${total}% (工控高优先级)` : '87.4% (工控高优先级)';
+  const total = protocolStats.value.modbus + protocolStats.value.s7 + protocolStats.value.ethercat + protocolStats.value.iec104;
+  return total > 0 ? `${total}% (工控高优先级)` : '0% (暂无工控报文)';
 });
 
-// 遥测吞吐率、PPS与抖动
-const telemetryPps = ref(42890);
-const telemetryThroughputMbps = ref('1,248.65');
-const telemetryJitterMs = ref('0.14');
+// 实时指令与威胁合规汇总（100% 由真实捕获报文驱动，禁止无抓包或已违规状态静态报绿）
+const complianceHealthSummary = computed(() => {
+  const pkts = props.packets || [];
+  if (pkts.length === 0) {
+    return {
+      headerBadge: '待捕获评估',
+      badgeClass: 'text-slate-600 dark:text-slate-300 bg-slate-500/10 border-slate-500/25',
+      iconBoxClass: 'bg-slate-500/10 border-slate-500/25 text-[var(--text-muted)]',
+      iconName: 'shield',
+      title: '指令审计引擎待命',
+      subtitle: '尚未捕获报文，启动采集后按实审计违规指令',
+      countLabel: '—',
+      countClass: 'text-[var(--text-muted)]',
+    };
+  }
+
+  let violationCount = 0;
+  let writeOpsCount = 0;
+  let latestAlertDesc = '';
+
+  for (const p of pkts) {
+    const bd = p?.business_data;
+    const protoUpper = String(p?.protocol || '').toUpperCase();
+    const hasViolation = Boolean(
+      bd?.ics_acl_violation ||
+      bd?.threat_hit ||
+      bd?.vlan_threat_alert ||
+      protoUpper.includes('ALERT') ||
+      p?.entropy_level === 'critical'
+    );
+    if (hasViolation) {
+      violationCount++;
+      const reason = bd?.ics_acl_violation?.violation_reason || bd?.vlan_threat_alert || p?.protocol;
+      latestAlertDesc = `${p?.src_ip || ''}→${p?.dst_ip || ''} (${reason})`;
+    }
+    if (bd?.is_write || bd?.modbus_tcp?.is_write) {
+      writeOpsCount++;
+    }
+  }
+
+  if (violationCount > 0) {
+    return {
+      headerBadge: `检出 ${violationCount} 项异常`,
+      badgeClass: 'text-rose-700 dark:text-rose-300 bg-rose-500/15 border-rose-500/35',
+      iconBoxClass: 'bg-rose-500/15 border-rose-500/35 text-rose-600 dark:text-rose-400',
+      iconName: 'alert',
+      title: '检出越权/高危特征报文',
+      subtitle: latestAlertDesc || `写操作 ${writeOpsCount} 帧 · 请核查告警详情与等保控制台`,
+      countLabel: `${violationCount} 异常`,
+      countClass: 'text-rose-600 dark:text-rose-400',
+    };
+  }
+
+  return {
+    headerBadge: '实时监视正常',
+    badgeClass: 'text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/25',
+    iconBoxClass: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400',
+    iconName: 'check',
+    title: '指令白名单实时监看中',
+    subtitle: `已实时审计 ${pkts.length.toLocaleString()} 帧（工控写指令 ${writeOpsCount} 帧）`,
+    countLabel: '0 违规',
+    countClass: 'text-emerald-600 dark:text-emerald-400',
+  };
+});
+
+// 真实遥测吞吐率、PPS与基于真实到达时间差的抖动 Jitter
+const telemetryPps = ref(0);
+const telemetryThroughputMbps = ref('0.00');
+const telemetryJitterMs = ref('0.00');
 
 let ppsCounter = 0;
 let bytesCounter = 0;
-let lastTelemetryCalc = Date.now();
+let lastTelemetryCalc = performance.now();
+let lastPacketArrivalTime = 0;
+let lastInterArrivalMs = 0;
+let smoothedJitterMs = 0;
 
 watch(() => props.packets.length, (newLen, oldLen) => {
+  if (newLen === 0) {
+    topoNodes = [];
+    topoLinks = [];
+    topoNodeIndexMap.clear();
+    ppsCounter = 0;
+    bytesCounter = 0;
+    telemetryPps.value = 0;
+    telemetryThroughputMbps.value = '0.00';
+    telemetryJitterMs.value = '0.00';
+    return;
+  }
   const delta = newLen - (oldLen || 0);
-  if (delta > 0) {
-    ppsCounter += delta;
-    if (props.packets.length > 0) {
-      const lastPkt = props.packets[props.packets.length - 1];
-      bytesCounter += (lastPkt.length || 64) * delta;
-      triggerNodePulse(lastPkt.protocol);
+  if (delta > 0 && props.packets.length > 0) {
+    const now = performance.now();
+    if (lastPacketArrivalTime > 0) {
+      const iat = now - lastPacketArrivalTime;
+      const diff = Math.abs(iat - lastInterArrivalMs);
+      smoothedJitterMs = smoothedJitterMs * 0.75 + diff * 0.25;
+      lastInterArrivalMs = iat;
+    }
+    lastPacketArrivalTime = now;
+
+    const startIdx = Math.max(0, newLen - delta);
+    for (let i = startIdx; i < newLen; i++) {
+      const p = props.packets[i];
+      if (!p) continue;
+      ppsCounter += 1;
+      bytesCounter += (p.length || 64);
+      emitRealTopologyFlowParticle(p.src_ip, p.dst_ip, p.protocol);
     }
   }
 });
 
 let telemetryTimer: any = null;
 function updateTelemetryMetrics() {
-  const now = Date.now();
+  const now = performance.now();
   const elapsed = (now - lastTelemetryCalc) / 1000;
   if (elapsed >= 0.8) {
     const calculatedPps = Math.round(ppsCounter / elapsed);
-    telemetryPps.value = calculatedPps > 0 ? calculatedPps : (props.isRunning && !props.isPaused ? 2450 : 0);
-    const mbpsVal = ((bytesCounter * 8) / (elapsed * 1024 * 1024));
-    telemetryThroughputMbps.value = mbpsVal > 0 ? mbpsVal.toFixed(2) : (props.isRunning && !props.isPaused ? '148.20' : '0.00');
-    telemetryJitterMs.value = (0.10 + Math.random() * 0.08).toFixed(2);
+    const mbpsVal = (bytesCounter * 8) / (elapsed * 1000 * 1000);
+    telemetryPps.value = calculatedPps;
+    telemetryThroughputMbps.value = mbpsVal.toFixed(2);
+    telemetryJitterMs.value = ppsCounter > 0 ? Math.min(999.9, smoothedJitterMs).toFixed(2) : '0.00';
     ppsCounter = 0;
     bytesCounter = 0;
     lastTelemetryCalc = now;
   }
 }
 
-// 全息网络拓扑动态 Canvas 动画引擎
+// 动态真实网络会话拓扑 Canvas 引擎 (绝不静态硬编码任何假节点与假粒子)
 interface TopoNode {
   id: string;
   x: number;
@@ -1308,28 +1857,62 @@ interface TopoLink {
   packets: Array<{ progress: number; speed: number }>;
 }
 
-let topoNodes: TopoNode[] = [
-  { id: 'scada', x: 0.18, y: 0.45, label: 'SCADA 调度中心 (192.168.1.114)', color: '#00F2FE', pulse: 0 },
-  { id: 'plc1',  x: 0.46, y: 0.25, label: 'Siemens S7-1500 (192.168.1.20)', color: '#F59E0B', pulse: 0 },
-  { id: 'plc2',  x: 0.56, y: 0.60, label: 'Modbus 网关 (192.168.1.10)', color: '#10B981', pulse: 0 },
-  { id: 'drive', x: 0.78, y: 0.32, label: 'EtherCAT 伺服驱动组', color: '#7F5AF0', pulse: 0 },
-  { id: 'rtu',   x: 0.82, y: 0.68, label: 'DNP3 变电站 RTU', color: '#4FACFE', pulse: 0 },
-];
+let topoNodes: TopoNode[] = [];
+let topoLinks: TopoLink[] = [];
+const topoNodeIndexMap = new Map<string, number>();
 
-let topoLinks: TopoLink[] = [
-  { from: 0, to: 1, packets: [] },
-  { from: 0, to: 2, packets: [] },
-  { from: 1, to: 3, packets: [] },
-  { from: 0, to: 4, packets: [] },
-  { from: 2, to: 4, packets: [] }
-];
+function ensureDynamicTopoEndpoints(ip: string, isSource: boolean, proto?: string): number {
+  const clean = (ip || '').trim();
+  if (!clean) return -1;
+  const existing = topoNodeIndexMap.get(clean);
+  if (existing !== undefined) return existing;
 
-function triggerNodePulse(protocol?: string) {
-  const p = (protocol || '').toUpperCase();
-  if (p.includes('S7') && topoNodes[1]) topoNodes[1].pulse = 1.0;
-  else if (p.includes('MODBUS') && topoNodes[2]) topoNodes[2].pulse = 1.0;
-  else if (p.includes('ETHERCAT') && topoNodes[3]) topoNodes[3].pulse = 1.0;
-  else if (topoNodes[0]) topoNodes[0].pulse = 1.0;
+  // 环形最多展示 Top-8 实时高频实体节点，防界面拥挤
+  if (topoNodes.length >= 8) {
+    return -1;
+  }
+  const idx = topoNodes.length;
+  const angle = (idx / 8) * Math.PI * 2 - Math.PI / 2;
+  const rx = 0.34;
+  const ry = 0.32;
+  const pUpper = (proto || '').toUpperCase();
+  const color = pUpper.includes('ALERT')
+    ? '#F43F5E'
+    : pUpper.includes('MODBUS')
+    ? '#10B981'
+    : pUpper.includes('S7')
+    ? '#F59E0B'
+    : isSource
+    ? '#00F2FE'
+    : '#4FACFE';
+
+  topoNodes.push({
+    id: clean,
+    x: 0.5 + rx * Math.cos(angle),
+    y: 0.5 + ry * Math.sin(angle),
+    label: clean,
+    color,
+    pulse: 1.0,
+  });
+  topoNodeIndexMap.set(clean, idx);
+  return idx;
+}
+
+function emitRealTopologyFlowParticle(srcIp?: string, dstIp?: string, protocol?: string) {
+  if (!srcIp || !dstIp) return;
+  const iSrc = ensureDynamicTopoEndpoints(srcIp, true, protocol);
+  const iDst = ensureDynamicTopoEndpoints(dstIp, false, protocol);
+  if (iSrc < 0 || iDst < 0 || iSrc === iDst) return;
+
+  topoNodes[iSrc].pulse = 1.0;
+  let link = topoLinks.find(l => (l.from === iSrc && l.to === iDst) || (l.from === iDst && l.to === iSrc));
+  if (!link) {
+    link = { from: iSrc, to: iDst, packets: [] };
+    topoLinks.push(link);
+  }
+  if (link.packets.length < 6) {
+    link.packets.push({ progress: 0, speed: 0.025 });
+  }
 }
 
 let topoAnimId: number | null = null;
@@ -1362,6 +1945,15 @@ function startTopologyAnimation() {
       return;
     }
 
+    const dpr = window.devicePixelRatio || 1;
+    const targetW = Math.round(w * dpr);
+    const targetH = Math.round(h * dpr);
+    if (canvas.width !== targetW || canvas.height !== targetH) {
+      canvas.width = targetW;
+      canvas.height = targetH;
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
     ctx.clearRect(0, 0, w, h);
 
     const isLightMode = document.querySelector('.theme-apple-light') !== null;
@@ -1383,13 +1975,15 @@ function startTopologyAnimation() {
       ctx.stroke();
     }
 
-    // 产生流动光包粒子
-    if (Math.random() < 0.14) {
-      const link = topoLinks[Math.floor(Math.random() * topoLinks.length)];
-      link.packets.push({ progress: 0, speed: 0.008 + Math.random() * 0.012 });
+    // 若尚无真实捕获拓扑节点，显示客观待机网格提示，严禁虚构连线与粒子
+    if (topoNodes.length === 0) {
+      ctx.fillStyle = isLightMode ? 'rgba(15, 23, 42, 0.55)' : 'rgba(148, 163, 184, 0.65)';
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('待机中: 启动网卡嗅探或导入 PCAP 后自动绘制真实活跃流拓扑', w / 2, h / 2);
     }
 
-    // 绘制连线与流动粒子
+    // 绘制真实连线与实时流光粒子
     topoLinks.forEach(l => {
       const n1 = topoNodes[l.from];
       const n2 = topoNodes[l.to];
@@ -1486,96 +2080,22 @@ function startTopologyAnimation() {
   topoAnimId = requestAnimationFrame(render);
 }
 
-// 双报文差分工作台响应式状态
-const isPacketDiffOpen = ref(false);
-const packetDiffBaselineA = ref<PacketRecord | null>(null);
-const packetDiffCompareB = ref<PacketRecord | null>(null);
+// 双报文/多报文比对状态由全局 diffBus 统一管理
 
-export interface SerialPortDetail {
-  port_name: string;
-  description: string;
-  hardware_id: string;
-  manufacturer?: string;
-  product?: string;
-  port_type: string;
-  is_usb: boolean;
-  is_available: boolean;
-  is_in_use_by_us: boolean;
+
+
+function copyHex(hex?: string) {
+  if (hex && navigator.clipboard) {
+    navigator.clipboard.writeText(hex);
+  }
 }
 
-interface PacketRecord {
-  id: number;
-  timestamp: string;
-  timestamp_ns?: number;
-  direction: string;
-  transport: string;
-  protocol: string;
-  src_ip: string;
-  dst_ip: string;
-  src_port: number;
-  dst_port: number;
-  length: number;
-  payload_hex: string;
-  entropy: number;
-  entropy_level: string;
-  mac_src: string;
-  mac_dst: string;
-  chain_hash: string;
-  business_data?: Record<string, any>;
-  raw_text?: string;
-}
-
-export interface MutationWaveBin {
-  offset: number;
-  mutation_rate: number;
-  unique_values_count: number;
-  entropy: number;
-  dominant_hex: string;
-}
-
-interface MatrixResult {
-  mode?: string;
-  summary: string;
-  mutation_spectrum?: MutationWaveBin[];
-  payloads: Array<{
-    label: string;
-    byte_length: number;
-    hex_rows: Array<{
-      offset: string;
-      cells: Array<{ hex: string; ascii: string; diff_type: string }>;
-      ascii_repr: string;
-    }>;
-  }>;
-}
-
-const props = defineProps<{
-  packets: PacketRecord[];
-  assets?: any[];
-  isRunning: boolean;
-  isPaused?: boolean;
-  isSerialRunning?: boolean;
-  isUsbRunning?: boolean;
-  selectedIface: string;
-  bpfFilter: string;
-  interfaces: string[];
-  serialPorts: string[];
-  serialPortsDetail?: SerialPortDetail[];
-  activeSerialPorts?: string[];
-  serialPortBaudRates?: Record<string, number>;
-  selectedSerial: string;
-  serialBaudRate: number;
-  usbDevices: any[];
-}>();
-
-const emit = defineEmits([
-  'startCapture', 'pauseCapture', 'resumeCapture', 'stopCapture',
-  'startSerialCapture', 'stopSerialCapture',
-  'startUsbCapture', 'stopUsbCapture', 'refreshUsb', 'refreshSerial',
-  'updateSerial', 'updateBaudRate', 'updatePortBaudRate',
-  'clearData',
-  'updateBpf', 'updateIface', 'replayPacket', 'saveBaseline',
-  'appendLog', 'importPackets', 'openHoneypot', 'switchWorkbench'
-]);
+const telemetryRateText = computed(() => {
+  if (props.packets.length === 0 || !props.isRunning || props.isPaused) {
+    return '待命热备';
+  }
+  return telemetryPps.value > 0 ? `+${(telemetryPps.value / 1000).toFixed(1)}k/s` : '实时监听';
+});
 
 const activeBus = ref<'nic' | 'serial' | 'usb'>('nic');
 const isTransceiverModalOpen = ref(false);
@@ -1609,13 +2129,13 @@ async function triggerSendProbeFrame() {
       port: props.selectedSerial,
       baudRate: props.serialBaudRate,
     });
-    probeResultMsg.value = `⚡ 探活成功: ${props.selectedSerial}`;
+    probeResultMsg.value = `探活成功: ${props.selectedSerial}`;
     emit('appendLog', res);
     setTimeout(() => { probeResultMsg.value = null; }, 4000);
   } catch (err: any) {
     const errMsg = err?.message || String(err);
-    probeResultMsg.value = `❌ 探活失败: ${errMsg}`;
-    emit('appendLog', `[SERIAL] ❌ 探活帧发送失败: ${errMsg}`);
+    probeResultMsg.value = `探活失败: ${errMsg}`;
+    emit('appendLog', `[SERIAL] 探活帧发送失败: ${errMsg}`);
     setTimeout(() => { probeResultMsg.value = null; }, 5000);
   } finally {
     isSendingProbe.value = false;
@@ -1642,10 +2162,10 @@ function onBaudRateChange(rate: number) {
 function getSerialOptionLabel(portName: string): string {
   const detail = props.serialPortsDetail?.find(d => d.port_name === portName);
   if (detail) {
-    const statusIcon = detail.is_available ? '🟢' : '🔴';
-    const typeTag = detail.is_usb ? ' [USB]' : ' [板载/PCI]';
+    const statusIcon = detail.is_available ? '[可用]' : '[占用]';
+    const typeTag = detail.is_usb ? '[USB]' : '[板载/PCI]';
     const desc = detail.product || detail.manufacturer || detail.description;
-    return `${statusIcon} ${portName}${typeTag} - ${desc}`;
+    return `${statusIcon} ${portName} ${typeTag} - ${desc}`;
   }
   return portName;
 }
@@ -1653,7 +2173,7 @@ function getSerialOptionLabel(portName: string): string {
 function getSerialDetailTitle(portName: string): string {
   const detail = props.serialPortsDetail?.find(d => d.port_name === portName);
   if (detail) {
-    const availText = detail.is_available ? '状态: 🟢 空闲可用' : '状态: 🔴 被占用/无访问权限';
+    const availText = detail.is_available ? '状态: 空闲可用' : '状态: 被占用或无访问权限';
     const inUseText = detail.is_in_use_by_us ? ' (正在被本探针监听)' : '';
     return `${availText}${inUseText}\n描述: ${detail.description}\n硬件ID: ${detail.hardware_id}\n类型: ${detail.port_type}`;
   }
@@ -1662,13 +2182,13 @@ function getSerialDetailTitle(portName: string): string {
 
 function getSerialBadgeStyle(portName: string): string {
   const palette = [
-    'bg-blue-100 text-blue-900 border-blue-300',
-    'bg-emerald-100 text-emerald-900 border-emerald-300',
-    'bg-amber-100 text-amber-900 border-amber-300',
-    'bg-purple-100 text-purple-900 border-purple-300',
-    'bg-rose-100 text-rose-900 border-rose-300',
-    'bg-teal-100 text-teal-900 border-teal-300',
-    'bg-cyan-100 text-cyan-900 border-cyan-300',
+    'bg-blue-500/12 text-blue-700 dark:text-sky-300 border-blue-500/25',
+    'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/25',
+    'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/25',
+    'bg-purple-500/12 text-purple-700 dark:text-purple-300 border-purple-500/25',
+    'bg-rose-500/12 text-rose-700 dark:text-rose-300 border-rose-500/25',
+    'bg-teal-500/12 text-teal-700 dark:text-teal-300 border-teal-500/25',
+    'bg-cyan-500/12 text-cyan-700 dark:text-cyan-300 border-cyan-500/25',
   ];
   let hash = 0;
   for (let i = 0; i < (portName || '').length; i++) {
@@ -1679,6 +2199,15 @@ function getSerialBadgeStyle(portName: string): string {
   return palette[idx];
 }
 
+// 顶部菜单点击展开状态 (替换 hover 下拉)
+const activeDropdown = ref<'analyze' | 'control' | 'archive' | null>(null);
+function toggleDropdown(menu: 'analyze' | 'control' | 'archive') {
+  activeDropdown.value = activeDropdown.value === menu ? null : menu;
+}
+function closeAllDropdowns() {
+  activeDropdown.value = null;
+}
+
 // 工业级专业模块模态框状态
 const isTcpStreamOpen = ref(false);
 const isExportOpen = ref(false);
@@ -1686,6 +2215,240 @@ const isImportOpen = ref(false);
 const isCidrAssetOpen = ref(false);
 const isIpDbOpen = ref(false);
 const tcpStreamPacket = ref<PacketRecord | null>(null);
+
+// PCAP 线速重放控制台状态
+interface ReplayCaptureInfo {
+  format: string;
+  byte_order: string;
+  total_packets: number;
+  total_bytes: number;
+  duration_seconds: number;
+  average_pps: number;
+  average_mbps: number;
+}
+interface ReplayTelemetry {
+  state: string;
+  current_index: number;
+  total_packets: number;
+  current_loop: number;
+  max_loops: number;
+  sent_packets: number;
+  sent_bytes: number;
+  elapsed_micros: number;
+  current_pps: number;
+  current_mbps: number;
+  progress_percent: number;
+  estimated_remaining_secs: number;
+}
+
+const isReplayPanelOpen = ref(false);
+const replayFilePath = ref('');
+const replayMode = ref<'paced' | 'top_speed' | 'step'>('paced');
+const replaySpeed = ref<number>(1.0);
+const replayLoops = ref<number>(1);
+const replayLoading = ref(false);
+const replayFileInfo = ref<ReplayCaptureInfo | null>(null);
+const replayTelemetry = ref<ReplayTelemetry>({
+  state: 'Idle',
+  current_index: 0,
+  total_packets: 0,
+  current_loop: 0,
+  max_loops: 1,
+  sent_packets: 0,
+  sent_bytes: 0,
+  elapsed_micros: 0,
+  current_pps: 0,
+  current_mbps: 0,
+  progress_percent: 0,
+  estimated_remaining_secs: 0,
+});
+let replayPollTimer: ReturnType<typeof setInterval> | null = null;
+
+async function fetchReplayTelemetry() {
+  try {
+    replayTelemetry.value = await invoke<ReplayTelemetry>('get_pcap_replay_telemetry_cmd');
+    if (['Idle', 'Completed', 'Stopped'].includes(replayTelemetry.value.state) && replayPollTimer) {
+      clearInterval(replayPollTimer);
+      replayPollTimer = null;
+    }
+  } catch (e) {
+    console.error('获取 PCAP 重放遥测失败:', e);
+  }
+}
+
+function ensureReplayPolling() {
+  if (!replayPollTimer) {
+    replayPollTimer = setInterval(fetchReplayTelemetry, 500);
+  }
+}
+
+async function toggleReplayConsole() {
+  isReplayPanelOpen.value = !isReplayPanelOpen.value;
+  if (isReplayPanelOpen.value) {
+    await fetchReplayTelemetry();
+  }
+}
+
+async function loadReplayFile() {
+  if (!replayFilePath.value.trim()) return;
+  replayLoading.value = true;
+  try {
+    replayFileInfo.value = await invoke<ReplayCaptureInfo>('load_pcap_replay_file_cmd', {
+      filePath: replayFilePath.value.trim(),
+    });
+    await fetchReplayTelemetry();
+    notifySuccess(
+      '重放文件加载完成',
+      `${replayFileInfo.value.format} | 共 ${replayFileInfo.value.total_packets} 帧 · 平均 ${replayFileInfo.value.average_pps.toFixed(0)} pps`
+    );
+  } catch (e) {
+    notifyError('重放文件加载失败', e);
+  } finally {
+    replayLoading.value = false;
+  }
+}
+
+async function startReplay() {
+  try {
+    await invoke<string>('start_pcap_replay_cmd', {
+      mode: replayMode.value,
+      speedMultiplier: replaySpeed.value,
+      loopCount: replayLoops.value,
+    });
+    ensureReplayPolling();
+    await fetchReplayTelemetry();
+  } catch (e) {
+    notifyError('启动线速重放失败', e);
+  }
+}
+
+async function pauseReplay() {
+  try {
+    await invoke<string>('pause_pcap_replay_cmd');
+    await fetchReplayTelemetry();
+  } catch (e) {
+    notifyError('暂停重放失败', e);
+  }
+}
+
+async function resumeReplay() {
+  try {
+    await invoke<string>('resume_pcap_replay_cmd');
+    ensureReplayPolling();
+    await fetchReplayTelemetry();
+  } catch (e) {
+    notifyError('恢复重放失败', e);
+  }
+}
+
+async function stepReplay() {
+  try {
+    await invoke<string>('step_pcap_replay_cmd');
+    await fetchReplayTelemetry();
+  } catch (e) {
+    notifyError('单步触发失败', e);
+  }
+}
+
+async function stopReplay() {
+  try {
+    await invoke<string>('stop_pcap_replay_cmd');
+    await fetchReplayTelemetry();
+  } catch (e) {
+    notifyError('停止重放失败', e);
+  }
+}
+
+// 工控事务追踪与多分辨率时序/矩阵状态
+interface TransactionMetricsSnapshot {
+  total_transactions_recorded: number;
+  successful_transactions: number;
+  exception_transactions: number;
+  timeout_transactions: number;
+  avg_plc_latency_ms: number;
+  max_plc_latency_ms: number;
+  min_plc_latency_ms: number;
+  active_pending_count: number;
+}
+interface CompletedIndustrialTransaction {
+  id: number;
+  flow_key: string;
+  client_ip: string;
+  server_ip: string;
+  protocol: string;
+  transaction_id: number;
+  function_code: number;
+  req_time: string;
+  plc_latency_ms: number;
+  status: string;
+  summary: string;
+}
+interface TimeSeriesBucket {
+  slot_timestamp_s: number;
+  packet_count: number;
+  byte_count: number;
+  industrial_packet_count: number;
+  write_operation_count: number;
+  error_or_threat_count: number;
+}
+interface TopologyHeatmapCell {
+  source_ip: string;
+  dest_ip: string;
+  interaction_count: number;
+  total_bytes: number;
+  write_operation_count: number;
+  error_count: number;
+  is_industrial: boolean;
+}
+
+const isIndustrialTxOpen = ref(false);
+const txStats = ref<TransactionMetricsSnapshot | null>(null);
+const recentIndustrialTxs = ref<CompletedIndustrialTransaction[]>([]);
+
+const isTimeseriesHeatmapOpen = ref(false);
+const tsResolution = ref<'1s' | '10s' | '60s'>('1s');
+const tsBuckets = ref<TimeSeriesBucket[]>([]);
+const heatmapCells = ref<TopologyHeatmapCell[]>([]);
+
+async function fetchIndustrialTxData() {
+  try {
+    const [stats, list] = await Promise.all([
+      invoke<TransactionMetricsSnapshot>('get_industrial_transaction_stats_cmd'),
+      invoke<CompletedIndustrialTransaction[]>('get_recent_industrial_transactions_cmd', { limit: 40 }),
+    ]);
+    txStats.value = stats;
+    recentIndustrialTxs.value = list;
+  } catch (e) {
+    console.error('获取工控事务数据失败:', e);
+  }
+}
+
+async function toggleIndustrialTxPanel() {
+  isIndustrialTxOpen.value = !isIndustrialTxOpen.value;
+  if (isIndustrialTxOpen.value) {
+    await fetchIndustrialTxData();
+  }
+}
+
+async function fetchTimeseriesHeatmapData() {
+  try {
+    const [series, heatmap] = await Promise.all([
+      invoke<TimeSeriesBucket[]>('get_timeseries_metrics_cmd', { resolution: tsResolution.value }),
+      invoke<TopologyHeatmapCell[]>('get_industrial_heatmap_matrix_cmd', { limit: 30 }),
+    ]);
+    tsBuckets.value = series;
+    heatmapCells.value = heatmap;
+  } catch (e) {
+    console.error('获取时序热力矩阵失败:', e);
+  }
+}
+
+async function toggleTimeseriesHeatmapPanel() {
+  isTimeseriesHeatmapOpen.value = !isTimeseriesHeatmapOpen.value;
+  if (isTimeseriesHeatmapOpen.value) {
+    await fetchTimeseriesHeatmapData();
+  }
+}
 
 // bottomTabs inline migrated
 const activeBottomTab = ref('hexdump');
@@ -1696,6 +2459,15 @@ function openIoGraphsTab() {
 
 const selectedPacket = ref<PacketRecord | null>(null);
 const selectedPackets = ref<Set<number>>(new Set());
+
+// 默认联动：自动选中首个规约报文，避免右侧抽屉处于空选状态
+watch(() => props.packets, (newPackets) => {
+  if (!selectedPacket.value && newPackets && newPackets.length > 0) {
+    const defaultPkt = newPackets[0];
+    selectedPacket.value = defaultPkt;
+    selectedPackets.value = new Set([defaultPkt.id]);
+  }
+}, { immediate: true });
 
 const filterText = ref('');
 const filterInput = ref('');
@@ -1818,13 +2590,13 @@ interface ColumnDef {
 }
 
 const DEFAULT_COLUMNS: ColumnDef[] = [
-  { key: 'id', label: '序号', defaultWidth: 68, minWidth: 50, width: 68, sortable: true, visible: true },
-  { key: 'timestamp', label: '精准时间', defaultWidth: 98, minWidth: 75, width: 98, sortable: true, visible: true },
-  { key: 'src_endpoint', label: '源端点 (Source)', defaultWidth: 165, minWidth: 120, width: 165, sortable: true, visible: true },
-  { key: 'dst_endpoint', label: '目标端点 (Destination)', defaultWidth: 165, minWidth: 120, width: 165, sortable: true, visible: true },
-  { key: 'protocol', label: '规约协议', defaultWidth: 88, minWidth: 65, width: 88, sortable: true, visible: true },
-  { key: 'length', label: '载荷大小', defaultWidth: 68, minWidth: 45, width: 68, sortable: true, visible: true },
-  { key: 'l7_summary', label: '应用层解析关键信息 (L7 Semantic Summary)', defaultWidth: 320, minWidth: 180, width: 320, sortable: false, visible: true },
+  { key: 'id', label: '序号', defaultWidth: 56, minWidth: 46, width: 56, sortable: true, visible: true },
+  { key: 'timestamp', label: '精准时间', defaultWidth: 80, minWidth: 68, width: 80, sortable: true, visible: true },
+  { key: 'src_endpoint', label: '源端点 (Source)', defaultWidth: 134, minWidth: 100, width: 134, sortable: true, visible: true },
+  { key: 'dst_endpoint', label: '目标端点 (Target)', defaultWidth: 134, minWidth: 100, width: 134, sortable: true, visible: true },
+  { key: 'protocol', label: '规约协议', defaultWidth: 74, minWidth: 58, width: 74, sortable: true, visible: true },
+  { key: 'length', label: '载荷大小', defaultWidth: 58, minWidth: 44, width: 58, sortable: true, visible: true },
+  { key: 'l7_summary', label: '应用层解析摘要 (L7)', defaultWidth: 170, minWidth: 120, width: 170, sortable: false, visible: true },
   // 扩展列（默认隐藏，供高级审计自由开启）
   { key: 'direction', label: '流向模式', defaultWidth: 70, minWidth: 50, width: 70, sortable: true, visible: false },
   { key: 'transport', label: '传输总线', defaultWidth: 65, minWidth: 50, width: 65, sortable: true, visible: false },
@@ -1833,7 +2605,7 @@ const DEFAULT_COLUMNS: ColumnDef[] = [
   { key: 'payload', label: '十六进制载荷', defaultWidth: 200, minWidth: 100, width: 200, sortable: false, visible: false },
 ];
 
-const COLUMN_STORAGE_KEY = 'omni_probe_table_column_widths_v4_grand_horizon';
+const COLUMN_STORAGE_KEY = 'omni_probe_table_column_widths_v7_apple_hig';
 
 interface StoredColumnConfig {
   width: number;
@@ -1844,7 +2616,8 @@ function loadStoredColumnConfigs(): Record<string, StoredColumnConfig> {
   try {
     const raw = localStorage.getItem(COLUMN_STORAGE_KEY);
     return raw ? JSON.parse(raw) : {};
-  } catch {
+  } catch (err) {
+    console.warn('[TrafficAnalyzer] loadStoredColumnConfigs JSON parse failed, using defaults:', err);
     return {};
   }
 }
@@ -1859,8 +2632,8 @@ function saveColumnConfigs(cols: ColumnDef[]) {
       };
     });
     localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(map));
-  } catch {
-    // 忽略异常
+  } catch (err) {
+    console.warn('[TrafficAnalyzer] saveColumnConfigs to localStorage failed:', err);
   }
 }
 
@@ -1871,7 +2644,7 @@ const columns = ref<ColumnDef[]>(
     return {
       ...c,
       width: stored?.width ? Math.max(c.minWidth, stored.width) : c.defaultWidth,
-      visible: stored?.visible !== undefined ? stored.visible : true,
+      visible: stored?.visible !== undefined ? stored.visible : (c.visible !== false),
     };
   })
 );
@@ -1882,7 +2655,7 @@ const visibleColumns = computed(() => columns.value.filter(c => c.visible !== fa
 
 function isColVisible(key: string): boolean {
   const col = columns.value.find(c => c.key === key);
-  return col ? col.visible !== false : true;
+  return col ? col.visible !== false : false;
 }
 
 const gridTemplateStyle = computed(() => {
@@ -1965,8 +2738,9 @@ function resetColWidth(visibleIndex: number) {
 
 function resetAllColWidths() {
   columns.value.forEach(c => {
+    const def = DEFAULT_COLUMNS.find(d => d.key === c.key);
     c.width = c.defaultWidth;
-    c.visible = true;
+    c.visible = def ? (def.visible !== false) : true;
   });
   saveColumnConfigs(columns.value);
 }
@@ -2060,42 +2834,73 @@ function formatRemoteIp(pkt: PacketRecord | null | undefined): string {
   return loc ? `${ip} (${loc})` : ip;
 }
 
+function hexToBytes(hexStr?: string): number[] {
+  if (!hexStr) return [];
+  const cleaned = hexStr.replace(/\s+/g, '');
+  if (cleaned.length < 2) return [];
+  const out: number[] = [];
+  for (let i = 0; i + 1 < cleaned.length; i += 2) {
+    const val = parseInt(cleaned.slice(i, i + 2), 16);
+    if (!Number.isNaN(val)) out.push(val);
+  }
+  return out;
+}
+
 function getPacketL7Summary(pkt: PacketRecord): string {
   if (!pkt) return '';
   const bdata = pkt.business_data;
+  if (bdata?.ics_acl_violation) {
+    const v = bdata.ics_acl_violation as { reason?: string; rule_name?: string };
+    return `[ACL阻断] ${v.rule_name || '越权控制'} ${v.reason || ''}`.trim();
+  }
+  if (Array.isArray(bdata?.threat_hits) && bdata.threat_hits.length > 0) {
+    const firstHit = bdata.threat_hits[0] as { name?: string };
+    return `[威胁命中:${bdata.threat_hits.length}] ${firstHit?.name || '特征告警'}`;
+  }
+  if (bdata?.tls_ja3_hash) {
+    return `TLS JA3:${String(bdata.tls_ja3_hash).slice(0, 12)}... | JA4:${bdata.tls_ja4 || '--'}`;
+  }
+  if (bdata?.quic_decrypted) {
+    return `QUIC/HTTP3 ${bdata.quic_packet_type || 'Initial'} | PN:${bdata.quic_packet_number ?? '--'} (${bdata.quic_frames_count ?? 0} 帧)`;
+  }
   if (bdata?.plugin_summary) {
     return String(bdata.plugin_summary);
   }
-  if (pkt.raw_text && pkt.raw_text.trim() && !pkt.raw_text.startsWith('0x') && pkt.raw_text.length < 120) {
+  if (pkt.raw_text && pkt.raw_text.trim() && !pkt.raw_text.startsWith('0x') && pkt.raw_text.length < 140) {
     return pkt.raw_text.trim();
   }
+
+  // 严格从真实 payload_hex 解码帧首部关键字段，禁止按协议名拼凑虚假默认值
+  const bytes = hexToBytes(pkt.payload_hex);
   const proto = (pkt.protocol || '').toUpperCase();
-  if (proto.includes('S7')) {
-    return 'Job: Read Var | DB1.DBD24 (Pressure_Sensor_A) = 3.84 bar';
-  } else if (proto.includes('MODBUS')) {
-    return 'Func 03 (Read Holding Regs) Resp: Reg[0..3] = [0x01E2, 0x00A4]';
-  } else if (proto.includes('ETHERCAT')) {
-    return 'Cmd: LRW (Logical Read Write) | Addr 0x10000 | 4 Servos Sync OK';
-  } else if (proto.includes('DNP3')) {
-    return 'Func 0x81 (Response) | Obj 30 Var 1 (Analog Input 32-bit with Flag)';
-  } else if (proto.includes('104') || proto.includes('IEC')) {
-    return 'I-Format: N(S)=14, N(R)=12 | Type 36 (Measured value, float)';
-  } else if (proto.includes('SL651') || proto.includes('WATER')) {
-    return '水文遥测报 | 遥测站: 42010001 | 水位: 28.45m | 降雨量: 12.5mm';
-  } else if (proto.includes('MQTT')) {
-    return 'Topic: /sensor/vibration/axis_z | QOS 1 | Val: 0.042g RMS';
-  } else if (proto.includes('HTTP')) {
-    return 'POST /api/v2/telemetry/scada HTTP/1.1 | 200 OK | Content-Type: application/json';
-  } else if (proto.includes('ARP')) {
-    return `Who has ${pkt.dst_ip || '192.168.1.1'}? Tell ${pkt.src_ip || '192.168.1.100'}`;
-  } else if (proto.includes('DNS')) {
-    return 'Standard query A scada.internal.plant';
+  if (proto.includes('MODBUS') && bytes.length >= 8 && bytes[2] === 0 && bytes[3] === 0) {
+    const transId = (bytes[0] << 8) | bytes[1];
+    const unitId = bytes[6];
+    const fc = bytes[7];
+    const regAddr = bytes.length >= 10 ? ((bytes[8] << 8) | bytes[9]) : null;
+    return regAddr !== null
+      ? `MBAP TransID:0x${transId.toString(16).padStart(4, '0')} | Unit:${unitId} | FC:0x${fc.toString(16).padStart(2, '0')} | Addr:0x${regAddr.toString(16).padStart(4, '0')}`
+      : `MBAP TransID:0x${transId.toString(16).padStart(4, '0')} | Unit:${unitId} | FC:0x${fc.toString(16).padStart(2, '0')}`;
   }
-  if (pkt.raw_text) return pkt.raw_text;
-  if (pkt.payload_hex) {
-    return `Payload: ${pkt.payload_hex.slice(0, 32)}... (${pkt.length} B)`;
+  if (proto.includes('S7') && bytes.length >= 12) {
+    const s7Idx = bytes.findIndex((b, idx) => b === 0x32 && idx + 4 < bytes.length);
+    if (s7Idx >= 0) {
+      const rosctr = bytes[s7Idx + 1];
+      const pduRef = (bytes[s7Idx + 4] << 8) | bytes[s7Idx + 5];
+      return `S7Comm ROSCTR:0x${rosctr.toString(16).padStart(2, '0')} | PDU-Ref:0x${pduRef.toString(16).padStart(4, '0')} (${bytes.length}B)`;
+    }
   }
-  return '报文结构符合工业标准规约规约，正常通信中';
+  if (proto.includes('ARP')) {
+    return `ARP 解析: ${pkt.src_ip || '--'} -> ${pkt.dst_ip || '--'} (${pkt.length}B)`;
+  }
+  if (bytes.length > 0) {
+    const asciiPreview = bytes
+      .slice(0, 48)
+      .map((b) => (b >= 32 && b <= 126 ? String.fromCharCode(b) : '.'))
+      .join('');
+    return `Hex[${bytes.length}B]: ${pkt.payload_hex.slice(0, 24)} (${asciiPreview.slice(0, 24)})`;
+  }
+  return `${pkt.protocol || pkt.transport || 'Frame'} (${pkt.length} 字节，无应用层载荷)`;
 }
 
 interface L7StructuredSummary {
@@ -2130,17 +2935,17 @@ function parseL7StructuredSummary(pkt: PacketRecord): L7StructuredSummary {
       detail = '';
     }
 
-    let actionClass = 'text-sky-950 dark:text-sky-200 bg-sky-100/90 dark:bg-sky-950/70 border border-sky-300 dark:border-sky-800 font-bold';
+    let actionClass = 'text-sky-700 dark:text-sky-200 bg-sky-500/12 border border-sky-500/25 font-semibold';
     if (/DISCONNECT|CLOSE|RESET|FAIL|ERROR|DROP|TIMEOUT/i.test(action)) {
-      actionClass = 'text-rose-950 dark:text-rose-200 bg-rose-100/90 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-800 font-bold';
+      actionClass = 'text-rose-700 dark:text-rose-200 bg-rose-500/15 border border-rose-500/25 font-semibold';
     } else if (/CONNECT|OPEN|ACCEPT|ESTABLISHED|OK|ACK/i.test(action)) {
-      actionClass = 'text-emerald-950 dark:text-emerald-200 bg-emerald-100/90 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-800 font-bold';
+      actionClass = 'text-emerald-700 dark:text-emerald-200 bg-emerald-500/15 border border-emerald-500/25 font-semibold';
     }
 
     return {
       kind: 'sys_ctrl',
       badge: 'SYS_CTRL',
-      badgeClass: 'bg-slate-200 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 font-bold',
+      badgeClass: 'bg-slate-500/15 text-slate-700 dark:text-slate-200 border-slate-500/25 font-semibold',
       action,
       actionClass,
       detail
@@ -2197,87 +3002,93 @@ const l7DecodedTree = computed<L7TreeResult>(() => {
     };
   }
 
-  const proto = (pkt.protocol || '').toUpperCase();
-  if (proto.includes('S7')) {
-    return {
-      protocolTitle: 'Siemens S7 Protocol (CotP & S7Comm)',
-      statusBadge: '合规白名单已放行',
-      nodes: [
-        { text: '▸ COTP: Type 0x0f (Data), EOT=1, TPDU-NR=0', level: 1, fieldKey: 's7comm.rosctr', fieldValue: '1' },
-        { text: '▸ S7 Header: Protocol Id 0x32, ROSCTR 0x01 (Job), Redundancy ID 0x0000', level: 1, fieldKey: 's7comm.rosctr', fieldValue: '1' },
-        { text: '▸ Parameter: Function 0x04 (Read Var), Item Count: 1', level: 1, fieldKey: 's7comm.param.func', fieldValue: '4' },
-        { text: '• Syntax Id: 0x12 (S7Any) | Transport Size: 0x04 (WORD)', level: 2, fieldKey: 's7comm.item.syntax_id', fieldValue: '18' },
-        { text: '• Area: 0x84 (DataBlock) | DB Number: 1 | Offset: 0x000018 (Bit 0)', level: 2, fieldKey: 's7comm.item.area', fieldValue: '132' },
-        { text: '• Return Value: 0x01E2 (Pressure_Sensor_A = 3.84 bar)', level: 3, fieldKey: 's7comm.data', fieldValue: '01E2' },
-      ]
-    };
-  } else if (proto.includes('MODBUS')) {
-    return {
-      protocolTitle: 'Modbus TCP Industrial Protocol (Port 502)',
-      statusBadge: '合规白名单已放行',
-      nodes: [
-        { text: '▸ MBAP Header: Transaction ID 0x0001, Protocol ID 0x0000, Length: 6, Unit ID: 1', level: 1, fieldKey: 'modbus.trans_id', fieldValue: '1' },
-        { text: '▸ Modbus PDU: Function Code 0x03 (Read Holding Registers)', level: 1, fieldKey: 'modbus.func_code', fieldValue: '3' },
-        { text: '• Starting Address: 0x0000 (Holding Register 40001) | Quantity: 4', level: 2, fieldKey: 'modbus.reference_num', fieldValue: '0' },
-        { text: '• Register Values: [0x01E2, 0x00A4, 0x0000, 0x03E8]', level: 3, fieldKey: 'modbus.data', fieldValue: '01E2' },
-      ]
-    };
-  } else if (proto.includes('ETHERCAT')) {
-    return {
-      protocolTitle: 'EtherCAT Real-Time Industrial Ethernet',
-      statusBadge: '硬实时伺服同步',
-      nodes: [
-        { text: '▸ EtherCAT Frame Header: Frame Length 128 Bytes, Type: 1', level: 1 },
-        { text: '▸ Sub-Telegram: Command 0x0C (LRW Logical Read/Write)', level: 1 },
-        { text: '• Logical Address: 0x00010000 | Length: 32 Bytes', level: 2 },
-        { text: '• Working Counter (WKC): 3 | 4 Servos Synchronized OK', level: 3 },
-      ]
-    };
-  } else if (proto.includes('104') || proto.includes('IEC')) {
-    return {
-      protocolTitle: 'IEC 60870-5-104 Telecontrol Protocol',
-      statusBadge: '电力遥测遥信达标',
-      nodes: [
-        { text: '▸ APCI: Start Character 0x68, APDU Length: 14 Bytes', level: 1 },
-        { text: '▸ Control Field: I-Format (Information Transfer)', level: 1 },
-        { text: '• Send Sequence N(S): 14 | Receive Sequence N(R): 12', level: 2 },
-        { text: '▸ ASDU: Type 36 (Measured value, short floating point), VSQ: 1', level: 2 },
-        { text: '• Cause of Transmission: 3 (Spontaneous) | Common Address: 1', level: 3 },
-      ]
-    };
-  } else if (proto.includes('SL651') || proto.includes('WATER')) {
-    return {
-      protocolTitle: 'SL651-2014 国家水文水资源监测规约',
-      statusBadge: '国标水利水务在线',
-      nodes: [
-        { text: '▸ 帧起始符: 0x7E 0x7E | 报文长度: 46 字节', level: 1 },
-        { text: '▸ 中心站地址: 0x01 | 遥测站遥测地址: 42010001', level: 1 },
-        { text: '▸ 功能码: 0x32 (定时遥测报)', level: 1 },
-        { text: '• 水位要素: 28.45 m (正常防汛水位)', level: 2 },
-        { text: '• 降雨量要素: 12.5 mm | 水温: 18.2 ℃', level: 3 },
-      ]
-    };
-  } else if (proto.includes('MQTT')) {
-    return {
-      protocolTitle: 'MQTT v3.1.1 IoT Telemetry Protocol',
-      statusBadge: '物联遥测传输',
-      nodes: [
-        { text: '▸ Fixed Header: Control Packet Type: 3 (PUBLISH), DUP=0, QoS=1', level: 1 },
-        { text: '▸ Variable Header: Topic: /sensor/vibration/axis_z, Packet ID: 104', level: 2 },
-        { text: '• Payload: {"rms_g": 0.042, "temp_c": 45.2, "status": "HEALTHY"}', level: 3 },
-      ]
-    };
+  const bytes = hexToBytes(pkt.payload_hex);
+  const proto = (pkt.protocol || 'UNKNOWN').toUpperCase();
+  const bdata = pkt.business_data || {};
+  const nodes: L7TreeNode[] = [];
+
+  // 1. 从真实十六进制应用层载荷解码底层协议字段 (无静态假数值)
+  if (proto.includes('MODBUS') && bytes.length >= 8 && bytes[2] === 0 && bytes[3] === 0) {
+    const transId = (bytes[0] << 8) | bytes[1];
+    const pduLen = (bytes[4] << 8) | bytes[5];
+    const unitId = bytes[6];
+    const funcCode = bytes[7];
+    nodes.push(
+      { text: `▸ MBAP Header: TransID=0x${transId.toString(16).padStart(4, '0')}, Proto=0x0000, Len=${pduLen}, Unit=${unitId}`, level: 1, fieldKey: 'modbus.trans_id', fieldValue: String(transId) },
+      { text: `▸ Modbus PDU: Function Code 0x${funcCode.toString(16).padStart(2, '0')} (${funcCode})`, level: 1, fieldKey: 'modbus.func_code', fieldValue: String(funcCode) },
+    );
+    if (bytes.length >= 10) {
+      const refAddr = (bytes[8] << 8) | bytes[9];
+      nodes.push({ text: `• 起始寄存器/线圈地址: 0x${refAddr.toString(16).padStart(4, '0')} (${refAddr})`, level: 2, fieldKey: 'modbus.reference_num', fieldValue: String(refAddr) });
+    }
+    if (bytes.length > 10) {
+      nodes.push({ text: `• 真实数据载荷 (${bytes.length - 8}B): ${pkt.payload_hex.slice(16, 80)}`, level: 3 });
+    }
+  } else if (proto.includes('S7') && bytes.length >= 8) {
+    const s7Idx = bytes.findIndex((b, idx) => b === 0x32 && idx + 8 <= bytes.length);
+    if (s7Idx >= 0) {
+      const rosctr = bytes[s7Idx + 1];
+      const pduRef = (bytes[s7Idx + 4] << 8) | bytes[s7Idx + 5];
+      const paramLen = (bytes[s7Idx + 6] << 8) | bytes[s7Idx + 7];
+      const dataLen = bytes.length >= s7Idx + 10 ? ((bytes[s7Idx + 8] << 8) | bytes[s7Idx + 9]) : 0;
+      nodes.push(
+        { text: `▸ S7 Header (offset +${s7Idx}): ProtoId=0x32, ROSCTR=0x${rosctr.toString(16).padStart(2, '0')}, PDU-Ref=0x${pduRef.toString(16).padStart(4, '0')}`, level: 1, fieldKey: 's7comm.rosctr', fieldValue: String(rosctr) },
+        { text: `• ParamLen=${paramLen}B | DataLen=${dataLen}B`, level: 2 },
+      );
+    }
+  } else if ((proto.includes('SL651') || proto.includes('WATER')) && bytes.length >= 10 && bytes[0] === 0x7e && bytes[1] === 0x7e) {
+    const centerAddr = bytes[2];
+    const stationHex = bytes.slice(3, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
+    const funcCode = bytes[10];
+    nodes.push(
+      { text: `▸ SL651-2014 帧定界符: 0x7E 0x7E | 报文长度: ${bytes.length}B`, level: 1 },
+      { text: `• 实测中心站地址: 0x${centerAddr.toString(16).padStart(2, '0')} | 遥测站码(BCD): ${stationHex} | 功能码: 0x${funcCode.toString(16).padStart(2, '0')}`, level: 2 },
+    );
+  } else if ((proto.includes('104') || proto.includes('IEC')) && bytes.length >= 6 && bytes[0] === 0x68) {
+    const apduLen = bytes[1];
+    nodes.push(
+      { text: `▸ IEC-104 APCI: Start=0x68, APDU Length=${apduLen}B`, level: 1 },
+      { text: `• Control Octets: ${bytes.slice(2, 6).map((b) => '0x' + b.toString(16).padStart(2, '0')).join(' ')}`, level: 2 },
+    );
+    if (bytes.length >= 8) {
+      nodes.push({ text: `• ASDU TypeID=${bytes[6]} | VSQ=0x${bytes[7].toString(16).padStart(2, '0')}`, level: 3 });
+    }
   }
 
-  // 默认通用规约
+  // 2. 注入全部来自后端引擎的真实解析与审计字段 (DPI / GeoIP / TLS指纹 / QUIC / ACL / 威胁命中)
+  const bdataEntries = Object.entries(bdata);
+  if (bdataEntries.length > 0) {
+    nodes.push({ text: `▸ 后端引擎实时解构字段 (共 ${bdataEntries.length} 项)`, level: 1 });
+    for (const [k, v] of bdataEntries) {
+      const formattedVal = typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v);
+      nodes.push({
+        text: `• ${k}: ${formattedVal.length > 140 ? formattedVal.slice(0, 140) + '...' : formattedVal}`,
+        level: 2,
+      });
+    }
+  }
+
+  // 3. 若无高层结构则呈现真实字节长度、信息熵与原始 ASCII 摘要
+  if (nodes.length === 0) {
+    const rawPreview = bytes.length > 0
+      ? bytes.slice(0, 48).map((b) => (b >= 32 && b <= 126 ? String.fromCharCode(b) : '.')).join('')
+      : '无应用层载荷';
+    nodes.push(
+      { text: `▸ 帧长度: ${pkt.length} 字节 | 实测载荷: ${bytes.length} 字节 | 信息熵: ${pkt.entropy ? pkt.entropy.toFixed(2) : '0.00'}`, level: 1 },
+      { text: `• 物理 MAC: ${pkt.mac_src || '--'} ➔ ${pkt.mac_dst || '--'}`, level: 2 },
+      { text: `• 原始 ASCII 预览: ${pkt.raw_text || rawPreview}`, level: 3 },
+    );
+  }
+
+  const hasThreat = Boolean(bdata.ics_acl_violation) || (Array.isArray(bdata.threat_hits) && bdata.threat_hits.length > 0);
+  const statusBadge = hasThreat
+    ? '安全威胁 / 策略命中'
+    : (bdataEntries.length > 0 ? `引擎解析 ${bdataEntries.length} 字段` : '原始载荷实测');
+
   return {
-    protocolTitle: `${pkt.protocol || 'Ethernet II'} 传输规约层`,
-    statusBadge: '正常通信',
-    nodes: [
-      { text: `▸ 载荷长度: ${pkt.length} 字节 | 信息熵: ${pkt.entropy ? pkt.entropy.toFixed(2) : '0.00'}`, level: 1 },
-      { text: `• 语义特征: ${getPacketL7Summary(pkt)}`, level: 2 },
-      { text: `• 物理源 MAC: ${pkt.mac_src || '00:1B:21:A4:B0:12'} ➔ 目的 MAC: ${pkt.mac_dst || '00:50:56:C0:00:08'}`, level: 3 },
-    ]
+    protocolTitle: `${pkt.protocol || 'Ethernet II'} (${pkt.transport || 'L2'}) 实测解析`,
+    statusBadge,
+    nodes,
   };
 });
 
@@ -2357,8 +3168,23 @@ const busTotalPackets = computed(() => {
   }
 });
 
+// 苹果数据流控制底盘：当前作用域过滤 (all | alert | industrial | serial_usb)
+const currentScopeFilter = ref<'all' | 'alert' | 'industrial' | 'serial_usb'>('all');
+const isAutoScroll = ref(true);
+
+function setScope(scope: 'all' | 'alert' | 'industrial' | 'serial_usb') {
+  currentScopeFilter.value = scope;
+}
+
 const filteredPackets = computed(() => {
   let list = busTotalPackets.value;
+  if (currentScopeFilter.value === 'alert') {
+    list = list.filter(p => p.entropy_level === 'critical' || (p as any).is_alert || (p as any).severity === 'high');
+  } else if (currentScopeFilter.value === 'industrial') {
+    list = list.filter(p => /^MODBUS|S7_|ENIP|DNP3|IEC104|BACNET|OPC|ETHERCAT|GOOSE|MMS/i.test(p.protocol));
+  } else if (currentScopeFilter.value === 'serial_usb') {
+    list = list.filter(p => p.transport === 'SERIAL' || p.transport === 'USB' || p.direction?.startsWith('SERIAL') || p.direction?.startsWith('USB'));
+  }
   if (astMatchedIds.value !== null) {
     list = list.filter(p => astMatchedIds.value!.has(p.id));
   } else if (filterText.value.trim()) {
@@ -2416,6 +3242,7 @@ const offsetY = computed(() => startIdx.value * ROW_HEIGHT);
 const lastClickedIndex = ref<number>(-1);
 
 function handleRowClick(e: MouseEvent, pkt: PacketRecord, index?: number) {
+  isInspectorOpen.value = true; // 单击报文行即时滑出随行抽屉
   if (e.shiftKey && lastClickedIndex.value >= 0 && index !== undefined) {
     const start = Math.min(lastClickedIndex.value, index);
     const end = Math.max(lastClickedIndex.value, index);
@@ -2455,11 +3282,27 @@ function openDiffWithSelected2() {
     .map(id => props.packets.find(p => p.id === id))
     .filter(Boolean) as PacketRecord[];
   if (selArr.length >= 2) {
-    packetDiffBaselineA.value = selArr[0];
-    packetDiffCompareB.value = selArr[1];
-    isPacketDiffOpen.value = true;
-    emit('appendLog', `[DIFF] ✓ 已将选中的报文 #${selArr[0].id} 与 #${selArr[1].id} 送入双报文差分对比工作台`);
+    diffBus.openUniversalDiff(selArr[0], selArr[1], 'hex');
+    emit('appendLog', `[DIFF] ✓ 已将选中的报文 #${selArr[0].id} 与 #${selArr[1].id} 送入双组精密比对工作台`);
   }
+}
+
+function openGlobalMultiDiffWithSelected() {
+  const selArr = Array.from(selectedPackets.value)
+    .map(id => props.packets.find(p => p.id === id))
+    .filter(Boolean) as PacketRecord[];
+  if (selArr.length >= 2) {
+    const items = selArr.map((p) => ({
+      ...p,
+      label: `帧 #${p.id} (${p.protocol || 'RAW'})`
+    }));
+    diffBus.openMultiDiff(items, 0, 'multi');
+    emit('appendLog', `[DIFF] ✓ 已将选中的 ${items.length} 帧报文送入全局 Center-Star 多组精准对齐工作台`);
+  }
+}
+
+function queuePacketForDiff(pkt: PacketRecord) {
+  diffBus.addToQueue(pkt, `帧 #${pkt.id} (${pkt.protocol || 'RAW'})`, false);
 }
 
 async function quickSelectFirstTwoAndCompare() {
@@ -2745,7 +3588,7 @@ async function runMatrixCompare() {
   }
 }
 
-function exportMatrixReport() {
+async function exportMatrixReport() {
   if (!matrixResult.value) return;
   const res = matrixResult.value;
   const timeStr = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
@@ -2774,14 +3617,13 @@ function exportMatrixReport() {
     });
     md += `\`\`\`\n\n`;
   });
-  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `matrix_diff_report_${Date.now()}.md`;
-  a.click();
-  URL.revokeObjectURL(url);
-  notifySuccess('矩阵分析报告已导出', '多报文特征矩阵比对报告已成功保存为 Markdown');
+  await saveTextViaNativeDesktop(
+    `matrix_diff_report_${Date.now()}.md`,
+    md,
+    'Markdown 分析报告 (*.md)',
+    '*.md',
+    '导出多报文特征矩阵报告'
+  );
 }
 
 async function loadHistoricalBaseline() {
@@ -2815,55 +3657,41 @@ function formatBytes(bytes: number): string {
 
 function directionBadgeClass(direction: string): string {
   if (direction === 'HONEYPOT_RECV') {
-    return 'bg-amber-500 text-slate-950 font-bold border-amber-600 shadow-2xs';
+    return 'bg-amber-500 text-slate-950 font-semibold border-amber-600';
   }
   if (direction === 'SYS_CTRL') {
-    return 'bg-slate-200 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600 font-bold';
+    return 'bg-slate-500/15 text-slate-700 dark:text-slate-200 border-slate-500/25 font-semibold';
   }
   if (direction === 'SYS_ALERT') {
-    return 'bg-rose-100 text-rose-950 border-rose-300 dark:bg-rose-950/80 dark:text-rose-200 dark:border-rose-800 font-bold';
+    return 'bg-rose-500/15 text-rose-700 dark:text-rose-200 border-rose-500/30 font-semibold';
   }
   if (direction === 'PASSIVE_RECV' || direction === 'IN' || direction === 'PORT_INBOUND' || direction === 'INBOUND') {
-    return 'bg-emerald-100 text-emerald-950 border-emerald-300 dark:bg-emerald-950/70 dark:text-emerald-300 dark:border-emerald-800 font-bold';
+    return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 font-semibold';
   }
   if (direction === 'ACTIVE_PULL' || direction === 'OUT' || direction === 'PORT_OUTBOUND' || direction === 'OUTBOUND') {
-    return 'bg-blue-100 text-blue-950 border-blue-300 dark:bg-blue-950/70 dark:text-blue-300 dark:border-blue-800 font-bold';
+    return 'bg-blue-500/15 text-blue-700 dark:text-sky-300 border-blue-500/30 font-semibold';
   }
-  if (direction === 'SERIAL_TX') return 'bg-indigo-100 text-indigo-950 border-indigo-300 dark:bg-indigo-950/70 dark:text-indigo-300 dark:border-indigo-800 font-bold';
-  if (direction === 'SERIAL_RX') return 'bg-purple-100 text-purple-950 border-purple-300 dark:bg-purple-950/70 dark:text-purple-300 dark:border-purple-800 font-bold';
-  if (direction === 'USB_ATTACH' || direction === 'USB_DETACH') return 'bg-teal-100 text-teal-950 border-teal-300 dark:bg-teal-950/70 dark:text-teal-300 dark:border-teal-800 font-bold';
-  return 'bg-slate-200 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 font-medium';
+  if (direction === 'SERIAL_TX') return 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30 font-semibold';
+  if (direction === 'SERIAL_RX') return 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30 font-semibold';
+  if (direction === 'USB_ATTACH' || direction === 'USB_DETACH') return 'bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30 font-semibold';
+  return 'bg-slate-500/12 text-slate-700 dark:text-slate-300 border-slate-500/25 font-medium';
 }
 
 function protocolColor(proto: string): string {
-  if (/^MODBUS|S7_|ENIP|DNP3|IEC104|BACNET|OPC/.test(proto)) {
-    return 'bg-amber-100/90 text-amber-950 border border-amber-300/80';
-  }
-  if (/^MQTT|AMQP|COAP/.test(proto)) {
-    return 'bg-purple-100/90 text-purple-950 border border-purple-300/80';
-  }
-  if (/^TLS|SSH/.test(proto)) {
-    return 'bg-emerald-100/90 text-emerald-950 border border-emerald-300/80';
-  }
-  if (/^HTTP/.test(proto)) {
-    return 'bg-sky-100/90 text-sky-950 border border-sky-300/80';
-  }
-  if (/^DNS|NTP|DHCP/.test(proto)) {
-    return 'bg-cyan-100/90 text-cyan-950 border border-cyan-300/80';
-  }
-  if (/^HJ212|SL651/.test(proto)) {
-    return 'bg-teal-100/90 text-teal-950 border border-teal-300/80';
-  }
-  if (/^REDIS|MYSQL|POSTGRESQL|MONGODB/.test(proto)) {
-    return 'bg-orange-100/90 text-orange-950 border border-orange-300/80';
-  }
-  if (/^SERIAL/.test(proto)) {
-    return 'bg-indigo-100/90 text-indigo-950 border border-indigo-300/80';
-  }
-  if (/^USB/.test(proto)) {
-    return 'bg-fuchsia-100/90 text-fuchsia-950 border border-fuchsia-300/80';
-  }
-  return 'bg-slate-100/90 text-slate-800 border border-slate-300/80';
+  if (/^MODBUS/.test(proto)) return 'proto-badge proto-modbus';
+  if (/^S7_|^S7COMM/.test(proto)) return 'proto-badge proto-s7comm';
+  if (/^IEC104/.test(proto)) return 'proto-badge proto-iec104';
+  if (/^GOOSE/.test(proto)) return 'proto-badge proto-goose';
+  if (/^ENIP/.test(proto)) return 'proto-badge proto-enip';
+  if (/^OPC/.test(proto)) return 'proto-badge proto-opcua';
+  if (/^ALERT|^DLP/.test(proto)) return 'proto-badge proto-alert';
+  if (/^MQTT|AMQP|COAP/.test(proto)) return 'proto-badge bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30';
+  if (/^TLS|SSH/.test(proto)) return 'proto-badge bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30';
+  if (/^HTTP/.test(proto)) return 'proto-badge bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30';
+  if (/^DNS|NTP|DHCP/.test(proto)) return 'proto-badge bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30';
+  if (/^SERIAL/.test(proto)) return 'proto-badge bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30';
+  if (/^USB/.test(proto)) return 'proto-badge bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300 border border-fuchsia-500/30';
+  return 'proto-badge bg-slate-500/15 text-slate-700 dark:text-slate-300 border border-slate-500/25';
 }
 
 function formatAlignedHexDump(hexStr: string): string[] {
@@ -3001,35 +3829,46 @@ function sendPayloadToNetAssist(pkt: PacketRecord | null) {
   if (hex) {
     try {
       localStorage.setItem('omni_probe_net_assist_incoming_payload', hex);
-    } catch {}
+    } catch (err) {
+      console.warn('[TrafficAnalyzer] store incoming payload for NetAssist failed:', err);
+    }
   }
   emit('switchWorkbench', 'net_assist');
   notifySuccess('已推送至网络调试助手', `报文 #${pkt.id} (${pkt.protocol}) 载荷已准备就绪`);
 }
 
-function menuAction(action: 'inject' | 'detail' | 'baseline' | 'replay' | 'copy' | 'tcp_stream' | 'dossier_src' | 'dossier_dst' | 'traceroute_src' | 'traceroute_dst' | 'set_diff_a' | 'diff_with_a' | 'save_sample') {
+function menuAction(action: 'inject' | 'detail' | 'baseline' | 'replay' | 'copy' | 'tcp_stream' | 'dossier_src' | 'dossier_dst' | 'traceroute_src' | 'traceroute_dst' | 'set_diff_a' | 'diff_with_a' | 'add_diff_queue' | 'save_sample') {
   const pkt = contextMenu.value.packet;
   closeContextMenu();
   if (!pkt) return;
 
-  if (action === 'set_diff_a') {
-    packetDiffBaselineA.value = pkt;
-    emit('appendLog', `[DIFF] ✓ 已将报文 #${pkt.id} (${pkt.protocol}) 设为基准报文 A`);
+  if (action === 'add_diff_queue') {
+    queuePacketForDiff(pkt);
+  } else if (action === 'set_diff_a') {
+    diffBus.setSlotA(pkt, `帧 #${pkt.id} (${pkt.protocol})`);
+    emit('appendLog', `[DIFF] ✓ 已将报文 #${pkt.id} (${pkt.protocol}) 设为全局对比基准项 A`);
+    notifyInfo('已设定基准项 A', `报文 #${pkt.id} (${pkt.protocol}) 已作为参照基准`);
   } else if (action === 'diff_with_a') {
-    packetDiffCompareB.value = pkt;
-    isPacketDiffOpen.value = true;
+    diffBus.setSlotB(pkt, `帧 #${pkt.id} (${pkt.protocol})`);
+    diffBus.compareSlots();
   } else if (action === 'save_sample') {
     const defaultName = `样本_#${pkt.id}_${pkt.protocol}`;
-    const name = prompt('请输入该报文特征样本归档名称:', defaultName);
-    if (name) {
-      invoke('save_packet_sample_cmd', { name: name.trim(), packet: pkt })
-        .then(() => {
-          emit('appendLog', `[DIFF] ✓ 报文 #${pkt.id} 成功存入样本库: ${name}`);
-        })
-        .catch((err) => {
-          notifyError('保存流量分析样本受阻', err);
-        });
-    }
+    uiPrompt('请输入该报文特征样本归档名称:', defaultName, {
+      title: '存入报文特征样本库',
+      placeholder: '请输入归档样本名称',
+      confirmText: '保存样本',
+    }).then((name) => {
+      if (name && name.trim()) {
+        invoke('save_packet_sample_cmd', { name: name.trim(), packet: pkt })
+          .then(() => {
+            emit('appendLog', `[DIFF] 已将报文 #${pkt.id} 成功存入样本库: ${name.trim()}`);
+            notifySuccess('样本保存成功', `已将 #${pkt.id} 归档为: ${name.trim()}`);
+          })
+          .catch((err) => {
+            notifyError('保存流量分析样本受阻', err);
+          });
+      }
+    });
   } else if (action === 'tcp_stream') {
     tcpStreamPacket.value = pkt;
     isTcpStreamOpen.value = true;
@@ -3086,17 +3925,50 @@ watch(filteredPackets, () => {
 async function updateStreamBufferStats() {
   try {
     streamBufferStats.value = await invoke('get_stream_buffer_stats_cmd');
-  } catch (_e) {}
+  } catch (err) {
+    console.warn('[TrafficAnalyzer] get_stream_buffer_stats_cmd polling failed:', err);
+  }
+}
+
+function handleScopeKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') {
+    closeAllDropdowns();
+  }
+  if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
+  if (e.key === 'Escape') {
+    isInspectorOpen.value = false; // ESC 一键收起抽屉
+    return;
+  }
+  if (e.key === 'r' || e.key === 'R') {
+    isInspectorOpen.value = !isInspectorOpen.value; // R 键随行解构开关
+    return;
+  }
+  if (e.key === '0') {
+    setScope('all');
+  } else if (e.key === 'a' || e.key === 'A') {
+    setScope('alert');
+  } else if (e.key === 'i' || e.key === 'I') {
+    setScope('industrial');
+  } else if (e.key === 'b' || e.key === 'B') {
+    setScope('serial_usb');
+  } else if (e.key === 's' || e.key === 'S') {
+    isAutoScroll.value = !isAutoScroll.value;
+  } else if (e.key === ' ') {
+    e.preventDefault();
+    if (props.isPaused) emit('resumeCapture');
+    else emit('pauseCapture');
+  }
 }
 
 onMounted(() => {
+  window.addEventListener('keydown', handleScopeKeydown);
   startTopologyAnimation();
   telemetryTimer = setInterval(updateTelemetryMetrics, 1000);
   updateStreamBufferStats();
   streamBufferTimer = setInterval(updateStreamBufferStats, 2000);
-  startTopologyAnimation();
 
   window.addEventListener('click', closeContextMenu);
+  window.addEventListener('click', closeAllDropdowns);
   nextTick(() => {
     if (tableContainer.value) {
       containerHeight.value = tableContainer.value.clientHeight || 500;
@@ -3113,12 +3985,17 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  window.removeEventListener('keydown', handleScopeKeydown);
   if (topoAnimId) cancelAnimationFrame(topoAnimId);
   if (telemetryTimer) clearInterval(telemetryTimer);
   if (streamBufferTimer) clearInterval(streamBufferTimer);
-  if (topoAnimId) cancelAnimationFrame(topoAnimId);
+  if (replayPollTimer) {
+    clearInterval(replayPollTimer);
+    replayPollTimer = null;
+  }
 
   window.removeEventListener('click', closeContextMenu);
+  window.removeEventListener('click', closeAllDropdowns);
   window.removeEventListener('mousemove', onColResizeMove);
   window.removeEventListener('mouseup', onColResizeEnd);
   if (tableResizeObserver) {

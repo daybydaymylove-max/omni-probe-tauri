@@ -46,11 +46,34 @@ pub fn setup_panic_hook() {
         // 写入当前工作目录
         let _ = std::fs::write("crash.log", &crash_msg);
 
-        // 写入 LocalAppData 目录
+        // 写入各平台用户日志目录
+        #[cfg(windows)]
         if let Ok(local_appdata) = std::env::var("LOCALAPPDATA") {
             let dir = std::path::PathBuf::from(local_appdata).join("com.chinacpu.omni-probe-tauri");
             let _ = std::fs::create_dir_all(&dir);
             let _ = std::fs::write(dir.join("crash.log"), &crash_msg);
+        }
+
+        #[cfg(target_os = "macos")]
+        if let Ok(home) = std::env::var("HOME") {
+            let dir = std::path::PathBuf::from(home)
+                .join("Library")
+                .join("Logs")
+                .join("com.chinacpu.omni-probe-tauri");
+            let _ = std::fs::create_dir_all(&dir);
+            let _ = std::fs::write(dir.join("crash.log"), &crash_msg);
+        }
+
+        #[cfg(all(unix, not(target_os = "macos")))]
+        {
+            let base = std::env::var("XDG_DATA_HOME").ok().filter(|s| !s.is_empty()).or_else(|| {
+                std::env::var("HOME").ok().map(|h| format!("{}/.local/share", h))
+            });
+            if let Some(base_dir) = base {
+                let dir = std::path::PathBuf::from(base_dir).join("com.chinacpu.omni-probe-tauri");
+                let _ = std::fs::create_dir_all(&dir);
+                let _ = std::fs::write(dir.join("crash.log"), &crash_msg);
+            }
         }
 
         default_hook(info);
@@ -63,15 +86,15 @@ unsafe fn is_omni_probe_process(pid: u32) -> bool {
     use windows_sys::Win32::Foundation::CloseHandle;
     use windows_sys::Win32::System::Threading::{OpenProcess, QueryFullProcessImageNameW, PROCESS_QUERY_LIMITED_INFORMATION};
 
-    let h_proc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+    let h_proc = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid) };
     if h_proc.is_null() {
         return false;
     }
 
     let mut buf = [0u16; 1024];
     let mut size = buf.len() as u32;
-    let ok = QueryFullProcessImageNameW(h_proc, 0, buf.as_mut_ptr(), &mut size);
-    CloseHandle(h_proc);
+    let ok = unsafe { QueryFullProcessImageNameW(h_proc, 0, buf.as_mut_ptr(), &mut size) };
+    unsafe { CloseHandle(h_proc) };
 
     if ok != 0 && size > 0 {
         let full_path = String::from_utf16_lossy(&buf[..size as usize]).to_lowercase();
@@ -175,32 +198,34 @@ pub fn ensure_single_instance() {
                 };
 
                 unsafe extern "system" fn enum_windows_proc(hwnd: HWND, lparam: LPARAM) -> BOOL {
-                    let ctx_ptr = lparam as *mut EnumCtx;
-                    let mut win_pid = 0u32;
-                    GetWindowThreadProcessId(hwnd, &mut win_pid);
+                    unsafe {
+                        let ctx_ptr = lparam as *mut EnumCtx;
+                        let mut win_pid = 0u32;
+                        GetWindowThreadProcessId(hwnd, &mut win_pid);
 
-                    // 排除当前正在启动的进程自身
-                    if win_pid != (*ctx_ptr).current_pid && win_pid > 4 {
-                        // 1. 严格校验所属进程是否确实为 omni-probe-tauri.exe（杜绝误判 VSCode/终端/浏览器）
-                        if is_omni_probe_process(win_pid) && IsWindowVisible(hwnd) != 0 {
-                            let mut buf = [0u16; 512];
-                            let len = GetWindowTextW(hwnd, buf.as_mut_ptr(), 512);
-                            let title = if len > 0 {
-                                String::from_utf16_lossy(&buf[..len as usize])
-                            } else {
-                                String::new()
-                            };
+                        // 排除当前正在启动的进程自身
+                        if win_pid != (*ctx_ptr).current_pid && win_pid > 4 {
+                            // 1. 严格校验所属进程是否确实为 omni-probe-tauri.exe（杜绝误判 VSCode/终端/浏览器）
+                            if is_omni_probe_process(win_pid) && IsWindowVisible(hwnd) != 0 {
+                                let mut buf = [0u16; 512];
+                                let len = GetWindowTextW(hwnd, buf.as_mut_ptr(), 512);
+                                let title = if len > 0 {
+                                    String::from_utf16_lossy(&buf[..len as usize])
+                                } else {
+                                    String::new()
+                                };
 
-                            // 2. 确认拥有有效窗口标题或真实探针主界面
-                            if title.contains("Omni-Probe") || title.contains("网络探针") || len == 0 {
-                                ShowWindow(hwnd, SW_RESTORE);
-                                SetForegroundWindow(hwnd);
-                                (*ctx_ptr).found_visible_window = true;
-                                return 0; // 找到真实前台主窗口后终止遍历
+                                // 2. 确认拥有有效窗口标题或真实探针主界面
+                                if title.contains("Omni-Probe") || title.contains("网络探针") || len == 0 {
+                                    ShowWindow(hwnd, SW_RESTORE);
+                                    SetForegroundWindow(hwnd);
+                                    (*ctx_ptr).found_visible_window = true;
+                                    return 0; // 找到真实前台主窗口后终止遍历
+                                }
                             }
                         }
+                        TRUE
                     }
-                    TRUE
                 }
 
                 EnumWindows(Some(enum_windows_proc), &mut ctx as *mut EnumCtx as LPARAM);
@@ -218,7 +243,8 @@ pub fn ensure_single_instance() {
                 }
             }
 
-            if let Ok(mut lock) = MUTEX_HANDLE.lock() {
+            {
+                let mut lock = crate::lock_guard::lock_mutex(&MUTEX_HANDLE, "instance_guard::acquire_single_instance");
                 *lock = Some(handle as usize);
             }
         }

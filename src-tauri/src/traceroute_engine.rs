@@ -241,34 +241,169 @@ impl OfflineGeoCatalog {
         province_map.insert("西藏", (29.6525, 91.1721));
         province_map.insert("台湾", (25.0330, 121.5654));
 
-        // 2.3 国际主要国家与网络核心枢纽
+        // 2.3 国际主要国家与网络核心枢纽 (中英双语全面支持 xdb 输出格式)
         country_map.insert("中国", (35.8617, 104.1954));
+        country_map.insert("China", (35.8617, 104.1954));
         country_map.insert("美国", (37.0902, -95.7129));
+        country_map.insert("United States", (37.0902, -95.7129));
         country_map.insert("日本", (36.2048, 138.2529));
+        country_map.insert("Japan", (36.2048, 138.2529));
         country_map.insert("新加坡", (1.3521, 103.8198));
+        country_map.insert("Singapore", (1.3521, 103.8198));
         country_map.insert("韩国", (35.9078, 127.7669));
+        country_map.insert("South Korea", (35.9078, 127.7669));
+        country_map.insert("Korea", (35.9078, 127.7669));
         country_map.insert("德国", (51.1657, 10.4515));
+        country_map.insert("Germany", (51.1657, 10.4515));
         country_map.insert("英国", (55.3781, -3.4360));
+        country_map.insert("United Kingdom", (55.3781, -3.4360));
         country_map.insert("法国", (46.2276, 2.2137));
+        country_map.insert("France", (46.2276, 2.2137));
         country_map.insert("荷兰", (52.1326, 5.2913));
+        country_map.insert("Netherlands", (52.1326, 5.2913));
         country_map.insert("俄罗斯", (61.5240, 105.3188));
+        country_map.insert("Russia", (61.5240, 105.3188));
+        country_map.insert("Russian Federation", (61.5240, 105.3188));
         country_map.insert("加拿大", (56.1304, -106.3468));
+        country_map.insert("Canada", (56.1304, -106.3468));
         country_map.insert("澳大利亚", (-25.2744, 133.7751));
+        country_map.insert("Australia", (-25.2744, 133.7751));
         country_map.insert("印度", (20.5937, 78.9629));
+        country_map.insert("India", (20.5937, 78.9629));
         country_map.insert("巴西", (-14.2350, -51.9253));
+        country_map.insert("Brazil", (-14.2350, -51.9253));
         country_map.insert("南非", (-30.5595, 22.9375));
+        country_map.insert("South Africa", (-30.5595, 22.9375));
         country_map.insert("阿联酋", (23.4241, 53.8478));
+        country_map.insert("United Arab Emirates", (23.4241, 53.8478));
+        country_map.insert("瑞士", (46.8182, 8.2275));
+        country_map.insert("Switzerland", (46.8182, 8.2275));
+        country_map.insert("瑞典", (60.1282, 18.6435));
+        country_map.insert("Sweden", (60.1282, 18.6435));
+        country_map.insert("芬兰", (61.9241, 25.7482));
+        country_map.insert("Finland", (61.9241, 25.7482));
+        country_map.insert("挪威", (60.4720, 8.4689));
+        country_map.insert("Norway", (60.4720, 8.4689));
+        country_map.insert("丹麦", (56.2639, 9.5018));
+        country_map.insert("Denmark", (56.2639, 9.5018));
+        country_map.insert("爱尔兰", (53.1424, -7.6921));
+        country_map.insert("Ireland", (53.1424, -7.6921));
+        country_map.insert("波兰", (51.9194, 19.1451));
+        country_map.insert("Poland", (51.9194, 19.1451));
+        country_map.insert("意大利", (41.8719, 12.5674));
+        country_map.insert("Italy", (41.8719, 12.5674));
+        country_map.insert("西班牙", (40.4637, -3.7492));
+        country_map.insert("Spain", (40.4637, -3.7492));
+        country_map.insert("葡萄牙", (39.3999, -8.2245));
+        country_map.insert("Portugal", (39.3999, -8.2245));
+        country_map.insert("乌克兰", (48.3794, 31.1656));
+        country_map.insert("Ukraine", (48.3794, 31.1656));
+        country_map.insert("土耳其", (38.9637, 35.2433));
+        country_map.insert("Turkey", (38.9637, 35.2433));
+        country_map.insert("以色列", (31.0461, 34.8516));
+        country_map.insert("Israel", (31.0461, 34.8516));
+        country_map.insert("泰国", (15.8700, 100.9925));
+        country_map.insert("Thailand", (15.8700, 100.9925));
+        country_map.insert("越南", (14.0583, 108.2772));
+        country_map.insert("Vietnam", (14.0583, 108.2772));
+        country_map.insert("马来西亚", (4.2105, 101.9758));
+        country_map.insert("Malaysia", (4.2105, 101.9758));
+        country_map.insert("印度尼西亚", (-0.7893, 113.9213));
+        country_map.insert("Indonesia", (-0.7893, 113.9213));
+        country_map.insert("菲律宾", (12.8797, 121.7740));
+        country_map.insert("Philippines", (12.8797, 121.7740));
+        country_map.insert("墨西哥", (23.6345, -102.5528));
+        country_map.insert("Mexico", (23.6345, -102.5528));
+        country_map.insert("阿根廷", (-38.4161, -63.6167));
+        country_map.insert("Argentina", (-38.4161, -63.6167));
+        country_map.insert("智利", (-35.6751, -71.5430));
+        country_map.insert("Chile", (-35.6751, -71.5430));
+        country_map.insert("新西兰", (-40.9006, 174.8860));
+        country_map.insert("New Zealand", (-40.9006, 174.8860));
+        country_map.insert("沙特", (23.8859, 45.0792));
+        country_map.insert("Saudi Arabia", (23.8859, 45.0792));
+        country_map.insert("埃及", (26.8206, 30.8025));
+        country_map.insert("Egypt", (26.8206, 30.8025));
+        country_map.insert("香港", (22.3193, 114.1694));
+        country_map.insert("Hong Kong", (22.3193, 114.1694));
+        country_map.insert("台湾", (25.0330, 121.5654));
+        country_map.insert("Taiwan", (25.0330, 121.5654));
 
-        // 国际著名骨干机房城市
+        // 国际美国主要州中心 (中英文)
+        province_map.insert("加利福尼亚", (36.7783, -119.4179));
+        province_map.insert("California", (36.7783, -119.4179));
+        province_map.insert("德克萨斯", (31.9686, -99.9018));
+        province_map.insert("Texas", (31.9686, -99.9018));
+        province_map.insert("纽约", (40.7128, -74.0060));
+        province_map.insert("New York", (40.7128, -74.0060));
+        province_map.insert("华盛顿", (47.7511, -120.7401));
+        province_map.insert("Washington", (47.7511, -120.7401));
+        province_map.insert("弗吉尼亚", (37.4316, -78.6569));
+        province_map.insert("Virginia", (37.4316, -78.6569));
+        province_map.insert("俄勒冈", (43.8041, -120.5542));
+        province_map.insert("Oregon", (43.8041, -120.5542));
+        province_map.insert("伊利诺伊", (40.6331, -89.3985));
+        province_map.insert("Illinois", (40.6331, -89.3985));
+        province_map.insert("佛罗里达", (27.6648, -81.5158));
+        province_map.insert("Florida", (27.6648, -81.5158));
+        province_map.insert("马萨诸塞", (42.4072, -71.3824));
+        province_map.insert("Massachusetts", (42.4072, -71.3824));
+        province_map.insert("新泽西", (40.0583, -74.4057));
+        province_map.insert("New Jersey", (40.0583, -74.4057));
+
+        // 国际著名骨干机房城市 (中英文双语模糊匹配)
         city_map.insert("东京", (35.6762, 139.6503));
+        city_map.insert("大阪", (34.6937, 135.5023));
         city_map.insert("首尔", (37.5665, 126.9780));
         city_map.insert("硅谷", (37.3861, -122.0839));
+        city_map.insert("圣何塞", (37.3382, -121.8863));
+        city_map.insert("旧金山", (37.7749, -122.4194));
         city_map.insert("洛杉矶", (34.0522, -118.2437));
+        city_map.insert("西雅图", (47.6062, -122.3321));
+        city_map.insert("芝加哥", (41.8781, -87.6298));
+        city_map.insert("达拉斯", (32.7767, -96.7970));
+        city_map.insert("纽约", (40.7128, -74.0060));
         city_map.insert("阿什本", (39.0438, -77.4874)); // 全球最大互联网交换中心
         city_map.insert("法兰克福", (50.1109, 8.6821));
+        city_map.insert("柏林", (52.5200, 13.4050));
+        city_map.insert("慕尼黑", (48.1351, 11.5820));
         city_map.insert("伦敦", (51.5074, -0.1278));
+        city_map.insert("巴黎", (48.8566, 2.3522));
         city_map.insert("阿姆斯特丹", (52.3676, 4.9041));
+        city_map.insert("苏黎世", (47.3769, 8.5417));
+        city_map.insert("斯德哥尔摩", (59.3293, 18.0686));
+        city_map.insert("莫斯科", (55.7558, 37.6173));
+        city_map.insert("迪拜", (25.2048, 55.2708));
+        city_map.insert("孟买", (19.0760, 72.8777));
         city_map.insert("悉尼", (-33.8688, 151.2093));
+        city_map.insert("墨尔本", (-37.8136, 144.9631));
+        city_map.insert("多伦多", (43.6532, -79.3832));
+        city_map.insert("温哥华", (49.2827, -123.1207));
+        city_map.insert("圣保罗", (-23.5505, -46.6333));
+        city_map.insert("曼谷", (13.7563, 100.5018));
+        city_map.insert("吉隆坡", (3.1390, 101.6869));
+        city_map.insert("雅加达", (-6.2088, 106.8456));
+        city_map.insert("马尼拉", (14.5995, 120.9842));
+        city_map.insert("河内", (21.0285, 105.8542));
+        city_map.insert("胡志明", (10.8231, 106.6297));
+        // 常见直辖与英文别名
+        city_map.insert("Beijing", (39.9042, 116.4074));
+        city_map.insert("Shanghai", (31.2304, 121.4737));
+        city_map.insert("Shenzhen", (22.5431, 114.0579));
+        city_map.insert("Guangzhou", (23.1291, 113.2644));
+        city_map.insert("Hong Kong", (22.3193, 114.1694));
+        city_map.insert("Tokyo", (35.6762, 139.6503));
+        city_map.insert("Singapore", (1.3521, 103.8198));
+        city_map.insert("Seoul", (37.5665, 126.9780));
+        city_map.insert("San Jose", (37.3382, -121.8863));
+        city_map.insert("Los Angeles", (34.0522, -118.2437));
+        city_map.insert("Seattle", (47.6062, -122.3321));
+        city_map.insert("New York", (40.7128, -74.0060));
+        city_map.insert("Ashburn", (39.0438, -77.4874));
+        city_map.insert("Frankfurt", (50.1109, 8.6821));
+        city_map.insert("London", (51.5074, -0.1278));
+        city_map.insert("Amsterdam", (52.3676, 4.9041));
+        city_map.insert("Sydney", (-33.8688, 151.2093));
 
         Self {
             city_map,
@@ -281,23 +416,42 @@ impl OfflineGeoCatalog {
 
     /// 根据归属地层级 (国家, 省份, 城市) 依次多级模糊匹配出最优经纬度坐标
     pub fn lookup(&self, country: &str, province: &str, city: &str) -> Option<GeoCoordinates> {
-        // 1. 优先尝试精准匹配城市
+        let city_lower = city.trim().to_lowercase();
+        let prov_lower = province.trim().to_lowercase();
+        let ctry_lower = country.trim().to_lowercase();
+
+        let match_field = |input: &str, key: &str| -> bool {
+            if input.is_empty() || input == "0" {
+                return false;
+            }
+            if input.contains(key) {
+                return true;
+            }
+            input.chars().count() >= 2 && key.contains(input)
+        };
+
+        // 1. 优先尝试精准匹配城市 (兼容城市名落在 city 或 province 直辖市字段)
         for (c_name, &(lat, lon)) in &self.city_map {
-            if !city.is_empty() && (city.contains(c_name) || c_name.contains(city)) {
+            let c_low = c_name.to_lowercase();
+            let hit_city = match_field(&city_lower, &c_low);
+            let hit_prov = match_field(&prov_lower, &c_low);
+            if hit_city || hit_prov {
+                let disp_city = if !city.is_empty() { city } else { province };
                 return Some(GeoCoordinates {
                     latitude: lat,
                     longitude: lon,
                     country: country.to_string(),
                     province: province.to_string(),
-                    city: city.to_string(),
-                    label: format!("{}/{}", country, city),
+                    city: disp_city.to_string(),
+                    label: format!("{}/{}", country, disp_city),
                 });
             }
         }
 
         // 2. 二级回退: 匹配省份中心
         for (p_name, &(lat, lon)) in &self.province_map {
-            if !province.is_empty() && (province.contains(p_name) || p_name.contains(province)) {
+            let p_low = p_name.to_lowercase();
+            if match_field(&prov_lower, &p_low) {
                 return Some(GeoCoordinates {
                     latitude: lat,
                     longitude: lon,
@@ -311,7 +465,8 @@ impl OfflineGeoCatalog {
 
         // 3. 三级回退: 匹配国家中心
         for (ctry_name, &(lat, lon)) in &self.country_map {
-            if !country.is_empty() && (country.contains(ctry_name) || ctry_name.contains(country)) {
+            let c_low = ctry_name.to_lowercase();
+            if match_field(&ctry_lower, &c_low) {
                 return Some(GeoCoordinates {
                     latitude: lat,
                     longitude: lon,
@@ -436,7 +591,7 @@ pub fn resolve_self_ip_geo(target: Option<&str>) -> (Ipv4Addr, TracerouteHop) {
     let lan_role = Some("本机源端主机 (Probe Host)".to_string());
     let subnet_cidr = infer_lan_subnet_cidr(&local_ip_str);
 
-    let engine = GLOBAL_IP_ENGINE.lock().unwrap();
+    let engine = crate::lock_guard::lock_mutex(&GLOBAL_IP_ENGINE, "traceroute_engine::build_local_source_hop");
     let intel = engine.classify(&local_ip_str);
 
     let (country, province, city, isp, zone_name) = (
@@ -615,7 +770,7 @@ pub async fn execute_traceroute(
 
             // 联动 ip2region.xdb 获取详细地理与运营商情报
             let (country, province, city, isp, zone_name) = if hop_ip != "*" {
-                let engine = GLOBAL_IP_ENGINE.lock().unwrap();
+                let engine = crate::lock_guard::lock_mutex(&GLOBAL_IP_ENGINE, "traceroute_engine::trace_route_hop");
                 let intel = engine.classify(&hop_ip);
                 (
                     intel.country.unwrap_or_default(),

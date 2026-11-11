@@ -1,65 +1,76 @@
 <template>
-  <div class="w-full h-full relative overflow-hidden flex flex-col select-none">
-    <!-- 1. 顶部控制栏 (布局模式切换与拓扑情报胶囊) -->
-    <div class="absolute top-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between pointer-events-none gap-2 flex-wrap">
+  <div class="w-full h-full relative overflow-hidden flex flex-col" style="background: var(--surface-content);">
+    <!-- 1. 顶部控制栏 (浮动导航玻璃层) -->
+    <div class="absolute top-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between pointer-events-none gap-2 flex-wrap select-none">
       <!-- 左侧：多层次拓扑布局模式切换分段控件 -->
-      <div class="bg-slate-900/90 backdrop-blur-xl p-1 rounded-xl border border-white/20 shadow-xl flex items-center gap-1 pointer-events-auto">
+      <div
+        class="backdrop-blur-xl p-1 rounded-xl border shadow-md flex items-center gap-1 pointer-events-auto"
+        style="background: var(--surface-glass-nav); border-color: var(--border-strong);"
+      >
         <button
           @click="layoutMode = 'tiered'"
           :class="[
-            'px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer',
+            'px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer',
             layoutMode === 'tiered'
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'text-slate-300 hover:text-white hover:bg-white/10'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
           ]"
-          title="多层次网状拓扑：核心网关 ➔ 工业控制与服务器 ➔ 现场终端 ➔ 外部公网"
+          title="多层次网状拓扑：核心网关 -> 工业控制与服务器 -> 现场终端 -> 外部公网"
         >
-          <span>📐 网状层次</span>
+          <AppIcon name="layers" :size="13" />
+          <span>网状层次</span>
         </button>
 
         <button
           @click="layoutMode = 'radar'"
           :class="[
-            'px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer',
+            'px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer',
             layoutMode === 'radar'
-              ? 'bg-indigo-600 text-white shadow-sm'
-              : 'text-slate-300 hover:text-white hover:bg-white/10'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
           ]"
-          title="同心圆雷达拓扑：以核心网关为圆心，多圈同心环态势感知分布"
+          title="同心圆雷达拓扑：以核心网关为圆心，多圈同心环结构分布"
         >
-          <span>🎯 同心雷达</span>
+          <AppIcon name="radar" :size="13" />
+          <span>同心雷达</span>
         </button>
 
         <button
           @click="layoutMode = 'force'"
           :class="[
-            'px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer',
+            'px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer',
             layoutMode === 'force'
-              ? 'bg-emerald-600 text-white shadow-sm'
-              : 'text-slate-300 hover:text-white hover:bg-white/10'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
           ]"
           title="物理网状力导向拓扑：引力与排斥力动态物理演化"
         >
-          <span>⚡ 动态力导</span>
+          <AppIcon name="zap" :size="13" />
+          <span>动态力导</span>
         </button>
       </div>
 
-      <!-- 右侧：拓扑指标胶囊与节点检索 -->
+      <!-- 右侧：拓扑指标胶囊与复位 -->
       <div class="flex items-center gap-1.5 pointer-events-auto">
-        <div class="bg-slate-900/90 backdrop-blur-xl px-2.5 py-1 rounded-xl border border-white/20 shadow-xl flex items-center gap-2 text-xs font-mono text-slate-300">
-          <div>节点: <strong class="text-sky-400 font-bold">{{ topologySummary.nodeCount }}</strong></div>
-          <div class="w-[1px] h-3 bg-slate-700"></div>
-          <div>链路: <strong class="text-emerald-400 font-bold">{{ topologySummary.linkCount }}</strong></div>
-          <div class="w-[1px] h-3 bg-slate-700 hidden sm:block"></div>
-          <div class="hidden sm:block">纵深: <strong class="text-amber-400 font-bold">{{ topologySummary.tierCount }}层</strong></div>
+        <div
+          class="backdrop-blur-xl px-3 py-1 rounded-xl border shadow-md flex items-center gap-2.5 text-xs ui-num"
+          style="background: var(--surface-glass-nav); border-color: var(--border-strong); color: var(--text-secondary);"
+        >
+          <div>节点: <strong class="font-semibold text-blue-500 dark:text-sky-400">{{ topologySummary.nodeCount }}</strong></div>
+          <div class="w-[1px] h-3" style="background: var(--border-strong);"></div>
+          <div>链路: <strong class="font-semibold text-emerald-600 dark:text-emerald-400">{{ topologySummary.linkCount }}</strong></div>
+          <div class="w-[1px] h-3 hidden sm:block" style="background: var(--border-strong);"></div>
+          <div class="hidden sm:block">纵深: <strong class="font-semibold text-amber-600 dark:text-amber-400">{{ topologySummary.tierCount }} 层</strong></div>
         </div>
 
         <button
           @click="resetZoom"
-          class="bg-slate-900/90 hover:bg-slate-800 backdrop-blur-xl text-slate-300 hover:text-white px-2.5 py-1 rounded-xl border border-white/20 text-xs font-semibold cursor-pointer shadow transition-all active:scale-95"
+          class="backdrop-blur-xl px-2.5 py-1 rounded-xl border text-xs font-medium cursor-pointer shadow-md transition-all active:scale-95 flex items-center gap-1 hover:opacity-90"
+          style="background: var(--surface-glass-nav); border-color: var(--border-strong); color: var(--text-primary);"
           title="重置视图缩放与居中"
         >
-          ⟲ 复位
+          <AppIcon name="refresh" :size="13" />
+          <span>复位</span>
         </button>
       </div>
     </div>
@@ -75,118 +86,114 @@
         @click="onChartClick"
       />
 
-      <!-- 空状态雷达待机动效看板 -->
-      <div
-        v-else
-        class="w-full h-full flex flex-col items-center justify-center text-slate-400 p-6 select-none bg-slate-950"
-      >
-        <div class="relative w-28 h-28 mb-4 flex items-center justify-center">
-          <div class="absolute inset-0 rounded-full border border-blue-500/30 animate-ping opacity-30"></div>
-          <div class="absolute inset-3 rounded-full border border-dashed border-indigo-400/40 animate-spin opacity-50" style="animation-duration: 12s;"></div>
-          <div class="absolute inset-6 rounded-full border border-blue-400/20"></div>
-          <div class="w-12 h-12 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center text-xl shadow-inner">
-            📡
-          </div>
-        </div>
-        <p class="text-sm font-bold text-slate-200">工业网络拓扑雷达待命中</p>
-        <p class="text-xs text-slate-500 mt-1 max-w-sm text-center leading-relaxed">
-          点击左侧【全网深度扫描】发现局域网物理资产，或点击【启动网卡嗅探】捕获实时通信会话，系统将自动构建多层次网状拓扑
-        </p>
+      <!-- 空状态待机面板 -->
+      <div v-else class="w-full h-full flex items-center justify-center p-6">
+        <EmptyState
+          icon="radar"
+          title="工业网络拓扑雷达待命中"
+          description="点击顶部【全网深度扫描】发现局域网物理资产，或启动网卡嗅探捕获实时通信会话，系统将自动构建多层次网状拓扑。"
+        />
       </div>
     </div>
 
-    <!-- 3. 悬浮拓扑图例 (分层体系与规约标识) -->
+    <!-- 3. 悬浮拓扑图例 (浮动玻璃层) -->
     <div
       v-if="topologySummary.nodeCount > 0"
-      class="absolute bottom-2.5 left-2.5 bg-slate-900/85 backdrop-blur-xl px-3 py-1.5 rounded-xl border border-white/20 shadow-xl flex items-center gap-2.5 text-[10px] font-medium text-slate-300 select-none z-10 flex-wrap max-w-[calc(100%-20px)]"
+      class="absolute bottom-2.5 left-2.5 backdrop-blur-xl px-3 py-1.5 rounded-xl border shadow-md flex items-center gap-3 text-[11px] font-medium select-none z-10 flex-wrap max-w-[calc(100%-20px)]"
+      style="background: var(--surface-glass-nav); border-color: var(--border-strong); color: var(--text-secondary);"
     >
-      <div class="flex items-center gap-1">
-        <span class="w-2 h-2 rounded-full bg-[#6366f1] ring-2 ring-indigo-300/40 inline-block shadow-xs"></span>
+      <div class="flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-[#6366f1] inline-block"></span>
         <span>Tier 1 核心网关</span>
       </div>
-      <div class="flex items-center gap-1">
-        <span class="w-2 h-2 rounded-full bg-[#0d9488] ring-2 ring-teal-300/40 inline-block shadow-xs"></span>
+      <div class="flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-[#0d9488] inline-block"></span>
         <span>Tier 2 控制中心/服务器</span>
       </div>
-      <div class="flex items-center gap-1">
-        <span class="w-2 h-2 rounded-full bg-[#0284c7] ring-2 ring-sky-300/40 inline-block shadow-xs"></span>
+      <div class="flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-[#0284c7] inline-block"></span>
         <span>Tier 3 现场终端</span>
       </div>
-      <div class="flex items-center gap-1">
-        <span class="w-2 h-2 rounded-full bg-[#10b981] ring-2 ring-emerald-300/40 inline-block shadow-xs"></span>
+      <div class="flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-[#10b981] inline-block"></span>
         <span>Tier 4 外部公网</span>
       </div>
-      <div class="flex items-center gap-1">
-        <span class="w-2 h-2 rounded-full bg-[#e11d48] animate-pulse inline-block shadow-xs"></span>
+      <div class="flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-[#e11d48] inline-block"></span>
         <span>高熵/风险</span>
       </div>
     </div>
 
-    <!-- 4. 节点全息情报与拓扑关系卡片 (交互抽屉) -->
+    <!-- 4. 节点全息情报与拓扑关系卡片 (交互抽屉 - 玻璃层) -->
     <transition name="slide-fade">
       <div
         v-if="selectedNode"
-        class="absolute top-14 right-2.5 w-72 sm:w-80 max-w-[calc(100%-20px)] bg-slate-900/95 backdrop-blur-2xl rounded-2xl border border-white/25 shadow-2xl p-3.5 text-xs font-mono text-slate-200 z-20 flex flex-col gap-2.5 max-h-[80%] overflow-auto custom-scrollbar"
+        class="absolute top-14 right-2.5 w-72 sm:w-80 max-w-[calc(100%-20px)] backdrop-blur-2xl rounded-2xl border shadow-2xl p-3.5 text-xs z-20 flex flex-col gap-2.5 max-h-[82%] overflow-auto custom-scrollbar select-text"
+        style="background: var(--surface-glass-nav); border-color: var(--border-strong); color: var(--text-primary);"
       >
-        <div class="flex items-center justify-between border-b border-slate-700/80 pb-2">
-          <div class="flex items-center gap-2">
-            <span class="w-3 h-3 rounded-full" :style="{ backgroundColor: selectedNode.meta.color }"></span>
-            <strong class="text-sm font-bold text-sky-400 truncate max-w-[190px]" :title="selectedNode.name">
+        <div class="flex items-center justify-between border-b pb-2" style="border-color: var(--border-subtle);">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-2.5 h-2.5 rounded-full shrink-0" :style="{ backgroundColor: selectedNode.meta.color }"></span>
+            <strong class="text-sm font-semibold text-blue-500 dark:text-sky-400 truncate ui-num" :title="selectedNode.name">
               {{ selectedNode.name }}
             </strong>
           </div>
-          <button @click="selectedNode = null" class="text-slate-400 hover:text-white cursor-pointer text-sm">
-            ✕
+          <button
+            @click="selectedNode = null"
+            class="p-1 rounded-lg transition-colors cursor-pointer text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
+            title="关闭详情面板"
+          >
+            <AppIcon name="close" :size="14" />
           </button>
         </div>
 
-        <div class="space-y-1.5 text-[11px]">
-          <div class="flex justify-between">
-            <span class="text-slate-400">拓扑层次:</span>
-            <span class="font-bold text-indigo-300">{{ selectedNode.meta.tierName }}</span>
+        <div class="space-y-1.5 text-xs">
+          <div class="flex justify-between gap-2">
+            <span style="color: var(--text-muted);">拓扑层次:</span>
+            <span class="font-medium text-indigo-600 dark:text-indigo-300 text-right">{{ selectedNode.meta.tierName }}</span>
           </div>
-          <div class="flex justify-between">
-            <span class="text-slate-400">设备角色:</span>
-            <span class="text-slate-100 font-semibold">{{ selectedNode.meta.role }}</span>
+          <div class="flex justify-between gap-2">
+            <span style="color: var(--text-muted);">设备角色:</span>
+            <span class="font-medium text-right">{{ selectedNode.meta.role }}</span>
           </div>
-          <div class="flex justify-between">
-            <span class="text-slate-400">物理 MAC:</span>
-            <span class="text-slate-300">{{ selectedNode.mac || 'N/A' }}</span>
+          <div class="flex justify-between gap-2">
+            <span style="color: var(--text-muted);">物理 MAC:</span>
+            <span class="ui-num font-mono text-right">{{ selectedNode.mac || 'N/A' }}</span>
           </div>
-          <div class="flex justify-between">
-            <span class="text-slate-400">硬件厂商:</span>
-            <span class="text-slate-300 truncate max-w-[150px]" :title="selectedNode.vendor">{{ selectedNode.vendor || '通用网络设备' }}</span>
+          <div class="flex justify-between gap-2">
+            <span style="color: var(--text-muted);">硬件厂商:</span>
+            <span class="truncate max-w-[160px] text-right" :title="selectedNode.vendor">{{ selectedNode.vendor || '通用网络设备' }}</span>
           </div>
-          <div v-if="selectedNode.zoneName" class="flex justify-between">
-            <span class="text-slate-400">安全域:</span>
-            <span class="text-indigo-400 font-bold">{{ selectedNode.zoneName }}</span>
+          <div v-if="selectedNode.zoneName" class="flex justify-between gap-2">
+            <span style="color: var(--text-muted);">安全域:</span>
+            <span class="text-indigo-600 dark:text-indigo-300 font-medium text-right">{{ selectedNode.zoneName }}</span>
           </div>
-          <div v-if="selectedNode.osName" class="flex justify-between">
-            <span class="text-slate-400">系统指纹:</span>
-            <span class="text-emerald-300 font-semibold">{{ selectedNode.osName }}</span>
+          <div v-if="selectedNode.osName" class="flex justify-between gap-2">
+            <span style="color: var(--text-muted);">系统指纹:</span>
+            <span class="text-emerald-600 dark:text-emerald-300 font-medium text-right">{{ selectedNode.osName }}</span>
           </div>
-          <div v-if="selectedNode.hostname" class="flex justify-between">
-            <span class="text-slate-400">主机名称:</span>
-            <span class="text-amber-300 font-semibold">{{ selectedNode.hostname }}</span>
+          <div v-if="selectedNode.hostname" class="flex justify-between gap-2">
+            <span style="color: var(--text-muted);">主机名称:</span>
+            <span class="text-amber-600 dark:text-amber-300 font-medium text-right">{{ selectedNode.hostname }}</span>
           </div>
-          <div v-if="selectedNode.geoSummary" class="flex justify-between">
-            <span class="text-slate-400">地理归属:</span>
-            <span class="text-sky-300">{{ selectedNode.geoSummary }}</span>
+          <div v-if="selectedNode.geoSummary" class="flex justify-between gap-2">
+            <span style="color: var(--text-muted);">地理归属:</span>
+            <span class="text-blue-600 dark:text-sky-300 text-right">{{ selectedNode.geoSummary }}</span>
           </div>
-          <div class="flex justify-between">
-            <span class="text-slate-400">累计吞吐:</span>
-            <span class="text-emerald-400 font-bold">{{ selectedNode.pktCount }} 帧报文</span>
+          <div class="flex justify-between gap-2">
+            <span style="color: var(--text-muted);">累计吞吐:</span>
+            <span class="text-emerald-600 dark:text-emerald-400 font-semibold ui-num text-right">{{ selectedNode.pktCount }} 帧报文</span>
           </div>
         </div>
 
         <!-- 开放端口 -->
-        <div v-if="selectedNode.ports && selectedNode.ports.length > 0" class="border-t border-slate-800 pt-2">
-          <span class="text-[10px] text-slate-400 uppercase font-bold block mb-1">开放网络服务与端口</span>
+        <div v-if="selectedNode.ports && selectedNode.ports.length > 0" class="border-t pt-2" style="border-color: var(--border-subtle);">
+          <span class="text-[11px] font-semibold block mb-1.5" style="color: var(--text-muted);">开放网络服务与端口</span>
           <div class="flex items-center gap-1 flex-wrap">
             <span
               v-for="p in selectedNode.ports"
               :key="p"
-              class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold"
+              class="px-1.5 py-0.5 rounded bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-[11px] font-semibold ui-num"
             >
               :{{ p }}
             </span>
@@ -194,8 +201,8 @@
         </div>
 
         <!-- 关联邻居节点 -->
-        <div class="border-t border-slate-800 pt-2 flex-1">
-          <span class="text-[10px] text-slate-400 uppercase font-bold block mb-1">
+        <div class="border-t pt-2 flex-1" style="border-color: var(--border-subtle);">
+          <span class="text-[11px] font-semibold block mb-1.5" style="color: var(--text-muted);">
             直连拓扑邻居 ({{ selectedNode.neighbors.length }} 个节点)
           </span>
           <div class="space-y-1 max-h-36 overflow-auto custom-scrollbar pr-1">
@@ -203,21 +210,24 @@
               v-for="nbr in selectedNode.neighbors"
               :key="nbr.peer"
               @click="openIpDossier(nbr.peer)"
-              class="bg-slate-800/80 hover:bg-slate-700/80 p-1.5 rounded-lg text-[10px] flex items-center justify-between border border-slate-700/60 cursor-pointer transition-colors group"
+              class="p-1.5 rounded-lg text-[11px] flex items-center justify-between border cursor-pointer transition-colors group hover:bg-[var(--surface-hover)]"
+              style="background: var(--surface-content-alt); border-color: var(--border-subtle);"
               title="点击查阅该邻居 IP 全息档案与溯源"
             >
-              <div class="flex items-center gap-1 truncate max-w-[180px]">
-                <span :class="nbr.direction === 'out' ? 'text-emerald-400' : 'text-sky-400'">
-                  {{ nbr.direction === 'out' ? '➔' : '⬅' }}
-                </span>
-                <span class="font-bold truncate text-slate-200 group-hover:text-blue-300" :title="nbr.peer">{{ nbr.peer }}</span>
+              <div class="flex items-center gap-1.5 truncate max-w-[175px]">
+                <AppIcon
+                  name="arrow-right"
+                  :size="11"
+                  :class="nbr.direction === 'out' ? 'text-emerald-500' : 'text-sky-500 rotate-180'"
+                />
+                <span class="font-semibold truncate ui-num group-hover:text-blue-500 dark:group-hover:text-sky-400" :title="nbr.peer">{{ nbr.peer }}</span>
               </div>
-              <div class="text-slate-400 flex items-center gap-1 shrink-0">
-                <span class="text-amber-400 font-semibold">{{ nbr.protocol }}</span>
-                <span>({{ nbr.count }}次)</span>
+              <div class="flex items-center gap-1 shrink-0 ui-num" style="color: var(--text-muted);">
+                <span class="text-amber-600 dark:text-amber-400 font-semibold">{{ nbr.protocol }}</span>
+                <span>({{ nbr.count }})</span>
               </div>
             </div>
-            <div v-if="selectedNode.neighbors.length === 0" class="text-slate-500 text-[10px] py-1 text-center">
+            <div v-if="selectedNode.neighbors.length === 0" class="text-[11px] py-2 text-center" style="color: var(--text-muted);">
               暂无通信邻居
             </div>
           </div>
@@ -227,10 +237,11 @@
         <button
           v-if="selectedNode.id && selectedNode.id !== 'HOST_SYSTEM'"
           @click="openIpDossier(selectedNode.id)"
-          class="w-full mt-2 py-1.5 px-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-semibold shadow-md flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shrink-0"
+          class="ui-btn-primary w-full mt-1 py-1.5 px-3 text-xs font-medium justify-center shrink-0"
         >
-          <span>🔍 查阅 IP 全息档案与溯源</span>
-          <span class="text-[10px] opacity-75">↗</span>
+          <AppIcon name="search" :size="13" />
+          <span>查阅 IP 全息档案与溯源</span>
+          <AppIcon name="arrow-right" :size="12" />
         </button>
       </div>
     </transition>
@@ -249,13 +260,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
 import { GraphChart } from 'echarts/charts';
 import { TooltipComponent } from 'echarts/components';
 import VChart from 'vue-echarts';
 import IpDossierModal from './IpDossierModal.vue';
+import AppIcon from './AppIcon.vue';
+import EmptyState from './EmptyState.vue';
 
 use([CanvasRenderer, GraphChart, TooltipComponent]);
 
@@ -287,6 +300,26 @@ const layoutMode = ref<'tiered' | 'radar' | 'force'>('tiered');
 const selectedNode = ref<any | null>(null);
 const dossierVisible = ref(false);
 const selectedDossierIp = ref('');
+
+const isDarkTheme = ref(
+  typeof document !== 'undefined' ? !document.documentElement.classList.contains('theme-apple-light') : true
+);
+
+let themeObserver: MutationObserver | null = null;
+onMounted(() => {
+  if (typeof document === 'undefined') return;
+  const syncTheme = () => {
+    isDarkTheme.value = !document.documentElement.classList.contains('theme-apple-light');
+  };
+  syncTheme();
+  themeObserver = new MutationObserver(syncTheme);
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+});
+
+onBeforeUnmount(() => {
+  themeObserver?.disconnect();
+  themeObserver = null;
+});
 
 function openIpDossier(ip: string) {
   if (!ip) return;
@@ -580,6 +613,18 @@ const topologySummary = computed(() => {
 const chartOption = computed(() => {
   const { nodes, links } = topologyData.value;
   const mode = layoutMode.value;
+  const isDark = isDarkTheme.value;
+
+  const labelColor = isDark ? '#f1f5f9' : '#0f172a';
+  const labelBg = isDark ? 'rgba(12, 18, 30, 0.9)' : 'rgba(255, 255, 255, 0.94)';
+  const labelBorder = isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(15, 23, 42, 0.14)';
+  const tooltipBg = isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.96)';
+  const tooltipBorder = isDark ? '#334155' : '#cbd5e1';
+  const tooltipTextColor = isDark ? '#f1f5f9' : '#0f172a';
+  const tooltipTitleColor = isDark ? '#38bdf8' : '#0284c7';
+  const tooltipMutedColor = isDark ? '#94a3b8' : '#64748b';
+  const infraLineColor = isDark ? '#475569' : '#94a3b8';
+  const activeLineColor = isDark ? '#38bdf8' : '#0284c7';
 
   // 虚拟画布基准尺寸
   const canvasW = 900;
@@ -698,15 +743,15 @@ const chartOption = computed(() => {
         show: true,
         position: 'bottom',
         distance: 6,
-        color: '#f8fafc',
-        fontSize: 10,
+        color: labelColor,
+        fontSize: 11,
         fontWeight: 'bold',
-        fontFamily: 'monospace',
-        backgroundColor: 'rgba(15, 23, 42, 0.85)',
-        borderColor: 'rgba(255, 255, 255, 0.2)',
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+        backgroundColor: labelBg,
+        borderColor: labelBorder,
         borderWidth: 1,
         borderRadius: 4,
-        padding: [2, 5],
+        padding: [2, 6],
       },
       rawNode: n,
     };
@@ -724,9 +769,9 @@ const chartOption = computed(() => {
       value: l.count,
       protocol: l.protocol,
       lineStyle: {
-        color: isThreat ? '#f43f5e' : (isInfra ? '#475569' : '#38bdf8'),
+        color: isThreat ? '#f43f5e' : (isInfra ? infraLineColor : activeLineColor),
         type: isInfra ? 'dashed' : 'solid',
-        opacity: isInfra ? 0.4 : 0.75,
+        opacity: isInfra ? 0.45 : 0.78,
         width,
         curveness: 0.15,
       },
@@ -736,33 +781,33 @@ const chartOption = computed(() => {
   return {
     tooltip: {
       trigger: 'item',
-      backgroundColor: 'rgba(15, 23, 42, 0.94)',
-      borderColor: '#334155',
+      backgroundColor: tooltipBg,
+      borderColor: tooltipBorder,
       borderWidth: 1,
-      textStyle: { color: '#f8fafc', fontSize: 11 },
+      textStyle: { color: tooltipTextColor, fontSize: 12 },
       formatter: (params: any) => {
         if (params.dataType === 'node') {
           const raw = params.data.rawNode;
-          const threatTag = raw.hasThreat ? '<span style="color: #f43f5e; font-weight: bold;">[高熵风险]</span>' : '';
+          const threatTag = raw.hasThreat ? '<span style="color: #e11d48; font-weight: bold;">[高熵风险]</span>' : '';
           return `
-            <div style="font-family: monospace; padding: 2px;">
-              <div style="font-weight: bold; color: #38bdf8; margin-bottom: 2px;">${raw.name} ${threatTag}</div>
-              <div>层级: <span style="color: #c7d2fe;">${raw.meta.tierName}</span></div>
-              <div>角色: <span style="color: #cbd5e1;">${raw.meta.role}</span></div>
-              <div>MAC: <span style="color: #94a3b8;">${raw.mac || 'N/A'}</span></div>
-              <div>厂商: <span style="color: #94a3b8;">${raw.vendor || '通用设备'}</span></div>
-              <div>吞吐: <span style="color: #4ade80; font-weight: bold;">${raw.pktCount} 帧报文</span></div>
-              ${raw.ports && raw.ports.length > 0 ? `<div>端口: <span style="color: #facc15;">:${raw.ports.join(', :')}</span></div>` : ''}
+            <div style="font-family: ui-monospace, SFMono-Regular, monospace; padding: 2px;">
+              <div style="font-weight: bold; color: ${tooltipTitleColor}; margin-bottom: 3px;">${raw.name} ${threatTag}</div>
+              <div>层级: <span>${raw.meta.tierName}</span></div>
+              <div>角色: <span>${raw.meta.role}</span></div>
+              <div>MAC: <span style="color: ${tooltipMutedColor};">${raw.mac || 'N/A'}</span></div>
+              <div>厂商: <span style="color: ${tooltipMutedColor};">${raw.vendor || '通用设备'}</span></div>
+              <div>吞吐: <span style="color: #10b981; font-weight: bold;">${raw.pktCount} 帧报文</span></div>
+              ${raw.ports && raw.ports.length > 0 ? `<div>端口: <span style="color: #f59e0b;">:${raw.ports.join(', :')}</span></div>` : ''}
             </div>
           `;
         } else if (params.dataType === 'edge') {
           const d = params.data;
           return `
-            <div style="font-family: monospace; padding: 2px;">
-              <div style="font-weight: bold; color: #e2e8f0;">${d.lineStyle?.type === 'dashed' ? '基础设施拓扑关联' : '实时通信数据流'}</div>
-              <div>${d.source} ➔ ${d.target}</div>
-              <div>通信频次: <span style="color: #38bdf8; font-weight: bold;">${d.value} 次</span></div>
-              <div>应用规约: <span style="color: #facc15;">${d.protocol}</span></div>
+            <div style="font-family: ui-monospace, SFMono-Regular, monospace; padding: 2px;">
+              <div style="font-weight: bold; margin-bottom: 2px;">${d.lineStyle?.type === 'dashed' ? '基础设施拓扑关联' : '实时通信数据流'}</div>
+              <div>${d.source} → ${d.target}</div>
+              <div>通信频次: <span style="color: ${tooltipTitleColor}; font-weight: bold;">${d.value} 次</span></div>
+              <div>应用规约: <span style="color: #f59e0b;">${d.protocol}</span></div>
             </div>
           `;
         }
@@ -787,7 +832,7 @@ const chartOption = computed(() => {
         links: graphLinks,
         emphasis: {
           focus: 'adjacency',
-          lineStyle: { width: 5, color: '#38bdf8' },
+          lineStyle: { width: 5, color: activeLineColor },
         },
       },
     ],

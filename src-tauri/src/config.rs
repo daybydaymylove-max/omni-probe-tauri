@@ -216,7 +216,8 @@ pub fn save_config(cfg: ProbeConfig) -> Result<(), String> {
     let json = serde_json::to_string_pretty(&cfg)
         .map_err(|e| format!("配置序列化失败: {}", e))?;
     std::fs::write(config_path(), &json).map_err(|e| format!("写入 config.json 失败: {}", e))?;
-    if let Ok(mut guard) = GLOBAL_CONFIG.lock() {
+    {
+        let mut guard = crate::lock_guard::lock_mutex(&GLOBAL_CONFIG, "config::save_config");
         *guard = cfg;
     }
     Ok(())

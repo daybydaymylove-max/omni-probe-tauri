@@ -820,6 +820,94 @@ impl TlsThreatHit {
     }
 }
 
+/// TLS 指纹捕获会话记录
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TlsFingerprintSessionRecord {
+    pub timestamp: String,
+    pub src_ip: String,
+    pub src_port: u16,
+    pub dst_ip: String,
+    pub dst_port: u16,
+    pub ja3_hash: String,
+    pub ja4_string: String,
+    pub is_threat: bool,
+    pub threat_name: Option<String>,
+}
+
+/// TLS 指纹监控引擎汇总遥测
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct TlsFingerprintTelemetry {
+    pub total_client_hellos: u64,
+    pub threat_hit_count: u64,
+    pub builtin_threat_signatures: usize,
+    pub recent_sessions: Vec<TlsFingerprintSessionRecord>,
+}
+
+pub struct GlobalTlsFingerprintState {
+    pub engine: TlsFingerprintEngine,
+    pub total_client_hellos: u64,
+    pub threat_hit_count: u64,
+    pub recent_sessions: Vec<TlsFingerprintSessionRecord>,
+}
+
+pub static GLOBAL_TLS_FP_STATE: once_cell::sync::Lazy<std::sync::Mutex<GlobalTlsFingerprintState>> =
+    once_cell::sync::Lazy::new(|| {
+        std::sync::Mutex::new(GlobalTlsFingerprintState {
+            engine: TlsFingerprintEngine::new(),
+            total_client_hellos: 0,
+            threat_hit_count: 0,
+            recent_sessions: Vec::new(),
+        })
+    });
+
+/// 供抓包主流水线调用：对 TLS ClientHello 进行 JA3/JA4 计算与恶意 C2 库实时碰撞并存档
+pub fn inspect_and_record_tls(
+    payload: &[u8],
+    src_ip: &str,
+    dst_ip: &str,
+    src_port: u16,
+    dst_port: u16,
+    timestamp: &str,
+) -> Option<(String, String, Option<TlsThreatHit>)> {
+    let mut state = GLOBAL_TLS_FP_STATE.lock().ok()?;
+    let (ja3, ja4, hit) = state.engine.inspect_client_hello(payload, false)?;
+    state.total_client_hellos += 1;
+    if hit.is_some() {
+        state.threat_hit_count += 1;
+    }
+    state.recent_sessions.insert(
+        0,
+        TlsFingerprintSessionRecord {
+            timestamp: timestamp.to_string(),
+            src_ip: src_ip.to_string(),
+            src_port,
+            dst_ip: dst_ip.to_string(),
+            dst_port,
+            ja3_hash: ja3.clone(),
+            ja4_string: ja4.clone(),
+            is_threat: hit.is_some(),
+            threat_name: hit.as_ref().map(|h| h.threat_name.clone()),
+        },
+    );
+    if state.recent_sessions.len() > 200 {
+        state.recent_sessions.truncate(200);
+    }
+    Some((ja3, ja4, hit))
+}
+
+#[tauri::command]
+pub fn get_tls_fingerprint_telemetry_cmd() -> Result<TlsFingerprintTelemetry, String> {
+    let state = GLOBAL_TLS_FP_STATE
+        .lock()
+        .map_err(|e| format!("TLS 指纹状态锁定失败: {}", e))?;
+    Ok(TlsFingerprintTelemetry {
+        total_client_hellos: state.total_client_hellos,
+        threat_hit_count: state.threat_hit_count,
+        builtin_threat_signatures: state.engine.known_ja3_threats.len(),
+        recent_sessions: state.recent_sessions.clone(),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -910,5 +998,32 @@ mod tests {
         let threat_entry = engine.known_ja3_threats.get(cs_hash).unwrap();
         assert_eq!(threat_entry.tool_or_malware_family, "CobaltStrike");
         assert_eq!(threat_entry.severity, ThreatSeverity::Critical);
+    }
+
+    #[test]
+    fn test_inspect_and_record_tls_updates_global_state_and_empty_guard() {
+        // 1. 极限用例: 空报文与畸形短包快速返回 None
+        assert!(inspect_and_record_tls(&[], "1.1.1.1", "2.2.2.2", 1234, 443, "12:00:00").is_none());
+        assert!(inspect_and_record_tls(&[0x16, 0x03, 0x01], "1.1.1.1", "2.2.2.2", 1234, 443, "12:00:00").is_none());
+
+        // 2. 构造真实 ClientHello 并验证全局状态记账与 JA3/JA4 返回
+        let mut pkt = Vec::new();
+        pkt.extend_from_slice(&[0x16, 0x03, 0x01, 0x00, 0x3b]);
+        pkt.push(0x01);
+        pkt.extend_from_slice(&[0x00, 0x00, 0x37]);
+        pkt.extend_from_slice(&[0x03, 0x03]);
+        pkt.extend_from_slice(&[0x22; 32]);
+        pkt.push(0x00);
+        pkt.extend_from_slice(&[0x00, 0x02, 0x13, 0x01]);
+        pkt.extend_from_slice(&[0x01, 0x00]);
+        pkt.extend_from_slice(&[0x00, 0x07, 0x00, 0x2b, 0x00, 0x03, 0x02, 0x03, 0x04]);
+
+        let before = get_tls_fingerprint_telemetry_cmd().unwrap().total_client_hellos;
+        let res = inspect_and_record_tls(&pkt, "10.1.1.2", "93.184.216.34", 51111, 443, "12:00:01")
+            .expect("合规 ClientHello 必须成功提取并落盘指纹状态");
+        assert_eq!(res.0.len(), 32);
+        assert!(res.1.starts_with("t13"));
+        let after = get_tls_fingerprint_telemetry_cmd().unwrap().total_client_hellos;
+        assert_eq!(after, before + 1);
     }
 }

@@ -802,6 +802,34 @@ pub fn inspect_and_decrypt_quic_packet_cmd(packet_bytes: Vec<u8>) -> Result<Decr
     }
 }
 
+/// 供抓包主流水线调用的无异常轻量 QUIC/HTTP3 被动自解密入口
+pub fn try_passive_decrypt_quic(packet_bytes: &[u8]) -> Option<DecryptedQuicPacket> {
+    if packet_bytes.len() < 16 {
+        return None;
+    }
+    let meta = QuicHeaderMetadata::parse_raw(packet_bytes).ok()?;
+    if meta.packet_type == QuicPacketType::Initial {
+        let keys = QuicInitialKeys::derive_from_dcid(&meta.dcid).ok()?;
+        let dec = QuicPacketDecryptor::decrypt_packet(packet_bytes, &keys.client)
+            .or_else(|_| QuicPacketDecryptor::decrypt_packet(packet_bytes, &keys.server))
+            .ok()?;
+
+        {
+            let mut mgr = crate::lock_guard::lock_mutex(&GLOBAL_QUIC_MANAGER, "quic_engine::try_auto_decrypt_initial");
+            mgr.total_decrypted += 1;
+            mgr.auto_initial_count += 1;
+            for frame in &dec.parsed_frames {
+                if let QuicFrameType::Stream { stream_id, offset, length, fin } = frame {
+                    let stream_bytes = &dec.payload_bytes[..(*length).min(dec.payload_bytes.len())];
+                    mgr.reassembler.process_stream_frame(*stream_id, *offset, stream_bytes, *fin);
+                }
+            }
+        }
+        return Some(dec);
+    }
+    None
+}
+
 #[tauri::command]
 pub fn get_quic_streams_cmd() -> Result<Vec<QuicStreamSummary>, String> {
     let mgr = GLOBAL_QUIC_MANAGER.lock().map_err(|e| e.to_string())?;

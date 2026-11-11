@@ -151,20 +151,22 @@ fn save_rules_to_disk(rules: &[FirewallRule]) -> bool {
 
 /// 获取当前全部防火墙规则列表
 pub fn get_firewall_rules() -> Vec<FirewallRule> {
-    if let Ok(rules) = FIREWALL_RULES.read() {
-        rules.clone()
-    } else {
-        Vec::new()
-    }
+    let rules = crate::lock_guard::read_rwlock(
+        &FIREWALL_RULES,
+        "firewall_filter::get_firewall_rules",
+    );
+    rules.clone()
 }
 
 /// 保存更新防火墙规则列表并落盘
 pub fn save_firewall_rules(new_rules: Vec<FirewallRule>) -> bool {
     if save_rules_to_disk(&new_rules) {
-        if let Ok(mut rules) = FIREWALL_RULES.write() {
-            *rules = new_rules;
-            return true;
-        }
+        let mut rules = crate::lock_guard::write_rwlock(
+            &FIREWALL_RULES,
+            "firewall_filter::save_firewall_rules",
+        );
+        *rules = new_rules;
+        return true;
     }
     false
 }
@@ -174,17 +176,11 @@ pub fn save_firewall_rules(new_rules: Vec<FirewallRule>) -> bool {
 /// 时间复杂度: O(R * K)，R 为启用规则数，K 为正则匹配开销 (通常在微秒级)
 /// 空间复杂度: O(1) 零堆分配
 pub fn evaluate_http_traffic(req: &DecryptedHttpRequest) -> FirewallDecision {
-    let rules = if let Ok(r) = FIREWALL_RULES.read() {
-        r.clone()
-    } else {
-        return FirewallDecision {
-            action: "PASS".to_string(),
-            matched_rule_id: None,
-            matched_rule_name: None,
-            reason: "规则引擎锁定失败，降级放行".to_string(),
-            block_html: None,
-        };
-    };
+    let rules = crate::lock_guard::read_rwlock(
+        &FIREWALL_RULES,
+        "firewall_filter::evaluate_http_traffic",
+    )
+    .clone();
 
     let body_str = String::from_utf8_lossy(&req.body);
 

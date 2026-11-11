@@ -477,7 +477,7 @@ impl PcapReplayEngine {
         self.sent_packets.store(0, Ordering::Relaxed);
         self.sent_bytes.store(0, Ordering::Relaxed);
         self.elapsed_micros.store(0, Ordering::Relaxed);
-        *self.state.lock().unwrap() = ReplayState::Idle;
+        *crate::lock_guard::lock_mutex(&self.state, "pcap_replay::load_pcap_idle") = ReplayState::Idle;
 
         Ok(info)
     }
@@ -495,7 +495,7 @@ impl PcapReplayEngine {
 
         self.stop();
 
-        *self.state.lock().unwrap() = ReplayState::Playing;
+        *crate::lock_guard::lock_mutex(&self.state, "pcap_replay::start_playing") = ReplayState::Playing;
         self.stop_signal.store(false, Ordering::Relaxed);
         self.step_trigger.store(false, Ordering::Relaxed);
         self.current_index.store(0, Ordering::Relaxed);
@@ -503,11 +503,11 @@ impl PcapReplayEngine {
         self.sent_packets.store(0, Ordering::Relaxed);
         self.sent_bytes.store(0, Ordering::Relaxed);
         self.elapsed_micros.store(0, Ordering::Relaxed);
-        *self.last_sample_instant.lock().unwrap() = Instant::now();
+        *crate::lock_guard::lock_mutex(&self.last_sample_instant, "pcap_replay::start_sample_instant") = Instant::now();
         self.last_sample_packets.store(0, Ordering::Relaxed);
         self.last_sample_bytes.store(0, Ordering::Relaxed);
-        *self.current_pps.lock().unwrap() = 0.0;
-        *self.current_mbps.lock().unwrap() = 0.0;
+        *crate::lock_guard::lock_mutex(&self.current_pps, "pcap_replay::start_reset_pps") = 0.0;
+        *crate::lock_guard::lock_mutex(&self.current_mbps, "pcap_replay::start_reset_mbps") = 0.0;
 
         let packets = self.packets.clone();
         let config = self.config.clone();
@@ -557,7 +557,7 @@ impl PcapReplayEngine {
 
     /// 暂停重放
     pub fn pause(&self) {
-        let mut state_guard = self.state.lock().unwrap();
+        let mut state_guard = crate::lock_guard::lock_mutex(&self.state, "pcap_replay::pause");
         if *state_guard == ReplayState::Playing {
             *state_guard = ReplayState::Paused;
         }
@@ -565,7 +565,7 @@ impl PcapReplayEngine {
 
     /// 恢复重放
     pub fn resume(&self) {
-        let mut state_guard = self.state.lock().unwrap();
+        let mut state_guard = crate::lock_guard::lock_mutex(&self.state, "pcap_replay::resume");
         if *state_guard == ReplayState::Paused {
             *state_guard = ReplayState::Playing;
             self.condvar.notify_all();
@@ -576,7 +576,7 @@ impl PcapReplayEngine {
     pub fn stop(&mut self) {
         self.stop_signal.store(true, Ordering::Relaxed);
         {
-            let mut state_guard = self.state.lock().unwrap();
+            let mut state_guard = crate::lock_guard::lock_mutex(&self.state, "pcap_replay::stop");
             *state_guard = ReplayState::Stopped;
             self.condvar.notify_all();
         }
@@ -587,7 +587,7 @@ impl PcapReplayEngine {
 
     /// 单步触发单帧发送
     pub fn step(&self) {
-        let state_guard = self.state.lock().unwrap();
+        let state_guard = crate::lock_guard::lock_mutex(&self.state, "pcap_replay::step");
         if *state_guard == ReplayState::Paused || *state_guard == ReplayState::Idle {
             self.step_trigger.store(true, Ordering::Relaxed);
             self.condvar.notify_all();
@@ -603,7 +603,7 @@ impl PcapReplayEngine {
 
     /// 获取实时遥测状态与指标
     pub fn get_telemetry(&self) -> ReplayTelemetry {
-        let state_str = self.state.lock().unwrap().to_string();
+        let state_str = crate::lock_guard::lock_mutex(&self.state, "pcap_replay::get_telemetry_state").to_string();
         let cur_idx = self.current_index.load(Ordering::Relaxed);
         let tot = self.packets.len();
         let cur_loop = self.current_loop.load(Ordering::Relaxed);
@@ -611,8 +611,8 @@ impl PcapReplayEngine {
         let s_pkts = self.sent_packets.load(Ordering::Relaxed);
         let s_bytes = self.sent_bytes.load(Ordering::Relaxed);
         let el_micros = self.elapsed_micros.load(Ordering::Relaxed);
-        let pps = *self.current_pps.lock().unwrap();
-        let mbps = *self.current_mbps.lock().unwrap();
+        let pps = *crate::lock_guard::lock_mutex(&self.current_pps, "pcap_replay::get_telemetry_pps");
+        let mbps = *crate::lock_guard::lock_mutex(&self.current_mbps, "pcap_replay::get_telemetry_mbps");
 
         let progress = if tot > 0 {
             (cur_idx as f64 / tot as f64) * 100.0
@@ -664,7 +664,7 @@ impl PcapReplayEngine {
     ) {
         let total_packets = packets.len();
         if total_packets == 0 {
-            *state.lock().unwrap() = ReplayState::Completed;
+            *crate::lock_guard::lock_mutex(&state, "pcap_replay::worker_empty") = ReplayState::Completed;
             return;
         }
 
@@ -688,13 +688,13 @@ impl PcapReplayEngine {
             while idx < total_packets && !stop_signal.load(Ordering::Relaxed) {
                 // 1. 检查暂停与单步状态
                 {
-                    let mut st = state.lock().unwrap();
+                    let mut st = crate::lock_guard::lock_mutex(&state, "pcap_replay::worker_pause_wait");
                     while *st == ReplayState::Paused && !stop_signal.load(Ordering::Relaxed) {
                         if step_trigger.swap(false, Ordering::Relaxed) {
                             // 单步触发，跳出等待发送单帧
                             break;
                         }
-                        st = condvar.wait(st).unwrap();
+                        st = condvar.wait(st).unwrap_or_else(|e| e.into_inner());
                     }
                 }
 
@@ -758,7 +758,7 @@ impl PcapReplayEngine {
 
                 // 5. 定期采样计算瞬时速率 (每 100ms 刷新一次)
                 {
-                    let mut sample_time = last_sample_instant.lock().unwrap();
+                    let mut sample_time = crate::lock_guard::lock_mutex(&last_sample_instant, "pcap_replay::worker_sample_time");
                     let now = Instant::now();
                     let elapsed_sample = now.duration_since(*sample_time);
                     if elapsed_sample.as_millis() >= 100 {
@@ -772,8 +772,8 @@ impl PcapReplayEngine {
                         let secs = elapsed_sample.as_secs_f64();
 
                         if secs > 0.0 {
-                            *current_pps.lock().unwrap() = delta_pkts as f64 / secs;
-                            *current_mbps.lock().unwrap() = (delta_bytes as f64 * 8.0) / (secs * 1_000_000.0);
+                            *crate::lock_guard::lock_mutex(&current_pps, "pcap_replay::worker_pps") = delta_pkts as f64 / secs;
+                            *crate::lock_guard::lock_mutex(&current_mbps, "pcap_replay::worker_mbps") = (delta_bytes as f64 * 8.0) / (secs * 1_000_000.0);
                         }
                         *sample_time = now;
                     }
@@ -781,7 +781,7 @@ impl PcapReplayEngine {
 
                 // 如果处于单步模式，每发送一帧后立即自动暂停
                 if config.mode == ReplayMode::Step {
-                    let mut st = state.lock().unwrap();
+                    let mut st = crate::lock_guard::lock_mutex(&state, "pcap_replay::worker_step_pause");
                     *st = ReplayState::Paused;
                 }
             }
@@ -790,7 +790,7 @@ impl PcapReplayEngine {
             current_index.store(0, Ordering::Relaxed);
         }
 
-        let mut st = state.lock().unwrap();
+        let mut st = crate::lock_guard::lock_mutex(&state, "pcap_replay::worker_complete");
         if !stop_signal.load(Ordering::Relaxed) {
             *st = ReplayState::Completed;
         }
@@ -986,23 +986,34 @@ mod tests {
 
         engine.start(None).unwrap();
 
+        let wait_for = |eng: &PcapReplayEngine, target_pkts: u64, target_state: &str| {
+            let deadline = std::time::Instant::now() + Duration::from_millis(800);
+            loop {
+                let t = eng.get_telemetry();
+                if t.sent_packets >= target_pkts && t.state == target_state {
+                    return t;
+                }
+                if std::time::Instant::now() >= deadline {
+                    return t;
+                }
+                thread::sleep(Duration::from_millis(5));
+            }
+        };
+
         // 初始已发送第 1 帧后自动暂停
-        thread::sleep(Duration::from_millis(20));
-        let t1 = engine.get_telemetry();
+        let t1 = wait_for(&engine, 1, "Paused");
         assert_eq!(t1.sent_packets, 1);
         assert_eq!(t1.state, "Paused");
 
         // 触发单步
         engine.step();
-        thread::sleep(Duration::from_millis(20));
-        let t2 = engine.get_telemetry();
+        let t2 = wait_for(&engine, 2, "Paused");
         assert_eq!(t2.sent_packets, 2);
         assert_eq!(t2.state, "Paused");
 
         // 再次触发单步
         engine.step();
-        thread::sleep(Duration::from_millis(20));
-        let t3 = engine.get_telemetry();
+        let t3 = wait_for(&engine, 3, "Completed");
         assert_eq!(t3.sent_packets, 3);
         assert_eq!(t3.state, "Completed");
 

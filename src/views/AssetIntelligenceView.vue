@@ -1,108 +1,147 @@
 <template>
   <div class="flex-1 flex flex-col gap-2.5 overflow-hidden min-w-0">
-    <!-- 顶部工具栏 (毛玻璃风格统一) -->
-    <div class="bg-white/75 backdrop-blur-xl rounded-2xl border border-white/60 shadow-sm px-4 py-2 flex items-center justify-between shrink-0 gap-3 flex-wrap">
-      <div class="flex items-center gap-3">
-        <h2 class="text-xs font-bold text-slate-800 flex items-center gap-2">
-          <span>局域网资产全息感知与拓扑态势 (Asset & Topology Intelligence)</span>
+    <!-- 顶部工具栏 (真 Liquid Glass 单行有序对齐) -->
+    <div class="ui-nav-glass rounded-2xl px-4 py-2.5 flex items-center justify-between shrink-0 gap-3 flex-wrap">
+      <span class="lens-edge-lip" aria-hidden="true"></span>
+      <div class="flex items-center gap-3 min-w-0 shrink-0">
+        <h2 class="text-[13px] font-semibold flex items-center gap-2 whitespace-nowrap" style="color: var(--text-primary);">
+          <AppIcon name="radar" :size="15" class="text-[var(--accent-primary)] shrink-0" />
+          <span>资产感知与拓扑</span>
         </h2>
-        <span class="text-[11px] font-mono text-slate-400">
-          发现资产: <strong class="text-slate-800">{{ assets.length }}</strong> 节点
+        <span class="ui-pill px-2 py-0.5 rounded-full text-[11px] ui-num shrink-0 whitespace-nowrap">
+          <strong class="font-semibold" style="color: var(--text-primary);">{{ assets.length }}</strong> 节点
         </span>
-      </div>
 
-      <div class="flex items-center gap-2 flex-wrap text-xs">
         <!-- 视口布局模式分段选择器 -->
-        <div class="bg-slate-100 p-0.5 rounded-xl border border-slate-200/80 flex items-center gap-0.5">
-          <button @click="viewLayout = 'split'"
-            :class="['px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1',
-              viewLayout === 'split' ? 'bg-white text-blue-700 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900']"
-            title="左右均衡对照 (清单 + 拓扑)">
-            <span>⚖️ 均衡分屏</span>
+        <div class="glass-pill p-0.5 rounded-xl hidden xl:flex items-center gap-0.5">
+          <button
+            @click="viewLayout = 'split'"
+            :class="[
+              'px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap',
+              viewLayout === 'split' ? 'bg-[var(--accent-primary)] text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+            ]"
+            title="左右均衡对照 (清单 + 拓扑)"
+          >
+            <AppIcon name="scale" :size="13" />
+            <span>分屏</span>
           </button>
-          <button @click="viewLayout = 'topology'"
-            :class="['px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1',
-              viewLayout === 'topology' ? 'bg-white text-blue-700 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900']"
-            title="全景工业拓扑雷达大图">
-            <span>🎯 拓扑全景</span>
+          <button
+            @click="viewLayout = 'topology'"
+            :class="[
+              'px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap',
+              viewLayout === 'topology' ? 'bg-[var(--accent-primary)] text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+            ]"
+            title="全景工业拓扑图"
+          >
+            <AppIcon name="radar" :size="13" />
+            <span>拓扑</span>
           </button>
-          <button @click="viewLayout = 'table'"
-            :class="['px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1',
-              viewLayout === 'table' ? 'bg-white text-blue-700 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900']"
-            title="全屏资产高密度数据台账">
-            <span>📋 资产台账</span>
+          <button
+            @click="viewLayout = 'table'"
+            :class="[
+              'px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap',
+              viewLayout === 'table' ? 'bg-[var(--accent-primary)] text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+            ]"
+            title="全屏资产数据台账"
+          >
+            <AppIcon name="document" :size="13" />
+            <span>台账</span>
+          </button>
+          <button
+            @click="switchToHierarchyLayout"
+            :class="[
+              'px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap',
+              viewLayout === 'hierarchy' ? 'bg-[var(--accent-primary)] text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+            ]"
+            title="SNMP/CIDR 万级资产层次化钻取聚合拓扑"
+          >
+            <AppIcon name="layers" :size="13" />
+            <span>分层</span>
           </button>
         </div>
+      </div>
 
-        <input v-model="searchQuery" placeholder="过滤 IP / MAC / 厂商 / 角色 / 端口"
-          class="w-52 bg-white/80 border border-slate-200/80 rounded-xl px-2.5 py-1 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 font-mono shadow-2xs">
-        <button @click="$emit('refreshAssets')"
-          class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3 py-1 rounded-xl font-semibold cursor-pointer transition-all active:scale-95">
-          刷新资产
+      <div class="flex items-center gap-1.5 flex-1 justify-end min-w-0 flex-wrap text-xs">
+        <input
+          v-model="searchQuery"
+          placeholder="过滤 IP / MAC / 厂商 / 端口..."
+          class="ui-input flex-1 min-w-[140px] max-w-[230px] px-2.5 py-1 text-xs"
+        />
+
+        <button @click="$emit('refreshAssets')" class="ui-btn-secondary px-2.5 py-1 text-xs">
+          <AppIcon name="refresh" :size="13" />
+          <span class="hidden 2xl:inline">刷新</span>
         </button>
-        <button @click="$emit('scanAssets')" :disabled="scanning"
-          class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3.5 py-1 rounded-xl font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40 active:scale-95">
-          <span v-if="scanning" class="animate-spin">⏳</span>
-          <span>全网深度扫描</span>
+
+        <button @click="$emit('scanAssets')" :disabled="scanning" class="ui-btn-primary px-3 py-1 text-xs">
+          <AppIcon name="radar" :size="13" :class="{ 'animate-spin': scanning }" />
+          <span>全网扫描</span>
         </button>
-        <button @click="$emit('probeAllPorts')" :disabled="probingAll"
-          class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3.5 py-1 rounded-xl font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40 active:scale-95">
-          <span v-if="probingAll" class="animate-spin">⚡</span>
-          <span>全网端口探活</span>
+
+        <button @click="$emit('probeAllPorts')" :disabled="probingAll" class="ui-btn-secondary px-2.5 py-1 text-xs">
+          <AppIcon name="zap" :size="13" :class="{ 'animate-spin': probingAll }" />
+          <span>探活</span>
         </button>
-        <!-- 资产快照与差分比对工作台入口 -->
-        <button @click="showDiffWorkbench = !showDiffWorkbench"
-          :class="['text-xs px-3.5 py-1 rounded-xl font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 border',
-            showDiffWorkbench ? 'bg-indigo-600 text-white border-indigo-500 shadow-indigo-200' : 'bg-white/80 hover:bg-white text-indigo-700 border-indigo-200 shadow-2xs']">
-          <span>📊 快照与差分对比</span>
-          <span v-if="snapshotList.length > 0" class="px-1.5 py-0.2 rounded-full text-[10px] bg-indigo-100 text-indigo-800 font-mono font-bold">
+
+        <button
+          @click="showDiffWorkbench = !showDiffWorkbench"
+          :class="[
+            'text-xs px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1 cursor-pointer border whitespace-nowrap',
+            showDiffWorkbench ? 'bg-[var(--accent-primary)] text-white border-transparent' : 'ui-btn-secondary'
+          ]"
+        >
+          <AppIcon name="activity" :size="13" />
+          <span>快照</span>
+          <span
+            v-if="snapshotList.length > 0"
+            class="px-1.5 py-0.5 rounded-full text-[11px] ui-num font-semibold bg-[var(--accent-primary-soft)] text-[var(--accent-primary-text)]"
+          >
             {{ snapshotList.length }}
           </span>
         </button>
-        <!-- B9: clear_discovered_assets_cmd 真实资产清空 -->
-        <button @click="$emit('clearAssets')"
-          class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 border border-rose-300/60 text-xs px-3 py-1 rounded-xl font-semibold transition-all cursor-pointer shadow-2xs active:scale-95">
-          清空资产
+
+        <button @click="$emit('clearAssets')" class="ui-btn-danger px-3 py-1 text-xs">
+          <AppIcon name="trash" :size="13" />
+          <span>清空</span>
         </button>
       </div>
     </div>
 
-    <!-- 资产快照与多维差分比对工作台 (Apple Glassmorphism Workbench) -->
-    <div v-if="showDiffWorkbench" class="bg-white/80 backdrop-blur-xl rounded-2xl border border-indigo-100 shadow-sm p-3.5 flex flex-col gap-3 shrink-0">
-      <div class="flex items-center justify-between border-b border-slate-200/60 pb-2.5 flex-wrap gap-2">
-        <div class="flex items-center gap-2">
-          <span class="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-indigo-600 animate-pulse"></span>
+    <!-- 资产快照与多维差分比对工作台 (稳态实体内容衬底) -->
+    <div v-if="showDiffWorkbench" class="ui-content-card p-3.5 flex flex-col gap-3 shrink-0 select-text">
+      <div class="flex items-center justify-between border-b pb-2.5 flex-wrap gap-2" style="border-color: var(--border-subtle);">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="text-[13px] font-semibold flex items-center gap-1.5" style="color: var(--text-primary);">
+            <span class="w-2 h-2 rounded-full bg-indigo-500 shrink-0"></span>
             <span>全网资产快照持久化与基线差分审计工作台</span>
           </span>
-          <span class="text-[11px] text-slate-500">
-            支持历史快照持久化、任意两版本比对、高危端口突变与 MAC 漂移审计
+          <span class="text-xs hidden lg:inline" style="color: var(--text-muted);">
+            支持历史快照持久化、任意两版本比对、高危端口变动与 MAC 漂移审计
           </span>
         </div>
 
-        <!-- 快照创建操作栏 -->
         <div class="flex items-center gap-2 text-xs">
-          <input v-model="newSnapshotName" placeholder="快照备注名称 (可选)"
-            class="w-48 bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 shadow-2xs">
-          <button @click="doSaveSnapshot" :disabled="isSavingSnapshot"
-            class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1 rounded-xl font-semibold shadow-2xs transition-all flex items-center gap-1 cursor-pointer disabled:opacity-40 active:scale-95">
-            <span v-if="isSavingSnapshot" class="animate-spin">⏳</span>
-            <span v-else>💾</span>
-            <span>拍摄保存当前快照</span>
+          <input
+            v-model="newSnapshotName"
+            placeholder="快照备注名称 (可选)"
+            class="ui-input w-48 px-2.5 py-1 text-xs"
+          />
+          <button @click="doSaveSnapshot" :disabled="isSavingSnapshot" class="ui-btn-primary px-3 py-1 text-xs">
+            <AppIcon v-if="isSavingSnapshot" name="refresh" :size="13" class="animate-spin" />
+            <AppIcon v-else name="archive" :size="13" />
+            <span>保存当前快照</span>
           </button>
-          <button @click="showDiffWorkbench = false" title="收起快照工作台"
-            class="w-7 h-7 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer text-xs font-bold">
-            ✕
+          <button @click="showDiffWorkbench = false" title="收起快照工作台" class="ui-btn-secondary w-7 h-7 p-0 justify-center">
+            <AppIcon name="close" :size="14" />
           </button>
         </div>
       </div>
 
       <!-- 差分比对参数选择器 -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-2.5 items-center text-xs bg-slate-50/70 p-2.5 rounded-xl border border-slate-200/60">
+      <div class="ui-sub-card grid grid-cols-1 md:grid-cols-4 gap-2.5 items-center text-xs p-2.5">
         <div>
-          <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">基准版本 (Base Snapshot)</label>
-          <select v-model="selectedBaseSnapshotId"
-            class="w-full bg-white border border-slate-200 rounded-xl px-2 py-1 text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 shadow-2xs">
+          <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">基准版本 (Base Snapshot)</label>
+          <select v-model="selectedBaseSnapshotId" class="ui-input w-full px-2 py-1.5 text-xs ui-num">
             <option v-for="s in snapshotList" :key="s.id" :value="s.id">
               {{ s.name }} ({{ s.total_assets }} 资产 / {{ s.timestamp_str }})
             </option>
@@ -111,9 +150,8 @@
         </div>
 
         <div>
-          <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">对比目标 (Target Snapshot)</label>
-          <select v-model="selectedTargetSnapshotId"
-            class="w-full bg-white border border-slate-200 rounded-xl px-2 py-1 text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 shadow-2xs">
+          <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">对比目标 (Target Snapshot)</label>
+          <select v-model="selectedTargetSnapshotId" class="ui-input w-full px-2 py-1.5 text-xs ui-num">
             <option value="CURRENT_REALTIME">当前实时感知资产 ({{ assets.length }} 节点)</option>
             <option v-for="s in snapshotList" :key="s.id" :value="s.id">
               {{ s.name }} ({{ s.total_assets }} 资产 / {{ s.timestamp_str }})
@@ -121,45 +159,59 @@
           </select>
         </div>
 
-        <div class="flex items-end gap-2">
-          <button @click="doCompareSnapshots" :disabled="!selectedBaseSnapshotId || isComparing"
-            class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs px-3.5 py-1.5 rounded-xl font-bold shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 active:scale-95">
-            <span v-if="isComparing" class="animate-spin">⏳</span>
-            <span v-else>🔍</span>
+        <div class="flex items-end gap-1.5 h-full">
+          <button
+            @click="doCompareSnapshots"
+            :disabled="!selectedBaseSnapshotId || isComparing"
+            class="ui-btn-primary flex-1 px-3 py-1.5 text-xs justify-center"
+          >
+            <AppIcon v-if="isComparing" name="refresh" :size="13" class="animate-spin" />
+            <AppIcon v-else name="search" :size="13" />
             <span>执行多维差分比对</span>
           </button>
-          <button @click="loadSnapshots" title="刷新快照清单"
-            class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-95">
-            ⟳
+          <button @click="loadSnapshots" title="刷新快照清单" class="ui-btn-secondary px-2.5 py-1.5">
+            <AppIcon name="refresh" :size="14" />
           </button>
-          <button v-if="selectedBaseSnapshotId" @click="doDeleteSnapshot(selectedBaseSnapshotId)" title="删除选中的基准快照"
-            class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-95">
-            🗑️
+          <button
+            v-if="selectedBaseSnapshotId"
+            @click="doDeleteSnapshot(selectedBaseSnapshotId)"
+            title="删除选中的基准快照"
+            class="ui-btn-danger px-2.5 py-1.5"
+          >
+            <AppIcon name="trash" :size="14" />
           </button>
         </div>
 
         <!-- 差异过滤条件 -->
         <div v-if="diffReport">
-          <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">差分项快速过滤</label>
-          <div class="flex gap-1">
-            <button @click="diffFilter = 'ALL'"
-              :class="['px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer',
-                diffFilter === 'ALL' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200']">
+          <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">差分项快速过滤</label>
+          <div class="flex gap-1 flex-wrap">
+            <button
+              @click="diffFilter = 'ALL'"
+              :class="['px-2 py-0.5 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer',
+                diffFilter === 'ALL' ? 'bg-indigo-600 text-white border-indigo-600' : 'ui-pill']"
+            >
               全部 ({{ diffReport.items.length }})
             </button>
-            <button @click="diffFilter = 'HIGH'"
-              :class="['px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer',
-                diffFilter === 'HIGH' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-rose-700 border-rose-200']">
-              高危告警 ({{ diffReport.high_risk_count }})
+            <button
+              @click="diffFilter = 'HIGH'"
+              :class="['px-2 py-0.5 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer',
+                diffFilter === 'HIGH' ? 'bg-rose-600 text-white border-rose-600' : 'border-rose-500/30 text-rose-600 dark:text-rose-400 bg-rose-500/10']"
+            >
+              高危 ({{ diffReport.high_risk_count }})
             </button>
-            <button @click="diffFilter = 'ADDED'"
-              :class="['px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer',
-                diffFilter === 'ADDED' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-emerald-700 border-emerald-200']">
+            <button
+              @click="diffFilter = 'ADDED'"
+              :class="['px-2 py-0.5 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer',
+                diffFilter === 'ADDED' ? 'bg-emerald-600 text-white border-emerald-600' : 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10']"
+            >
               新增 ({{ diffReport.added_count }})
             </button>
-            <button @click="diffFilter = 'MODIFIED'"
-              :class="['px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer',
-                diffFilter === 'MODIFIED' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-amber-700 border-amber-200']">
+            <button
+              @click="diffFilter = 'MODIFIED'"
+              :class="['px-2 py-0.5 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer',
+                diffFilter === 'MODIFIED' ? 'bg-amber-600 text-white border-amber-600' : 'border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10']"
+            >
               变动 ({{ diffReport.modified_count }})
             </button>
           </div>
@@ -168,101 +220,112 @@
 
       <!-- 差分比对报告面板 -->
       <div v-if="diffReport" class="flex flex-col gap-2">
-        <!-- 统计摘要卡片 -->
         <div class="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
-          <div class="bg-indigo-50/80 border border-indigo-200/80 p-2 rounded-xl">
-            <div class="text-[10px] text-indigo-600 font-bold uppercase">基准 vs 目标资产数</div>
-            <div class="text-sm font-bold text-indigo-950 font-mono">{{ diffReport.total_base }} ➔ {{ diffReport.total_target }}</div>
+          <div class="bg-indigo-500/10 border border-indigo-500/25 p-2.5 rounded-xl">
+            <div class="text-[11px] text-indigo-600 dark:text-indigo-300 font-semibold">基准 vs 目标资产数</div>
+            <div class="text-sm font-bold ui-num mt-0.5" style="color: var(--text-primary);">{{ diffReport.total_base }} → {{ diffReport.total_target }}</div>
           </div>
-          <div class="bg-emerald-50/80 border border-emerald-200/80 p-2 rounded-xl">
-            <div class="text-[10px] text-emerald-600 font-bold uppercase">新上线未知资产</div>
-            <div class="text-sm font-bold text-emerald-800 font-mono">+{{ diffReport.added_count }} 节点</div>
+          <div class="bg-emerald-500/10 border border-emerald-500/25 p-2.5 rounded-xl">
+            <div class="text-[11px] text-emerald-600 dark:text-emerald-300 font-semibold">新上线未知资产</div>
+            <div class="text-sm font-bold text-emerald-600 dark:text-emerald-400 ui-num mt-0.5">+{{ diffReport.added_count }} 节点</div>
           </div>
-          <div class="bg-slate-100 border border-slate-200 p-2 rounded-xl">
-            <div class="text-[10px] text-slate-500 font-bold uppercase">离线失联资产</div>
-            <div class="text-sm font-bold text-slate-700 font-mono">-{{ diffReport.removed_count }} 节点</div>
+          <div class="ui-sub-card p-2.5 rounded-xl">
+            <div class="text-[11px] font-semibold" style="color: var(--text-muted);">离线失联资产</div>
+            <div class="text-sm font-bold ui-num mt-0.5" style="color: var(--text-secondary);">-{{ diffReport.removed_count }} 节点</div>
           </div>
-          <div class="bg-amber-50/80 border border-amber-200/80 p-2 rounded-xl">
-            <div class="text-[10px] text-amber-600 font-bold uppercase">端口/属性漂移</div>
-            <div class="text-sm font-bold text-amber-800 font-mono">~{{ diffReport.modified_count }} 节点</div>
+          <div class="bg-amber-500/10 border border-amber-500/25 p-2.5 rounded-xl">
+            <div class="text-[11px] text-amber-600 dark:text-amber-300 font-semibold">端口/属性漂移</div>
+            <div class="text-sm font-bold text-amber-600 dark:text-amber-400 ui-num mt-0.5">~{{ diffReport.modified_count }} 节点</div>
           </div>
-          <div class="bg-rose-50/80 border border-rose-200/80 p-2 rounded-xl">
-            <div class="text-[10px] text-rose-600 font-bold uppercase">高危变动风险</div>
-            <div class="text-sm font-bold text-rose-700 font-mono">🚨 {{ diffReport.high_risk_count }} 项</div>
+          <div class="bg-rose-500/10 border border-rose-500/25 p-2.5 rounded-xl">
+            <div class="text-[11px] text-rose-600 dark:text-rose-300 font-semibold">高危变动风险</div>
+            <div class="text-sm font-bold text-rose-600 dark:text-rose-400 ui-num mt-0.5 flex items-center gap-1">
+              <AppIcon name="alert" :size="14" />
+              <span>{{ diffReport.high_risk_count }} 项</span>
+            </div>
           </div>
         </div>
 
-        <!-- 差分明细表格 -->
-        <div class="max-h-56 overflow-auto custom-scrollbar border border-slate-200/80 rounded-xl bg-white shadow-2xs">
-          <table class="w-full text-left text-xs font-mono border-collapse table-fixed">
-            <thead class="bg-slate-100/90 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase sticky top-0 z-10">
+        <div class="max-h-56 overflow-auto custom-scrollbar border rounded-xl" style="border-color: var(--border-subtle); background: var(--surface-content-alt);">
+          <table class="w-full text-left text-xs border-collapse table-fixed">
+            <thead class="ui-table-head sticky top-0 z-10">
               <tr>
-                <th class="p-2 w-[18%]">节点 IP</th>
-                <th class="p-2 w-[12%]">差分类型</th>
-                <th class="p-2 w-[16%]">MAC 状态</th>
-                <th class="p-2 w-[14%]">角色变动</th>
-                <th class="p-2 w-[22%]">开放端口差分</th>
-                <th class="p-2 w-[18%]">风险等级与审计说明</th>
+                <th class="p-2.5 w-[18%]">节点 IP</th>
+                <th class="p-2.5 w-[12%]">差分类型</th>
+                <th class="p-2.5 w-[16%]">MAC 状态</th>
+                <th class="p-2.5 w-[14%]">角色变动</th>
+                <th class="p-2.5 w-[22%]">开放端口差分</th>
+                <th class="p-2.5 w-[18%]">风险等级与审计说明</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100 text-[11px]">
-              <tr v-for="item in filteredDiffItems" :key="item.ip"
-                :class="['hover:bg-slate-50/80 transition-colors',
-                  item.risk_level === 'HIGH' ? 'bg-rose-50/40' : '']">
-                <td class="p-2 font-bold text-slate-800 truncate" :title="item.ip">{{ item.ip }}</td>
+            <tbody class="divide-y text-xs" style="--tw-divide-opacity: 1; border-color: var(--border-subtle);">
+              <tr
+                v-for="item in filteredDiffItems"
+                :key="item.ip"
+                :class="['transition-colors hover:bg-[var(--surface-hover)]', item.risk_level === 'HIGH' ? 'bg-rose-500/5' : '']"
+              >
+                <td class="p-2 font-semibold ui-num truncate" style="color: var(--text-primary);" :title="item.ip">{{ item.ip }}</td>
                 <td class="p-2 truncate">
-                  <span :class="['px-1.5 py-0.5 rounded text-[9px] font-bold uppercase',
-                    item.diff_type === 'ADDED' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
-                    item.diff_type === 'REMOVED' ? 'bg-slate-200 text-slate-700 border border-slate-300' :
-                    'bg-amber-100 text-amber-800 border border-amber-200']">
+                  <span :class="['px-1.5 py-0.5 rounded text-[11px] font-semibold',
+                    item.diff_type === 'ADDED' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' :
+                    item.diff_type === 'REMOVED' ? 'bg-slate-500/15 text-slate-600 dark:text-slate-300' :
+                    'bg-amber-500/15 text-amber-700 dark:text-amber-300']">
                     {{ item.diff_type === 'ADDED' ? '+ 新增' : item.diff_type === 'REMOVED' ? '- 下线' : '~ 变更' }}
                   </span>
                 </td>
-                <td class="p-2 truncate" :title="item.target_mac || item.base_mac || 'N/A'">
-                  <div v-if="item.is_mac_drift" class="text-rose-600 font-bold flex items-center gap-1">
-                    <span>⚠️ 漂移:</span>
-                    <span class="line-through text-slate-400 text-[10px]">{{ item.base_mac }}</span>
-                    <span>➔ {{ item.target_mac }}</span>
+                <td class="p-2 truncate font-mono text-[11px]" :title="item.target_mac || item.base_mac || 'N/A'">
+                  <div v-if="item.is_mac_drift" class="text-rose-600 dark:text-rose-400 font-semibold flex items-center gap-1">
+                    <AppIcon name="alert" :size="12" />
+                    <span class="line-through opacity-60">{{ item.base_mac }}</span>
+                    <span>→ {{ item.target_mac }}</span>
                   </div>
-                  <div v-else class="text-slate-600">
+                  <div v-else style="color: var(--text-secondary);">
                     {{ item.target_mac || item.base_mac || 'N/A' }}
                   </div>
                 </td>
-                <td class="p-2 text-slate-600 truncate">
+                <td class="p-2 truncate" style="color: var(--text-secondary);">
                   <span v-if="item.base_role && item.target_role && item.base_role !== item.target_role">
-                    {{ item.base_role }} ➔ {{ item.target_role }}
+                    {{ item.base_role }} → {{ item.target_role }}
                   </span>
                   <span v-else>{{ item.target_role || item.base_role || '终端设备' }}</span>
                 </td>
                 <td class="p-2 truncate">
                   <div class="flex items-center gap-1 flex-wrap">
-                    <span v-if="item.port_diff?.added_ports && item.port_diff.added_ports.length > 0"
-                      class="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200">
+                    <span
+                      v-if="item.port_diff?.added_ports && item.port_diff.added_ports.length > 0"
+                      class="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold ui-num"
+                    >
                       +{{ item.port_diff.added_ports.join(',') }}
                     </span>
-                    <span v-if="item.port_diff?.closed_ports && item.port_diff.closed_ports.length > 0"
-                      class="px-1.5 py-0.2 rounded bg-rose-100 text-rose-800 text-[10px] font-bold border border-rose-200 line-through">
+                    <span
+                      v-if="item.port_diff?.closed_ports && item.port_diff.closed_ports.length > 0"
+                      class="px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-700 dark:text-rose-300 text-[11px] font-semibold ui-num line-through"
+                    >
                       -{{ item.port_diff.closed_ports.join(',') }}
                     </span>
-                    <span v-if="(!item.port_diff || (item.port_diff.added_ports.length === 0 && item.port_diff.closed_ports.length === 0))" class="text-slate-400 text-[10px]">
+                    <span
+                      v-if="(!item.port_diff || (item.port_diff.added_ports.length === 0 && item.port_diff.closed_ports.length === 0))"
+                      class="text-[11px]"
+                      style="color: var(--text-muted);"
+                    >
                       无端口变动
                     </span>
                   </div>
                 </td>
                 <td class="p-2 truncate">
-                  <div class="flex items-center gap-1 truncate" :title="item.risk_desc">
-                    <span :class="['px-1.5 py-0.2 rounded text-[9px] font-bold shrink-0',
+                  <div class="flex items-center gap-1.5 truncate" :title="item.risk_desc">
+                    <span :class="['px-1.5 py-0.5 rounded text-[11px] font-semibold shrink-0',
                       item.risk_level === 'HIGH' ? 'bg-rose-600 text-white' :
                       item.risk_level === 'MEDIUM' ? 'bg-amber-500 text-white' :
-                      'bg-slate-200 text-slate-700']">
+                      'bg-slate-500/20 text-[var(--text-secondary)]']">
                       {{ item.risk_level === 'HIGH' ? '高危' : item.risk_level === 'MEDIUM' ? '中危' : '正常' }}
                     </span>
-                    <span class="truncate text-[10px] text-slate-700">{{ item.risk_desc }}</span>
+                    <span class="truncate text-[11px]" style="color: var(--text-secondary);">{{ item.risk_desc }}</span>
                   </div>
                 </td>
               </tr>
               <tr v-if="filteredDiffItems.length === 0">
-                <td colspan="6" class="p-6 text-center text-slate-400 text-xs">
+                <td colspan="6" class="p-6 text-center text-xs" style="color: var(--text-muted);">
                   暂无匹配的差分记录（基准与对比版本在当前过滤条件下完全一致）
                 </td>
               </tr>
@@ -272,98 +335,209 @@
       </div>
     </div>
 
-    <!-- 主体：视口自适应调度 (分屏对照 / 拓扑全屏 / 资产台账) -->
-    <div class="flex-1 flex gap-2.5 overflow-hidden min-h-0">
-      <!-- 左侧：局域网资产清单表格 (毛玻璃风格统一) -->
+    <!-- 主体：视口自适应调度 -->
+    <div v-if="viewLayout === 'hierarchy'" class="flex-1 ui-content-card p-4 flex flex-col gap-3 overflow-hidden min-h-0 text-xs select-text">
+      <div class="flex items-center justify-between border-b pb-2.5 flex-wrap gap-2 shrink-0" style="border-color: var(--border-subtle);">
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <span class="font-semibold text-[13px] flex items-center gap-1.5" style="color: var(--text-primary);">
+            <AppIcon name="layers" :size="15" class="text-blue-500" />
+            <span>CIDR 分层聚合拓扑下钻 (Zone → /16 → /24 → Host)</span>
+          </span>
+          <span class="ui-pill px-2 py-0.5 text-[11px] ui-num">沉淀主机: {{ hierarchyViewport?.total_ingested_hosts ?? 0 }}</span>
+          <span class="px-2 py-0.5 rounded-lg bg-blue-500/12 text-blue-600 dark:text-sky-300 text-[11px] ui-num font-medium">可视节点: {{ hierarchyViewport?.rendered_node_count ?? 0 }}</span>
+          <span class="px-2 py-0.5 rounded-lg bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 text-[11px] ui-num font-medium">压缩率: {{ (hierarchyViewport?.compression_ratio ?? 0).toFixed(1) }}%</span>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <input
+            v-model="switchLocateIp"
+            placeholder="交换机端口定位 (输入 IP)..."
+            class="ui-input px-2.5 py-1 text-xs w-48"
+          />
+          <button @click="locateSwitchPort" :disabled="!switchLocateIp.trim()" class="ui-btn-primary px-2.5 py-1 text-xs">
+            定位物理端口
+          </button>
+          <button @click="collapseAllHierarchy" class="ui-btn-secondary px-2.5 py-1 text-xs">
+            全部折叠
+          </button>
+          <button @click="fetchHierarchyViewport" class="ui-btn-secondary px-2.5 py-1 text-xs">
+            <AppIcon name="refresh" :size="13" />
+            <span>刷新</span>
+          </button>
+        </div>
+      </div>
+
+      <div v-if="switchPortLocResult" class="px-3 py-2 rounded-xl bg-indigo-500/10 border border-indigo-500/25 text-indigo-700 dark:text-indigo-200 text-xs shrink-0">
+        {{ switchPortLocResult }}
+      </div>
+
+      <div class="flex-1 grid grid-cols-12 gap-3 overflow-hidden min-h-0">
+        <div class="col-span-7 overflow-y-auto custom-scrollbar space-y-2 pr-1">
+          <EmptyState
+            v-if="!hierarchyViewport || hierarchyViewport.visible_nodes.length === 0"
+            icon="layers"
+            title="暂无分层拓扑节点数据"
+            description="触发全网资产扫描或启动网卡嗅探后将自动构建层级树。"
+          />
+          <div
+            v-for="node in hierarchyViewport?.visible_nodes || []"
+            :key="node.node_id"
+            class="ui-sub-card p-3 flex items-center justify-between gap-2 transition-colors hover:bg-[var(--surface-hover)]"
+          >
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-blue-500/15 text-blue-600 dark:text-sky-300 border border-blue-500/25">{{ node.level }}</span>
+                <span class="font-semibold text-[13px]" style="color: var(--text-primary);">{{ node.label }}</span>
+                <span v-if="node.cidr_prefix" class="ui-num text-xs" style="color: var(--text-muted);">[{{ node.cidr_prefix }}]</span>
+              </div>
+              <div class="text-[11px] mt-1 flex gap-3 ui-num" style="color: var(--text-muted);">
+                <span>下辖主机: <b style="color: var(--text-primary);">{{ node.host_count }}</b></span>
+                <span>总流数: <b style="color: var(--text-primary);">{{ node.total_flows }}</b></span>
+                <span>吞吐: <b class="text-emerald-600 dark:text-emerald-400">{{ (node.total_in_bytes + node.total_out_bytes).toLocaleString() }} B</b></span>
+                <span v-if="node.total_alerts > 0" class="text-rose-600 dark:text-rose-400 font-semibold">告警: {{ node.total_alerts }}</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0" v-if="node.level !== 'Host'">
+              <button @click="drillDownNode(node.node_id)" class="ui-btn-primary px-2.5 py-1 text-[11px]">
+                <AppIcon name="chevron-down" :size="12" />
+                <span>下钻</span>
+              </button>
+              <button @click="rollUpNode(node.node_id)" class="ui-btn-secondary px-2.5 py-1 text-[11px]">
+                <AppIcon name="chevron-up" :size="12" />
+                <span>折叠</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-span-5 overflow-y-auto custom-scrollbar border rounded-xl p-3" style="border-color: var(--border-subtle); background: var(--surface-content-alt);">
+          <div class="font-semibold text-[13px] mb-2" style="color: var(--text-primary);">聚合骨干通信边 ({{ hierarchyViewport?.visible_edges.length ?? 0 }})</div>
+          <div v-if="!hierarchyViewport || hierarchyViewport.visible_edges.length === 0" class="text-xs py-8 text-center" style="color: var(--text-muted);">
+            尚无跨节点聚合流量边
+          </div>
+          <div
+            v-for="edge in hierarchyViewport?.visible_edges || []"
+            :key="edge.edge_id"
+            class="py-2 px-2.5 mb-1.5 rounded-lg border text-[11px]"
+            :class="edge.contains_threat ? 'border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-200' : 'ui-sub-card'"
+          >
+            <div class="font-semibold truncate ui-num">{{ edge.source_node_id }} → {{ edge.target_node_id }}</div>
+            <div class="flex justify-between mt-0.5 ui-num" style="color: var(--text-muted);">
+              <span>流次数: {{ edge.flow_count }}</span>
+              <span>总量: {{ edge.total_bytes.toLocaleString() }} B</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-else class="flex-1 flex gap-2.5 overflow-hidden min-h-0">
+      <!-- 左侧：局域网资产清单表格 (实体稳态衬底，分屏时不溢出横向滚动) -->
       <div
         v-show="viewLayout === 'split' || viewLayout === 'table'"
-        :class="['bg-white/75 backdrop-blur-xl rounded-2xl border border-white/60 shadow-sm flex flex-col overflow-hidden min-h-0 transition-all duration-200',
+        :class="['ui-content-card flex flex-col overflow-hidden min-h-0 transition-all duration-200',
           viewLayout === 'table' ? 'w-full flex-1' : 'flex-1 min-w-0']"
       >
-        <div class="px-4 py-2 border-b border-slate-200/50 bg-white/40 backdrop-blur-md flex items-center justify-between text-xs font-bold text-slate-700 shrink-0 flex-wrap gap-2">
-          <div class="flex items-center gap-2">
-            <span>局域网资产清单 ({{ filteredAssets.length }} / {{ assets.length }})</span>
-            <span class="text-[10px] text-slate-400 font-normal hidden lg:inline">基于 ARP 侦测、物理流量沉淀与非阻塞探活</span>
+        <div class="px-4 py-2 border-b flex items-center justify-between text-xs font-semibold shrink-0 flex-wrap gap-2" style="border-color: var(--border-subtle); color: var(--text-primary);">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="truncate">局域网资产清单 ({{ filteredAssets.length }} / {{ assets.length }})</span>
+            <span class="text-[11px] font-normal hidden xl:inline" style="color: var(--text-muted);">基于 ARP 侦测、流量沉淀与非阻塞探活</span>
           </div>
 
-          <!-- 资产角色分类筛选胶囊 -->
-          <div class="flex items-center gap-1 bg-slate-100/90 p-0.5 rounded-xl border border-slate-200/60 text-[10px]">
-            <button @click="activeRoleCategory = 'ALL'"
-              :class="['px-2 py-0.5 rounded-lg font-semibold transition-all cursor-pointer',
-                activeRoleCategory === 'ALL' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800']">
+          <div class="flex items-center gap-1 glass-pill p-0.5 rounded-xl text-[11px]">
+            <button
+              @click="activeRoleCategory = 'ALL'"
+              :class="['px-2 py-0.5 rounded-lg font-medium transition-all cursor-pointer',
+                activeRoleCategory === 'ALL' ? 'bg-[var(--accent-primary)] text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']"
+            >
               全部 ({{ assets.length }})
             </button>
-            <button @click="activeRoleCategory = 'GATEWAY'"
-              :class="['px-2 py-0.5 rounded-lg font-semibold transition-all cursor-pointer',
-                activeRoleCategory === 'GATEWAY' ? 'bg-white text-indigo-700 shadow-2xs font-bold' : 'text-slate-500 hover:text-indigo-700']">
+            <button
+              @click="activeRoleCategory = 'GATEWAY'"
+              :class="['px-2 py-0.5 rounded-lg font-medium transition-all cursor-pointer',
+                activeRoleCategory === 'GATEWAY' ? 'bg-[var(--accent-primary)] text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']"
+            >
               网关 ({{ gatewayCount }})
             </button>
-            <button @click="activeRoleCategory = 'CONTROLLER'"
-              :class="['px-2 py-0.5 rounded-lg font-semibold transition-all cursor-pointer',
-                activeRoleCategory === 'CONTROLLER' ? 'bg-white text-blue-700 shadow-2xs font-bold' : 'text-slate-500 hover:text-blue-700']">
+            <button
+              @click="activeRoleCategory = 'CONTROLLER'"
+              :class="['px-2 py-0.5 rounded-lg font-medium transition-all cursor-pointer',
+                activeRoleCategory === 'CONTROLLER' ? 'bg-[var(--accent-primary)] text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']"
+            >
               控制/服务 ({{ controllerCount }})
             </button>
-            <button @click="activeRoleCategory = 'TERMINAL'"
-              :class="['px-2 py-0.5 rounded-lg font-semibold transition-all cursor-pointer',
-                activeRoleCategory === 'TERMINAL' ? 'bg-white text-slate-700 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-700']">
-              现场终端 ({{ terminalCount }})
+            <button
+              @click="activeRoleCategory = 'TERMINAL'"
+              :class="['px-2 py-0.5 rounded-lg font-medium transition-all cursor-pointer',
+                activeRoleCategory === 'TERMINAL' ? 'bg-[var(--accent-primary)] text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']"
+            >
+              终端 ({{ terminalCount }})
             </button>
-            <button @click="activeRoleCategory = 'THREAT'"
-              :class="['px-2 py-0.5 rounded-lg font-semibold transition-all cursor-pointer',
-                activeRoleCategory === 'THREAT' ? 'bg-rose-600 text-white shadow-2xs font-bold' : 'text-rose-600 hover:bg-rose-50']">
-              风险/蜜罐 ({{ threatCount }})
+            <button
+              @click="activeRoleCategory = 'THREAT'"
+              :class="['px-2 py-0.5 rounded-lg font-medium transition-all cursor-pointer',
+                activeRoleCategory === 'THREAT' ? 'bg-rose-600 text-white shadow-xs' : 'text-rose-600 dark:text-rose-400 hover:bg-rose-500/10']"
+            >
+              高危 ({{ threatCount }})
             </button>
           </div>
         </div>
 
-        <div class="flex-1 overflow-auto custom-scrollbar">
-          <table class="w-full text-left text-xs font-mono border-collapse table-fixed min-w-[820px]">
-            <thead class="bg-slate-100/80 border-b border-slate-200/70 text-[10px] font-bold text-slate-500 uppercase sticky top-0 z-10 select-none">
+        <div class="flex-1 overflow-auto custom-scrollbar select-text bg-transparent">
+          <table class="w-full text-left text-xs border-collapse table-fixed">
+            <thead class="ui-table-head sticky top-0 z-10 select-none">
               <tr>
-                <th class="p-2.5 w-[22%] min-w-[170px]">主机 IPv4 & 名称</th>
-                <th class="p-2.5 w-[15%] min-w-[125px]">物理 MAC</th>
-                <th class="p-2.5 w-[14%] min-w-[115px]">硬件厂商画像</th>
-                <th class="p-2.5 w-[12%] min-w-[95px]">网络角色</th>
-                <th class="p-2.5 w-[10%] min-w-[85px]">业务规约</th>
-                <th class="p-2.5 w-[11%] min-w-[95px]">开放端口</th>
-                <th class="p-2.5 w-[8%] min-w-[75px]">末次活跃</th>
-                <th class="p-2.5 w-[8%] min-w-[95px] text-center">操作</th>
+                <th class="p-2.5" :class="viewLayout === 'table' ? 'w-[20%]' : 'w-[27%]'">主机 IP & 名称</th>
+                <th v-if="viewLayout === 'table'" class="p-2.5 w-[14%]">物理 MAC</th>
+                <th class="p-2.5" :class="viewLayout === 'table' ? 'w-[14%]' : 'hidden xl:table-cell w-[16%]'">硬件厂商</th>
+                <th class="p-2.5" :class="viewLayout === 'table' ? 'w-[11%]' : 'w-[17%]'">网络角色</th>
+                <th class="p-2.5" :class="viewLayout === 'table' ? 'w-[11%]' : 'w-[15%]'">业务规约</th>
+                <th class="p-2.5" :class="viewLayout === 'table' ? 'w-[12%]' : 'w-[18%]'">开放端口</th>
+                <th v-if="viewLayout === 'table'" class="p-2.5 w-[8%]">末次活跃</th>
+                <th class="p-2.5 text-center" :class="viewLayout === 'table' ? 'w-[10%]' : 'w-[110px]'">操作</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
-              <tr v-for="asset in filteredAssets" :key="asset.ip" class="hover:bg-blue-50/30 transition-colors">
+            <tbody class="divide-y" style="border-color: var(--border-subtle);">
+              <tr v-for="asset in filteredAssets" :key="asset.ip" class="hover:bg-[var(--surface-hover)] transition-colors">
                 <!-- IP 与主机名 -->
-                <td class="p-2.5 font-bold text-slate-800">
+                <td class="p-2.5 font-semibold" style="color: var(--text-primary);">
                   <div class="flex items-center gap-1.5 flex-nowrap truncate">
                     <span
                       @click="openIpDossier(asset.ip)"
-                      class="truncate cursor-pointer hover:text-blue-600 hover:underline transition-colors font-mono"
+                      class="truncate cursor-pointer hover:underline transition-colors ui-num text-blue-600 dark:text-sky-400"
                       title="点击查阅 IP 全息画像档案"
                     >
                       {{ asset.ip }}
                     </span>
-                    <span v-if="asset.hostname"
-                      class="px-1.5 py-0.2 rounded text-[9px] font-normal bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0 truncate max-w-[80px]"
-                      :title="asset.hostname">
+                    <span
+                      v-if="asset.hostname"
+                      class="px-1.5 py-0.5 rounded text-[11px] font-normal bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 shrink-0 truncate max-w-[76px]"
+                      :title="asset.hostname"
+                    >
                       {{ asset.hostname }}
                     </span>
-                    <span v-else-if="asset.zone_name"
-                      class="px-1.5 py-0.2 rounded text-[9px] font-normal bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0 truncate max-w-[80px]"
-                      :title="asset.geo_summary || asset.zone_name">
+                    <span
+                      v-else-if="asset.zone_name"
+                      class="px-1.5 py-0.5 rounded text-[11px] font-normal bg-indigo-500/12 text-indigo-700 dark:text-indigo-300 border border-indigo-500/25 shrink-0 truncate max-w-[76px]"
+                      :title="asset.geo_summary || asset.zone_name"
+                    >
                       {{ asset.zone_name }}
                     </span>
                   </div>
                 </td>
 
-                <!-- MAC -->
-                <td class="p-2.5 text-slate-500 text-[11px] truncate font-mono">{{ asset.mac || 'N/A' }}</td>
+                <!-- MAC (仅全表展示，分屏模式下点击行/档案查阅以防止横向挤压) -->
+                <td v-if="viewLayout === 'table'" class="p-2.5 text-[11px] truncate font-mono ui-num" style="color: var(--text-secondary);">
+                  {{ asset.mac || 'N/A' }}
+                </td>
 
                 <!-- 厂商 -->
-                <td class="p-2.5 text-slate-600 truncate text-[11px]" :title="asset.vendor">{{ asset.vendor || '通用网络终端' }}</td>
+                <td class="p-2.5 truncate text-[11px]" :class="viewLayout === 'table' ? '' : 'hidden xl:table-cell'" style="color: var(--text-secondary);" :title="asset.vendor">
+                  {{ asset.vendor || '通用网络终端' }}
+                </td>
 
                 <!-- 角色 -->
                 <td class="p-2.5 truncate">
-                  <span :class="['px-1.5 py-0.5 rounded text-[9px] font-bold uppercase truncate inline-block max-w-full', roleBadgeColor(asset.role)]">
+                  <span :class="['px-1.5 py-0.5 rounded text-[11px] font-semibold uppercase truncate inline-block max-w-full', roleBadgeColor(asset.role)]">
                     {{ asset.role }}
                   </span>
                 </td>
@@ -371,12 +545,15 @@
                 <!-- 规约协议 -->
                 <td class="p-2.5 truncate">
                   <div class="flex gap-1 flex-nowrap truncate">
-                    <span v-for="pr in asset.protocols.slice(0, 2)" :key="pr"
-                      :class="['px-1.5 py-0.2 rounded font-bold text-[9px] shrink-0 border',
-                        pr.includes('HONEYPOT') ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-100 text-slate-700 border-slate-200']">
+                    <span
+                      v-for="pr in asset.protocols.slice(0, 2)"
+                      :key="pr"
+                      :class="['px-1.5 py-0.5 rounded font-semibold text-[11px] shrink-0 border',
+                        pr.includes('HONEYPOT') ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30' : 'ui-pill']"
+                    >
                       {{ pr }}
                     </span>
-                    <span v-if="asset.protocols.length > 2" class="text-[9px] text-slate-400 font-bold">
+                    <span v-if="asset.protocols.length > 2" class="text-[11px] font-semibold ui-num" style="color: var(--text-muted);">
                       +{{ asset.protocols.length - 2 }}
                     </span>
                   </div>
@@ -385,54 +562,85 @@
                 <!-- 开放端口 -->
                 <td class="p-2.5 truncate">
                   <div class="flex items-center gap-1 flex-nowrap truncate">
-                    <span v-for="port in asset.ports.slice(0, 3)" :key="port"
-                      class="px-1.5 py-0.2 rounded-md bg-emerald-500/10 text-emerald-800 border border-emerald-300/60 text-[9px] font-bold shadow-2xs shrink-0">
+                    <span
+                      v-for="port in asset.ports.slice(0, 3)"
+                      :key="port"
+                      class="px-1.5 py-0.5 rounded-md bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-[11px] font-semibold ui-num shrink-0"
+                    >
                       :{{ port }}
                     </span>
-                    <span v-if="asset.ports.length > 3" class="text-[9px] text-slate-400 font-bold">
+                    <span v-if="asset.ports.length > 3" class="text-[11px] font-semibold ui-num" style="color: var(--text-muted);">
                       +{{ asset.ports.length - 3 }}
                     </span>
-                    <button v-if="asset.ports.length === 0" @click="$emit('probeSinglePort', asset.ip)"
-                      class="text-[9px] px-1.5 py-0.2 rounded-md bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 border border-amber-300/60 transition-colors cursor-pointer flex items-center gap-0.5 font-semibold shrink-0">
-                      <span>⚡ 探活</span>
+                    <button
+                      v-if="asset.ports.length === 0"
+                      @click="$emit('probeSinglePort', asset.ip)"
+                      class="text-[11px] px-1.5 py-0.5 rounded-md bg-amber-500/12 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/25 transition-colors cursor-pointer flex items-center gap-1 font-medium shrink-0"
+                    >
+                      <AppIcon name="zap" :size="11" />
+                      <span>探活</span>
                     </button>
                   </div>
                 </td>
 
                 <!-- 末次活跃时间 -->
-                <td class="p-2.5 text-slate-500 text-[11px] truncate font-mono">
+                <td v-if="viewLayout === 'table'" class="p-2.5 text-[11px] truncate ui-num" style="color: var(--text-muted);">
                   {{ new Date(asset.last_seen_ts).toLocaleTimeString('zh-CN', { hour12: false }) }}
                 </td>
 
                 <!-- 操作组合按钮 -->
-                <td class="p-2.5 text-center truncate">
+                <td class="p-2 text-center truncate">
                   <div class="flex items-center justify-center gap-1">
-                    <button @click="$emit('probeSinglePort', asset.ip)"
-                      class="text-[10px] px-1.5 py-0.5 rounded-lg bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-800 border border-slate-200 transition-all cursor-pointer font-semibold shadow-2xs"
-                      title="端口探活">
-                      ⚡
+                    <button
+                      @click="$emit('probeSinglePort', asset.ip)"
+                      class="p-1.5 rounded-lg glass-pill hover:text-amber-500 transition-all cursor-pointer"
+                      style="color: var(--text-secondary);"
+                      title="端口探活"
+                    >
+                      <AppIcon name="zap" :size="13" />
                     </button>
-                    <button @click="$emit('filterTraffic', asset.ip)"
-                      class="text-[10px] px-1.5 py-0.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-all cursor-pointer font-semibold shadow-2xs"
-                      title="穿透至流量分析大屏过滤该 IP">
-                      🔍
+                    <button
+                      @click="$emit('filterTraffic', asset.ip)"
+                      class="p-1.5 rounded-lg glass-pill hover:text-blue-500 transition-all cursor-pointer"
+                      style="color: var(--text-secondary);"
+                      title="穿透至流量分析监控看板过滤该 IP"
+                    >
+                      <AppIcon name="search" :size="13" />
                     </button>
-                    <button @click="openIpDossier(asset.ip)"
-                      class="text-[10px] px-1.5 py-0.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-all cursor-pointer font-semibold shadow-2xs"
-                      title="打开该 IP 全息画像档案">
-                      📁
+                    <button
+                      @click="openIpDossier(asset.ip)"
+                      class="p-1.5 rounded-lg glass-pill hover:text-indigo-500 transition-all cursor-pointer"
+                      style="color: var(--text-secondary);"
+                      title="打开该 IP 全息画像档案"
+                    >
+                      <AppIcon name="folder" :size="13" />
                     </button>
-                    <button @click="openTraceroute(asset.ip)"
-                      class="text-[10px] px-1.5 py-0.5 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-200 transition-all cursor-pointer font-semibold shadow-2xs"
-                      title="启动测地线可视路由追踪，探测地球大圆航线">
-                      🌐
+                    <button
+                      @click="openTraceroute(asset.ip)"
+                      class="p-1.5 rounded-lg glass-pill hover:text-emerald-500 transition-all cursor-pointer"
+                      style="color: var(--text-secondary);"
+                      title="启动测地线可视路由追踪，探测路由中转链路"
+                    >
+                      <AppIcon name="globe" :size="13" />
+                    </button>
+                    <button
+                      @click="addAssetToDiffQueue(asset)"
+                      class="p-1.5 rounded-lg glass-pill hover:text-purple-500 transition-all cursor-pointer"
+                      style="color: var(--text-secondary);"
+                      title="将资产开放端口/规约指纹加入全局多组比对队列"
+                    >
+                      <AppIcon name="scale" :size="13" />
                     </button>
                   </div>
                 </td>
               </tr>
               <tr v-if="filteredAssets.length === 0">
-                <td colspan="8" class="p-12 text-center text-slate-400 text-xs">
-                  暂无匹配的局域网资产记录，点击右上角【全网深度扫描】发起探测
+                <td :colspan="viewLayout === 'table' ? 8 : 6" class="p-10 text-center">
+                  <EmptyState
+                    icon="radar"
+                    title="暂无匹配的局域网资产记录"
+                    description="点击顶部【全网扫描】探测当前局域网在线节点，或放宽搜索过滤条件。"
+                  />
                 </td>
               </tr>
             </tbody>
@@ -440,28 +648,29 @@
         </div>
       </div>
 
-      <!-- 右侧：工业拓扑雷达地图 (毛玻璃风格统一) -->
+      <!-- 右侧：工业网络拓扑地图 (实体稳态衬底，不再双层模糊锁黑) -->
       <div
         v-show="viewLayout === 'split' || viewLayout === 'topology'"
-        :class="['bg-white/75 backdrop-blur-xl rounded-2xl border border-white/60 shadow-sm flex flex-col overflow-hidden min-h-0 transition-all duration-200',
+        :class="['ui-content-card flex flex-col overflow-hidden min-h-0 transition-all duration-200',
           viewLayout === 'topology' ? 'w-full flex-1' : 'flex-1 min-w-0']"
       >
-        <div class="px-4 py-2 border-b border-slate-200/50 bg-white/40 backdrop-blur-md flex items-center justify-between text-xs font-bold text-slate-700 shrink-0">
+        <div class="px-4 py-2 border-b flex items-center justify-between text-xs font-semibold shrink-0" style="border-color: var(--border-subtle); color: var(--text-primary);">
           <div class="flex items-center gap-2">
-            <span>工业网络拓扑雷达 (Topology Intelligence)</span>
-            <span class="px-2 py-0.2 rounded-full text-[10px] font-mono bg-blue-50 text-blue-700 border border-blue-200 font-semibold">
-              多层次网状 & 同心圆雷达
+            <span>工业网络拓扑图</span>
+            <span class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-500/12 text-blue-600 dark:text-sky-300 border border-blue-500/25">
+              多层次网状 &amp; 同心雷达
             </span>
           </div>
           <button
             @click="viewLayout = viewLayout === 'topology' ? 'split' : 'topology'"
             :title="viewLayout === 'topology' ? '还原为分屏视图' : '放大独占拓扑全景'"
-            class="text-[10px] px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 transition-all cursor-pointer font-semibold"
+            class="ui-btn-secondary text-[11px] px-2.5 py-1"
           >
-            {{ viewLayout === 'topology' ? '❐ 还原分屏' : '⛶ 拓扑全屏' }}
+            <AppIcon :name="viewLayout === 'topology' ? 'minimize' : 'layers'" :size="12" />
+            <span>{{ viewLayout === 'topology' ? '还原分屏' : '拓扑全景' }}</span>
           </button>
         </div>
-        <div class="flex-1 bg-slate-950 relative overflow-hidden">
+        <div class="flex-1 relative overflow-hidden">
           <TopologyMap :packets="packets" :assets="assets" />
         </div>
       </div>
@@ -478,7 +687,7 @@
       @drillDown="selectedDossierIp = $event"
     />
 
-    <!-- 测地线可视路由追踪工作台 (TASK-43) -->
+    <!-- 测地线可视路由追踪工作台 -->
     <GeodesicTracerouteModal
       :isOpen="isTracerouteOpen"
       :initialTarget="tracerouteTarget"
@@ -489,11 +698,45 @@
 
 <script setup lang="ts">
 import { notifySuccess, notifyInfo, notifyError } from '../composables/useNotification';
+import { uiConfirm } from '../composables/useConfirmDialog';
 import { ref, computed, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import TopologyMap from '../components/TopologyMap.vue';
 import IpDossierModal from '../components/IpDossierModal.vue';
 import GeodesicTracerouteModal from '../components/GeodesicTracerouteModal.vue';
+import AppIcon from '../components/AppIcon.vue';
+import EmptyState from '../components/EmptyState.vue';
+import { useUniversalDiff } from '../composables/useUniversalDiff';
+
+const diffBus = useUniversalDiff();
+
+function addAssetToDiffQueue(asset: DiscoveredAsset) {
+  const portStr = (asset.ports || []).slice().sort((a, b) => a - b).join(',');
+  const protoStr = (asset.protocols || []).join(',');
+  const summary = `IP=${asset.ip};MAC=${asset.mac || 'N/A'};ROLE=${asset.role};VENDOR=${asset.vendor || 'GENERIC'};PORTS=[${portStr}];PROTOS=[${protoStr}]`;
+  diffBus.addToQueue({
+    id: `ASSET_${asset.ip}`,
+    label: `[资产] ${asset.ip}${asset.hostname ? ` (${asset.hostname})` : ''}`,
+    protocol: asset.role || 'ASSET',
+    src: asset.ip,
+    dst: asset.mac || asset.zone_name || '-',
+    format: 'ASCII',
+    isRawText: true,
+    payloadHex: '',
+    rawText: summary,
+    length: summary.length,
+    extraFields: {
+      ip: asset.ip,
+      mac: asset.mac || '-',
+      role: asset.role,
+      vendor: asset.vendor || '-',
+      scope: asset.scope || '-',
+      ports: portStr || '-',
+      protocols: protoStr || '-',
+      packet_count: String(asset.packet_count)
+    }
+  }, `资产 ${asset.ip}`, false);
+}
 
 interface DiscoveredAsset {
   ip: string;
@@ -567,7 +810,92 @@ const props = defineProps<{
 const emit = defineEmits(['refreshAssets', 'scanAssets', 'probeAllPorts', 'probeSinglePort', 'clearAssets', 'filterTraffic', 'appendLog']);
 
 // 视口布局控制与角色分类
-const viewLayout = ref<'split' | 'topology' | 'table'>('split');
+const viewLayout = ref<'split' | 'topology' | 'table' | 'hierarchy'>('split');
+
+interface SuperNode {
+  node_id: string;
+  label: string;
+  level: string;
+  parent_id?: string | null;
+  cidr_prefix?: string | null;
+  is_collapsed: boolean;
+  host_count: number;
+  total_in_bytes: number;
+  total_out_bytes: number;
+  total_flows: number;
+  total_alerts: number;
+  high_risk_hosts: number;
+}
+interface AggregatedEdge {
+  edge_id: string;
+  source_node_id: string;
+  target_node_id: string;
+  flow_count: number;
+  total_bytes: number;
+  contains_threat: boolean;
+}
+interface TopologyViewPortResult {
+  visible_nodes: SuperNode[];
+  visible_edges: AggregatedEdge[];
+  total_ingested_hosts: number;
+  rendered_node_count: number;
+  compression_ratio: number;
+}
+interface PhysicalPortLocation {
+  target_ip: string;
+  target_mac: string;
+  switch_id: string;
+  switch_ip: string;
+  switch_name: string;
+  if_index: number;
+  if_name: string;
+  vlan_id: number;
+}
+
+const hierarchyViewport = ref<TopologyViewPortResult | null>(null);
+const switchLocateIp = ref('');
+const switchPortLocResult = ref('');
+
+async function fetchHierarchyViewport() {
+  try {
+    hierarchyViewport.value = await invoke<TopologyViewPortResult>('get_hierarchical_topology_viewport_cmd', { maxBudget: 64 });
+  } catch (e) {
+    console.error('加载分层拓扑失败:', e);
+  }
+}
+
+async function switchToHierarchyLayout() {
+  viewLayout.value = 'hierarchy';
+  await fetchHierarchyViewport();
+}
+
+async function drillDownNode(nodeId: string) {
+  await invoke<boolean>('drill_down_topology_node_cmd', { nodeId });
+  await fetchHierarchyViewport();
+}
+
+async function rollUpNode(nodeId: string) {
+  await invoke<boolean>('roll_up_topology_node_cmd', { nodeId });
+  await fetchHierarchyViewport();
+}
+
+async function collapseAllHierarchy() {
+  await invoke<boolean>('collapse_all_topology_cmd');
+  await fetchHierarchyViewport();
+}
+
+async function locateSwitchPort() {
+  const ip = switchLocateIp.value.trim();
+  if (!ip) return;
+  try {
+    const res = await invoke<PhysicalPortLocation | null>('locate_asset_switch_port_cmd', { ip, mac: null });
+    switchPortLocResult.value = res
+      ? `已定位至交换机 [${res.switch_name} (${res.switch_ip})] 物理端口 ${res.if_name} (VLAN ${res.vlan_id}) | MAC: ${res.target_mac}`
+      : `未在已登记 SNMP Bridge-MIB 转发表中匹配到 ${ip} 的物理接入端口`;
+  } catch (e) {
+    switchPortLocResult.value = `查询失败: ${String(e)}`;
+  }
+}
 const activeRoleCategory = ref<string>('ALL');
 
 const searchQuery = ref('');
@@ -646,7 +974,12 @@ async function doSaveSnapshot() {
 }
 
 async function doDeleteSnapshot(id: string) {
-  if (!confirm(`确定要删除此份历史快照 (${id}) 吗？`)) return;
+  const confirmed = await uiConfirm(`确定要删除此份历史快照 (${id}) 吗？`, {
+    title: '确认移除历史快照',
+    confirmText: '确认删除',
+    danger: true,
+  });
+  if (!confirmed) return;
   try {
     await invoke('delete_asset_snapshot_cmd', { id });
     await loadSnapshots();
@@ -753,10 +1086,16 @@ const filteredAssets = computed(() => {
 });
 
 function roleBadgeColor(role: string): string {
-  if (role.includes('ROUTER') || role.includes('GATEWAY')) return 'bg-amber-100 text-amber-900 border border-amber-200';
-  if (role.includes('SERVER') || role.includes('CENTER')) return 'bg-blue-100 text-blue-900 border border-blue-200';
-  if (role.includes('PLC') || role.includes('RTU')) return 'bg-teal-100 text-teal-900 border border-teal-200';
-  return 'bg-slate-100 text-slate-700';
+  if (role.includes('ROUTER') || role.includes('GATEWAY')) {
+    return 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/25';
+  }
+  if (role.includes('SERVER') || role.includes('CENTER')) {
+    return 'bg-blue-500/15 text-blue-700 dark:text-sky-300 border border-blue-500/25';
+  }
+  if (role.includes('PLC') || role.includes('RTU')) {
+    return 'bg-teal-500/15 text-teal-700 dark:text-teal-300 border border-teal-500/25';
+  }
+  return 'bg-slate-500/12 text-slate-700 dark:text-slate-300 border border-slate-500/20';
 }
 
 onMounted(() => {

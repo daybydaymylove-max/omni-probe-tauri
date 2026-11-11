@@ -38,13 +38,15 @@ struct CloudConfig {
 /// webhook_url: 接收端 HTTP 地址（如 "http://siem.example.com/ingest"）
 pub fn start_cloud_streaming(app: tauri::AppHandle, webhook_url: String) {
     // 更新全局配置
-    if let Ok(mut cfg) = CLOUD_CONFIG.lock() {
+    {
+        let mut cfg = crate::lock_guard::lock_mutex(&CLOUD_CONFIG, "cloud::start_cloud_streaming_cfg");
         cfg.enabled = true;
         cfg.webhook_url = webhook_url.clone();
     }
 
     // 防止重复启动
-    if let Ok(tx_lock) = CLOUD_TX.lock() {
+    {
+        let tx_lock = crate::lock_guard::lock_mutex(&CLOUD_TX, "cloud::start_cloud_streaming_check");
         if tx_lock.is_some() {
             let _ = app.emit("system-log", "[CLOUD] 上报引擎已在运行");
             return;
@@ -53,7 +55,8 @@ pub fn start_cloud_streaming(app: tauri::AppHandle, webhook_url: String) {
 
     let (tx, mut rx) = mpsc::channel::<serde_json::Value>(QUEUE_CAP);
 
-    if let Ok(mut tx_lock) = CLOUD_TX.lock() {
+    {
+        let mut tx_lock = crate::lock_guard::lock_mutex(&CLOUD_TX, "cloud::start_cloud_streaming_tx");
         *tx_lock = Some(tx);
     }
 
@@ -153,10 +156,12 @@ pub fn start_cloud_streaming(app: tauri::AppHandle, webhook_url: String) {
 
 /// 停止云端上报引擎（关闭发送端，Worker 将自然退出）
 pub fn stop_cloud_streaming() {
-    if let Ok(mut tx_lock) = CLOUD_TX.lock() {
+    {
+        let mut tx_lock = crate::lock_guard::lock_mutex(&CLOUD_TX, "cloud::stop_cloud_streaming_tx");
         *tx_lock = None; // Drop Sender -> rx.recv() 返回 None -> Worker 退出
     }
-    if let Ok(mut cfg) = CLOUD_CONFIG.lock() {
+    {
+        let mut cfg = crate::lock_guard::lock_mutex(&CLOUD_CONFIG, "cloud::stop_cloud_streaming_cfg");
         cfg.enabled = false;
     }
 }
@@ -164,10 +169,9 @@ pub fn stop_cloud_streaming() {
 /// 非阻塞投递一条记录到上报队列
 /// 背压溢出时直接丢弃（不阻塞调用方），返回 false 表示被丢弃
 pub fn emit_record(record: serde_json::Value) -> bool {
-    if let Ok(tx_lock) = CLOUD_TX.lock() {
-        if let Some(tx) = tx_lock.as_ref() {
-            return tx.try_send(record).is_ok();
-        }
+    let tx_lock = crate::lock_guard::lock_mutex(&CLOUD_TX, "cloud::emit_record");
+    if let Some(tx) = tx_lock.as_ref() {
+        return tx.try_send(record).is_ok();
     }
     false
 }

@@ -114,7 +114,7 @@ mod winsock_raw {
     }
 
     #[link(name = "ws2_32")]
-    extern "system" {
+    unsafe extern "system" {
         pub fn getnameinfo(
             sa: *const std::ffi::c_void,
             salen: i32,
@@ -380,17 +380,20 @@ pub fn record_asset(ip: &str, mac: &str, proto: &str, port: u16) -> bool {
         .unwrap_or_default()
         .as_millis();
 
-    if let Ok(mut map) = ASSET_CACHE.lock() {
+    let mut map = crate::lock_guard::lock_mutex(&ASSET_CACHE, "discovery::upsert_asset_and_notify");
+    {
         let mut is_new = false;
         let entry = map.entry(ip.to_string()).or_insert_with(|| {
             is_new = true;
             let role = infer_device_role(ip);
             let vendor = infer_vendor_by_mac(mac);
-            let (zone_name, geo_summary) = if let Ok(engine) = crate::ip_intelligence::GLOBAL_IP_ENGINE.lock() {
+            let (zone_name, geo_summary) = {
+                let engine = crate::lock_guard::lock_mutex(
+                    &crate::ip_intelligence::GLOBAL_IP_ENGINE,
+                    "discovery::upsert_asset_ip_classify",
+                );
                 let intel = engine.classify(ip);
                 (Some(intel.zone_name), Some(intel.geo_summary))
-            } else {
-                (None, None)
             };
             DiscoveredAsset {
                 ip: ip.to_string(),
@@ -425,9 +428,28 @@ pub fn record_asset(ip: &str, mac: &str, proto: &str, port: u16) -> bool {
             entry.ports.push(port);
         }
 
+        let snapshot_ip = entry.ip.clone();
+        let snapshot_mac = entry.mac.clone();
+        let snapshot_vendor = entry.vendor.clone();
+        let snapshot_role = entry.role.clone();
+        let snapshot_zone = entry.zone_name.clone();
+        drop(map);
+
+        if let Some(mut tree) = crate::lock_guard::try_lock_mutex(
+            &crate::snmp_topology::GLOBAL_TOPOLOGY_TREE,
+            "discovery::upsert_asset_and_notify_topology",
+        ) {
+            let leaf = crate::snmp_topology::DiscoveredHostLeaf::new(
+                snapshot_ip,
+                snapshot_mac,
+                snapshot_vendor,
+                snapshot_role,
+            );
+            let zone_opt = snapshot_zone.as_deref().map(|z| (z, z));
+            tree.ingest_host(leaf, zone_opt);
+        }
+
         is_new
-    } else {
-        false
     }
 }
 
@@ -523,7 +545,7 @@ pub fn sync_kernel_neighbors(app: Option<&tauri::AppHandle>) -> usize {
 
 #[cfg(windows)]
 #[link(name = "iphlpapi")]
-extern "system" {
+unsafe extern "system" {
     fn SendARP(
         dest_ip: u32,
         src_ip: u32,
@@ -830,42 +852,38 @@ fn ip_to_sort_key(ip: &str) -> (u8, u128) {
 /// 获取全量已知资产列表（工业级稳定排序：网关优先 -> 角色权重 -> 自然 IP 地址递增）
 /// 严格杜绝按动态变化的 last_seen_ts 排序，彻底消除前端表格行上下乱跳闪烁
 pub fn get_all_assets() -> Vec<DiscoveredAsset> {
-    if let Ok(map) = ASSET_CACHE.lock() {
-        let mut list: Vec<DiscoveredAsset> = map.values().cloned().collect();
-        list.sort_by(|a, b| {
-            // 权重 1: 角色优先级 (核心网关 > 控制中心/服务器 > PLC/RTU > 局域网终端 > 公网/外部)
-            let role_weight = |role: &str, ip: &str| -> u32 {
-                if ip.ends_with(".1") || ip.ends_with(".254") || role.contains("网关") || role.contains("路由") {
-                    10
-                } else if role.contains("服务器") || role.contains("中心") || role.contains("SERVER") {
-                    20
-                } else if role.contains("PLC") || role.contains("RTU") || role.contains("控制") {
-                    30
-                } else if role.contains("局域网") || role.contains("终端") {
-                    40
-                } else {
-                    50
-                }
-            };
-            let wa = role_weight(&a.role, &a.ip);
-            let wb = role_weight(&b.role, &b.ip);
-            if wa != wb {
-                return wa.cmp(&wb);
+    let map = crate::lock_guard::lock_mutex(&ASSET_CACHE, "discovery::get_all_assets");
+    let mut list: Vec<DiscoveredAsset> = map.values().cloned().collect();
+    list.sort_by(|a, b| {
+        // 权重 1: 角色优先级 (核心网关 > 控制中心/服务器 > PLC/RTU > 局域网终端 > 公网/外部)
+        let role_weight = |role: &str, ip: &str| -> u32 {
+            if ip.ends_with(".1") || ip.ends_with(".254") || role.contains("网关") || role.contains("路由") {
+                10
+            } else if role.contains("服务器") || role.contains("中心") || role.contains("SERVER") {
+                20
+            } else if role.contains("PLC") || role.contains("RTU") || role.contains("控制") {
+                30
+            } else if role.contains("局域网") || role.contains("终端") {
+                40
+            } else {
+                50
             }
-            // 权重 2: IP 地址自然网络序 (192.168.1.1 < 192.168.1.2 < 192.168.1.100)
-            ip_to_sort_key(&a.ip).cmp(&ip_to_sort_key(&b.ip))
-        });
-        list
-    } else {
-        Vec::new()
-    }
+        };
+        let wa = role_weight(&a.role, &a.ip);
+        let wb = role_weight(&b.role, &b.ip);
+        if wa != wb {
+            return wa.cmp(&wb);
+        }
+        // 权重 2: IP 地址自然网络序 (192.168.1.1 < 192.168.1.2 < 192.168.1.100)
+        ip_to_sort_key(&a.ip).cmp(&ip_to_sort_key(&b.ip))
+    });
+    list
 }
 
 /// 清空资产库
 pub fn clear_assets() {
-    if let Ok(mut map) = ASSET_CACHE.lock() {
-        map.clear();
-    }
+    let mut map = crate::lock_guard::lock_mutex(&ASSET_CACHE, "discovery::clear_assets");
+    map.clear();
 }
 
 // ============================================================

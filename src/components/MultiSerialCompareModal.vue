@@ -1,305 +1,271 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-    <div class="bg-white/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/80 w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden text-slate-800">
-      
-      <!-- 1. 模态框顶栏 (Apple Glassmorphism 工业级控制头) -->
-      <div class="px-5 py-3 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/80 shrink-0">
+  <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 ui-modal-backdrop animate-in fade-in duration-200">
+    <div class="ui-modal-surface rounded-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden">
+      <span class="lens-edge-lip" aria-hidden="true"></span>
+
+      <!-- 1. 模态框顶栏 (Liquid Glass) -->
+      <header class="ui-nav-glass border-b px-5 py-3 flex items-center justify-between shrink-0 flex-wrap gap-3">
         <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-base shadow-sm font-bold">
-            ⚖
+          <div class="w-8 h-8 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-700 dark:text-indigo-300 flex items-center justify-center shrink-0">
+            <AppIcon name="scale" :size="16" />
           </div>
           <div>
             <div class="flex items-center gap-2">
-              <h3 class="text-sm font-bold text-slate-900 leading-tight">多串口数据实时交叉比对终端</h3>
-              <span class="text-[10px] font-mono font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full border border-indigo-200">
-                双通道时序差分
+              <h3 class="text-sm font-bold leading-tight" style="color: var(--text-primary)">多串口数据实时交叉比对终端</h3>
+              <span class="text-[11px] font-semibold bg-indigo-500/12 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-500/25">
+                {{ channels.length }} 通道时序 LCS 对齐差分
               </span>
             </div>
-            <p class="text-[11px] text-slate-500 font-sans mt-0.5">
-              支持双串口全双工实时同步对照、LCS 逐字节差分高亮与传输延迟抖动 (&Delta;t) 分析
+            <p class="text-[11px] mt-0.5" style="color: var(--text-muted)">
+              支持 2～4 路 COM 串口全双工同步对照、真实 LCS DP 回溯字节对齐与传输延迟抖动 (Δt) 分析
             </p>
           </div>
         </div>
 
         <div class="flex items-center gap-2">
-          <!-- 导出比对报表 -->
-          <button @click="exportReport" :disabled="comparedPairs.length === 0"
-            class="px-2.5 py-1.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40 shadow-2xs">
-            <span>📥</span>
+          <button
+            v-if="comparedGroups.length > 0"
+            @click="sendGroupToGlobalDiff(comparedGroups[comparedGroups.length - 1])"
+            class="ui-btn-primary text-xs px-3 py-1.5 rounded-xl"
+            title="将最新一轮多路串口帧送入全局多组中心对齐对比台"
+          >
+            <AppIcon name="layers" :size="13" />
+            <span>送入全局多组精密矩阵</span>
+          </button>
+          <button @click="exportReport" :disabled="comparedGroups.length === 0" class="ui-btn-secondary text-xs px-3 py-1.5 rounded-xl">
+            <AppIcon name="download" :size="13" />
             <span>导出比对报表</span>
           </button>
-          
-          <!-- 关闭按钮 -->
-          <button @click="$emit('close')"
-            class="w-7 h-7 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200 flex items-center justify-center transition-colors cursor-pointer text-sm font-bold">
-            ✕
+          <button @click="$emit('close')" class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer" title="关闭">
+            <AppIcon name="close" :size="15" />
           </button>
         </div>
-      </div>
+      </header>
 
-      <!-- 2. 控制参数栏 (通道选择、比对模式、自动滚动与清空) -->
-      <div class="px-5 py-2.5 bg-white/80 border-b border-slate-200/70 flex items-center justify-between gap-4 flex-wrap shrink-0">
-        <!-- 左侧通道选择器 -->
-        <div class="flex items-center gap-3 flex-wrap text-xs">
-          <!-- 通道 A -->
-          <div class="flex items-center gap-1.5 bg-blue-50/80 border border-blue-200/80 px-2.5 py-1 rounded-xl">
-            <span class="w-2 h-2 rounded-full bg-blue-600"></span>
-            <span class="font-bold text-blue-900">通道 A:</span>
-            <select v-model="channelA" class="bg-white border border-blue-200 rounded-lg px-2 py-0.5 font-mono text-xs text-blue-950 focus:outline-none">
-              <option v-for="p in availablePorts" :key="'a-' + p" :value="p">{{ p }}</option>
+      <!-- 2. 多路通道动态控制栏 -->
+      <div class="px-5 py-2.5 border-b flex items-center justify-between gap-3 flex-wrap shrink-0 bg-[var(--surface-glass-pill)]" style="border-color: var(--border-subtle)">
+        <div class="flex items-center gap-2 flex-wrap text-xs">
+          <div
+            v-for="(_, cIdx) in channels"
+            :key="cIdx"
+            class="flex items-center gap-1.5 border px-2.5 py-1 rounded-xl"
+            :class="getChannelChipClass(cIdx)"
+          >
+            <span class="w-2 h-2 rounded-full shrink-0" :style="{ background: getChannelColor(cIdx) }"></span>
+            <span class="font-bold">{{ cIdx === 0 ? '基准 A' : `通道 ${String.fromCharCode(65 + cIdx)}` }}:</span>
+            <select v-model="channels[cIdx]" class="ui-input ui-num w-auto py-0.5 px-2 text-xs cursor-pointer">
+              <option v-for="p in availablePorts" :key="`ch-${cIdx}-${p}`" :value="p">{{ p }}</option>
               <option v-if="availablePorts.length === 0" value="">未发现可用串口</option>
             </select>
+            <button
+              v-if="channels.length > 2"
+              @click="removeChannel(cIdx)"
+              class="ml-0.5 opacity-65 hover:opacity-100 cursor-pointer"
+              title="移除此对比通道"
+            >
+              <AppIcon name="close" :size="11" />
+            </button>
           </div>
 
-          <!-- 通道 B -->
-          <div class="flex items-center gap-1.5 bg-emerald-50/80 border border-emerald-200/80 px-2.5 py-1 rounded-xl">
-            <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
-            <span class="font-bold text-emerald-900">通道 B:</span>
-            <select v-model="channelB" class="bg-white border border-emerald-200 rounded-lg px-2 py-0.5 font-mono text-xs text-emerald-950 focus:outline-none">
-              <option v-for="p in availablePorts" :key="'b-' + p" :value="p">{{ p }}</option>
-              <option v-if="availablePorts.length === 0" value="">未发现可用串口</option>
-            </select>
-          </div>
+          <button
+            v-if="channels.length < 4"
+            @click="addChannel"
+            class="ui-pill px-2.5 py-1 rounded-xl text-[11px] font-semibold cursor-pointer hover:text-[var(--text-primary)] flex items-center gap-1"
+            title="新增第 3 或第 4 路串口同步比对"
+          >
+            <span>+ 增加串口通道</span>
+          </button>
 
-          <!-- 视图模式切换 -->
-          <div class="flex bg-slate-200/70 p-0.5 rounded-xl border border-slate-300/60 font-semibold text-[11px]">
+          <div class="flex ui-pill p-0.5 rounded-xl font-semibold text-[11px]">
             <button @click="viewMode = 'split'"
-              :class="['px-2.5 py-0.5 rounded-lg transition-all cursor-pointer', viewMode === 'split' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900']">
-              双分栏对照
+              :class="['px-2.5 py-1 rounded-lg transition-colors cursor-pointer', viewMode === 'split' ? 'bg-[var(--accent-primary)] text-white shadow-xs font-bold' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">
+              多栏同步对照
             </button>
             <button @click="viewMode = 'interleaved'"
-              :class="['px-2.5 py-0.5 rounded-lg transition-all cursor-pointer', viewMode === 'interleaved' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900']">
-              时序交织比对
+              :class="['px-2.5 py-1 rounded-lg transition-colors cursor-pointer', viewMode === 'interleaved' ? 'bg-[var(--accent-primary)] text-white shadow-xs font-bold' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">
+              时序交织堆栈
             </button>
           </div>
         </div>
 
-        <!-- 右侧指标与开关 -->
-        <div class="flex items-center gap-3 text-xs">
-          <!-- 统计指标微胶囊 -->
-          <div class="flex items-center gap-2 font-mono text-[11px] bg-slate-100/90 px-3 py-1 rounded-xl border border-slate-200">
-            <div>A接收: <strong class="text-blue-700">{{ channelAPackets.length }}</strong></div>
-            <div class="text-slate-300">|</div>
-            <div>B接收: <strong class="text-emerald-700">{{ channelBPackets.length }}</strong></div>
-            <div class="text-slate-300">|</div>
-            <div>比对组: <strong class="text-indigo-700">{{ comparedPairs.length }}</strong></div>
-            <div class="text-slate-300">|</div>
-            <div>匹配率: <strong :class="matchRate >= 95 ? 'text-emerald-700' : matchRate >= 80 ? 'text-amber-700' : 'text-rose-700'">{{ matchRate.toFixed(1) }}%</strong></div>
+        <div class="flex items-center gap-2.5 text-xs">
+          <div class="flex items-center gap-2 ui-num text-[11px] ui-pill px-3 py-1 rounded-xl">
+            <div>比对轮次: <strong class="text-indigo-700 dark:text-indigo-300">{{ comparedGroups.length }}</strong></div>
+            <span style="color: var(--border-strong)">|</span>
+            <div>全匹配率: <strong :class="matchRate >= 95 ? 'text-emerald-700 dark:text-emerald-400' : matchRate >= 80 ? 'text-amber-700 dark:text-amber-400' : 'text-rose-700 dark:text-rose-400'">{{ matchRate.toFixed(1) }}%</strong></div>
           </div>
 
-          <!-- 自动滚动复选框 -->
-          <label class="flex items-center gap-1.5 text-xs text-slate-600 font-semibold cursor-pointer select-none">
-            <input type="checkbox" v-model="autoScroll" class="rounded text-indigo-600 focus:ring-0 cursor-pointer">
-            <span>自动滚动</span>
+          <label class="flex items-center gap-1.5 text-xs font-semibold cursor-pointer select-none" style="color: var(--text-secondary)">
+            <input type="checkbox" v-model="autoScroll" class="rounded accent-sky-500 cursor-pointer">
+            <span>自动滚屏</span>
           </label>
 
-          <!-- 清空缓冲 -->
-          <button @click="clearBuffer"
-            class="text-[11px] text-slate-400 hover:text-slate-700 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
-            清空视图
+          <button @click="clearBuffer" class="text-[11px] ui-pill px-2.5 py-1 rounded-lg cursor-pointer">
+            清空当前轮次
           </button>
         </div>
       </div>
 
       <!-- 3. 主比对内容视口 -->
-      <div ref="scrollContainer" class="flex-1 overflow-auto custom-scrollbar p-4 bg-slate-50/50 min-h-0">
-        
-        <!-- 空状态提示 -->
-        <div v-if="channelAPackets.length === 0 && channelBPackets.length === 0"
-          class="flex flex-col items-center justify-center py-20 text-slate-400 text-xs gap-2 select-none">
-          <div class="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-2xl mb-1 shadow-2xs">
-            ⚖
-          </div>
-          <span class="text-sm font-bold text-slate-800">等待串口数据输入</span>
-          <span class="text-[11px] text-slate-500 font-mono">
-            请确认已同时启动 <strong class="text-blue-700">{{ channelA || '通道A' }}</strong> 与 <strong class="text-emerald-700">{{ channelB || '通道B' }}</strong> 的监听
-          </span>
-          <div class="text-[11px] text-slate-400 max-w-md text-center mt-1">
-            当两个串口产生操作数据帧时，系统将根据物理时间戳自动对齐，并执行 LCS 逐字节差分高亮与传输延迟分析。
-          </div>
-        </div>
+      <div ref="scrollContainer" class="flex-1 overflow-auto custom-scrollbar p-4 min-h-0 select-text bg-transparent">
+        <EmptyState
+          v-if="comparedGroups.length === 0"
+          class="py-16"
+          icon="scale"
+          title="等待多路串口数据输入"
+          :description="`请确认已启动 ${channels.filter(Boolean).join(' / ') || '目标串口'} 的监听，报文抵达后将按真实 LCS 回溯算法执行逐字节对齐高亮。`"
+        />
 
-        <!-- 模式 1: 双分栏对照视图 (Split View) -->
-        <div v-else-if="viewMode === 'split'" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          
-          <!-- 通道 A 栏 -->
-          <div class="bg-white/80 rounded-2xl border border-blue-200/80 shadow-xs flex flex-col overflow-hidden">
-            <div class="px-3.5 py-2 bg-blue-50/80 border-b border-blue-200/60 flex items-center justify-between text-xs">
-              <span class="font-bold text-blue-900 flex items-center gap-1.5 font-mono">
-                <span class="w-2 h-2 rounded-full bg-blue-600"></span>
-                <span>通道 A: {{ channelA }}</span>
+        <!-- 模式 1: 多栏分屏同步对照视图 (动态支持 2~4 路并排) -->
+        <div
+          v-else-if="viewMode === 'split'"
+          class="grid gap-3"
+          :class="channels.length <= 2 ? 'grid-cols-1 md:grid-cols-2' : channels.length === 3 ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4'"
+        >
+          <div
+            v-for="(chName, cIdx) in channels"
+            :key="`col-${cIdx}`"
+            class="ui-content-card flex flex-col overflow-hidden"
+          >
+            <div class="px-3.5 py-2 border-b flex items-center justify-between text-xs bg-[var(--surface-glass-pill)]" style="border-color: var(--border-subtle)">
+              <span class="font-bold flex items-center gap-1.5 ui-num" style="color: var(--text-primary)">
+                <span class="w-2 h-2 rounded-full" :style="{ background: getChannelColor(cIdx) }"></span>
+                <span>{{ cIdx === 0 ? '基准 A' : `通道 ${String.fromCharCode(65 + cIdx)}` }}: {{ chName || '未选定' }}</span>
               </span>
-              <span class="font-mono text-[11px] text-blue-700">共 {{ channelAPackets.length }} 帧</span>
+              <span class="ui-num text-[11px]" style="color: var(--text-muted)">共 {{ channelPackets[cIdx]?.length || 0 }} 帧</span>
             </div>
-            <div class="p-2 space-y-2 overflow-auto max-h-[60vh] custom-scrollbar">
-              <div v-for="(pair, idx) in comparedPairs" :key="'split-a-' + idx"
-                class="p-2 rounded-xl border text-xs font-mono transition-all"
-                :class="pair.match ? 'bg-slate-50/70 border-slate-200/70' : 'bg-rose-50/60 border-rose-200/80'">
-                <div class="flex items-center justify-between text-[10px] text-slate-500 mb-1">
-                  <span class="font-bold text-slate-700">#{{ idx + 1 }} {{ pair.pktA ? pair.pktA.timestamp : '—' }}</span>
-                  <span v-if="pair.pktA" class="bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded font-semibold">{{ pair.pktA.length }} 字节</span>
-                  <span v-else class="text-slate-400">无对应报文</span>
+            <div class="p-2.5 space-y-2 overflow-auto max-h-[60vh] custom-scrollbar">
+              <div
+                v-for="(grp, gIdx) in comparedGroups"
+                :key="`split-${cIdx}-${gIdx}`"
+                class="ui-sub-card p-2.5 text-xs ui-num transition-colors"
+                :class="grp.allMatch ? '' : 'border-rose-500/40 bg-rose-500/8'"
+              >
+                <div class="flex items-center justify-between text-[11px] mb-1 gap-1 flex-wrap" style="color: var(--text-muted)">
+                  <span class="font-bold" style="color: var(--text-primary)">
+                    #{{ gIdx + 1 }} {{ grp.slots[cIdx]?.pkt ? grp.slots[cIdx].pkt!.timestamp : '—' }}
+                  </span>
+                  <div class="flex items-center gap-1.5">
+                    <span v-if="cIdx > 0 && grp.slots[cIdx]?.deltaMs !== null" class="px-1.5 py-0.5 rounded ui-pill text-[11px]">
+                      Δt {{ grp.slots[cIdx].deltaMs!.toFixed(1) }}ms
+                    </span>
+                    <span v-if="grp.slots[cIdx]?.pkt" class="bg-blue-500/12 text-blue-700 dark:text-sky-300 px-1.5 py-0.5 rounded font-semibold">
+                      {{ grp.slots[cIdx].pkt!.length }}B
+                    </span>
+                    <span v-else>无对应帧</span>
+                  </div>
                 </div>
-                <!-- 逐字节对比 Hex 预览 -->
-                <div v-if="pair.pktA" class="break-all font-mono text-[11px] leading-relaxed">
-                  <span v-for="(byteDiff, bIdx) in pair.diffA" :key="'b-a-' + bIdx"
+
+                <div v-if="grp.slots[cIdx]?.pkt" class="break-all font-mono-code text-[11px] leading-relaxed">
+                  <span
+                    v-for="(byteDiff, bIdx) in grp.slots[cIdx].alignedBytes"
+                    :key="`b-${cIdx}-${bIdx}`"
                     :class="[
-                      'inline-block px-1 py-0.2 m-0.5 rounded text-[10px]',
-                      byteDiff.type === 'match' ? 'bg-emerald-100 text-emerald-900 font-bold' :
-                      byteDiff.type === 'diff' ? 'bg-rose-500 text-white font-bold' :
-                      'bg-slate-200 text-slate-700'
+                      'inline-block px-1 py-0.5 m-0.5 rounded text-[11px]',
+                      byteDiff.type === 'match' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold' :
+                      byteDiff.type === 'insert' ? 'bg-blue-600 text-white font-bold' :
+                      byteDiff.type === 'diff' ? 'bg-rose-600 text-white font-bold' :
+                      'ui-pill opacity-50'
                     ]"
-                    :title="`偏移 0x${bIdx.toString(16).toUpperCase()}: ${byteDiff.hex} (${byteDiff.type})`">
+                    :title="`对齐位 ${bIdx}: ${byteDiff.hex} (${byteDiff.type})`"
+                  >
                     {{ byteDiff.hex }}
                   </span>
                 </div>
-                <div v-if="pair.pktA?.raw_text" class="text-[10px] text-slate-600 mt-1 truncate border-t border-slate-200/60 pt-1">
-                  {{ pair.pktA.raw_text }}
+                <div v-if="grp.slots[cIdx]?.pkt?.raw_text" class="text-[11px] mt-1 truncate border-t pt-1" style="color: var(--text-secondary); border-color: var(--border-subtle)">
+                  {{ grp.slots[cIdx].pkt!.raw_text }}
                 </div>
               </div>
             </div>
           </div>
-
-          <!-- 通道 B 栏 -->
-          <div class="bg-white/80 rounded-2xl border border-emerald-200/80 shadow-xs flex flex-col overflow-hidden">
-            <div class="px-3.5 py-2 bg-emerald-50/80 border-b border-emerald-200/60 flex items-center justify-between text-xs">
-              <span class="font-bold text-emerald-900 flex items-center gap-1.5 font-mono">
-                <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
-                <span>通道 B: {{ channelB }}</span>
-              </span>
-              <span class="font-mono text-[11px] text-emerald-700">共 {{ channelBPackets.length }} 帧</span>
-            </div>
-            <div class="p-2 space-y-2 overflow-auto max-h-[60vh] custom-scrollbar">
-              <div v-for="(pair, idx) in comparedPairs" :key="'split-b-' + idx"
-                class="p-2 rounded-xl border text-xs font-mono transition-all"
-                :class="pair.match ? 'bg-slate-50/70 border-slate-200/70' : 'bg-rose-50/60 border-rose-200/80'">
-                <div class="flex items-center justify-between text-[10px] text-slate-500 mb-1">
-                  <span class="font-bold text-slate-700">#{{ idx + 1 }} {{ pair.pktB ? pair.pktB.timestamp : '—' }}</span>
-                  <span v-if="pair.pktB" class="bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-semibold">{{ pair.pktB.length }} 字节</span>
-                  <span v-else class="text-slate-400">无对应报文</span>
-                </div>
-                <!-- 逐字节对比 Hex 预览 -->
-                <div v-if="pair.pktB" class="break-all font-mono text-[11px] leading-relaxed">
-                  <span v-for="(byteDiff, bIdx) in pair.diffB" :key="'b-b-' + bIdx"
-                    :class="[
-                      'inline-block px-1 py-0.2 m-0.5 rounded text-[10px]',
-                      byteDiff.type === 'match' ? 'bg-emerald-100 text-emerald-900 font-bold' :
-                      byteDiff.type === 'diff' ? 'bg-rose-500 text-white font-bold' :
-                      'bg-slate-200 text-slate-700'
-                    ]"
-                    :title="`偏移 0x${bIdx.toString(16).toUpperCase()}: ${byteDiff.hex} (${byteDiff.type})`">
-                    {{ byteDiff.hex }}
-                  </span>
-                </div>
-                <div v-if="pair.pktB?.raw_text" class="text-[10px] text-slate-600 mt-1 truncate border-t border-slate-200/60 pt-1">
-                  {{ pair.pktB.raw_text }}
-                </div>
-              </div>
-            </div>
-          </div>
-
         </div>
 
-        <!-- 模式 2: 时序交织比对视图 (Interleaved Timeline View) -->
+        <!-- 模式 2: 时序交织堆栈比对视图 -->
         <div v-else class="space-y-2.5">
-          <div v-for="(pair, idx) in comparedPairs" :key="'interleaved-' + idx"
-            class="bg-white/85 rounded-2xl border p-3 shadow-xs transition-all"
-            :class="pair.match ? 'border-slate-200/80 hover:border-blue-300' : 'border-rose-300/80 bg-rose-50/30'">
-            
-            <!-- 比对头信息 -->
-            <div class="flex items-center justify-between text-xs pb-2 border-b border-slate-200/60 mb-2">
+          <div
+            v-for="(grp, gIdx) in comparedGroups"
+            :key="`interleaved-${gIdx}`"
+            class="ui-content-card p-3 transition-colors"
+            :class="grp.allMatch ? 'hover:border-sky-500/40' : 'border-rose-500/40 bg-rose-500/8'"
+          >
+            <div class="flex items-center justify-between text-xs pb-2 border-b mb-2 flex-wrap gap-2" style="border-color: var(--border-subtle)">
               <div class="flex items-center gap-2">
-                <span class="font-bold text-slate-800 font-mono">比对组 #{{ idx + 1 }}</span>
-                <span :class="pair.match ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-rose-100 text-rose-800 border-rose-200'"
-                  class="text-[10px] font-bold px-2 py-0.2 rounded-full border">
-                  {{ pair.match ? '✓ 载荷完全一致' : '✕ 载荷存在差异' }}
-                </span>
-                <span v-if="pair.deltaMs !== null" class="text-[10px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded">
-                  时延抖动 &Delta;t: {{ pair.deltaMs.toFixed(2) }} ms
+                <span class="font-bold ui-num" style="color: var(--text-primary)">比对轮次 #{{ gIdx + 1 }}</span>
+                <span
+                  :class="grp.allMatch ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30'"
+                  class="text-[11px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1"
+                >
+                  <AppIcon :name="grp.allMatch ? 'check' : 'close'" :size="11" />
+                  <span>{{ grp.allMatch ? '全通道载荷一致' : '存在长度或字节突变' }}</span>
                 </span>
               </div>
-              <div class="text-[11px] font-mono text-slate-400">
-                LCS 匹配相似度: <strong class="text-indigo-700 font-bold">{{ pair.similarity.toFixed(1) }}%</strong>
-              </div>
-            </div>
-
-            <!-- 对照双流 -->
-            <div class="space-y-2 text-xs font-mono">
-              <!-- Channel A -->
-              <div class="flex items-start gap-2">
-                <span class="w-16 shrink-0 text-[10px] font-bold text-blue-800 bg-blue-100 px-1.5 py-0.5 rounded text-center mt-0.5">
-                  {{ channelA }}
-                </span>
-                <div class="flex-1 break-all bg-slate-100/80 p-2 rounded-xl border border-slate-200/60">
-                  <span v-for="(byteDiff, bIdx) in pair.diffA" :key="'int-a-' + bIdx"
-                    :class="[
-                      'inline-block px-1 py-0.2 m-0.5 rounded text-[10px]',
-                      byteDiff.type === 'match' ? 'bg-emerald-100 text-emerald-900 font-bold' :
-                      byteDiff.type === 'diff' ? 'bg-rose-500 text-white font-bold' :
-                      'bg-slate-200 text-slate-700'
-                    ]">
-                    {{ byteDiff.hex }}
-                  </span>
-                  <div v-if="pair.pktA?.raw_text" class="text-[10px] text-slate-500 mt-1 truncate">
-                    文本: {{ pair.pktA.raw_text }}
-                  </div>
-                </div>
-              </div>
-
-              <!-- Channel B -->
-              <div class="flex items-start gap-2">
-                <span class="w-16 shrink-0 text-[10px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded text-center mt-0.5">
-                  {{ channelB }}
-                </span>
-                <div class="flex-1 break-all bg-slate-100/80 p-2 rounded-xl border border-slate-200/60">
-                  <span v-for="(byteDiff, bIdx) in pair.diffB" :key="'int-b-' + bIdx"
-                    :class="[
-                      'inline-block px-1 py-0.2 m-0.5 rounded text-[10px]',
-                      byteDiff.type === 'match' ? 'bg-emerald-100 text-emerald-900 font-bold' :
-                      byteDiff.type === 'diff' ? 'bg-rose-500 text-white font-bold' :
-                      'bg-slate-200 text-slate-700'
-                    ]">
-                    {{ byteDiff.hex }}
-                  </span>
-                  <div v-if="pair.pktB?.raw_text" class="text-[10px] text-slate-500 mt-1 truncate">
-                    文本: {{ pair.pktB.raw_text }}
-                  </div>
-                </div>
+              <div class="flex items-center gap-3 text-[11px] ui-num" style="color: var(--text-muted)">
+                <span>最小 LCS 相似度: <strong class="text-indigo-700 dark:text-indigo-300 font-bold">{{ grp.minSimilarity.toFixed(1) }}%</strong></span>
+                <button @click="sendGroupToGlobalDiff(grp)" class="ui-btn-secondary px-2 py-0.5 text-[11px]">
+                  <AppIcon name="scale" :size="11" />
+                  <span>深度差分</span>
+                </button>
               </div>
             </div>
 
+            <div class="space-y-2 text-xs font-mono-code">
+              <div v-for="(slot, cIdx) in grp.slots" :key="`int-slot-${gIdx}-${cIdx}`" class="flex items-start gap-2">
+                <span
+                  class="w-20 shrink-0 text-[11px] font-bold px-1.5 py-0.5 rounded text-center mt-0.5 border"
+                  :class="getChannelChipClass(cIdx)"
+                >
+                  {{ channels[cIdx] || `CH-${cIdx + 1}` }}
+                </span>
+                <div class="flex-1 break-all ui-sub-card p-2">
+                  <template v-if="slot.pkt">
+                    <span
+                      v-for="(byteDiff, bIdx) in slot.alignedBytes"
+                      :key="`int-b-${cIdx}-${bIdx}`"
+                      :class="[
+                        'inline-block px-1 py-0.5 m-0.5 rounded text-[11px]',
+                        byteDiff.type === 'match' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold' :
+                        byteDiff.type === 'insert' ? 'bg-blue-600 text-white font-bold' :
+                        byteDiff.type === 'diff' ? 'bg-rose-600 text-white font-bold' :
+                        'ui-pill opacity-50'
+                      ]"
+                    >
+                      {{ byteDiff.hex }}
+                    </span>
+                    <div class="text-[11px] mt-1 flex justify-between gap-2" style="color: var(--text-muted)">
+                      <span class="truncate">{{ slot.pkt.raw_text || 'BINARY STREAM' }}</span>
+                      <span v-if="cIdx > 0 && slot.deltaMs !== null" class="shrink-0 ui-num">Δt: {{ slot.deltaMs.toFixed(2) }}ms · 相似 {{ slot.similarity.toFixed(1) }}%</span>
+                    </div>
+                  </template>
+                  <span v-else class="text-[11px]" style="color: var(--text-muted)">该轮次本通道尚未抵达数据帧</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
       </div>
 
-      <!-- 4. 底部状态与操作说明栏 -->
-      <div class="px-5 py-2.5 border-t border-slate-200/80 bg-white/90 flex items-center justify-between text-xs text-slate-500 shrink-0">
+      <!-- 4. 底部图例状态栏 -->
+      <footer class="px-5 py-2.5 border-t flex items-center justify-between text-xs shrink-0 flex-wrap gap-2 bg-[var(--surface-glass-pill)]" style="border-color: var(--border-subtle); color: var(--text-secondary)">
         <div class="flex items-center gap-4">
-          <div class="flex items-center gap-1.5">
-            <span class="w-2.5 h-2.5 rounded bg-emerald-500"></span>
-            <span>一致字节</span>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <span class="w-2.5 h-2.5 rounded bg-rose-500"></span>
-            <span>差异/突变字节</span>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <span class="w-2.5 h-2.5 rounded bg-slate-300"></span>
-            <span>长度缺失填充</span>
-          </div>
+          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-emerald-500"></span><span>一致字节</span></div>
+          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-rose-500"></span><span>替换/差异字节</span></div>
+          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-blue-600"></span><span>前插/新增字节</span></div>
+          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-slate-400"></span><span>对齐缺失 (-- 插槽)</span></div>
         </div>
-        <div class="font-mono text-[11px]">
-          算法: LCS (Longest Common Subsequence) 时间复杂度 O(M&times;N)
+        <div class="ui-num text-[11px]" style="color: var(--text-muted)">
+          真实回溯 LCS DP 对齐算法 · 消除前插位移错乱
         </div>
-      </div>
-
+      </footer>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue';
+import AppIcon from './AppIcon.vue';
+import EmptyState from './EmptyState.vue';
+import { useUniversalDiff } from '../composables/useUniversalDiff';
+import { saveTextViaNativeDesktop } from '../composables/useDesktopSave';
 
 interface PacketRecord {
   id: number;
@@ -325,17 +291,20 @@ interface PacketRecord {
 
 interface ByteDiff {
   hex: string;
-  type: 'match' | 'diff' | 'missing';
+  type: 'match' | 'diff' | 'insert' | 'missing';
 }
 
-interface ComparedPair {
-  pktA?: PacketRecord;
-  pktB?: PacketRecord;
-  diffA: ByteDiff[];
-  diffB: ByteDiff[];
-  match: boolean;
+interface AlignedSlot {
+  pkt?: PacketRecord;
+  alignedBytes: ByteDiff[];
   similarity: number;
   deltaMs: number | null;
+}
+
+interface ComparedMultiGroup {
+  slots: AlignedSlot[];
+  allMatch: boolean;
+  minSimilarity: number;
 }
 
 const props = defineProps<{
@@ -346,48 +315,70 @@ const props = defineProps<{
   defaultPortB?: string;
 }>();
 
-const emit = defineEmits(['close']);
+defineEmits(['close']);
 
-const channelA = ref(props.defaultPortA || (props.availablePorts[0] || ''));
-const channelB = ref(props.defaultPortB || (props.availablePorts[1] || props.availablePorts[0] || ''));
+const diffBus = useUniversalDiff();
+const channels = ref<string[]>([
+  props.defaultPortA || (props.availablePorts[0] || ''),
+  props.defaultPortB || (props.availablePorts[1] || props.availablePorts[0] || ''),
+]);
 const viewMode = ref<'split' | 'interleaved'>('split');
 const autoScroll = ref(true);
 const scrollContainer = ref<HTMLElement | null>(null);
+const clearFloorIds = ref<Record<string, number>>({});
 
-// 保持可用端口的初始默认选择
-watch(() => props.availablePorts, (newPorts) => {
-  if (newPorts.length > 0) {
-    if (!channelA.value || !newPorts.includes(channelA.value)) {
-      channelA.value = newPorts[0];
+watch(
+  () => props.availablePorts,
+  (newPorts) => {
+    if (newPorts.length > 0) {
+      channels.value = channels.value.map((ch, idx) =>
+        ch && newPorts.includes(ch) ? ch : newPorts[idx % newPorts.length]
+      );
     }
-    if (!channelB.value || !newPorts.includes(channelB.value)) {
-      channelB.value = newPorts[1] || newPorts[0];
-    }
-  }
-}, { immediate: true });
+  },
+  { immediate: true }
+);
 
-// 提取两个通道的独立数据包队列
-const channelAPackets = computed(() => {
-  if (!channelA.value) return [];
-  return props.packets.filter(p => 
-    (p.transport === 'SERIAL' || p.direction?.startsWith('SERIAL')) &&
-    (p.src_ip === channelA.value || p.dst_ip === channelA.value || p.business_data?.serial_interface === channelA.value)
-  );
-});
+function addChannel() {
+  if (channels.value.length >= 4) return;
+  const unused = props.availablePorts.find((p) => !channels.value.includes(p));
+  channels.value.push(unused || props.availablePorts[0] || '');
+}
 
-const channelBPackets = computed(() => {
-  if (!channelB.value) return [];
-  return props.packets.filter(p => 
-    (p.transport === 'SERIAL' || p.direction?.startsWith('SERIAL')) &&
-    (p.src_ip === channelB.value || p.dst_ip === channelB.value || p.business_data?.serial_interface === channelB.value)
-  );
-});
+function removeChannel(idx: number) {
+  if (channels.value.length <= 2) return;
+  channels.value.splice(idx, 1);
+}
 
-/**
- * 将 Hex 字符串拆分为 2 字符的字节数组
- */
+function getChannelColor(idx: number): string {
+  return ['#38BDF8', '#10B981', '#A855F7', '#F59E0B'][idx % 4];
+}
+
+function getChannelChipClass(idx: number): string {
+  const classes = [
+    'bg-blue-500/10 border-blue-500/25 text-blue-700 dark:text-sky-300',
+    'bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-300',
+    'bg-purple-500/10 border-purple-500/25 text-purple-700 dark:text-purple-300',
+    'bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-300',
+  ];
+  return classes[idx % 4];
+}
+
+const channelPackets = computed<PacketRecord[][]>(() =>
+  channels.value.map((ch) => {
+    if (!ch) return [];
+    const floorId = clearFloorIds.value[ch] || 0;
+    return props.packets.filter(
+      (p) =>
+        p.id > floorId &&
+        (p.transport === 'SERIAL' || p.direction?.startsWith('SERIAL')) &&
+        (p.src_ip === ch || p.dst_ip === ch || p.business_data?.serial_interface === ch)
+    );
+  })
+);
+
 function splitHexBytes(hex: string): string[] {
-  const clean = hex.replace(/\s+/g, '');
+  const clean = (hex || '').replace(/\s+/g, '');
   const bytes: string[] = [];
   for (let i = 0; i < clean.length; i += 2) {
     bytes.push(clean.substring(i, i + 2).toUpperCase());
@@ -396,126 +387,137 @@ function splitHexBytes(hex: string): string[] {
 }
 
 /**
- * 计算 LCS (Longest Common Subsequence) 差异
+ * 真正通过 DP 回溯实现双序列 LCS 插入/删除/替换对齐（彻底消除同下标硬比导致的错位漂移）
  * 时间复杂度: O(M * N)，空间复杂度: O(M * N)
  */
-function computeLcsDiff(bytesA: string[], bytesB: string[]): { diffA: ByteDiff[]; diffB: ByteDiff[]; similarity: number } {
+function backtrackLcsDiff(bytesA: string[], bytesB: string[]): { alignedA: ByteDiff[]; alignedB: ByteDiff[]; similarity: number } {
   const m = bytesA.length;
   const n = bytesB.length;
-
-  if (m === 0 && n === 0) {
-    return { diffA: [], diffB: [], similarity: 100 };
-  }
+  if (m === 0 && n === 0) return { alignedA: [], alignedB: [], similarity: 100 };
   if (m === 0) {
     return {
-      diffA: [],
-      diffB: bytesB.map(b => ({ hex: b, type: 'diff' })),
-      similarity: 0
+      alignedA: bytesB.map(() => ({ hex: '--', type: 'missing' })),
+      alignedB: bytesB.map((b) => ({ hex: b, type: 'insert' })),
+      similarity: 0,
     };
   }
   if (n === 0) {
     return {
-      diffA: bytesA.map(b => ({ hex: b, type: 'diff' })),
-      diffB: [],
-      similarity: 0
+      alignedA: bytesA.map((b) => ({ hex: b, type: 'diff' })),
+      alignedB: bytesA.map(() => ({ hex: '--', type: 'missing' })),
+      similarity: 0,
     };
   }
 
-  // 动态规划表
+  // 安全阈值: 超大串口突发包 (> 400B) 降级直接对齐保护响应
+  if (m * n > 160_000) {
+    const maxLen = Math.max(m, n);
+    let eq = 0;
+    const alignedA: ByteDiff[] = [];
+    const alignedB: ByteDiff[] = [];
+    for (let i = 0; i < maxLen; i++) {
+      const a = bytesA[i];
+      const b = bytesB[i];
+      if (a === b) eq++;
+      alignedA.push(a ? { hex: a, type: a === b ? 'match' : 'diff' } : { hex: '--', type: 'missing' });
+      alignedB.push(b ? { hex: b, type: a === b ? 'match' : 'diff' } : { hex: '--', type: 'missing' });
+    }
+    return { alignedA, alignedB, similarity: (eq / maxLen) * 100 };
+  }
+
   const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
-      if (bytesA[i - 1] === bytesB[j - 1]) {
-        dp[i][j] = dp[i - 1][j - 1] + 1;
-      } else {
-        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-      }
+      dp[i][j] =
+        bytesA[i - 1] === bytesB[j - 1]
+          ? dp[i - 1][j - 1] + 1
+          : Math.max(dp[i - 1][j], dp[i][j - 1]);
     }
   }
 
-  const lcsLen = dp[m][n];
-  const maxLen = Math.max(m, n);
-  const similarity = maxLen > 0 ? (lcsLen / maxLen) * 100 : 100;
-
-  // 位置对齐比较
-  const diffA: ByteDiff[] = [];
-  const diffB: ByteDiff[] = [];
-
-  for (let i = 0; i < maxLen; i++) {
-    const bA = bytesA[i];
-    const bB = bytesB[i];
-
-    if (bA !== undefined && bB !== undefined) {
-      if (bA === bB) {
-        diffA.push({ hex: bA, type: 'match' });
-        diffB.push({ hex: bB, type: 'match' });
-      } else {
-        diffA.push({ hex: bA, type: 'diff' });
-        diffB.push({ hex: bB, type: 'diff' });
-      }
-    } else if (bA !== undefined) {
-      diffA.push({ hex: bA, type: 'diff' });
-      diffB.push({ hex: '--', type: 'missing' });
+  const alignedA: ByteDiff[] = [];
+  const alignedB: ByteDiff[] = [];
+  let i = m;
+  let j = n;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && bytesA[i - 1] === bytesB[j - 1]) {
+      alignedA.push({ hex: bytesA[i - 1], type: 'match' });
+      alignedB.push({ hex: bytesB[j - 1], type: 'match' });
+      i--;
+      j--;
+    } else if (i > 0 && j > 0 && dp[i - 1][j] === dp[i][j - 1]) {
+      // 同等代价值时按原地替换压缩展示长度
+      alignedA.push({ hex: bytesA[i - 1], type: 'diff' });
+      alignedB.push({ hex: bytesB[j - 1], type: 'diff' });
+      i--;
+      j--;
+    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+      alignedA.push({ hex: '--', type: 'missing' });
+      alignedB.push({ hex: bytesB[j - 1], type: 'insert' });
+      j--;
     } else {
-      diffA.push({ hex: '--', type: 'missing' });
-      diffB.push({ hex: bB!, type: 'diff' });
+      alignedA.push({ hex: bytesA[i - 1], type: 'diff' });
+      alignedB.push({ hex: '--', type: 'missing' });
+      i--;
     }
   }
 
-  return { diffA, diffB, similarity };
+  alignedA.reverse();
+  alignedB.reverse();
+  const lcsLen = dp[m][n];
+  const similarity = (lcsLen / Math.max(m, n)) * 100;
+  return { alignedA, alignedB, similarity };
 }
 
-/**
- * 构造对齐比对数据组
- */
-const comparedPairs = computed(() => {
-  const pktsA = channelAPackets.value;
-  const pktsB = channelBPackets.value;
-  const maxCount = Math.max(pktsA.length, pktsB.length);
-  const pairs: ComparedPair[] = [];
+const comparedGroups = computed<ComparedMultiGroup[]>(() => {
+  const lists = channelPackets.value;
+  const maxCount = Math.max(...lists.map((l) => l.length), 0);
+  const groups: ComparedMultiGroup[] = [];
 
-  for (let i = 0; i < maxCount; i++) {
-    const pA = pktsA[i];
-    const pB = pktsB[i];
+  for (let roundIdx = 0; roundIdx < maxCount; roundIdx++) {
+    const pkts = lists.map((l) => l[roundIdx]);
+    const anchorPkt = pkts[0];
+    const bytesAnchor = anchorPkt ? splitHexBytes(anchorPkt.payload_hex) : [];
 
-    const bytesA = pA ? splitHexBytes(pA.payload_hex) : [];
-    const bytesB = pB ? splitHexBytes(pB.payload_hex) : [];
-
-    const { diffA, diffB, similarity } = computeLcsDiff(bytesA, bytesB);
-
-    let deltaMs: number | null = null;
-    if (pA && pB) {
-      if (pA.timestamp_ns && pB.timestamp_ns) {
-        deltaMs = Math.abs(Number(pA.timestamp_ns - pB.timestamp_ns)) / 1_000_000;
+    const slots: AlignedSlot[] = pkts.map((pkt, cIdx) => {
+      if (cIdx === 0) {
+        const selfDiff = bytesAnchor.map<ByteDiff>((h) => ({ hex: h, type: 'match' }));
+        return { pkt, alignedBytes: selfDiff, similarity: 100, deltaMs: 0 };
       }
+      const bytesCur = pkt ? splitHexBytes(pkt.payload_hex) : [];
+      const { alignedB, similarity } = backtrackLcsDiff(bytesAnchor, bytesCur);
+      let deltaMs: number | null = null;
+      if (anchorPkt?.timestamp_ns && pkt?.timestamp_ns) {
+        deltaMs = Math.abs(Number(pkt.timestamp_ns - anchorPkt.timestamp_ns)) / 1_000_000;
+      }
+      return { pkt, alignedBytes: alignedB, similarity, deltaMs };
+    });
+
+    // 若只有 2 路通道，顺便把 Anchor 对 B 的缺失槽同步展示出来以直观看到对比对齐
+    if (pkts.length === 2 && anchorPkt && pkts[1]) {
+      const { alignedA, alignedB } = backtrackLcsDiff(bytesAnchor, splitHexBytes(pkts[1].payload_hex));
+      slots[0].alignedBytes = alignedA;
+      slots[1].alignedBytes = alignedB;
     }
 
-    const match = pA && pB ? pA.payload_hex === pB.payload_hex : false;
-
-    pairs.push({
-      pktA: pA,
-      pktB: pB,
-      diffA,
-      diffB,
-      match,
-      similarity,
-      deltaMs
-    });
+    const validPkts = pkts.filter((p): p is PacketRecord => Boolean(p));
+    const allMatch =
+      validPkts.length === channels.value.length &&
+      validPkts.every((p) => p.payload_hex === validPkts[0].payload_hex);
+    const minSimilarity = Math.min(...slots.map((s) => s.similarity));
+    groups.push({ slots, allMatch, minSimilarity });
   }
 
-  return pairs;
+  return groups;
 });
 
-// 计算总匹配率
 const matchRate = computed(() => {
-  const pairs = comparedPairs.value;
-  if (pairs.length === 0) return 100;
-  const matchCount = pairs.filter(p => p.match).length;
-  return (matchCount / pairs.length) * 100;
+  const gs = comparedGroups.value;
+  if (gs.length === 0) return 100;
+  return (gs.filter((g) => g.allMatch).length / gs.length) * 100;
 });
 
-// 监听数据增长并执行自动滚动
-watch(comparedPairs, async () => {
+watch(comparedGroups, async () => {
   if (autoScroll.value && scrollContainer.value) {
     await nextTick();
     scrollContainer.value.scrollTop = scrollContainer.value.scrollHeight;
@@ -523,44 +525,50 @@ watch(comparedPairs, async () => {
 });
 
 function clearBuffer() {
-  // 清空可通过外部或重置触发
+  const nextFloors = { ...clearFloorIds.value };
+  channels.value.forEach((ch) => {
+    if (!ch) return;
+    const latest = props.packets.reduce((max, p) => (p.id > max ? p.id : max), 0);
+    nextFloors[ch] = latest;
+  });
+  clearFloorIds.value = nextFloors;
 }
 
-/**
- * 导出多串口比对报告 (CSV 格式)
- */
-function exportReport() {
-  const pairs = comparedPairs.value;
-  if (pairs.length === 0) return;
+function sendGroupToGlobalDiff(grp: ComparedMultiGroup) {
+  const validItems = grp.slots
+    .map((slot, idx) => ({ slot, ch: channels.value[idx] || `串口 ${idx + 1}` }))
+    .filter((x) => Boolean(x.slot.pkt))
+    .map(({ slot, ch }) => ({
+      ...slot.pkt,
+      label: `[串口 ${ch}] #${slot.pkt!.id}`,
+      endpoint_src: ch,
+      endpoint_dst: slot.pkt!.dst_ip || 'HOST',
+    }));
 
-  let csv = '序号,通道A时间,通道A字节,通道B时间,通道B字节,时延差(ms),LCS相似度(%),是否一致,通道A载荷HEX,通道B载荷HEX\n';
-  pairs.forEach((p, idx) => {
-    const timeA = p.pktA?.timestamp || '';
-    const lenA = p.pktA?.length || 0;
-    const timeB = p.pktB?.timestamp || '';
-    const lenB = p.pktB?.length || 0;
-    const delta = p.deltaMs !== null ? p.deltaMs.toFixed(3) : '';
-    const sim = p.similarity.toFixed(2);
-    const isMatch = p.match ? '一致' : '差异';
-    const hexA = p.pktA?.payload_hex || '';
-    const hexB = p.pktB?.payload_hex || '';
+  if (validItems.length >= 2) {
+    diffBus.openMultiDiff(validItems, 0, validItems.length > 2 ? 'multi' : 'hex');
+  }
+}
 
-    csv += `${idx + 1},"${timeA}",${lenA},"${timeB}",${lenB},${delta},${sim},${isMatch},"${hexA}","${hexB}"\n`;
+async function exportReport() {
+  const groups = comparedGroups.value;
+  if (groups.length === 0) return;
+
+  const chHeaders = channels.value.map((ch, idx) => `通道${idx + 1}(${ch})时间,通道${idx + 1}字节,通道${idx + 1}HEX`).join(',');
+  let csv = `轮次,${chHeaders},全匹配,最小相似度(%)\n`;
+  groups.forEach((grp, idx) => {
+    const cols = grp.slots
+      .map((s) => `"${s.pkt?.timestamp || ''}",${s.pkt?.length || 0},"${s.pkt?.payload_hex || ''}"`)
+      .join(',');
+    csv += `${idx + 1},${cols},${grp.allMatch ? '一致' : '差异'},${grp.minSimilarity.toFixed(2)}\n`;
   });
 
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `serial_compare_${channelA.value}_vs_${channelB.value}_${Date.now()}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+  await saveTextViaNativeDesktop(
+    `serial_multi_compare_${channels.value.filter(Boolean).join('_vs_')}_${Date.now()}.csv`,
+    csv,
+    'CSV 表格 (*.csv)',
+    '*.csv',
+    '导出多通道串口比对表'
+  );
 }
 </script>
-
-<style scoped>
-.custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.4); border-radius: 9999px; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.6); }
-</style>

@@ -1,5 +1,6 @@
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -73,7 +74,7 @@ static BASELINES: Lazy<Arc<Mutex<HashMap<String, FlowBaseline>>>> =
     Lazy::new(|| Arc::new(Mutex::new(HashMap::new())));
 
 pub fn check_anomaly(src_ip: &str, dst_port: u16) -> Option<String> {
-    let mut map = BASELINES.lock().unwrap();
+    let mut map = crate::lock_guard::lock_mutex(&BASELINES, "analyzer::check_anomaly");
     let b = map.entry(src_ip.to_string()).or_insert_with(FlowBaseline::new);
     let (rate_res, scan_res) = b.push_and_analyze(dst_port);
 
@@ -121,7 +122,7 @@ pub struct WavePoint {
 }
 
 pub fn configure_wave_tracker(ip: String, offset: usize, length: usize, signed: bool, little_endian: bool) {
-    let mut cfg = WAVE_CONFIG.lock().unwrap();
+    let mut cfg = crate::lock_guard::lock_mutex(&WAVE_CONFIG, "analyzer::configure_wave_tracker");
     cfg.active = true;
     cfg.target_ip = ip;
     cfg.byte_offset = offset;
@@ -131,7 +132,7 @@ pub fn configure_wave_tracker(ip: String, offset: usize, length: usize, signed: 
 }
 
 pub fn process_wave_sample(app: &tauri::AppHandle, src_ip: &str, payload: &[u8]) {
-    let cfg = WAVE_CONFIG.lock().unwrap();
+    let cfg = crate::lock_guard::lock_mutex(&WAVE_CONFIG, "analyzer::process_wave_sample");
     if !cfg.active || cfg.target_ip != src_ip {
         return;
     }
@@ -246,31 +247,36 @@ pub fn smart_diff_payloads_labeled(
 
     // 标签有效性裁决：长度不匹配一律回退默认标签（防御性，杜绝错位标注）
     let use_labels = labels.len() == raw_strings.len();
-    let label_of = |i: usize| -> String {
-        if use_labels {
-            labels[i].clone()
-        } else if raw_strings.len() == 2 {
-            if i == 0 { "样本 A".into() } else { "样本 B".into() }
-        } else {
-            format!("样本 {:02}", i + 1)
-        }
-    };
+    let resolved_labels: Vec<String> = (0..raw_strings.len())
+        .map(|i| {
+            if use_labels {
+                labels[i].clone()
+            } else if raw_strings.len() == 2 {
+                if i == 0 { "样本 A".into() } else { "样本 B".into() }
+            } else {
+                format!("样本 {:02}", i + 1)
+            }
+        })
+        .collect();
 
     let payloads: Vec<Vec<u8>> = raw_strings
         .iter()
         .map(|s| {
-            let clean = s.replace(' ', "");
-            hex::decode(&clean).unwrap_or_else(|_| s.as_bytes().to_vec())
+            let clean: String = s.chars().filter(|c| !c.is_whitespace()).collect();
+            if !clean.is_empty() && clean.len() % 2 == 0 && clean.chars().all(|c| c.is_ascii_hexdigit()) {
+                hex::decode(&clean).unwrap_or_else(|_| s.as_bytes().to_vec())
+            } else {
+                s.as_bytes().to_vec()
+            }
         })
         .collect();
 
-    let spectrum = compute_mutation_spectrum(&payloads);
-
     if payloads.len() == 2 {
+        let spectrum = compute_mutation_spectrum(&payloads);
         let tags_a = lcs_diff_tags(&payloads[0], &payloads[1], true);
         let tags_b = lcs_diff_tags(&payloads[0], &payloads[1], false);
-        let pa = build_hex_rows(&payloads[0], &tags_a, &label_of(0));
-        let pb = build_hex_rows(&payloads[1], &tags_b, &label_of(1));
+        let pa = build_hex_rows(&payloads[0], &tags_a, &resolved_labels[0]);
+        let pb = build_hex_rows(&payloads[1], &tags_b, &resolved_labels[1]);
         let changes = tags_a.iter().filter(|t| t.as_str() != "equal").count();
         Ok(SmartDiffResult {
             mode: "smart_diff".into(),
@@ -279,39 +285,31 @@ pub fn smart_diff_payloads_labeled(
             mutation_spectrum: spectrum,
         })
     } else {
-        let max_len = payloads.iter().map(|p| p.len()).max().unwrap_or(0);
-        let mutating: std::collections::HashSet<usize> = (0..max_len)
-            .filter(|&i| {
-                let vals: std::collections::HashSet<u8> =
-                    payloads.iter().filter_map(|p| p.get(i)).copied().collect();
-                vals.len() > 1
-            })
+        // 3 组及以上采用以第 0 组为锚点的 Center-Star 多序列精准对齐，彻底消除长度差与前插错位导致的雪崩标红
+        let alignment = center_star_align_payloads(&payloads, 0);
+        let opt_rows: Vec<Vec<Option<u8>>> = alignment
+            .matrix
+            .iter()
+            .map(|row| row.iter().map(|(b, _)| *b).collect())
             .collect();
+        let spectrum = compute_mutation_spectrum_opts(&opt_rows);
 
-        let parsed: Vec<ParsedPayload> = payloads
+        let parsed: Vec<ParsedPayload> = alignment
+            .matrix
             .iter()
             .enumerate()
-            .map(|(i, p)| {
-                let tags: Vec<String> = (0..p.len())
-                    .map(|j| {
-                        if mutating.contains(&j) {
-                            "replace".into()
-                        } else {
-                            "equal".into()
-                        }
-                    })
-                    .collect();
-                build_hex_rows(p, &tags, &label_of(i))
-            })
+            .map(|(idx, row)| build_aligned_parsed_payload(row, payloads[idx].len(), &resolved_labels[idx]))
             .collect();
 
+        let diff_cols = spectrum.iter().filter(|b| b.unique_values_count > 1).count();
         Ok(SmartDiffResult {
-            mode: "vertical_diff".into(),
+            mode: "center_star_multi_diff".into(),
             payloads: parsed,
             summary: format!(
-                "垂直比对: {} 个字节位跳动（{} 个样本）",
-                mutating.len(),
-                payloads.len()
+                "多组居中精密对齐: {} 个对齐偏移列存在值差异或长度缺失（共 {} 组样本，总宽 {} 列）",
+                diff_cols,
+                payloads.len(),
+                alignment.aligned_width
             ),
             mutation_spectrum: spectrum,
         })
@@ -373,84 +371,384 @@ pub fn compare_with_historical_baseline(current_payloads: Vec<String>) -> Result
 }
 
 
-/// LCS (Longest Common Subsequence) 字节差分算法
-fn lcs_diff_tags(a: &[u8], b: &[u8], is_a: bool) -> Vec<String> {
+/// 最大二维 DP 单元格上限 (~10MB 平铺缓冲)
+const LCS_DP_CELL_LIMIT: usize = 2_500_000;
+/// 线性空间 Hirschberg 单纯计算允许的最大乘积量 (防极端 100KB 全异数据阻塞 UI)
+const LCS_HIRSCHBERG_OPS_LIMIT: usize = 25_000_000;
+
+/// 小规模一维平铺 DP 精确回溯 LCS 匹配下标对
+/// 时间复杂度: O(N * M), 空间复杂度: O(N * M) (受限于 LCS_DP_CELL_LIMIT <= 10MB)
+fn lcs_pairs_flat_dp(a: &[u8], b: &[u8], off_a: usize, off_b: usize, out: &mut Vec<(usize, usize)>) {
     let n = a.len();
     let m = b.len();
-
-    let mut dp = vec![vec![0usize; m + 1]; n + 1];
+    if n == 0 || m == 0 {
+        return;
+    }
+    let cols = m + 1;
+    let mut dp = vec![0u32; (n + 1) * cols];
     for i in 1..=n {
+        let row = i * cols;
+        let prev_row = (i - 1) * cols;
+        let ai = a[i - 1];
         for j in 1..=m {
-            dp[i][j] = if a[i - 1] == b[j - 1] {
-                dp[i - 1][j - 1] + 1
+            dp[row + j] = if ai == b[j - 1] {
+                dp[prev_row + j - 1] + 1
             } else {
-                dp[i - 1][j].max(dp[i][j - 1])
+                dp[prev_row + j].max(dp[row + j - 1])
             };
         }
     }
 
-    let mut ops_a: Vec<(&str, usize)> = Vec::new();
-    let mut ops_b: Vec<(&str, usize)> = Vec::new();
+    let mut local = Vec::new();
     let (mut i, mut j) = (n, m);
-
-    while i > 0 || j > 0 {
-        if i > 0 && j > 0 && a[i - 1] == b[j - 1] {
-            ops_a.push(("equal", i - 1));
-            ops_b.push(("equal", j - 1));
+    while i > 0 && j > 0 {
+        if a[i - 1] == b[j - 1] {
+            local.push((off_a + i - 1, off_b + j - 1));
             i -= 1;
             j -= 1;
-        } else if j > 0 && (i == 0 || dp[i][j - 1] >= dp[i - 1][j]) {
-            ops_b.push(("insert", j - 1));
+        } else if dp[i * cols + (j - 1)] >= dp[(i - 1) * cols + j] {
             j -= 1;
         } else {
-            ops_a.push(("delete", i - 1));
             i -= 1;
         }
     }
-
-    ops_a.reverse();
-    ops_b.reverse();
-
-    let del_c = ops_a.iter().filter(|(t, _)| *t == "delete").count();
-    let ins_c = ops_b.iter().filter(|(t, _)| *t == "insert").count();
-    let use_replace = del_c > 0 && ins_c > 0;
-
-    let target = if is_a { &ops_a } else { &ops_b };
-    let size = if is_a { n } else { m };
-    let mut result = vec!["equal".to_string(); size];
-    for (op, idx) in target {
-        result[*idx] = if use_replace && (*op == "delete" || *op == "insert") {
-            "replace".into()
-        } else {
-            op.to_string()
-        };
-    }
-    result
+    local.reverse();
+    out.extend(local);
 }
 
-fn build_hex_rows(payload: &[u8], tags: &[String], label: &str) -> ParsedPayload {
+/// 线性空间计算正向/反向 LCS 长度末行（供 Hirschberg 分治使用）
+fn lcs_last_row_forward(a: &[u8], b: &[u8]) -> Vec<u32> {
+    let m = b.len();
+    let mut prev = vec![0u32; m + 1];
+    let mut curr = vec![0u32; m + 1];
+    for &ai in a {
+        for j in 1..=m {
+            curr[j] = if ai == b[j - 1] {
+                prev[j - 1] + 1
+            } else {
+                prev[j].max(curr[j - 1])
+            };
+        }
+        std::mem::swap(&mut prev, &mut curr);
+        curr.fill(0);
+    }
+    prev
+}
+
+fn lcs_last_row_backward(a: &[u8], b: &[u8]) -> Vec<u32> {
+    let m = b.len();
+    let mut prev = vec![0u32; m + 1];
+    let mut curr = vec![0u32; m + 1];
+    for &ai in a.iter().rev() {
+        for j in (0..m).rev() {
+            curr[j] = if ai == b[j] {
+                prev[j + 1] + 1
+            } else {
+                prev[j].max(curr[j + 1])
+            };
+        }
+        std::mem::swap(&mut prev, &mut curr);
+        curr.fill(0);
+    }
+    prev
+}
+
+/// Hirschberg 分治线性空间 LCS 对齐（防止中大型报文触发二维矩阵 OOM）
+/// 空间复杂度: O(M), 时间复杂度: O(N * M)
+fn lcs_pairs_hirschberg(a: &[u8], b: &[u8], off_a: usize, off_b: usize, out: &mut Vec<(usize, usize)>) {
+    let n = a.len();
+    let m = b.len();
+    if n == 0 || m == 0 {
+        return;
+    }
+    if n == 1 {
+        let target = a[0];
+        if let Some(pos) = b.iter().position(|&ch| ch == target) {
+            out.push((off_a, off_b + pos));
+        }
+        return;
+    }
+    if m == 1 {
+        let target = b[0];
+        if let Some(pos) = a.iter().position(|&ch| ch == target) {
+            out.push((off_a + pos, off_b));
+        }
+        return;
+    }
+    if (n + 1).saturating_mul(m + 1) <= 65_536 {
+        lcs_pairs_flat_dp(a, b, off_a, off_b, out);
+        return;
+    }
+
+    let mid = n / 2;
+    let l1 = lcs_last_row_forward(&a[..mid], b);
+    let l2 = lcs_last_row_backward(&a[mid..], b);
+
+    let mut split_j = 0usize;
+    let mut best_sum = 0u32;
+    for j in 0..=m {
+        let sum = l1[j] + l2[j];
+        if sum >= best_sum {
+            best_sum = sum;
+            split_j = j;
+        }
+    }
+
+    lcs_pairs_hirschberg(&a[..mid], &b[..split_j], off_a, off_b, out);
+    lcs_pairs_hirschberg(&a[mid..], &b[split_j..], off_a + mid, off_b + split_j, out);
+}
+
+/// 巨型差异分块窗口锚定配对兜底（保障 100KB+ 随机大帧毫秒级响应且 O(min(W)) 空间）
+fn lcs_pairs_chunked_fallback(a: &[u8], b: &[u8], off_a: usize, off_b: usize, out: &mut Vec<(usize, usize)>) {
+    const CHUNK: usize = 512;
+    let max_chunks = a.len().div_ceil(CHUNK).max(b.len().div_ceil(CHUNK));
+    for c in 0..max_chunks {
+        let sa = (c * CHUNK).min(a.len());
+        let ea = ((c + 1) * CHUNK).min(a.len());
+        let sb = (c * CHUNK).min(b.len());
+        let eb = ((c + 1) * CHUNK).min(b.len());
+        if sa < ea && sb < eb {
+            lcs_pairs_flat_dp(&a[sa..ea], &b[sb..eb], off_a + sa, off_b + sb, out);
+        }
+    }
+}
+
+/// 混合防呆版精确 LCS 匹配下标求解器（前后缀剥离 + 平铺 DP + Hirschberg 线性空间 + 超大帧分窗降级）
+fn lcs_matched_pairs(a: &[u8], b: &[u8]) -> Vec<(usize, usize)> {
+    let n = a.len();
+    let m = b.len();
+    let min_len = n.min(m);
+
+    let mut prefix = 0usize;
+    while prefix < min_len && a[prefix] == b[prefix] {
+        prefix += 1;
+    }
+
+    let mut suffix = 0usize;
+    while suffix < (min_len - prefix) && a[n - 1 - suffix] == b[m - 1 - suffix] {
+        suffix += 1;
+    }
+
+    let mut pairs = Vec::with_capacity(min_len);
+    for i in 0..prefix {
+        pairs.push((i, i));
+    }
+
+    let mid_a = &a[prefix..n - suffix];
+    let mid_b = &b[prefix..m - suffix];
+    let prod = mid_a.len().saturating_mul(mid_b.len());
+    if !mid_a.is_empty() && !mid_b.is_empty() {
+        if prod <= LCS_DP_CELL_LIMIT {
+            lcs_pairs_flat_dp(mid_a, mid_b, prefix, prefix, &mut pairs);
+        } else if prod <= LCS_HIRSCHBERG_OPS_LIMIT {
+            lcs_pairs_hirschberg(mid_a, mid_b, prefix, prefix, &mut pairs);
+        } else {
+            lcs_pairs_chunked_fallback(mid_a, mid_b, prefix, prefix, &mut pairs);
+        }
+    }
+
+    for k in 0..suffix {
+        pairs.push((n - suffix + k, m - suffix + k));
+    }
+    pairs
+}
+
+/// 内存安全版 LCS 字节差分标记输出（保持向后兼容标签协议）
+/// 时间复杂度: O(N * M)（小中规模精确对齐）/ 分块线控保护（100KB+ 巨帧）
+/// 空间复杂度: 常规 <= 10MB，大规模 Hirschberg 降至 O(min(N, M))
+pub fn lcs_diff_tags(a: &[u8], b: &[u8], is_a: bool) -> Vec<String> {
+    let pairs = lcs_matched_pairs(a, b);
+    let mut matched_a = vec![false; a.len()];
+    let mut matched_b = vec![false; b.len()];
+    for &(ia, ib) in &pairs {
+        matched_a[ia] = true;
+        matched_b[ib] = true;
+    }
+
+    let has_del = matched_a.iter().any(|&m| !m);
+    let has_ins = matched_b.iter().any(|&m| !m);
+    let use_replace = has_del && has_ins;
+
+    if is_a {
+        matched_a
+            .into_iter()
+            .map(|eq| {
+                if eq {
+                    "equal".into()
+                } else if use_replace {
+                    "replace".into()
+                } else {
+                    "delete".into()
+                }
+            })
+            .collect()
+    } else {
+        matched_b
+            .into_iter()
+            .map(|eq| {
+                if eq {
+                    "equal".into()
+                } else if use_replace {
+                    "replace".into()
+                } else {
+                    "insert".into()
+                }
+            })
+            .collect()
+    }
+}
+
+/// Center-Star 多序列居中对齐产物
+struct CenterStarAlignment {
+    aligned_width: usize,
+    /// matrix[sample_idx][col_idx] = (字节值 Option<u8>, 差异类型标签)
+    matrix: Vec<Vec<(Option<u8>, String)>>,
+    mutated_counts: Vec<usize>,
+}
+
+/// 对任意 N 组（N >= 2）字节流以 anchor_idx 为锚点执行 Center-Star 全局精确对齐
+/// 时间复杂度: O(N * L_anchor * L_k), 空间复杂度: O(N * W)
+fn center_star_align_payloads(payloads: &[Vec<u8>], anchor_idx: usize) -> CenterStarAlignment {
+    let k = payloads.len();
+    if k == 0 {
+        return CenterStarAlignment {
+            aligned_width: 0,
+            matrix: Vec::new(),
+            mutated_counts: Vec::new(),
+        };
+    }
+
+    let safe_anchor = anchor_idx.min(k - 1);
+    let anchor = &payloads[safe_anchor];
+    let len_a = anchor.len();
+
+    // per_sample[s]: 每组相对于 anchor 的 (在每个 anchor[i] 上放置的内容及标签, 在各个间隙 gap[0..=len_a] 插入的字节)
+    struct SampleSlotPlan {
+        anchor_cells: Vec<(Option<u8>, String)>,
+        gaps: Vec<Vec<u8>>,
+    }
+
+    let mut plans: Vec<SampleSlotPlan> = Vec::with_capacity(k);
+    let mut max_gaps = vec![0usize; len_a + 1];
+
+    for (s_idx, seq) in payloads.iter().enumerate() {
+        let mut anchor_cells = vec![(None, "missing".to_string()); len_a];
+        let mut gaps = vec![Vec::<u8>::new(); len_a + 1];
+
+        if s_idx == safe_anchor {
+            for (i, &b) in seq.iter().enumerate() {
+                anchor_cells[i] = (Some(b), "equal".into());
+            }
+            plans.push(SampleSlotPlan { anchor_cells, gaps });
+            continue;
+        }
+
+        let mut pairs = lcs_matched_pairs(anchor, seq);
+        pairs.push((len_a, seq.len())); // 哨兵统一收尾末段未匹配子序列
+
+        let mut prev_a: isize = -1;
+        let mut prev_b: isize = -1;
+        for (cur_a, cur_b) in pairs {
+            let start_a = (prev_a + 1) as usize;
+            let start_b = (prev_b + 1) as usize;
+            let span_a = cur_a.saturating_sub(start_a);
+            let span_b = cur_b.saturating_sub(start_b);
+
+            let paired_replace = span_a.min(span_b);
+            for d in 0..paired_replace {
+                anchor_cells[start_a + d] = (Some(seq[start_b + d]), "replace".into());
+            }
+            // 若 span_a > span_b，剩余 anchor 位置保持默认 (None, "missing")
+            // 若 span_b > span_a，多出的字节放入紧邻 cur_a 前方（或末尾 len_a）的间隙槽
+            if span_b > paired_replace {
+                let extra = &seq[start_b + paired_replace..cur_b];
+                gaps[cur_a].extend_from_slice(extra);
+                if gaps[cur_a].len() > max_gaps[cur_a] {
+                    max_gaps[cur_a] = gaps[cur_a].len();
+                }
+            }
+
+            if cur_a < len_a && cur_b < seq.len() {
+                anchor_cells[cur_a] = (Some(seq[cur_b]), "equal".into());
+            }
+            prev_a = cur_a as isize;
+            prev_b = cur_b as isize;
+        }
+
+        plans.push(SampleSlotPlan { anchor_cells, gaps });
+    }
+
+    let aligned_width = len_a + max_gaps.iter().sum::<usize>();
+    let mut matrix = vec![Vec::with_capacity(aligned_width); k];
+    let mut mutated_counts = vec![0usize; k];
+
+    // 先判断哪些列上全样本完全一致（用于锚点自身是否被插入列牵连对比高亮）
+    for gap_idx in 0..=len_a {
+        let g_width = max_gaps[gap_idx];
+        for g_col in 0..g_width {
+            for s_idx in 0..k {
+                if let Some(&b) = plans[s_idx].gaps[gap_idx].get(g_col) {
+                    matrix[s_idx].push((Some(b), "insert".into()));
+                    mutated_counts[s_idx] += 1;
+                } else {
+                    // 在非自身插入间隙处填充 "--" 对齐槽位；由于与锚点同样为 None，不计入相对于锚点的突变数量
+                    matrix[s_idx].push((None, "missing".into()));
+                }
+            }
+        }
+        if gap_idx < len_a {
+            for s_idx in 0..k {
+                let (opt_b, tag) = plans[s_idx].anchor_cells[gap_idx].clone();
+                if s_idx != safe_anchor && tag != "equal" {
+                    mutated_counts[s_idx] += 1;
+                }
+                matrix[s_idx].push((opt_b, tag));
+            }
+        }
+    }
+
+    // 针对锚点行标出与其他样本真正存在数值/缺失分歧的 anchor 列，便于在矩阵中直观一眼定位突变位
+    for col in 0..aligned_width {
+        let anchor_byte = matrix[safe_anchor][col].0;
+        let col_differs = (0..k).any(|s| matrix[s][col].0 != anchor_byte);
+        if col_differs && matrix[safe_anchor][col].1 == "equal" {
+            matrix[safe_anchor][col].1 = "replace".into();
+        }
+    }
+
+    CenterStarAlignment {
+        aligned_width,
+        matrix,
+        mutated_counts,
+    }
+}
+
+fn build_aligned_parsed_payload(aligned_row: &[(Option<u8>, String)], original_byte_len: usize, label: &str) -> ParsedPayload {
     let mut hex_rows = Vec::new();
-    for chunk_start in (0..payload.len()).step_by(16) {
-        let chunk = &payload[chunk_start..payload.len().min(chunk_start + 16)];
+    for chunk_start in (0..aligned_row.len()).step_by(16) {
+        let chunk = &aligned_row[chunk_start..aligned_row.len().min(chunk_start + 16)];
         let cells: Vec<ByteCell> = chunk
             .iter()
-            .enumerate()
-            .map(|(i, &b)| ByteCell {
-                hex: format!("{:02X}", b),
-                ascii: if (32..=126).contains(&b) {
-                    (b as char).to_string()
-                } else {
-                    ".".into()
+            .map(|(opt_b, tag)| match opt_b {
+                Some(b) => ByteCell {
+                    hex: format!("{:02X}", b),
+                    ascii: if (32..=126).contains(b) { (*b as char).to_string() } else { ".".into() },
+                    diff_type: tag.clone(),
                 },
-                diff_type: tags
-                    .get(chunk_start + i)
-                    .cloned()
-                    .unwrap_or_else(|| "equal".into()),
+                None => ByteCell {
+                    hex: "--".into(),
+                    ascii: ".".into(),
+                    diff_type: tag.clone(),
+                },
             })
             .collect();
         let ascii_repr: String = chunk
             .iter()
-            .map(|&b| if (32..=126).contains(&b) { b as char } else { '.' })
+            .map(|(opt_b, _)| match opt_b {
+                Some(b) if (32..=126).contains(b) => *b as char,
+                Some(_) => '.',
+                None => ' ',
+            })
             .collect();
         hex_rows.push(HexRow {
             offset: format!("{:04X}", chunk_start),
@@ -460,9 +758,18 @@ fn build_hex_rows(payload: &[u8], tags: &[String], label: &str) -> ParsedPayload
     }
     ParsedPayload {
         label: label.to_string(),
-        byte_length: payload.len(),
+        byte_length: original_byte_len,
         hex_rows,
     }
+}
+
+fn build_hex_rows(payload: &[u8], tags: &[String], label: &str) -> ParsedPayload {
+    let aligned_row: Vec<(Option<u8>, String)> = payload
+        .iter()
+        .enumerate()
+        .map(|(i, &b)| (Some(b), tags.get(i).cloned().unwrap_or_else(|| "equal".into())))
+        .collect();
+    build_aligned_parsed_payload(&aligned_row, payload.len(), label)
 }
 
 // ============================================================
@@ -522,9 +829,72 @@ pub struct UniversalDiffPayload {
     pub extra_fields: Option<HashMap<String, String>>,
 }
 
+/// 通用跨模块多组比对样本摘要项
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MultiDiffSampleSummary {
+    pub sample_index: usize,
+    pub label: String,
+    pub protocol: String,
+    pub endpoint_src: String,
+    pub endpoint_dst: String,
+    pub byte_length: usize,
+    pub mutated_vs_anchor: usize,
+    pub mutation_rate_vs_anchor: f64,
+    pub cosine_similarity_vs_anchor: f64,
+    pub aligned_hex: ParsedPayload,
+}
+
+/// 跨多组规约及元数据字段矩阵对比行
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MultiFieldDiffRow {
+    pub layer: String,
+    pub field_name: String,
+    pub values: Vec<String>,
+    pub has_difference: bool,
+}
+
+/// 全局多组（N >= 2 不封顶）居中精确比对分析综合结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MultiUniversalDiffResult {
+    pub sample_count: usize,
+    pub anchor_index: usize,
+    pub aligned_column_count: usize,
+    pub samples: Vec<MultiDiffSampleSummary>,
+    pub field_matrix: Vec<MultiFieldDiffRow>,
+    pub aligned_mutation_spectrum: Vec<MutationWaveBin>,
+    pub summary: String,
+}
+
+/// 统一载荷字节提取：优先 HEX（严格偶数且全十六进制校验），否则回退 raw_text
+/// 当上层显式将 ASCII 明文置于 raw_text 且置空 payload_hex 时，可零失真保留 "CAFE" / "1234" 等明文字符串
+fn extract_payload_bytes(item: &UniversalDiffPayload) -> Vec<u8> {
+    let clean: String = item
+        .payload_hex
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .collect();
+    if !clean.is_empty() && clean.len() % 2 == 0 && clean.chars().all(|c| c.is_ascii_hexdigit()) {
+        if let Ok(bytes) = hex::decode(&clean) {
+            return bytes;
+        }
+    }
+    if !item.payload_hex.trim().is_empty() {
+        return item
+            .raw_text
+            .as_ref()
+            .filter(|s| !s.is_empty())
+            .map(|s| s.as_bytes().to_vec())
+            .unwrap_or_else(|| clean.as_bytes().to_vec());
+    }
+    item.raw_text
+        .as_ref()
+        .map(|s| s.as_bytes().to_vec())
+        .unwrap_or_default()
+}
+
 /// 全局通用的跨模块双样本数据深度差分与波形比对分析引擎
-/// 时间复杂度: O(N * M) (LCS 算法)
-/// 空间复杂度: O(N * M)
+/// 时间复杂度: 常规 O(N * M) / 超大帧分块线性保护 O(N + M)
+/// 空间复杂度: 常规 <= 10MB，Hirschberg 降至 O(min(N, M))
 pub fn compare_universal_payloads(
     item_a: UniversalDiffPayload,
     item_b: UniversalDiffPayload,
@@ -615,37 +985,8 @@ pub fn compare_universal_payloads(
         add_field("业务扩展属性", &k, val_a, val_b);
     }
 
-    // 载荷逐字节解析 (优先 HEX，若 HEX 为空则回退至 raw_text，若解析 HEX 失败亦回退至纯文本)
-    let clean_a = item_a.payload_hex.replace([' ', '\n', '\r', '\t'], "");
-    let clean_b = item_b.payload_hex.replace([' ', '\n', '\r', '\t'], "");
-
-    let bytes_a = if !clean_a.is_empty() {
-        hex::decode(&clean_a).unwrap_or_else(|_| {
-            if let Some(ref txt) = item_a.raw_text {
-                txt.as_bytes().to_vec()
-            } else {
-                clean_a.as_bytes().to_vec()
-            }
-        })
-    } else if let Some(ref txt) = item_a.raw_text {
-        txt.as_bytes().to_vec()
-    } else {
-        Vec::new()
-    };
-
-    let bytes_b = if !clean_b.is_empty() {
-        hex::decode(&clean_b).unwrap_or_else(|_| {
-            if let Some(ref txt) = item_b.raw_text {
-                txt.as_bytes().to_vec()
-            } else {
-                clean_b.as_bytes().to_vec()
-            }
-        })
-    } else if let Some(ref txt) = item_b.raw_text {
-        txt.as_bytes().to_vec()
-    } else {
-        Vec::new()
-    };
+    let bytes_a = extract_payload_bytes(&item_a);
+    let bytes_b = extract_payload_bytes(&item_b);
 
     let tags_a = lcs_diff_tags(&bytes_a, &bytes_b, true);
     let tags_b = lcs_diff_tags(&bytes_a, &bytes_b, false);
@@ -697,6 +1038,418 @@ pub fn compare_universal_payloads(
         field_diffs,
         summary,
         waveform_metrics,
+    })
+}
+
+/// 跨模块 N >= 2 组数据 Center-Star 居中精确比对引擎
+/// 时间复杂度: O(K * N * M) (K 为对比组数), 空间复杂度: O(K * W) (W 为居中对齐总列宽)
+pub fn compare_multi_universal_payloads(
+    items: Vec<UniversalDiffPayload>,
+    anchor_index: Option<usize>,
+) -> Result<MultiUniversalDiffResult, String> {
+    if items.len() < 2 {
+        return Err("多组比对至少需要 2 组数据样本".into());
+    }
+
+    let safe_anchor = anchor_index.unwrap_or(0).min(items.len() - 1);
+    let byte_lists: Vec<Vec<u8>> = items.iter().map(extract_payload_bytes).collect();
+    let alignment = center_star_align_payloads(&byte_lists, safe_anchor);
+
+    let opt_matrix: Vec<Vec<Option<u8>>> = alignment
+        .matrix
+        .iter()
+        .map(|row| row.iter().map(|(b, _)| *b).collect())
+        .collect();
+    let aligned_mutation_spectrum = compute_mutation_spectrum_opts(&opt_matrix);
+
+    let anchor_bytes = &byte_lists[safe_anchor];
+    let samples: Vec<MultiDiffSampleSummary> = items
+        .iter()
+        .enumerate()
+        .map(|(idx, item)| {
+            let cur_bytes = &byte_lists[idx];
+            let wm = compute_waveform_metrics(anchor_bytes, cur_bytes);
+            let label = if item.label.is_empty() {
+                format!("样本 #{}", idx + 1)
+            } else {
+                item.label.clone()
+            };
+            let mutated = if idx == safe_anchor {
+                0
+            } else {
+                alignment.mutated_counts[idx]
+            };
+            let denom = alignment.aligned_width.max(cur_bytes.len()).max(1);
+            let mut_rate = if alignment.aligned_width == 0 && cur_bytes.is_empty() {
+                0.0
+            } else if idx == safe_anchor {
+                0.0
+            } else {
+                (mutated as f64 / denom as f64) * 100.0
+            };
+
+            MultiDiffSampleSummary {
+                sample_index: idx,
+                label: label.clone(),
+                protocol: item.protocol.clone().unwrap_or_else(|| "GENERIC".into()),
+                endpoint_src: item.endpoint_src.clone().unwrap_or_else(|| "-".into()),
+                endpoint_dst: item.endpoint_dst.clone().unwrap_or_else(|| "-".into()),
+                byte_length: cur_bytes.len(),
+                mutated_vs_anchor: mutated,
+                mutation_rate_vs_anchor: mut_rate,
+                cosine_similarity_vs_anchor: if idx == safe_anchor { 1.0 } else { wm.cosine_similarity },
+                aligned_hex: build_aligned_parsed_payload(&alignment.matrix[idx], cur_bytes.len(), &label),
+            }
+        })
+        .collect();
+
+    // 构造全组字段矩阵
+    let mut field_matrix = Vec::new();
+    let mut push_matrix_row = |layer: &str, name: &str, values: Vec<String>| {
+        let first = values.first().map(|s| s.as_str()).unwrap_or("");
+        let has_difference = values.iter().any(|v| v.as_str() != first);
+        field_matrix.push(MultiFieldDiffRow {
+            layer: layer.into(),
+            field_name: name.into(),
+            values,
+            has_difference,
+        });
+    };
+
+    push_matrix_row(
+        "元数据",
+        "样本标签",
+        samples.iter().map(|s| s.label.clone()).collect(),
+    );
+    push_matrix_row(
+        "规约特征",
+        "通信协议/模式",
+        samples.iter().map(|s| s.protocol.clone()).collect(),
+    );
+    push_matrix_row(
+        "通信端点",
+        "源端点 (Source)",
+        samples.iter().map(|s| s.endpoint_src.clone()).collect(),
+    );
+    push_matrix_row(
+        "通信端点",
+        "目的端点 (Destination)",
+        samples.iter().map(|s| s.endpoint_dst.clone()).collect(),
+    );
+    push_matrix_row(
+        "载荷度量",
+        "原始字节长度",
+        samples.iter().map(|s| format!("{} 字节", s.byte_length)).collect(),
+    );
+
+    let mut all_extra_keys = std::collections::BTreeSet::new();
+    for item in &items {
+        if let Some(ref map) = item.extra_fields {
+            for k in map.keys() {
+                all_extra_keys.insert(k.clone());
+            }
+        }
+    }
+    for k in all_extra_keys {
+        let values = items
+            .iter()
+            .map(|it| {
+                it.extra_fields
+                    .as_ref()
+                    .and_then(|m| m.get(&k))
+                    .cloned()
+                    .unwrap_or_else(|| "—".into())
+            })
+            .collect();
+        push_matrix_row("业务扩展属性", &k, values);
+    }
+
+    let diff_field_cnt = field_matrix.iter().filter(|r| r.has_difference).count();
+    let diff_col_cnt = aligned_mutation_spectrum
+        .iter()
+        .filter(|b| b.unique_values_count > 1)
+        .count();
+    let summary = format!(
+        "{} 组多序列精准比对完成（锚点 #{}）：元数据差异 {} 项 | 对齐突变偏移列 {}/{}",
+        items.len(),
+        safe_anchor + 1,
+        diff_field_cnt,
+        diff_col_cnt,
+        alignment.aligned_width
+    );
+
+    Ok(MultiUniversalDiffResult {
+        sample_count: items.len(),
+        anchor_index: safe_anchor,
+        aligned_column_count: alignment.aligned_width,
+        samples,
+        field_matrix,
+        aligned_mutation_spectrum,
+        summary,
+    })
+}
+
+/// 多组居中差分中的连续差异字节段落指令
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MultiBytePatchHunk {
+    pub hunk_index: usize,
+    /// "REPLACE" | "INSERT" | "DELETE"
+    pub op_kind: String,
+    pub anchor_offset: usize,
+    pub anchor_len: usize,
+    pub target_len: usize,
+    pub anchor_hex: String,
+    pub target_hex: String,
+    pub semantic_hint: String,
+}
+
+/// 单组非锚点样本相对于 Anchor 的修订脚本包
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SamplePatchBundle {
+    pub sample_index: usize,
+    pub sample_label: String,
+    pub target_byte_length: usize,
+    pub target_sha256: String,
+    pub total_hunks: usize,
+    pub hunks: Vec<MultiBytePatchHunk>,
+}
+
+/// 全局多组差异字节段 Patch 与可执行修订脚本总成
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MultiDiffPatchReport {
+    pub anchor_index: usize,
+    pub anchor_label: String,
+    pub anchor_byte_length: usize,
+    pub anchor_sha256: String,
+    pub samples: Vec<SamplePatchBundle>,
+    pub hex_revision_script: String,
+    pub python_patch_script: String,
+}
+
+fn infer_byte_hunk_semantic(
+    anchor_bytes: &[u8],
+    target_bytes: &[u8],
+    offset: usize,
+    total_anchor_len: usize,
+) -> String {
+    if !anchor_bytes.is_empty() && anchor_bytes.len() == target_bytes.len() {
+        if offset + anchor_bytes.len() == total_anchor_len && anchor_bytes.len() == 2 {
+            return "尾部 2B 对齐变更 (疑似 CRC16/校验和随载荷变化)".into();
+        }
+        if anchor_bytes.len() == 1 {
+            let d = target_bytes[0] as i16 - anchor_bytes[0] as i16;
+            return format!("单字节定长修改 (差值 {:+})", d);
+        }
+        if anchor_bytes.len() == 2 {
+            let va = u16::from_be_bytes([anchor_bytes[0], anchor_bytes[1]]);
+            let vb = u16::from_be_bytes([target_bytes[0], target_bytes[1]]);
+            return format!("16-bit 大端数值变更 ({} -> {})", va, vb);
+        }
+        return format!("{} 字节等长域替换", anchor_bytes.len());
+    }
+    if anchor_bytes.is_empty() {
+        format!("前端/中段插入 {} 字节", target_bytes.len())
+    } else if target_bytes.is_empty() {
+        format!("裁切/删除 {} 字节", anchor_bytes.len())
+    } else {
+        format!("变长区替换 ({}B -> {}B)", anchor_bytes.len(), target_bytes.len())
+    }
+}
+
+/// 对一组（N >= 2）比对样本，以指定 Anchor 为基准生成精确到单字节偏移的 Patch 摘要与可逆 Python 修订脚本
+/// 时间复杂度: O(N * W), 空间复杂度: O(N * W)
+pub fn generate_multi_diff_patch_report(
+    items: Vec<UniversalDiffPayload>,
+    anchor_index: Option<usize>,
+) -> Result<MultiDiffPatchReport, String> {
+    if items.len() < 2 {
+        return Err("生成 Patch 修订脚本至少需要 2 组数据样本".into());
+    }
+    let safe_anchor = anchor_index.unwrap_or(0).min(items.len() - 1);
+    let byte_lists: Vec<Vec<u8>> = items.iter().map(extract_payload_bytes).collect();
+    let alignment = center_star_align_payloads(&byte_lists, safe_anchor);
+
+    let anchor_bytes = &byte_lists[safe_anchor];
+    let anchor_sha256 = hex::encode(Sha256::digest(anchor_bytes));
+    let anchor_label = if items[safe_anchor].label.is_empty() {
+        format!("基准样本 #{}", safe_anchor + 1)
+    } else {
+        items[safe_anchor].label.clone()
+    };
+
+    let anchor_row = &alignment.matrix[safe_anchor];
+    let mut bundles = Vec::new();
+    let mut hex_script = String::new();
+    hex_script.push_str(&format!(
+        "; Omni-Probe Multi-Group Binary Revision Summary\n; Anchor: #{} \"{}\" ({} bytes, SHA256={})\n\n",
+        safe_anchor + 1, anchor_label, anchor_bytes.len(), anchor_sha256
+    ));
+
+    let mut py_targets = String::new();
+
+    for idx in 0..items.len() {
+        if idx == safe_anchor {
+            continue;
+        }
+        let target_row = &alignment.matrix[idx];
+        let target_raw = &byte_lists[idx];
+        let target_sha256 = hex::encode(Sha256::digest(target_raw));
+        let label = if items[idx].label.is_empty() {
+            format!("样本 #{}", idx + 1)
+        } else {
+            items[idx].label.clone()
+        };
+
+        let mut hunks = Vec::new();
+        let mut anchor_cursor = 0usize;
+        let mut hunk_start_offset = 0usize;
+        let mut in_hunk = false;
+        let mut cur_a: Vec<u8> = Vec::new();
+        let mut cur_t: Vec<u8> = Vec::new();
+
+        for col in 0..alignment.aligned_width {
+            let a_opt = anchor_row[col].0;
+            let t_opt = target_row[col].0;
+
+            if a_opt == t_opt {
+                if in_hunk {
+                    let op_kind = match (cur_a.is_empty(), cur_t.is_empty()) {
+                        (true, false) => "INSERT",
+                        (false, true) => "DELETE",
+                        _ => "REPLACE",
+                    };
+                    let hint = infer_byte_hunk_semantic(&cur_a, &cur_t, hunk_start_offset, anchor_bytes.len());
+                    hunks.push(MultiBytePatchHunk {
+                        hunk_index: hunks.len(),
+                        op_kind: op_kind.into(),
+                        anchor_offset: hunk_start_offset,
+                        anchor_len: cur_a.len(),
+                        target_len: cur_t.len(),
+                        anchor_hex: hex::encode_upper(&cur_a),
+                        target_hex: hex::encode_upper(&cur_t),
+                        semantic_hint: hint,
+                    });
+                    cur_a.clear();
+                    cur_t.clear();
+                    in_hunk = false;
+                }
+            } else {
+                if !in_hunk {
+                    hunk_start_offset = anchor_cursor;
+                    in_hunk = true;
+                }
+                if let Some(ba) = a_opt {
+                    cur_a.push(ba);
+                }
+                if let Some(bt) = t_opt {
+                    cur_t.push(bt);
+                }
+            }
+
+            if a_opt.is_some() {
+                anchor_cursor += 1;
+            }
+        }
+
+        if in_hunk {
+            let op_kind = match (cur_a.is_empty(), cur_t.is_empty()) {
+                (true, false) => "INSERT",
+                (false, true) => "DELETE",
+                _ => "REPLACE",
+            };
+            let hint = infer_byte_hunk_semantic(&cur_a, &cur_t, hunk_start_offset, anchor_bytes.len());
+            hunks.push(MultiBytePatchHunk {
+                hunk_index: hunks.len(),
+                op_kind: op_kind.into(),
+                anchor_offset: hunk_start_offset,
+                anchor_len: cur_a.len(),
+                target_len: cur_t.len(),
+                anchor_hex: hex::encode_upper(&cur_a),
+                target_hex: hex::encode_upper(&cur_t),
+                semantic_hint: hint,
+            });
+        }
+
+        hex_script.push_str(&format!(
+            "[TARGET #{} \"{}\" | {} bytes | SHA256={}]\n",
+            idx + 1, label, target_raw.len(), target_sha256
+        ));
+        if hunks.is_empty() {
+            hex_script.push_str("  NO_DIFF (100% IDENTICAL TO ANCHOR)\n\n");
+        } else {
+            for h in &hunks {
+                hex_script.push_str(&format!(
+                    "  HUNK #{:02} {:<7} @ 0x{:04X} (anchor_len={}, new_len={}) : [{}] -> [{}]  ; {}\n",
+                    h.hunk_index,
+                    h.op_kind,
+                    h.anchor_offset,
+                    h.anchor_len,
+                    h.target_len,
+                    if h.anchor_hex.is_empty() { "-" } else { &h.anchor_hex },
+                    if h.target_hex.is_empty() { "-" } else { &h.target_hex },
+                    h.semantic_hint
+                ));
+            }
+            hex_script.push('\n');
+        }
+
+        // 拼接可逆 Python 片段: (anchor_offset, anchor_len, target_hex)
+        let ops_list: Vec<String> = hunks
+            .iter()
+            .map(|h| format!("({}, {}, \"{}\")", h.anchor_offset, h.anchor_len, h.target_hex))
+            .collect();
+        py_targets.push_str(&format!(
+            "    {{\n        \"index\": {},\n        \"label\": {:?},\n        \"expected_sha256\": \"{}\",\n        \"ops\": [{}],\n    }},\n",
+            idx + 1, label, target_sha256, ops_list.join(", ")
+        ));
+
+        bundles.push(SamplePatchBundle {
+            sample_index: idx,
+            sample_label: label,
+            target_byte_length: target_raw.len(),
+            target_sha256,
+            total_hunks: hunks.len(),
+            hunks,
+        });
+    }
+
+    let python_patch_script = format!(
+        "#!/usr/bin/env python3\n\
+# Auto-generated by Omni-Probe Multi-Diff Patch Generator\n\
+import hashlib\n\n\
+ANCHOR_HEX = \"{}\"\n\
+ANCHOR_SHA256 = \"{}\"\n\n\
+PATCH_TARGETS = [\n{}]\n\n\
+def apply_ops(anchor: bytes, ops) -> bytes:\n\
+    out = bytearray()\n\
+    cursor = 0\n\
+    for off, old_len, new_hex in ops:\n\
+        out.extend(anchor[cursor:off])\n\
+        if new_hex:\n\
+            out.extend(bytes.fromhex(new_hex))\n\
+        cursor = off + old_len\n\
+    out.extend(anchor[cursor:])\n\
+    return bytes(out)\n\n\
+if __name__ == \"__main__\":\n\
+    anchor_bytes = bytes.fromhex(ANCHOR_HEX)\n\
+    assert hashlib.sha256(anchor_bytes).hexdigest() == ANCHOR_SHA256\n\
+    for tgt in PATCH_TARGETS:\n\
+        rebuilt = apply_ops(anchor_bytes, tgt[\"ops\"])\n\
+        assert hashlib.sha256(rebuilt).hexdigest() == tgt[\"expected_sha256\"], tgt[\"label\"]\n\
+        print(f\"Verified Target #{{tgt['index']}} ({{tgt['label']}}): {{len(rebuilt)}} bytes OK\")\n",
+        hex::encode_upper(anchor_bytes),
+        anchor_sha256,
+        py_targets
+    );
+
+    Ok(MultiDiffPatchReport {
+        anchor_index: safe_anchor,
+        anchor_label,
+        anchor_byte_length: anchor_bytes.len(),
+        anchor_sha256,
+        samples: bundles,
+        hex_revision_script: hex_script,
+        python_patch_script,
     })
 }
 
@@ -807,14 +1560,14 @@ pub fn compute_waveform_metrics(bytes_a: &[u8], bytes_b: &[u8]) -> WaveformCompa
     }
 }
 
-/// 计算多样本在各字节偏移量上的变异波率（Mutation Wave Rate）与局部信息熵谱
-/// 时间复杂度: O(K * L), 空间复杂度: O(L)
-pub fn compute_mutation_spectrum(payloads: &[Vec<u8>]) -> Vec<MutationWaveBin> {
-    if payloads.is_empty() {
+/// 计算对齐后多样本（支持缺失态 None 不再误充 0x00）在各偏移列上的变异波率与局部信息熵谱
+/// 时间复杂度: O(K * W), 空间复杂度: O(W)
+pub fn compute_mutation_spectrum_opts(aligned_rows: &[Vec<Option<u8>>]) -> Vec<MutationWaveBin> {
+    if aligned_rows.is_empty() {
         return Vec::new();
     }
-    let max_len = payloads.iter().map(|p| p.len()).max().unwrap_or(0);
-    let total_samples = payloads.len();
+    let max_len = aligned_rows.iter().map(|p| p.len()).max().unwrap_or(0);
+    let total_samples = aligned_rows.len();
     if max_len == 0 || total_samples == 0 {
         return Vec::new();
     }
@@ -822,20 +1575,20 @@ pub fn compute_mutation_spectrum(payloads: &[Vec<u8>]) -> Vec<MutationWaveBin> {
     let mut spectrum = Vec::with_capacity(max_len);
 
     for offset in 0..max_len {
-        let mut freq_map = std::collections::HashMap::new();
-        for p in payloads {
-            let b = p.get(offset).copied().unwrap_or(0);
-            *freq_map.entry(b).or_insert(0usize) += 1;
+        let mut freq_map: std::collections::HashMap<Option<u8>, usize> = std::collections::HashMap::new();
+        for p in aligned_rows {
+            let opt_b = p.get(offset).copied().flatten();
+            *freq_map.entry(opt_b).or_insert(0usize) += 1;
         }
 
         let mut max_freq = 0usize;
-        let mut dominant_byte = 0u8;
+        let mut dominant_byte: Option<u8> = None;
         let mut entropy = 0.0f64;
 
-        for (&b, &cnt) in &freq_map {
+        for (&opt_b, &cnt) in &freq_map {
             if cnt > max_freq {
                 max_freq = cnt;
-                dominant_byte = b;
+                dominant_byte = opt_b;
             }
             let prob = cnt as f64 / total_samples as f64;
             if prob > 0.0 {
@@ -843,20 +1596,33 @@ pub fn compute_mutation_spectrum(payloads: &[Vec<u8>]) -> Vec<MutationWaveBin> {
             }
         }
 
-        // 突变率: 偏离主导特征值的样本占比 (0% ~ 100%)
         let non_dominant = total_samples.saturating_sub(max_freq);
         let mutation_rate = (non_dominant as f64 / total_samples as f64) * 100.0;
+        let dominant_hex = match dominant_byte {
+            Some(b) => format!("{:02X}", b),
+            None => "--".to_string(),
+        };
 
         spectrum.push(MutationWaveBin {
             offset,
             mutation_rate,
             unique_values_count: freq_map.len(),
             entropy,
-            dominant_hex: format!("{:02X}", dominant_byte),
+            dominant_hex,
         });
     }
 
     spectrum
+}
+
+/// 计算多样本在各字节偏移量上的变异波率（Mutation Wave Rate）与局部信息熵谱
+/// 时间复杂度: O(K * L), 空间复杂度: O(K * L)
+pub fn compute_mutation_spectrum(payloads: &[Vec<u8>]) -> Vec<MutationWaveBin> {
+    let opt_rows: Vec<Vec<Option<u8>>> = payloads
+        .iter()
+        .map(|p| p.iter().copied().map(Some).collect())
+        .collect();
+    compute_mutation_spectrum_opts(&opt_rows)
 }
 
 /// 获取报文样本归档主目录
@@ -1120,7 +1886,8 @@ pub fn record_packet_io(length: usize, rtt_ms: Option<f64>, is_retrans: bool) {
         Err(_) => 0,
     };
 
-    if let Ok(mut buf) = IO_GRAPH_BUFFER.lock() {
+    {
+        let mut buf = crate::lock_guard::lock_mutex(&IO_GRAPH_BUFFER, "analyzer::record_packet_io");
         if let Some(last) = buf.back_mut() {
             if last.timestamp_sec == now_sec {
                 last.packet_count += 1;
@@ -1158,7 +1925,7 @@ pub fn record_packet_io(length: usize, rtt_ms: Option<f64>, is_retrans: bool) {
 /// 查询指定时间窗口的 IO Graphs 曲线数据
 pub fn get_io_graph_series(window_seconds: u32) -> IoGraphSeries {
     let win = window_seconds.clamp(10, 300) as usize;
-    let buf = IO_GRAPH_BUFFER.lock().unwrap();
+    let buf = crate::lock_guard::lock_mutex(&IO_GRAPH_BUFFER, "analyzer::get_io_graph_series");
 
     let count = buf.len();
     let start_idx = count.saturating_sub(win);
@@ -1255,7 +2022,7 @@ pub fn record_cross_bus_event(
     let mut detected_correlation = None;
 
     {
-        let mut events = CROSS_BUS_EVENTS.lock().unwrap();
+        let mut events = crate::lock_guard::lock_mutex(&CROSS_BUS_EVENTS, "analyzer::record_cross_bus_event");
 
         // 在近期不同总线的事件中检索因果对 (例如 ETHERNET Modbus-TCP <-> SERIAL Modbus-RTU)
         for prev in events.iter().rev().take(100) {
@@ -1334,7 +2101,7 @@ pub fn record_cross_bus_event(
     }
 
     if let Some(corr) = detected_correlation {
-        let mut corr_list = CROSS_BUS_CORRELATIONS.lock().unwrap();
+        let mut corr_list = crate::lock_guard::lock_mutex(&CROSS_BUS_CORRELATIONS, "analyzer::record_cross_bus_correlation");
         corr_list.push(corr);
         while corr_list.len() > 200 {
             corr_list.remove(0);
@@ -1344,7 +2111,7 @@ pub fn record_cross_bus_event(
 
 /// 查询所有识别出的跨总线因果关联与时延记录
 pub fn get_cross_bus_correlations() -> Vec<CrossBusCorrelationRecord> {
-    let list = CROSS_BUS_CORRELATIONS.lock().unwrap();
+    let list = crate::lock_guard::lock_mutex(&CROSS_BUS_CORRELATIONS, "analyzer::get_cross_bus_correlations");
     list.clone()
 }
 
@@ -1582,6 +2349,192 @@ mod tests {
         let res_txt = compare_universal_payloads(txt_a, txt_b).expect("文本比对成功");
         assert!(res_txt.total_bytes_a > 10);
         assert!(res_txt.mutated_bytes_count > 0);
+    }
+
+    #[test]
+    fn test_multi_group_center_star_alignment_and_missing_distinction() {
+        // 验证 3 组含前部插入 + 尾部缺失的长度不一致载荷:
+        // Anchor(0): 01 03 00 02
+        // Group(1) : 01 AA 03 00 02  (第1字节后插入 AA)
+        // Group(2) : 01 03 05        (第2字节 00->05 且尾部 02 缺失)
+        let items = vec![
+            UniversalDiffPayload {
+                id: Some(1),
+                label: "基准帧 #1".into(),
+                timestamp: None,
+                protocol: Some("MODBUS".into()),
+                endpoint_src: Some("10.0.0.1".into()),
+                endpoint_dst: Some("10.0.0.2".into()),
+                payload_hex: "01 03 00 02".into(),
+                raw_text: None,
+                extra_fields: None,
+            },
+            UniversalDiffPayload {
+                id: Some(2),
+                label: "前插帧 #2".into(),
+                timestamp: None,
+                protocol: Some("MODBUS".into()),
+                endpoint_src: Some("10.0.0.1".into()),
+                endpoint_dst: Some("10.0.0.3".into()),
+                payload_hex: "01 AA 03 00 02".into(),
+                raw_text: None,
+                extra_fields: None,
+            },
+            UniversalDiffPayload {
+                id: Some(3),
+                label: "尾缺帧 #3".into(),
+                timestamp: None,
+                protocol: Some("MODBUS".into()),
+                endpoint_src: Some("10.0.0.1".into()),
+                endpoint_dst: Some("10.0.0.4".into()),
+                payload_hex: "01 03 05".into(),
+                raw_text: None,
+                extra_fields: None,
+            },
+        ];
+
+        let multi = compare_multi_universal_payloads(items, Some(0)).expect("3组对齐比对成功");
+        assert_eq!(multi.sample_count, 3);
+        assert_eq!(multi.aligned_column_count, 5, "对齐总列宽必须包含插入隙共5列");
+
+        let g0_cells = &multi.samples[0].aligned_hex.hex_rows[0].cells;
+        let g1_cells = &multi.samples[1].aligned_hex.hex_rows[0].cells;
+        let g2_cells = &multi.samples[2].aligned_hex.hex_rows[0].cells;
+
+        // 列 0 全为 01
+        assert_eq!(g0_cells[0].hex, "01");
+        assert_eq!(g1_cells[0].hex, "01");
+        assert_eq!(g2_cells[0].hex, "01");
+        // 列 1 插入隙: 组0与组2填 -- (missing), 组1为 AA (insert)
+        assert_eq!(g0_cells[1].hex, "--");
+        assert_eq!(g1_cells[1].hex, "AA");
+        assert_eq!(g1_cells[1].diff_type, "insert");
+        assert_eq!(g2_cells[1].hex, "--");
+        // 列 2 完美重对齐全为 03
+        assert_eq!(g0_cells[2].hex, "03");
+        assert_eq!(g1_cells[2].hex, "03");
+        assert_eq!(g2_cells[2].hex, "03");
+        assert_eq!(g1_cells[2].diff_type, "equal");
+        assert_eq!(g2_cells[2].diff_type, "equal");
+        // 列 4 尾部 02 缺失，不能混淆为 00
+        assert_eq!(g0_cells[4].hex, "02");
+        assert_eq!(g1_cells[4].hex, "02");
+        assert_eq!(g2_cells[4].hex, "--");
+        assert_eq!(multi.aligned_mutation_spectrum[4].dominant_hex, "02");
+        assert!(multi.aligned_mutation_spectrum[4].mutation_rate > 30.0);
+
+        // 也验证 ASCII 十六进制同名串 ("CAFE" / "1234") 不走 hex 解码错解
+        let ascii_a = UniversalDiffPayload {
+            id: None,
+            label: "ASCII CAFE".into(),
+            timestamp: None,
+            protocol: Some("ASCII_TEXT".into()),
+            endpoint_src: None,
+            endpoint_dst: None,
+            payload_hex: "".into(),
+            raw_text: Some("CAFE".into()),
+            extra_fields: None,
+        };
+        let ascii_b = UniversalDiffPayload {
+            id: None,
+            label: "ASCII 1234".into(),
+            timestamp: None,
+            protocol: Some("ASCII_TEXT".into()),
+            endpoint_src: None,
+            endpoint_dst: None,
+            payload_hex: "".into(),
+            raw_text: Some("1234".into()),
+            extra_fields: None,
+        };
+        let res_ascii = compare_universal_payloads(ascii_a, ascii_b).expect("ASCII CAFE 对比成功");
+        assert_eq!(res_ascii.total_bytes_a, 4, "CAFE 必须保持 4 字节而非 2 字节 Hex");
+        assert_eq!(res_ascii.total_bytes_b, 4, "1234 必须保持 4 字节而非 2 字节 Hex");
+    }
+
+    #[test]
+    fn test_multi_diff_patch_script_reversible_reconstruction() {
+        let base_bytes = vec![0x01u8, 0x03, 0x00, 0x00, 0x00, 0x02, 0xC4, 0x0B];
+        // 变体 1: 在最前面插入 0xAA，中段 0x02 改为 0x04
+        let v1 = vec![0xAAu8, 0x01, 0x03, 0x00, 0x00, 0x00, 0x04, 0xC4, 0x0B];
+        // 变体 2: 截断尾部 2 字节并将 0x00 改为 0x01
+        let v2 = vec![0x01u8, 0x03, 0x00, 0x01, 0x00, 0x02];
+
+        let mk = |id: u64, lbl: &str, bytes: &[u8]| UniversalDiffPayload {
+            id: Some(id),
+            label: lbl.into(),
+            timestamp: None,
+            protocol: Some("MODBUS-RTU".into()),
+            endpoint_src: None,
+            endpoint_dst: None,
+            payload_hex: hex::encode(bytes),
+            raw_text: None,
+            extra_fields: None,
+        };
+
+        let report = generate_multi_diff_patch_report(
+            vec![mk(1, "Anchor", &base_bytes), mk(2, "Variant-1", &v1), mk(3, "Variant-2", &v2)],
+            Some(0),
+        )
+        .expect("生成 Patch 修订脚本应成功");
+
+        assert_eq!(report.samples.len(), 2);
+        assert!(report.hex_revision_script.contains("INSERT"));
+        assert!(report.python_patch_script.contains("def apply_ops"));
+
+        // 严格用与 python_patch_script 完全相同的重建算子从 base_bytes 逐条回放每个 sample 的 hunks，校验 100% 位级可逆
+        for (idx, expected) in [v1, v2].iter().enumerate() {
+            let bundle = &report.samples[idx];
+            let mut rebuilt = Vec::new();
+            let mut cursor = 0usize;
+            for h in &bundle.hunks {
+                rebuilt.extend_from_slice(&base_bytes[cursor..h.anchor_offset]);
+                if !h.target_hex.is_empty() {
+                    rebuilt.extend_from_slice(&hex::decode(&h.target_hex).unwrap());
+                }
+                cursor = h.anchor_offset + h.anchor_len;
+            }
+            rebuilt.extend_from_slice(&base_bytes[cursor..]);
+            assert_eq!(rebuilt, *expected, "通过 Hunks 重放必须 100% 精准重构变体 #{}", idx + 1);
+        }
+    }
+
+    #[test]
+    fn test_large_payload_lcs_oom_defense_hirschberg_and_chunked() {
+        // 压测 50KB 级大报文直通 compare_universal_payloads (触发 Hirschberg/分块防呆，严禁分配 20GB OOM)
+        let mut raw_a = vec![0x41u8; 40_000];
+        let mut raw_b = vec![0x41u8; 40_000];
+        raw_a[15_000] = 0xBB;
+        raw_b[15_000] = 0xCC;
+        raw_b.splice(25_000..25_000, [0x99u8, 0x88u8]); // 插入 2 字节引起后续非相同
+
+        let item_a = UniversalDiffPayload {
+            id: Some(1),
+            label: "40KB A".into(),
+            timestamp: None,
+            protocol: None,
+            endpoint_src: None,
+            endpoint_dst: None,
+            payload_hex: hex::encode(&raw_a),
+            raw_text: None,
+            extra_fields: None,
+        };
+        let item_b = UniversalDiffPayload {
+            id: Some(2),
+            label: "40KB B".into(),
+            timestamp: None,
+            protocol: None,
+            endpoint_src: None,
+            endpoint_dst: None,
+            payload_hex: hex::encode(&raw_b),
+            raw_text: None,
+            extra_fields: None,
+        };
+        let t0 = std::time::Instant::now();
+        let res = compare_universal_payloads(item_a, item_b).expect("大包 LCS 比对不能 OOM");
+        assert!(t0.elapsed().as_millis() < 2000, "40KB 载荷对比应在 2s 内完成: {:?}", t0.elapsed());
+        assert_eq!(res.total_bytes_a, 40_000);
+        assert_eq!(res.total_bytes_b, 40_002);
+        assert!(res.mutated_bytes_count >= 2 && res.mutated_bytes_count < 100, "前缀与公共后缀剥离后仅少数突变，实际={}", res.mutated_bytes_count);
     }
 }
 

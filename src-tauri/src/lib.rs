@@ -1,8 +1,8 @@
+pub mod lock_guard;
 pub mod sniffer;
 pub mod analyzer;
 pub mod forensics;
 pub mod hardware;
-pub mod logger;
 pub mod serial;
 pub mod dpi;
 pub mod cloud;
@@ -63,6 +63,10 @@ pub mod industrial_gb_dissector;
 pub mod simd_matcher;
 // Suricata/Snort 工业入侵规则 DSL 扩展编译器与两阶段执行引擎
 pub mod threat_dsl;
+pub use threat_dsl::{
+    get_suricata_dsl_metrics_cmd,
+    load_suricata_dsl_rules_cmd,
+};
 // 工控细粒度访问控制列表 (ICS-ACL) 状态机引擎
 pub mod ics_acl;
 // 国密 GM/T 0024-2014 SSL VPN 协议深度解析器 (对标涉密工控商密安全标准)
@@ -71,12 +75,14 @@ pub mod gm_ssl;
 pub mod tls_keyring;
 // JA3/JA3S 与 JA4/JA4S 全标准 TLS 指纹提取与已知威胁 C2 碰撞引擎 (对标 Salesforce JA3 & FoxIO JA4+)
 pub mod tls_fingerprint;
+pub use tls_fingerprint::get_tls_fingerprint_telemetry_cmd;
 // 以太网-串口-USB 跨总线纳秒时钟对齐与级联超时诊断引擎 (对标 sigrok / PulseView)
 pub mod cross_bus_diagnostic;
 // 轻量级内存多分辨率时序聚合器与工业资产通信热力雷达 (对标 Sniffnet / ntopng)
 pub mod metrics_timeseries;
 // 图灵完备安全分析脚本引擎与事件驱动沙箱 (对标 Zeek Scripting Framework & Wireshark Lua Dissector Engine)
 pub mod script_engine;
+pub use script_engine::evaluate_audit_script_cmd;
 // 高精度脱机时间戳调度重放与虚拟网络接口注入引擎 (对标 tcpreplay)
 pub mod pcap_replay;
 // 双缓冲无锁有界内存池与零拷贝报文调度引擎 (对标 DPDK rte_mempool & PF_RING)
@@ -123,10 +129,19 @@ pub use hardware_logic_analyzer::{
 // 基于 eBPF / XDP 的内核级高性能 TCP 流线速分流与旁路直通引擎 (TASK-41)
 pub mod xdp_engine;
 pub use xdp_engine::{
+    apply_xdp_policy_preset_cmd,
     evaluate_xdp_packet_cmd,
     get_xdp_bypass_metrics_cmd,
     mark_flow_bypassed_cmd,
 };
+// Windows Filtering Platform (WFP via fwpuclnt.dll) 内核态网络过滤引擎
+pub mod wfp_engine;
+// 跨平台内建驱动级串口透明拦截引擎 (POSIX PTY / Win32 NamedPipe / RFC2217 / WDM IRP Tap)
+pub mod serial_intercept;
+// 工业级流式磁盘大文件 Myers 线性分治比对、目录比较与双向原子合并引擎
+pub mod file_diff_merge;
+// 原生桌面系统文件系统弹窗 (Open/Folder/SaveAs)、原子落盘与资源管理器交互引擎
+pub mod desktop_native;
 // 基于 Glushkov 构造算法与位并行 (Bit-Parallel) 的 Hyperscan 风格高性能正则/多模式匹配引擎 (TASK-42)
 pub mod glushkov_engine;
 pub use glushkov_engine::{
@@ -167,9 +182,13 @@ pub use bluetooth_monitor::{
 pub mod wireless_analyzer;
 pub use wireless_analyzer::dissect_wireless_or_vlan_hex_cmd;
 
-// 全球网络地理态势与地图引擎
+// 全球网络空间地理态势与流量测绘引擎
 pub mod geo_map_engine;
-pub use geo_map_engine::get_global_geo_map_data_cmd;
+pub use geo_map_engine::{
+    get_global_geo_map_data_cmd,
+    resolve_real_traffic_geo_cmd,
+    probe_active_os_sockets_cmd,
+};
 
 // 工业级网络调试助手通信引擎 (对标 NetAssist / TCP Client / TCP Server / UDP)
 pub mod net_assist;
@@ -195,7 +214,7 @@ pub static PROBE_RUNNING: Lazy<Arc<Mutex<bool>>> = Lazy::new(|| Arc::new(Mutex::
 
 #[tauri::command]
 async fn start_capture(app: tauri::AppHandle, iface: String, bpf_filter: Option<String>) -> Result<String, String> {
-    let mut running = PROBE_RUNNING.lock().unwrap();
+    let mut running = crate::lock_guard::lock_mutex(&PROBE_RUNNING, "lib::start_capture");
     if *running {
         return Ok("[PROBE] 探针引擎已在运行，无需重复启动".to_string());
     }
@@ -305,7 +324,7 @@ async fn resume_capture(app: tauri::AppHandle) -> Result<String, String> {
 
 #[tauri::command]
 async fn stop_capture(app: tauri::AppHandle) -> Result<String, String> {
-    let mut running = PROBE_RUNNING.lock().unwrap();
+    let mut running = crate::lock_guard::lock_mutex(&PROBE_RUNNING, "lib::stop_capture");
     *running = false;
     drop(running);
 
@@ -402,6 +421,71 @@ async fn stop_serial_bridge_cmd(bridge_id: Option<String>) -> Result<String, Str
 }
 
 #[tauri::command]
+async fn get_serial_intercept_capabilities_cmd() -> Result<serial_intercept::SerialInterceptCapabilities, String> {
+    Ok(serial_intercept::get_serial_intercept_capabilities())
+}
+
+#[tauri::command]
+async fn list_active_intercept_sessions_cmd() -> Result<Vec<serial_intercept::InterceptSessionInfo>, String> {
+    Ok(serial_intercept::list_active_intercept_sessions())
+}
+
+#[tauri::command]
+async fn start_rfc2217_intercept_gateway_cmd(
+    app: tauri::AppHandle,
+    listen_port: u16,
+    target_port: String,
+    config: serial::SerialCommunicationConfig,
+) -> Result<serial_intercept::InterceptSessionInfo, String> {
+    serial_intercept::start_rfc2217_intercept_gateway(Some(app), listen_port, &target_port, config)
+}
+
+#[tauri::command]
+async fn start_windows_named_pipe_intercept_cmd(
+    app: tauri::AppHandle,
+    pipe_suffix: String,
+    target_port: String,
+    config: serial::SerialCommunicationConfig,
+) -> Result<serial_intercept::InterceptSessionInfo, String> {
+    serial_intercept::start_windows_named_pipe_intercept(Some(app), &pipe_suffix, &target_port, config)
+}
+
+#[tauri::command]
+async fn start_unix_pty_intercept_cmd(
+    app: tauri::AppHandle,
+    symlink_alias: Option<String>,
+    target_port: String,
+    config: serial::SerialCommunicationConfig,
+) -> Result<serial_intercept::InterceptSessionInfo, String> {
+    serial_intercept::start_unix_pty_intercept(Some(app), symlink_alias.as_deref(), &target_port, config)
+}
+
+#[tauri::command]
+async fn start_kernel_filter_tap_cmd(app: tauri::AppHandle) -> Result<serial_intercept::InterceptSessionInfo, String> {
+    serial_intercept::start_kernel_filter_tap(Some(app))
+}
+
+#[tauri::command]
+async fn smart_start_serial_intercept_cmd(
+    app: tauri::AppHandle,
+    target_port: String,
+    prefer_mode: Option<String>,
+    config: serial::SerialCommunicationConfig,
+) -> Result<serial_intercept::SmartInterceptOutcome, String> {
+    Ok(serial_intercept::smart_start_serial_intercept(
+        Some(app),
+        &target_port,
+        prefer_mode.as_deref(),
+        config,
+    ))
+}
+
+#[tauri::command]
+async fn stop_intercept_session_cmd(session_id: Option<String>) -> Result<String, String> {
+    Ok(serial_intercept::stop_intercept_session(session_id.as_deref()))
+}
+
+#[tauri::command]
 async fn stop_serial_capture(port: Option<String>) -> Result<String, String> {
     let msg = serial::stop_serial_probe(port.as_deref());
     Ok(msg)
@@ -425,7 +509,7 @@ async fn list_usb_devices() -> Result<Vec<usb::UsbDeviceInfo>, String> {
 
 #[tauri::command]
 async fn is_honeypot_running_cmd() -> Result<bool, String> {
-    let running = honeypot::HONEYPOT_RUNNING.lock().unwrap();
+    let running = crate::lock_guard::lock_mutex(&honeypot::HONEYPOT_RUNNING, "lib::is_honeypot_running_cmd");
     Ok(*running)
 }
 
@@ -517,6 +601,142 @@ async fn load_baseline_payloads_cmd() -> Result<Vec<String>, String> {
 #[tauri::command]
 async fn compare_with_historical_baseline_cmd(current_payloads: Vec<String>) -> Result<analyzer::SmartDiffResult, String> {
     analyzer::compare_with_historical_baseline(current_payloads)
+}
+
+#[tauri::command]
+async fn compare_text_files_streaming_cmd(
+    left_path: String,
+    right_path: String,
+    options: Option<file_diff_merge::FileDiffOptions>,
+    max_preview_hunks: Option<usize>,
+) -> Result<file_diff_merge::TextFileDiffReport, String> {
+    tokio::task::spawn_blocking(move || {
+        file_diff_merge::compare_text_files_streaming(
+            &left_path,
+            &right_path,
+            options.unwrap_or_default(),
+            max_preview_hunks,
+        )
+    })
+    .await
+    .map_err(|e| format!("后台线程调度失败: {}", e))?
+}
+
+#[tauri::command]
+async fn apply_text_merge_and_save_cmd(
+    left_path: String,
+    right_path: String,
+    output_path: String,
+    options: Option<file_diff_merge::FileDiffOptions>,
+    decisions: Vec<file_diff_merge::HunkMergeDecision>,
+    default_choice: file_diff_merge::MergeChoice,
+    create_backup: bool,
+) -> Result<file_diff_merge::MergeSaveOutcome, String> {
+    tokio::task::spawn_blocking(move || {
+        file_diff_merge::apply_text_merge_and_save(
+            &left_path,
+            &right_path,
+            &output_path,
+            options.unwrap_or_default(),
+            decisions,
+            default_choice,
+            create_backup,
+        )
+    })
+    .await
+    .map_err(|e| format!("后台 Merge 线程调度失败: {}", e))?
+}
+
+#[tauri::command]
+async fn export_unified_patch_file_cmd(
+    left_path: String,
+    right_path: String,
+    patch_output_path: String,
+    options: Option<file_diff_merge::FileDiffOptions>,
+) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        file_diff_merge::export_unified_patch_file(
+            &left_path,
+            &right_path,
+            &patch_output_path,
+            options.unwrap_or_default(),
+        )
+    })
+    .await
+    .map_err(|e| format!("后台导出线程调度失败: {}", e))?
+}
+
+#[tauri::command]
+async fn compare_binary_files_streaming_cmd(
+    left_path: String,
+    right_path: String,
+    chunk_size: Option<usize>,
+) -> Result<file_diff_merge::BinaryFileDiffSummary, String> {
+    tokio::task::spawn_blocking(move || {
+        file_diff_merge::compare_binary_files_streaming(&left_path, &right_path, chunk_size)
+    })
+    .await
+    .map_err(|e| format!("后台二进制对比线程调度失败: {}", e))?
+}
+
+#[tauri::command]
+async fn compare_binary_files_fastcdc_cmd(
+    left_path: String,
+    right_path: String,
+) -> Result<file_diff_merge::FastCdcBinaryDiffReport, String> {
+    tokio::task::spawn_blocking(move || {
+        file_diff_merge::compare_binary_files_fastcdc(&left_path, &right_path)
+    })
+    .await
+    .map_err(|e| format!("后台 FastCDC 对比线程调度失败: {}", e))?
+}
+
+#[tauri::command]
+async fn read_binary_diff_dual_offset_page_cmd(
+    left_path: String,
+    right_path: String,
+    left_offset: u64,
+    right_offset: u64,
+    page_size: usize,
+) -> Result<file_diff_merge::BinaryDiffPageResult, String> {
+    tokio::task::spawn_blocking(move || {
+        file_diff_merge::read_binary_diff_dual_offset_page(
+            &left_path,
+            &right_path,
+            left_offset,
+            right_offset,
+            page_size,
+        )
+    })
+    .await
+    .map_err(|e| format!("后台读取双偏移二进制页失败: {}", e))?
+}
+
+#[tauri::command]
+async fn read_binary_diff_page_cmd(
+    left_path: String,
+    right_path: String,
+    start_offset: u64,
+    page_size: usize,
+) -> Result<file_diff_merge::BinaryDiffPageResult, String> {
+    tokio::task::spawn_blocking(move || {
+        file_diff_merge::read_binary_diff_page(&left_path, &right_path, start_offset, page_size)
+    })
+    .await
+    .map_err(|e| format!("后台读取二进制页失败: {}", e))?
+}
+
+#[tauri::command]
+async fn compare_directories_cmd(
+    left_dir: String,
+    right_dir: String,
+    verify_equal_size_contents: bool,
+) -> Result<file_diff_merge::DirectoryCompareReport, String> {
+    tokio::task::spawn_blocking(move || {
+        file_diff_merge::compare_directories(&left_dir, &right_dir, verify_equal_size_contents)
+    })
+    .await
+    .map_err(|e| format!("后台目录比较线程调度失败: {}", e))?
 }
 
 #[tauri::command]
@@ -758,8 +978,10 @@ async fn generate_judicial_report_cmd(
 #[tauri::command]
 async fn export_pcapng_cmd(if_name: Option<String>) -> Result<String, String> {
     let iface = if_name.unwrap_or_else(|| "Default Capture Interface".to_string());
-    let packets = pcap_engine::GLOBAL_RING_BUFFER.lock().unwrap().snapshot();
-    let pcapng_bytes = pcap_engine::encode_packets_to_pcapng(&packets, &iface, 0);
+    let packets = crate::lock_guard::lock_mutex(&pcap_engine::GLOBAL_RING_BUFFER, "lib::export_pcapng_cmd").snapshot();
+    let total_drops = crate::sniffer::CAPTURE_DROPPED_DRIVER.load(std::sync::atomic::Ordering::Relaxed)
+        + crate::sniffer::CAPTURE_DROPPED_INTERFACE.load(std::sync::atomic::Ordering::Relaxed);
+    let pcapng_bytes = pcap_engine::encode_packets_to_pcapng(&packets, &iface, total_drops);
     
     let path = forensics::data_path("forensic_capture.pcapng");
     std::fs::write(&path, &pcapng_bytes).map_err(|e| format!("写入 PCAPNG 失败: {}", e))?;
@@ -770,7 +992,7 @@ async fn export_pcapng_cmd(if_name: Option<String>) -> Result<String, String> {
         "AUDITOR_01",
         "SUPERVISOR_02",
         "forensic_capture.pcapng",
-        &format!("导出 {} 帧至 PCAPNG 格式", packets.len()),
+        &format!("导出 {} 帧至 PCAPNG 格式 (物理丢包记录: {})", packets.len(), total_drops),
         sz,
         "",
         "",
@@ -781,8 +1003,17 @@ async fn export_pcapng_cmd(if_name: Option<String>) -> Result<String, String> {
 
 #[tauri::command]
 async fn get_fidelity_certificate_cmd() -> Result<pcap_engine::CaptureFidelityCertificate, String> {
-    let count = pcap_engine::GLOBAL_RING_BUFFER.lock().unwrap().stats().0 as u64;
-    Ok(pcap_engine::generate_fidelity_certificate(count, 0, 0))
+    let recv = crate::sniffer::CAPTURE_RECEIVED_PACKETS.load(std::sync::atomic::Ordering::Relaxed);
+    let drop_drv = crate::sniffer::CAPTURE_DROPPED_DRIVER.load(std::sync::atomic::Ordering::Relaxed);
+    let drop_if = crate::sniffer::CAPTURE_DROPPED_INTERFACE.load(std::sync::atomic::Ordering::Relaxed);
+    let count = if recv > 0 {
+        recv
+    } else {
+        crate::lock_guard::lock_mutex(&pcap_engine::GLOBAL_RING_BUFFER, "lib::get_fidelity_certificate_cmd")
+            .stats()
+            .0 as u64
+    };
+    Ok(pcap_engine::generate_fidelity_certificate(count, drop_drv, drop_if))
 }
 
 // ============================================================
@@ -883,8 +1114,69 @@ fn drag_app(app: tauri::AppHandle) {
 }
 
 #[tauri::command]
+fn hide_to_tray_cmd(app: tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.hide();
+    }
+}
+
+#[tauri::command]
+async fn pick_native_file_dialog_cmd(
+    title: Option<String>,
+    filter_name: Option<String>,
+    filter_patterns: Option<String>,
+) -> Result<Option<String>, String> {
+    tokio::task::spawn_blocking(move || {
+        desktop_native::pick_native_file_dialog(
+            title.as_deref().unwrap_or("选择磁盘文件 - Omni-Probe"),
+            filter_name.as_deref().unwrap_or("常见支持文件"),
+            filter_patterns.as_deref().unwrap_or("*.*"),
+        )
+    })
+    .await
+    .map_err(|e| format!("文件对话线程调度失败: {}", e))?
+}
+
+#[tauri::command]
+async fn pick_native_folder_dialog_cmd(title: Option<String>) -> Result<Option<String>, String> {
+    tokio::task::spawn_blocking(move || {
+        desktop_native::pick_native_folder_dialog(
+            title.as_deref().unwrap_or("选择目录文件夹 - Omni-Probe"),
+        )
+    })
+    .await
+    .map_err(|e| format!("目录对话线程调度失败: {}", e))?
+}
+
+#[tauri::command]
+async fn save_text_with_native_dialog_cmd(
+    default_filename: String,
+    title: Option<String>,
+    filter_name: Option<String>,
+    filter_patterns: Option<String>,
+    content: String,
+) -> Result<desktop_native::NativeSaveOutcome, String> {
+    tokio::task::spawn_blocking(move || {
+        desktop_native::save_text_with_native_dialog(
+            &default_filename,
+            title.as_deref().unwrap_or("导出并原子写入磁盘 - Omni-Probe"),
+            filter_name.as_deref().unwrap_or("导出文档"),
+            filter_patterns.as_deref().unwrap_or("*.*"),
+            &content,
+        )
+    })
+    .await
+    .map_err(|e| format!("另存为线程调度失败: {}", e))?
+}
+
+#[tauri::command]
+async fn reveal_in_file_manager_cmd(path: String) -> Result<String, String> {
+    desktop_native::reveal_in_file_manager(&path)
+}
+
+#[tauri::command]
 async fn check_app_update_cmd() -> Result<updater::UpdateCheckResult, String> {
-    updater::check_latest_release("0.2.4").await
+    updater::check_latest_release(env!("CARGO_PKG_VERSION")).await
 }
 
 // ============================================================
@@ -897,7 +1189,11 @@ async fn set_snaplen_mode_cmd(mode: String, limit: Option<u32>) -> Result<String
         "header_only" | "header" => pcap_engine::SnaplenMode::HeaderOnly(limit.unwrap_or(96)),
         _ => pcap_engine::SnaplenMode::Full,
     };
-    Ok(format!("Snaplen 模式已设置为: {:?}", snaplen))
+    let mut writer = pcap_engine::GLOBAL_ROLLING_WRITER
+        .lock()
+        .map_err(|e| format!("获取滚动落盘引擎锁失败: {}", e))?;
+    writer.set_snaplen_mode(snaplen);
+    Ok(format!("Snaplen 模式已持久写入落盘引擎: {:?}", snaplen))
 }
 
 #[tauri::command]
@@ -908,16 +1204,18 @@ async fn set_rolling_pcap_config_cmd(
     max_duration_secs: u64,
     max_quota_gb: u64,
 ) -> Result<String, String> {
-    if let Ok(mut writer) = pcap_engine::GLOBAL_ROLLING_WRITER.lock() {
-        *writer = pcap_engine::RollingPcapWriter::new(pcap_engine::RollingPcapConfig {
-            enabled,
-            output_dir,
-            max_file_size_bytes: max_size_mb * 1024 * 1024,
-            max_file_duration_secs: max_duration_secs,
-            max_disk_quota_bytes: max_quota_gb * 1024 * 1024 * 1024,
-            snaplen_mode: pcap_engine::SnaplenMode::Full,
-        });
-    }
+    let mut writer = crate::lock_guard::lock_mutex(
+        &pcap_engine::GLOBAL_ROLLING_WRITER,
+        "lib::set_rolling_pcap_config_cmd",
+    );
+    *writer = pcap_engine::RollingPcapWriter::new(pcap_engine::RollingPcapConfig {
+        enabled,
+        output_dir,
+        max_file_size_bytes: max_size_mb * 1024 * 1024,
+        max_file_duration_secs: max_duration_secs,
+        max_disk_quota_bytes: max_quota_gb * 1024 * 1024 * 1024,
+        snaplen_mode: pcap_engine::SnaplenMode::Full,
+    });
     Ok("持续滚动落盘配置已成功更新".to_string())
 }
 
@@ -1025,17 +1323,25 @@ async fn get_pcap_replay_telemetry_cmd() -> Result<pcap_replay::ReplayTelemetry,
 
 #[tauri::command]
 async fn get_zero_copy_pool_metrics_cmd() -> Result<zero_copy_pool::ZeroCopyPoolMetrics, String> {
-    let pool = zero_copy_pool::GLOBAL_ZERO_COPY_POOL.lock().map_err(|e| e.to_string())?;
+    let pool = crate::lock_guard::lock_mutex(
+        &zero_copy_pool::GLOBAL_ZERO_COPY_POOL,
+        "lib::get_zero_copy_pool_metrics_cmd",
+    );
     Ok(pool.get_metrics())
 }
 
 #[tauri::command]
+async fn get_kernel_zero_copy_telemetry_cmd() -> Result<zero_copy_pool::KernelZeroCopyTelemetry, String> {
+    Ok(zero_copy_pool::get_runtime_zero_copy_telemetry())
+}
+
+#[tauri::command]
 async fn get_biflow_sessions_cmd() -> Result<Vec<stream_reassembly::FlowSummary>, String> {
-    if let Ok(engine) = stream_reassembly::GLOBAL_FLOW_ENGINE.lock() {
-        Ok(engine.get_flow_summaries())
-    } else {
-        Err("获取会话流引擎锁失败".to_string())
-    }
+    let engine = crate::lock_guard::lock_mutex(
+        &stream_reassembly::GLOBAL_FLOW_ENGINE,
+        "lib::get_biflow_sessions_cmd",
+    );
+    Ok(engine.get_flow_summaries())
 }
 
 #[tauri::command]
@@ -1046,42 +1352,42 @@ async fn follow_tcp_stream_cmd(
     dst_port: u16,
     transport: String,
 ) -> Result<Vec<stream_reassembly::StreamChunk>, String> {
-    if let Ok(engine) = stream_reassembly::GLOBAL_FLOW_ENGINE.lock() {
-        engine
-            .get_follow_stream(&src_ip, &dst_ip, src_port, dst_port, &transport)
-            .ok_or_else(|| "未找到对应的 TCP 会话流".to_string())
-    } else {
-        Err("获取会话流引擎锁失败".to_string())
-    }
+    let engine = crate::lock_guard::lock_mutex(
+        &stream_reassembly::GLOBAL_FLOW_ENGINE,
+        "lib::follow_tcp_stream_cmd",
+    );
+    engine
+        .get_follow_stream(&src_ip, &dst_ip, src_port, dst_port, &transport)
+        .ok_or_else(|| "未找到对应的 TCP 会话流".to_string())
 }
 
 #[tauri::command]
 async fn classify_ip_cmd(ip: String) -> Result<ip_intelligence::IpIntelligenceResult, String> {
-    if let Ok(engine) = ip_intelligence::GLOBAL_IP_ENGINE.lock() {
-        Ok(engine.classify(&ip))
-    } else {
-        Err("获取 IP 资产引擎锁失败".to_string())
-    }
+    let engine = crate::lock_guard::lock_mutex(
+        &ip_intelligence::GLOBAL_IP_ENGINE,
+        "lib::classify_ip_cmd",
+    );
+    Ok(engine.classify(&ip))
 }
 
 #[tauri::command]
 async fn get_cidr_rules_cmd() -> Result<Vec<ip_intelligence::CidrAssetRule>, String> {
-    if let Ok(engine) = ip_intelligence::GLOBAL_IP_ENGINE.lock() {
-        Ok(engine.get_rules())
-    } else {
-        Err("获取 IP 资产引擎锁失败".to_string())
-    }
+    let engine = crate::lock_guard::lock_mutex(
+        &ip_intelligence::GLOBAL_IP_ENGINE,
+        "lib::get_cidr_rules_cmd",
+    );
+    Ok(engine.get_rules())
 }
 
 #[tauri::command]
 async fn save_cidr_rules_cmd(rules: Vec<ip_intelligence::CidrAssetRule>) -> Result<usize, String> {
-    if let Ok(mut engine) = ip_intelligence::GLOBAL_IP_ENGINE.lock() {
-        let count = rules.len();
-        engine.set_rules(rules);
-        Ok(count)
-    } else {
-        Err("获取 IP 资产引擎锁失败".to_string())
-    }
+    let mut engine = crate::lock_guard::lock_mutex(
+        &ip_intelligence::GLOBAL_IP_ENGINE,
+        "lib::save_cidr_rules_cmd",
+    );
+    let count = rules.len();
+    engine.set_rules(rules);
+    Ok(count)
 }
 
 #[tauri::command]
@@ -1091,19 +1397,28 @@ async fn download_ip_db_cmd(app: tauri::AppHandle, custom_url: Option<String>) -
 
 #[tauri::command]
 fn load_local_ip_db_cmd(file_path: String) -> Result<String, String> {
-    let mut engine = ip_intelligence::GLOBAL_IP_ENGINE.lock().map_err(|e| e.to_string())?;
+    let mut engine = crate::lock_guard::lock_mutex(
+        &ip_intelligence::GLOBAL_IP_ENGINE,
+        "lib::load_local_ip_db_cmd",
+    );
     engine.load_xdb(&file_path)
 }
 
 #[tauri::command]
 fn get_ip_db_status_cmd() -> Result<serde_json::Value, String> {
-    let engine = ip_intelligence::GLOBAL_IP_ENGINE.lock().map_err(|e| e.to_string())?;
+    let engine = crate::lock_guard::lock_mutex(
+        &ip_intelligence::GLOBAL_IP_ENGINE,
+        "lib::get_ip_db_status_cmd",
+    );
     Ok(engine.get_xdb_status())
 }
 
 #[tauri::command]
 fn test_lookup_ip_cmd(ip: String) -> Result<ip_intelligence::IpIntelligenceResult, String> {
-    let engine = ip_intelligence::GLOBAL_IP_ENGINE.lock().map_err(|e| e.to_string())?;
+    let engine = crate::lock_guard::lock_mutex(
+        &ip_intelligence::GLOBAL_IP_ENGINE,
+        "lib::test_lookup_ip_cmd",
+    );
     Ok(engine.classify(&ip))
 }
 
@@ -1133,9 +1448,91 @@ async fn test_send_syslog_cmd(message: String) -> Result<String, String> {
     syslog::test_send_syslog(&message).await
 }
 
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+struct AuditComplianceSnapshot {
+    rbac_security: rbac::RbacSecurityStatus,
+    cidr_rule_count: usize,
+    baseline_mode: String,
+    baseline_rule_count: usize,
+    syslog_enabled: bool,
+    syslog_configured: bool,
+    ics_acl_rule_count: usize,
+    has_hsm_hardware: bool,
+    admin_audit_count: usize,
+    level3_rate_pct: f64,
+    level2_rate_pct: f64,
+    level4_rate_pct: f64,
+}
+
 #[tauri::command]
 fn get_current_user_cmd() -> Result<rbac::CurrentUser, String> {
     Ok(rbac::get_current_user())
+}
+
+#[tauri::command]
+fn get_rbac_security_status_cmd() -> Result<rbac::RbacSecurityStatus, String> {
+    Ok(rbac::get_rbac_security_status())
+}
+
+#[tauri::command]
+fn get_audit_compliance_snapshot_cmd() -> Result<AuditComplianceSnapshot, String> {
+    let rbac_security = rbac::get_rbac_security_status();
+    let cidr_rule_count = {
+        let engine = crate::lock_guard::lock_mutex(
+            &ip_intelligence::GLOBAL_IP_ENGINE,
+            "lib::get_audit_compliance_snapshot_cidr",
+        );
+        engine.get_rules().len()
+    };
+    let baseline_status = baseline_learning::get_baseline_status();
+    let baseline_rule_count = baseline_learning::get_baseline_rules().len();
+    let syslog_cfg = syslog::get_syslog_config();
+    let syslog_enabled = syslog_cfg.enabled;
+    let syslog_configured = syslog_enabled && !syslog_cfg.server_ip.trim().is_empty();
+    let ics_acl_rule_count = {
+        let acl_guard = crate::lock_guard::read_rwlock(
+            &sniffer::GLOBAL_ICS_ACL_ENGINE,
+            "lib::get_audit_compliance_snapshot_ics_acl",
+        );
+        acl_guard.rules.len()
+    };
+    let admin_audit_count = rbac::get_admin_audit_trail().len();
+    let has_hsm_hardware = false;
+
+    // 精确映射等保二级与三级实时条款判定（不预设任何默认达标率）
+    let c_8111 = rbac_security.all_credentials_hardened;
+    let c_8121 = cidr_rule_count > 0;
+    let c_8122 = baseline_status.mode == "ENFORCING" && cidr_rule_count > 0;
+    let c_8141 = rbac_security.active_roles_count >= 3 && rbac_security.all_credentials_hardened;
+    let c_8143 = syslog_configured;
+    let c_8144 = false; // 单次会话需主动触发核验，初始待核验，由前端按实际核验结果动态聚合
+    let c_g42 = baseline_status.mode != "DISABLED" && baseline_rule_count > 0;
+    let c_g43 = ics_acl_rule_count > 0;
+
+    let l3_checks = [c_8111, c_8121, c_8122, c_8141, c_8143, c_8144, c_g42, c_g43];
+    let l3_pass = l3_checks.iter().filter(|&&x| x).count();
+    let level3_rate_pct = ((l3_pass as f64 / l3_checks.len() as f64) * 1000.0).round() / 10.0;
+
+    let l2_checks = [c_8111, c_8121, c_8141, c_8143, c_8144];
+    let l2_pass = l2_checks.iter().filter(|&&x| x).count();
+    let level2_rate_pct = ((l2_pass as f64 / l2_checks.len() as f64) * 1000.0).round() / 10.0;
+
+    let level4_rate_pct = if has_hsm_hardware { 100.0 } else { 0.0 };
+
+    Ok(AuditComplianceSnapshot {
+        rbac_security,
+        cidr_rule_count,
+        baseline_mode: baseline_status.mode,
+        baseline_rule_count,
+        syslog_enabled,
+        syslog_configured,
+        ics_acl_rule_count,
+        has_hsm_hardware,
+        admin_audit_count,
+        level3_rate_pct,
+        level2_rate_pct,
+        level4_rate_pct,
+    })
 }
 
 #[tauri::command]
@@ -1193,20 +1590,20 @@ fn get_standard_field_registry_cmd() -> Result<Vec<filter_ast::FieldDefinition>,
 
 #[tauri::command]
 fn fetch_paged_packets_cmd(offset: usize, limit: usize) -> Result<stream_paging::PagedPacketsResponse, String> {
-    if let Ok(buf) = stream_paging::GLOBAL_STREAM_BUFFER.lock() {
-        Ok(buf.fetch_page(offset, limit))
-    } else {
-        Err("获取分页缓冲区锁失败".into())
-    }
+    let buf = crate::lock_guard::lock_mutex(
+        &stream_paging::GLOBAL_STREAM_BUFFER,
+        "lib::fetch_paged_packets_cmd",
+    );
+    Ok(buf.fetch_page(offset, limit))
 }
 
 #[tauri::command]
 fn get_stream_buffer_stats_cmd() -> Result<stream_paging::StreamBufferStats, String> {
-    if let Ok(buf) = stream_paging::GLOBAL_STREAM_BUFFER.lock() {
-        Ok(buf.get_stats())
-    } else {
-        Err("获取流式缓冲统计失败".into())
-    }
+    let buf = crate::lock_guard::lock_mutex(
+        &stream_paging::GLOBAL_STREAM_BUFFER,
+        "lib::get_stream_buffer_stats_cmd",
+    );
+    Ok(buf.get_stats())
 }
 
 #[tauri::command]
@@ -1301,6 +1698,22 @@ async fn compare_universal_payloads_cmd(
     item_b: analyzer::UniversalDiffPayload,
 ) -> Result<analyzer::DualPacketDiffResult, String> {
     analyzer::compare_universal_payloads(item_a, item_b)
+}
+
+#[tauri::command]
+async fn compare_multi_universal_payloads_cmd(
+    items: Vec<analyzer::UniversalDiffPayload>,
+    anchor_index: Option<usize>,
+) -> Result<analyzer::MultiUniversalDiffResult, String> {
+    analyzer::compare_multi_universal_payloads(items, anchor_index)
+}
+
+#[tauri::command]
+async fn export_multi_diff_patch_cmd(
+    items: Vec<analyzer::UniversalDiffPayload>,
+    anchor_index: Option<usize>,
+) -> Result<analyzer::MultiDiffPatchReport, String> {
+    analyzer::generate_multi_diff_patch_report(items, anchor_index)
 }
 
 // 3. 第三优先级：物理硬件基线白名单与合规差分比对
@@ -1399,6 +1812,31 @@ async fn get_firewall_rules_cmd() -> Result<Vec<firewall_filter::FirewallRule>, 
 #[tauri::command]
 async fn save_firewall_rules_cmd(rules: Vec<firewall_filter::FirewallRule>) -> Result<bool, String> {
     Ok(firewall_filter::save_firewall_rules(rules))
+}
+
+#[tauri::command]
+async fn wfp_block_ip_cmd(target: String, reason: String) -> Result<wfp_engine::WfpBlockOutcome, String> {
+    let outcome = wfp_engine::block_ip_kernel_wfp(&target, &reason);
+    // 联动 XDP 前端旁路黑名单：若为单主机 IP 或 /32 规则，同步注入实时 Drop 表
+    let bare_ip = target.trim().strip_suffix("/32").unwrap_or(target.trim());
+    if !bare_ip.contains('/') {
+        xdp_engine::sync_block_ip_to_xdp(bare_ip, true);
+    }
+    Ok(outcome)
+}
+
+#[tauri::command]
+async fn wfp_unblock_ip_cmd(target: String) -> Result<String, String> {
+    let bare_ip = target.trim().strip_suffix("/32").unwrap_or(target.trim());
+    if !bare_ip.contains('/') {
+        xdp_engine::sync_block_ip_to_xdp(bare_ip, false);
+    }
+    wfp_engine::unblock_ip_kernel_wfp(&target)
+}
+
+#[tauri::command]
+async fn get_wfp_status_cmd() -> Result<wfp_engine::WfpStatusReport, String> {
+    Ok(wfp_engine::get_wfp_kernel_status())
 }
 
 #[tauri::command]
@@ -1623,13 +2061,19 @@ async fn download_and_install_component_cmd(
 fn get_recent_industrial_transactions_cmd(
     limit: Option<usize>,
 ) -> Vec<industrial_transaction::CompletedIndustrialTransaction> {
-    let tracker = industrial_transaction::GLOBAL_TRANSACTION_TRACKER.lock().unwrap();
+    let tracker = crate::lock_guard::lock_mutex(
+        &industrial_transaction::GLOBAL_TRANSACTION_TRACKER,
+        "lib::get_recent_industrial_transactions_cmd",
+    );
     tracker.get_recent_transactions(limit.unwrap_or(50))
 }
 
 #[tauri::command]
 fn get_industrial_transaction_stats_cmd() -> industrial_transaction::TransactionMetricsSnapshot {
-    let tracker = industrial_transaction::GLOBAL_TRANSACTION_TRACKER.lock().unwrap();
+    let tracker = crate::lock_guard::lock_mutex(
+        &industrial_transaction::GLOBAL_TRANSACTION_TRACKER,
+        "lib::get_industrial_transaction_stats_cmd",
+    );
     tracker.get_metrics_snapshot()
 }
 
@@ -1644,10 +2088,16 @@ fn get_service_port_info_cmd(port: u16) -> Option<protocol_catalog::ServicePortI
 #[tauri::command]
 fn resolve_mac_vendor_cmd(mac_str: String) -> Option<protocol_catalog::MacVendorInfo> {
     let cleaned = mac_str.replace([':', '-'], "");
-    if let Ok(bytes) = hex::decode(&cleaned) {
-        protocol_catalog::resolve_mac_vendor(&bytes)
-    } else {
-        None
+    match hex::decode(&cleaned) {
+        Ok(bytes) => protocol_catalog::resolve_mac_vendor(&bytes),
+        Err(e) => {
+            eprintln!(
+                "{{\"level\":\"WARN\",\"event\":\"INVALID_MAC_INPUT\",\"mac\":\"{}\",\"error\":\"{}\"}}",
+                mac_str.replace('"', "\\\""),
+                e
+            );
+            None
+        }
     }
 }
 
@@ -1732,54 +2182,131 @@ pub fn run() {
                 cfg.logging.file.clone(),
             );
 
-            // 【主动加载 IP 资产情报离线库 (xdb)】
+            // 【主动加载 IP 资产情报离线库 (外部热更库优先覆盖；未提供时自动运行编译期内嵌零拷贝基准库)】
             let mut candidate_paths = vec![
-                std::path::PathBuf::from("data/ip2region.xdb"),
-                std::path::PathBuf::from("src-tauri/data/ip2region.xdb"),
-                std::path::PathBuf::from("ip2region.xdb"),
-                std::path::PathBuf::from("../data/ip2region.xdb"),
-                std::path::PathBuf::from("../../data/ip2region.xdb"),
+                forensics::data_path("ip2region.xdb"),
             ];
-            if let Ok(exe_path) = std::env::current_exe() {
-                if let Some(exe_dir) = exe_path.parent() {
-                    candidate_paths.push(exe_dir.join("data/ip2region.xdb"));
-                    candidate_paths.push(exe_dir.join("ip2region.xdb"));
-                    candidate_paths.push(exe_dir.join("../data/ip2region.xdb"));
-                    candidate_paths.push(exe_dir.join("../../data/ip2region.xdb"));
-                }
-            }
             if let Ok(app_dir) = app.path().app_data_dir() {
-                candidate_paths.push(app_dir.join("data/ip2region.xdb"));
                 candidate_paths.push(app_dir.join("ip2region.xdb"));
+                candidate_paths.push(app_dir.join("data/ip2region.xdb"));
             }
             if let Ok(res_dir) = app.path().resource_dir() {
                 candidate_paths.push(res_dir.join("data/ip2region.xdb"));
                 candidate_paths.push(res_dir.join("ip2region.xdb"));
             }
+            if let Ok(exe_path) = std::env::current_exe() {
+                if let Some(exe_dir) = exe_path.parent() {
+                    candidate_paths.push(exe_dir.join("data/ip2region.xdb"));
+                    candidate_paths.push(exe_dir.join("ip2region.xdb"));
+                }
+            }
 
-            let mut xdb_loaded = false;
+            let mut external_loaded = false;
             for p in &candidate_paths {
                 if p.exists() {
                     if let Ok(meta) = std::fs::metadata(p) {
                         if meta.len() >= 5 * 1024 * 1024 {
-                            if let Ok(mut engine) = ip_intelligence::GLOBAL_IP_ENGINE.lock() {
-                                if let Ok(msg) = engine.load_xdb(p.to_str().unwrap_or_default()) {
-                                    println!("[IP_INTELLIGENCE] ✓ {}", msg);
-                                    xdb_loaded = true;
-                                    break;
-                                }
+                            let mut engine = crate::lock_guard::lock_mutex(
+                                &ip_intelligence::GLOBAL_IP_ENGINE,
+                                "lib::setup_load_external_xdb",
+                            );
+                            if let Ok(msg) = engine.load_xdb(&p.to_string_lossy()) {
+                                println!("[IP_INTELLIGENCE] ✓ 已挂载外部扩展库: {}", msg);
+                                external_loaded = true;
+                                break;
                             }
                         }
                     }
                 }
             }
-            if !xdb_loaded {
-                eprintln!("[IP_INTELLIGENCE] ⚠️ 未在任何候选路径中找到有效的 ip2region.xdb 数据库文件");
+            if !external_loaded {
+                let engine = crate::lock_guard::lock_mutex(
+                    &ip_intelligence::GLOBAL_IP_ENGINE,
+                    "lib::setup_check_builtin_xdb",
+                );
+                println!(
+                    "[IP_INTELLIGENCE] ✓ 无外部覆盖库，已激活内置零拷贝 XDB 基准轨 (Ready: {})",
+                    engine.is_xdb_loaded()
+                );
             }
 
             discovery::start_asset_discovery_daemon(app.handle().clone());
             serial::start_serial_hotplug_detector(app.handle().clone());
             app.manage(net_assist::NetAssistManager::new());
+
+            // 挂载原生桌面系统托盘与原生右键上下文菜单 (彻底脱离 Web 浏览器形态)
+            {
+                use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+                use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+
+                let show_i = MenuItem::with_id(app, "tray_show", "显示主监控控制台", true, None::<&str>)?;
+                let diff_i = MenuItem::with_id(app, "tray_diff", "大文件 / 目录比对工作台", true, None::<&str>)?;
+                let hide_i = MenuItem::with_id(app, "tray_hide", "最小化隐藏至系统托盘", true, None::<&str>)?;
+                let sep_i = PredefinedMenuItem::separator(app)?;
+                let quit_i = MenuItem::with_id(app, "tray_quit", "安全终止探针并退出", true, None::<&str>)?;
+                let tray_menu = Menu::with_items(app, &[&show_i, &diff_i, &hide_i, &sep_i, &quit_i])?;
+
+                let mut builder = TrayIconBuilder::with_id("omni-probe-tray")
+                    .menu(&tray_menu)
+                    .tooltip("Omni-Probe 工业全能网络与总线探针系统")
+                    .show_menu_on_left_click(false)
+                    .on_menu_event(|app_h, event| match event.id.as_ref() {
+                        "tray_show" => {
+                            if let Some(w) = app_h.get_webview_window("main") {
+                                let _ = w.unminimize();
+                                let _ = w.show();
+                                let _ = w.set_focus();
+                            }
+                        }
+                        "tray_diff" => {
+                            if let Some(w) = app_h.get_webview_window("main") {
+                                let _ = w.unminimize();
+                                let _ = w.show();
+                                let _ = w.set_focus();
+                            }
+                            let _ = app_h.emit("desktop-open-file-diff", ());
+                        }
+                        "tray_hide" => {
+                            if let Some(w) = app_h.get_webview_window("main") {
+                                let _ = w.hide();
+                            }
+                        }
+                        "tray_quit" => {
+                            honeypot::stop_honeypot();
+                            active_probe::stop_stream_pull();
+                            serial::stop_serial_probe(None);
+                            serial::stop_serial_bridge(None);
+                            serial_intercept::stop_intercept_session(None);
+                            usb::stop_usb_sniffer();
+                            cloud::stop_cloud_streaming();
+                            app_h.exit(0);
+                        }
+                        _ => {}
+                    })
+                    .on_tray_icon_event(|tray, event| {
+                        if let TrayIconEvent::Click {
+                            button: MouseButton::Left,
+                            button_state: MouseButtonState::Up,
+                            ..
+                        } = event
+                        {
+                            let app_h = tray.app_handle();
+                            if let Some(w) = app_h.get_webview_window("main") {
+                                let _ = w.unminimize();
+                                let _ = w.show();
+                                let _ = w.set_focus();
+                            }
+                        }
+                    });
+
+                if let Some(icon) = app.default_window_icon() {
+                    builder = builder.icon(icon.clone());
+                }
+                if let Err(e) = builder.build(app) {
+                    eprintln!("[TRAY] ⚠️ 宿主桌面环境未启用系统托盘 (已优雅降级，主窗口正常运行): {}", e);
+                }
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -1882,6 +2409,8 @@ pub fn run() {
             save_syslog_config_cmd,
             test_send_syslog_cmd,
             get_current_user_cmd,
+            get_rbac_security_status_cmd,
+            get_audit_compliance_snapshot_cmd,
             switch_user_role_cmd,
             get_admin_audit_trail_cmd,
             validate_display_filter_cmd,
@@ -1907,6 +2436,8 @@ pub fn run() {
             delete_packet_sample_cmd,
             compare_two_packets_cmd,
             compare_universal_payloads_cmd,
+            compare_multi_universal_payloads_cmd,
+            export_multi_diff_patch_cmd,
             save_hardware_whitelist_cmd,
             get_hardware_whitelist_cmd,
             clear_hardware_whitelist_cmd,
@@ -1983,6 +2514,7 @@ pub fn run() {
             step_pcap_replay_cmd,
             get_pcap_replay_telemetry_cmd,
             get_zero_copy_pool_metrics_cmd,
+            get_kernel_zero_copy_telemetry_cmd,
             // 交换机物理端口联动、万级主机分级聚合拓扑树与分布式探针汇聚 (TASK-36)
             get_hierarchical_topology_viewport_cmd,
             drill_down_topology_node_cmd,
@@ -2008,10 +2540,20 @@ pub fn run() {
             get_xdp_bypass_metrics_cmd,
             mark_flow_bypassed_cmd,
             evaluate_xdp_packet_cmd,
+            apply_xdp_policy_preset_cmd,
+            // Windows Filtering Platform (WFP) 内核态入出站阻断联动
+            wfp_block_ip_cmd,
+            wfp_unblock_ip_cmd,
+            get_wfp_status_cmd,
             // 基于 Glushkov 构造算法与位并行 (Bit-Parallel) 的 Hyperscan 风格高性能正则/多模式匹配 (TASK-42)
             get_glushkov_engine_metrics_cmd,
             scan_payload_glushkov_cmd,
             reset_glushkov_engine_metrics_cmd,
+            // TLS JA3/JA4 指纹与 Suricata DSL 入侵检测及安全脚本沙箱引擎
+            get_tls_fingerprint_telemetry_cmd,
+            get_suricata_dsl_metrics_cmd,
+            load_suricata_dsl_rules_cmd,
+            evaluate_audit_script_cmd,
             // 测地线可视路由追踪与地球地理情报 (TASK-43)
             start_traceroute_cmd,
             lookup_ip_geo_coordinates_cmd,
@@ -2027,8 +2569,10 @@ pub fn run() {
             reset_bluetooth_telemetry_cmd,
             // 无线与 VLAN 统一诊断解剖
             dissect_wireless_or_vlan_hex_cmd,
-            // 全球网络地理态势地图数据 (TASK-46)
+            // 全球网络空间地理态势地图与双向测绘数据 (TASK-46)
             get_global_geo_map_data_cmd,
+            resolve_real_traffic_geo_cmd,
+            probe_active_os_sockets_cmd,
             // 工业级网络调试助手 (NetAssist)
             start_net_assist_session_cmd,
             stop_net_assist_session_cmd,
@@ -2037,16 +2581,43 @@ pub fn run() {
             calculate_checksum_cmd,
             get_local_ip_addresses_cmd,
             // 自动版本检查与在线更新
-            check_app_update_cmd
+            check_app_update_cmd,
+            // 跨平台内建驱动级串口透明拦截 (PTY / Win32 NamedPipe / RFC2217 / WDM IRP Tap)
+            get_serial_intercept_capabilities_cmd,
+            list_active_intercept_sessions_cmd,
+            start_rfc2217_intercept_gateway_cmd,
+            start_windows_named_pipe_intercept_cmd,
+            start_unix_pty_intercept_cmd,
+            start_kernel_filter_tap_cmd,
+            smart_start_serial_intercept_cmd,
+            stop_intercept_session_cmd,
+            // Beyond Compare 级流式大文件 Myers Diff、FastCDC 滚动锚点、目录对比与原子双向合并
+            compare_text_files_streaming_cmd,
+            apply_text_merge_and_save_cmd,
+            export_unified_patch_file_cmd,
+            compare_binary_files_streaming_cmd,
+            compare_binary_files_fastcdc_cmd,
+            read_binary_diff_page_cmd,
+            read_binary_diff_dual_offset_page_cmd,
+            compare_directories_cmd,
+            // 原生桌面文件系统对话、原子导出与资源管理器定位
+            hide_to_tray_cmd,
+            pick_native_file_dialog_cmd,
+            pick_native_folder_dialog_cmd,
+            save_text_with_native_dialog_cmd,
+            reveal_in_file_manager_cmd
         ])
         .on_window_event(|_window, event| match event {
             tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed => {
-                if let Ok(mut running) = PROBE_RUNNING.lock() {
+                {
+                    let mut running = crate::lock_guard::lock_mutex(&PROBE_RUNNING, "lib::on_window_event_close");
                     *running = false;
                 }
                 honeypot::stop_honeypot();
                 active_probe::stop_stream_pull();
                 serial::stop_serial_probe(None);
+                serial::stop_serial_bridge(None);
+                serial_intercept::stop_intercept_session(None);
                 usb::stop_usb_sniffer();
                 cloud::stop_cloud_streaming();
                 std::process::exit(0);

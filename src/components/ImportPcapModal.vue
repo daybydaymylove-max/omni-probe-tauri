@@ -1,45 +1,47 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-150">
-    <div class="w-full max-w-lg bg-white/95 backdrop-blur-2xl rounded-3xl border border-white/60 shadow-2xl flex flex-col overflow-hidden">
+  <div v-if="isOpen" class="ui-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
+    <div class="ui-modal-surface w-full max-w-lg rounded-3xl flex flex-col overflow-hidden">
       
       <!-- 1. 顶栏 -->
-      <div class="px-6 py-4 border-b border-slate-200/60 bg-white/40 flex items-center justify-between shrink-0">
+      <div class="ui-nav-glass px-6 py-4 border-b border-(--border-subtle) flex items-center justify-between shrink-0">
         <div class="flex items-center gap-2.5">
-          <span class="w-3 h-3 rounded-full bg-blue-500 shadow-sm"></span>
+          <div class="w-8 h-8 rounded-xl bg-sky-500/12 border border-sky-500/30 flex items-center justify-center text-sky-600 dark:text-sky-400">
+            <AppIcon name="upload" class="w-4 h-4" />
+          </div>
           <div>
-            <h3 class="text-sm font-bold text-slate-900">离线 PCAP 流量导入与回放 (Offline Ingestion)</h3>
-            <p class="text-[11px] text-slate-500 font-mono">载入本地 .pcap 文件，执行协议解码、信息熵计算与二次离线解剖</p>
+            <h3 class="text-sm font-bold text-(--text-primary)">离线 PCAP 流量导入与回放 (Offline Ingestion)</h3>
+            <p class="text-xs text-(--text-muted) font-mono-code">载入本地 .pcap 文件，执行协议解码与二次离线解剖</p>
           </div>
         </div>
-        <button @click="$emit('close')" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer">
-          ✕
+        <button @click="$emit('close')" class="ui-btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center cursor-pointer" aria-label="关闭弹窗">
+          <AppIcon name="close" class="w-4 h-4" />
         </button>
       </div>
 
       <!-- 2. 内容区 -->
-      <div class="p-6 space-y-4 text-xs font-mono">
+      <div class="p-6 space-y-4 text-xs">
         <div>
-          <label class="block font-bold text-slate-700 mb-1">PCAP 文件绝对路径 (File Path):</label>
-          <input v-model="filePath" placeholder="请输入 .pcap 文件的绝对路径 (如 E:\captures\sample.pcap 或 /home/user/captures/sample.pcap)"
-            class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30 shadow-2xs">
-          <p class="text-[10px] text-slate-400 mt-1">支持由 Wireshark、tcpdump 等工业工具生成的标准以太网 PCAP 格式</p>
+          <label class="block font-bold text-(--text-primary) mb-1.5">PCAP 文件绝对路径 (File Path):</label>
+          <input v-model="filePath" placeholder="请输入 .pcap 文件的绝对路径 (如 E:\captures\sample.pcap)"
+            class="ui-input w-full px-3 py-2 text-xs font-mono-code select-text">
+          <p class="text-[11px] text-(--text-muted) mt-1.5">支持由 Wireshark、tcpdump 等工业工具生成的标准以太网 PCAP 格式</p>
         </div>
 
         <!-- 结果反馈 -->
-        <div v-if="statusMsg" :class="['p-3 rounded-xl text-xs font-mono border', isError ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-blue-50 text-blue-800 border-blue-200']">
+        <div v-if="statusMsg" :class="['p-3 rounded-xl text-xs font-mono-code border select-text', isError ? 'bg-rose-500/12 text-rose-700 dark:text-rose-300 border-rose-500/30' : 'bg-sky-500/12 text-sky-700 dark:text-sky-300 border-sky-500/30']">
           {{ statusMsg }}
         </div>
       </div>
 
       <!-- 3. 底栏操作 -->
-      <div class="px-6 py-3 border-t border-slate-200/60 bg-white/40 flex items-center justify-between shrink-0">
-        <span class="text-[11px] text-slate-400 font-mono">解析后将无缝载入主表格</span>
+      <div class="px-6 py-3 border-t border-(--border-subtle) bg-(--surface-content-alt) flex items-center justify-between shrink-0">
+        <span class="text-xs text-(--text-muted) font-mono-code">解析后将无缝载入主表格</span>
         <div class="flex items-center gap-2">
-          <button @click="$emit('close')" class="px-4 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
+          <button @click="$emit('close')" class="ui-btn-secondary px-4 py-1.5 text-xs font-semibold cursor-pointer">
             取消
           </button>
           <button @click="doImport" :disabled="isImporting || !filePath.trim()"
-            class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-xs px-5 py-1.5 rounded-xl font-bold cursor-pointer transition-all shadow-sm active:scale-95 disabled:opacity-40">
+            class="ui-btn-primary text-xs px-5 py-1.5 font-bold cursor-pointer disabled:opacity-40">
             <span v-if="isImporting">解析中...</span>
             <span v-else>载入回放</span>
           </button>
@@ -53,6 +55,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import AppIcon from './AppIcon.vue';
 
 defineProps<{
   isOpen: boolean;

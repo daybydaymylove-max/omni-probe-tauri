@@ -261,38 +261,28 @@ impl EnvironmentInspector {
 
     /// 探活 ip2region.xdb 离线 IP 地理情报数据库 (千万级离线地理信息)
     pub fn inspect_ip_db() -> ComponentStatus {
-        let is_loaded = if let Ok(engine) = crate::ip_intelligence::GLOBAL_IP_ENGINE.lock() {
-            engine.is_xdb_loaded()
-        } else {
-            false
+        let status_json = {
+            let engine = crate::lock_guard::lock_mutex(
+                &crate::ip_intelligence::GLOBAL_IP_ENGINE,
+                "env_inspector::inspect_ip_db",
+            );
+            engine.get_xdb_status()
         };
 
-        let candidate_paths = [
-            "data/ip2region.xdb",
-            "src-tauri/data/ip2region.xdb",
-            "ip2region.xdb",
-            "../data/ip2region.xdb",
-        ];
+        let is_ready = status_json["loaded"].as_bool().unwrap_or(false);
+        let active_path = status_json["file_path"]
+            .as_str()
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string());
+        let file_size_bytes = status_json["file_size"].as_u64().unwrap_or(0);
+        let file_size_mb = if file_size_bytes > 0 {
+            Some((file_size_bytes as f64) / (1024.0 * 1024.0))
+        } else {
+            None
+        };
 
-        let mut found_path = None;
-        let mut file_size_mb = None;
-
-        for p_str in &candidate_paths {
-            let p = Path::new(p_str);
-            if p.exists() {
-                if let Ok(meta) = std::fs::metadata(p) {
-                    if meta.len() >= 5 * 1024 * 1024 {
-                        found_path = Some(p_str.to_string());
-                        file_size_mb = Some((meta.len() as f64) / (1024.0 * 1024.0));
-                        break;
-                    }
-                }
-            }
-        }
-
-        let is_ready = is_loaded || found_path.is_some();
         let version = if is_ready {
-            Some(format!("ip2region v2.0 XDB ({:.2} MB)", file_size_mb.unwrap_or(11.5)))
+            Some(format!("ip2region v2.0 XDB ({:.2} MB)", file_size_mb.unwrap_or(10.6)))
         } else {
             None
         };
@@ -303,14 +293,14 @@ impl EnvironmentInspector {
             category: "IntelligenceDatabase".to_string(),
             is_ready,
             version,
-            path: found_path,
-            capability_enabled: "解锁千万级公网 IPv4 物理地理位置（国家、省份、城市、运营商 ISP）微秒级精准离线解析，赋能全球网络态势地图与地理测地追踪。".to_string(),
-            fallback_mode: "已自动激活内置多轨自愈引擎：启用内存最长前缀 LPM 内网 CIDR 规则字典、全球权威骨干基础设施静态表与 RFC 1918 私网分类，免外部文件离线运行。".to_string(),
+            path: active_path,
+            capability_enabled: "解锁千万级公网 IPv4 物理地理位置（国家、省份、城市、运营商 ISP）微秒级精准离线解析，赋能全球网络空间地理测绘与路由追踪。".to_string(),
+            fallback_mode: "已自动激活内置静态内嵌 XDB 基准库与内存 LPM CIDR 自愈轨：免任何外挂目录开箱离线运行。".to_string(),
             official_url: "https://github.com/lionsoul2014/ip2region".to_string(),
-            install_tips: "可将 ip2region.xdb 文件置于程序根目录下的 data 目录中，亦可点击右侧【自动从官网下载】一键流式载入。".to_string(),
+            install_tips: "出厂已内置基准离线 XDB 库；点击【官方更新/热载】可将最新版本持久化至系统应用数据目录并热覆盖。".to_string(),
             can_auto_install: true,
             installer_filename: Some("ip2region.xdb".to_string()),
-            estimated_size_mb: Some(11.5),
+            estimated_size_mb: Some(10.6),
         }
     }
 
@@ -443,15 +433,20 @@ impl EnvironmentInspector {
             error_msg: None,
         });
 
-        // 区分可执行安装向导与离线数据库热挂载
+        // 区分可执行安装向导与离线数据库热挂载 (锚定 OS 标准数据目录，去 CWD 依赖)
         if component_id == "ip_db" || meta.target_filename.ends_with(".xdb") {
-            let target_dir = std::path::PathBuf::from("data");
-            let _ = std::fs::create_dir_all(&target_dir);
-            let final_path = target_dir.join("ip2region.xdb");
+            let final_path = crate::forensics::data_path("ip2region.xdb");
+            if let Some(parent) = final_path.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
             let _ = std::fs::copy(&dest_path, &final_path);
 
-            if let Ok(mut engine) = crate::ip_intelligence::GLOBAL_IP_ENGINE.lock() {
-                let _ = engine.load_xdb(final_path.to_str().unwrap_or_default());
+            {
+                let mut engine = crate::lock_guard::lock_mutex(
+                    &crate::ip_intelligence::GLOBAL_IP_ENGINE,
+                    "env_inspector::download_and_install_xdb",
+                );
+                let _ = engine.load_xdb(&final_path.to_string_lossy());
             }
 
             // 广播成功挂载事件
@@ -512,7 +507,7 @@ impl EnvironmentInspector {
     fn check_is_admin() -> bool {
         unsafe {
             #[link(name = "shell32")]
-            extern "system" {
+            unsafe extern "system" {
                 fn IsUserAnAdmin() -> i32;
             }
             IsUserAnAdmin() != 0

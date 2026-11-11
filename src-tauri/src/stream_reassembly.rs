@@ -413,18 +413,20 @@ pub static REASSEMBLY_SCRIPT_ENGINE: Lazy<RwLock<ReassemblyScriptEngine>> =
 
 /// 运行时动态热重载流重组策略脚本 (外部调用入口)
 pub fn hot_reload_stream_reassembly_policy(json_rules: &str) -> Result<usize, String> {
-    let mut engine = REASSEMBLY_SCRIPT_ENGINE.write()
-        .map_err(|e| format!("获取策略引擎写锁失败: {}", e))?;
+    let mut engine = crate::lock_guard::write_rwlock(
+        &REASSEMBLY_SCRIPT_ENGINE,
+        "stream_reassembly::reload_reassembly_policy",
+    );
     engine.hot_reload_from_json(json_rules)
 }
 
 /// 获取当前流重组策略脚本快照信息
 pub fn get_stream_reassembly_policy_snapshot() -> (u64, Vec<ReassemblyPolicyRule>) {
-    if let Ok(engine) = REASSEMBLY_SCRIPT_ENGINE.read() {
-        (engine.version(), engine.get_rules().to_vec())
-    } else {
-        (0, Vec::new())
-    }
+    let engine = crate::lock_guard::read_rwlock(
+        &REASSEMBLY_SCRIPT_ENGINE,
+        "stream_reassembly::get_stream_reassembly_policy_snapshot",
+    );
+    (engine.version(), engine.get_rules().to_vec())
 }
 
 
@@ -2566,12 +2568,13 @@ impl FlowSessionEngine {
 
             );
 
-            if let Ok(engine) = REASSEMBLY_SCRIPT_ENGINE.read() {
+            {
+                let engine = crate::lock_guard::read_rwlock(
+                    &REASSEMBLY_SCRIPT_ENGINE,
+                    "stream_reassembly::process_tcp_packet_policy",
+                );
                 let rule = engine.match_policy(src_ip, dst_ip, src_port, dst_port);
                 reassembler.apply_policy_rule(&rule);
-            } else {
-                reassembler.c2s.evasion_policy = self.default_policy;
-                reassembler.s2c.evasion_policy = self.default_policy;
             }
 
             self.sessions.insert(key.clone(), reassembler);

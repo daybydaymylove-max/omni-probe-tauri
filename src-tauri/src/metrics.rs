@@ -39,7 +39,7 @@ pub fn start_metrics_server(app: tauri::AppHandle, port: u16) {
             };
 
             loop {
-                if !*running.lock().unwrap() {
+                if !*crate::lock_guard::lock_mutex(&running, "metrics::start_metrics_server_loop") {
                     break;
                 }
 
@@ -95,7 +95,7 @@ fn build_metrics_body() -> String {
     let packets_total = crate::sniffer::GLOBAL_PACKETS_TOTAL.load(Ordering::Relaxed);
     let bytes_total = crate::sniffer::GLOBAL_BYTES_TOTAL.load(Ordering::Relaxed);
     let threats_blocked = crate::throttle::THREATS_BLOCKED.load(Ordering::Relaxed);
-    let honeypot_running = *crate::honeypot::HONEYPOT_RUNNING.lock().unwrap_or_else(|e| e.into_inner());
+    let honeypot_running = *crate::lock_guard::lock_mutex(&crate::honeypot::HONEYPOT_RUNNING, "metrics::build_metrics_body");
     // 第 5 指标：当前活动连接数（双轨 TCP + 蜜罐 + ACTIVE_PULL 拉流三路接入统一计数）
     let active_connections = crate::sniffer::GLOBAL_ACTIVE_CONNECTIONS.load(Ordering::Relaxed);
 

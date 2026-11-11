@@ -428,7 +428,8 @@ fn record_and_emit_traffic(app: &tauri::AppHandle, record: DecryptedTrafficRecor
     crate::discovery::record_asset_with_notify(app, &record.client_ip, "N/A", &record.traffic_type, 8899);
 
     // 1. 存入内存
-    if let Ok(mut logs) = DECRYPTED_LOGS.lock() {
+    {
+        let mut logs = crate::lock_guard::lock_mutex(&DECRYPTED_LOGS, "tls_proxy::record_and_emit_traffic");
         if logs.len() >= MAX_DECRYPTED_LOGS {
             logs.pop_back();
         }
@@ -451,19 +452,13 @@ fn record_and_emit_traffic(app: &tauri::AppHandle, record: DecryptedTrafficRecor
 /// 查询解密流量记录
 pub fn get_decrypted_traffic_logs(limit: Option<usize>) -> Vec<DecryptedTrafficRecord> {
     let limit = limit.unwrap_or(200);
-    if let Ok(logs) = DECRYPTED_LOGS.lock() {
-        logs.iter().take(limit).cloned().collect()
-    } else {
-        Vec::new()
-    }
+    let logs = crate::lock_guard::lock_mutex(&DECRYPTED_LOGS, "tls_proxy::get_decrypted_traffic_logs");
+    logs.iter().take(limit).cloned().collect()
 }
 
 /// 清空解密流量记录
 pub fn clear_decrypted_traffic_logs() -> bool {
-    if let Ok(mut logs) = DECRYPTED_LOGS.lock() {
-        logs.clear();
-        true
-    } else {
-        false
-    }
+    let mut logs = crate::lock_guard::lock_mutex(&DECRYPTED_LOGS, "tls_proxy::clear_decrypted_traffic_logs");
+    logs.clear();
+    true
 }

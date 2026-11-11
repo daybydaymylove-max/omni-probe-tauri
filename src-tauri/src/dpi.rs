@@ -220,7 +220,11 @@ pub fn dissect_payload(protocol: &str, payload: &[u8]) -> std::collections::Hash
     }
 
     // 优先尝试工控插件化解包器扩展（SEMI HSMS/SECS, Honeywell FTE, Yokogawa Vnet/IP, Schneider UMAS, Beckhoff ADS 及声明式长尾协议）
-    if let Ok(reg) = crate::industrial_plugin::INDUSTRIAL_PLUGIN_REGISTRY.read() {
+    {
+        let reg = crate::lock_guard::read_rwlock(
+            &crate::industrial_plugin::INDUSTRIAL_PLUGIN_REGISTRY,
+            "dpi::dissect_payload_plugin",
+        );
         if let Some(out) = reg.dissect_by_protocol_id(protocol, payload) {
             for (k, v) in out.fields {
             result.insert(k, v);
@@ -442,7 +446,8 @@ pub fn dissect_payload(protocol: &str, payload: &[u8]) -> std::collections::Hash
         }
     }
 
-    if let Ok(dict) = DYN_DICT.read() {
+    {
+        let dict = crate::lock_guard::read_rwlock(&DYN_DICT, "dpi::dissect_payload_dict");
         if let Some(rules) = dict.dissector_rules.get(protocol) {
             for rule in rules {
                 let end = rule.offset + rule.length;
@@ -549,10 +554,12 @@ pub fn reload_signatures(path: &str) -> Result<usize, String> {
         .collect();
 
     // 原子写入（写锁极短暂，不阻塞读路径）
-    if let Ok(mut w) = DYN_DICT.write() {
+    {
+        let mut w = crate::lock_guard::write_rwlock(&DYN_DICT, "dpi::reload_signatures_dict");
         *w = sigs;
     }
-    if let Ok(mut w) = DYN_REGEX_CACHE.write() {
+    {
+        let mut w = crate::lock_guard::write_rwlock(&DYN_REGEX_CACHE, "dpi::reload_signatures_regex");
         *w = compiled;
     }
 
@@ -664,7 +671,8 @@ pub fn identify_protocol(src_port: u16, dst_port: u16, payload: &[u8]) -> String
     }
 
     // ---- 阶段零：动态 JSON 字典匹配（最高优先级，热加载规则优先于内置）----
-    if let Ok(dict) = DYN_DICT.read() {
+    {
+        let dict = crate::lock_guard::read_rwlock(&DYN_DICT, "dpi::dissect_payload_dict");
         // 0a. 动态端口规则
         for rule in &dict.port_rules {
             if dst_port == rule.port || src_port == rule.port {
@@ -682,7 +690,8 @@ pub fn identify_protocol(src_port: u16, dst_port: u16, payload: &[u8]) -> String
         }
     }
     // 0c. 动态正则规则（使用预编译缓存）
-    if let Ok(cache) = DYN_REGEX_CACHE.read() {
+    {
+        let cache = crate::lock_guard::read_rwlock(&DYN_REGEX_CACHE, "dpi::identify_protocol_regex");
         if !cache.is_empty() {
             if let Ok(text) = std::str::from_utf8(payload) {
                 for (regex, proto) in cache.iter() {
@@ -695,7 +704,11 @@ pub fn identify_protocol(src_port: u16, dst_port: u16, payload: &[u8]) -> String
     }
 
     // ---- 阶段 0.5：工控专有与长尾解包插件（HSMS/SECS, FTE, Vnet/IP, UMAS, ADS 及自定义规则）----
-    if let Ok(reg) = crate::industrial_plugin::INDUSTRIAL_PLUGIN_REGISTRY.read() {
+    {
+        let reg = crate::lock_guard::read_rwlock(
+            &crate::industrial_plugin::INDUSTRIAL_PLUGIN_REGISTRY,
+            "dpi::dissect_payload_plugin",
+        );
         if let Some(out) = reg.inspect(src_port, dst_port, payload) {
             return out.protocol_id;
         }

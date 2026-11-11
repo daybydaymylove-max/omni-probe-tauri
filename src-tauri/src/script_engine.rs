@@ -1567,6 +1567,54 @@ impl SandboxedScriptEngine {
     }
 }
 
+/// 沙箱脚本执行返回摘要
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScriptExecutionSummary {
+    pub events_loaded: usize,
+    pub return_value: String,
+    pub alerts: Vec<ThreatHit>,
+    pub logs: Vec<String>,
+}
+
+/// 受 Gas Limit 与内存上限严格隔离的安全分析脚本评估命令
+#[tauri::command]
+pub fn evaluate_audit_script_cmd(
+    script_source: String,
+    sample_hex: String,
+) -> Result<ScriptExecutionSummary, String> {
+    if script_source.trim().is_empty() {
+        return Err("检测脚本内容不能为空".to_string());
+    }
+    let cleaned_hex = sample_hex.trim().replace(' ', "");
+    let payload_bytes = if cleaned_hex.is_empty() {
+        Vec::new()
+    } else {
+        hex::decode(&cleaned_hex).map_err(|e| format!("样本十六进制格式无效: {}", e))?
+    };
+
+    let config = SandboxConfig {
+        max_gas: 10_000,
+        max_memory_bytes: 256 * 1024,
+    };
+    let mut engine = SandboxedScriptEngine::new(config);
+    let events_loaded = engine.load_script(&script_source)?;
+    let mut pkt_map = HashMap::new();
+    pkt_map.insert("len".to_string(), ScriptValue::Int(payload_bytes.len() as i64));
+    pkt_map.insert("payload".to_string(), ScriptValue::Bytes(payload_bytes));
+
+    let mut ctx = ScriptContext::new();
+    let ret = engine
+        .dispatch_event("on_packet", &[ScriptValue::Map(pkt_map)], &mut ctx)
+        .map_err(|e| format!("沙箱执行终止: {:?}", e))?;
+
+    Ok(ScriptExecutionSummary {
+        events_loaded,
+        return_value: format!("{:?}", ret),
+        alerts: ctx.alerts,
+        logs: ctx.logs,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1694,5 +1742,31 @@ mod tests {
 
         let err = vm.execute(&chunk, &mut ctx).unwrap_err();
         assert!(matches!(err, ScriptRuntimeError::MemoryLimitExceeded { .. }), "超额内存分配必须被拦截");
+    }
+
+    #[test]
+    fn test_evaluate_audit_script_cmd_boundary_and_hit() {
+        // 1. 空脚本当拒绝 (Fail-Fast)
+        assert!(evaluate_audit_script_cmd("".into(), "00".into()).is_err());
+        // 2. 畸形 Hex 拒绝
+        assert!(evaluate_audit_script_cmd("event on_packet(pkt) { return true; }".into(), "ZZ".into()).is_err());
+        // 3. 死循环被 Gas Limit 拦截
+        let inf_loop = "event on_packet(pkt) { while (true) { let x = 1; } return false; }";
+        let loop_res = evaluate_audit_script_cmd(inf_loop.into(), "0001".into());
+        assert!(loop_res.is_err());
+        // 4. 真实 on_packet(pkt) Map 注入触发告警
+        let valid_script = r#"
+            event on_packet(pkt) {
+                let payload = pkt["payload"];
+                if (pkt["len"] >= 8 && extract_u8(payload, 7) == 5) {
+                    alert("Sandbox Caught Force Coil 0x05", "HIGH", "ICS_ATTACK");
+                    return true;
+                }
+                return false;
+            }
+        "#;
+        let ok_res = evaluate_audit_script_cmd(valid_script.into(), "00010000000601050000ff00".into()).unwrap();
+        assert_eq!(ok_res.alerts.len(), 1);
+        assert_eq!(ok_res.return_value, "Bool(true)");
     }
 }

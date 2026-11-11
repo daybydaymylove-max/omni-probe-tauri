@@ -1,235 +1,223 @@
 <template>
   <div class="h-full flex flex-col gap-2.5 overflow-hidden font-sans">
-    
-    <!-- 1. 顶部控制栏：司法取证态势与核心操作 -->
-    <section class="bg-white/80 backdrop-blur-xl rounded-2xl border border-white/70 p-3 shadow-xs shrink-0 flex flex-col gap-2.5">
-      
-      <!-- 1.1 标题与全局操作 -->
-      <div class="flex items-center justify-between gap-3">
-        <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-xl bg-indigo-600/10 text-indigo-600 flex items-center justify-center border border-indigo-500/20 shadow-2xs">
-            <svg class="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-            </svg>
+
+    <!-- 1. 顶部控制栏 (真 Liquid Glass 控制层) -->
+    <section class="ui-nav-glass rounded-2xl p-3.5 shrink-0 flex flex-col gap-3" style="color: var(--text-primary);">
+      <span class="lens-edge-lip" aria-hidden="true"></span>
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-8 h-8 rounded-xl bg-[var(--accent-primary-soft)] text-[var(--accent-primary-text)] flex items-center justify-center border border-[var(--accent-primary)]/20 shrink-0">
+            <AppIcon name="shield" :size="16" />
           </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <h2 class="text-xs font-bold text-slate-800 tracking-tight">网络电子数据司法取证与保管链系统</h2>
-              <span class="px-1.5 py-0.5 rounded-full text-[9px] font-mono bg-indigo-500/10 text-indigo-700 border border-indigo-500/20 font-bold">
-                GB/T 29360-2012 / ISO/IEC 27037:2012
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <h2 class="text-[13px] font-semibold tracking-tight" style="color: var(--text-primary);">网络电子数据司法取证与保管链系统</h2>
+              <span class="ui-pill px-2 py-0.5 rounded-full text-[11px] font-medium">
+                GB/T 29360 · ISO/IEC 27037
               </span>
             </div>
-            <p class="text-[10px] text-slate-400 font-mono mt-0.5">
-              国密 SM3 + SHA-256 双哈希封存 · PCAPNG 原生规约 · 零丢包物理保真 · WORM 防篡改锁定 · RFC 3161 TSA
+            <p class="text-[11px] mt-0.5 truncate" style="color: var(--text-muted);">
+              国密 SM3 + SHA-256 双哈希封存 · PCAPNG 原生规约 · Npcap 丢包采集 · WORM 防篡改锁定
             </p>
           </div>
         </div>
 
-        <!-- 顶部操作工具栏 -->
-        <div class="flex items-center gap-2">
-          
-          <!-- 手动双哈希封存 -->
-          <button @click="triggerManualSeal" :disabled="loading"
-            class="px-2.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-medium flex items-center gap-1.5 transition-all cursor-pointer border border-indigo-200 shadow-2xs">
-            <svg class="w-3.5 h-3.5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75A2.25 2.25 0 001.5 12v6.75a2.25 2.25 0 002.25 2.25z" />
-            </svg>
-            <span>双哈希封存 (SM3+SHA256)</span>
+        <div class="flex items-center gap-2 flex-wrap">
+          <button @click="triggerManualSeal" :disabled="loading" class="ui-btn-secondary px-3 py-1.5 text-xs">
+            <AppIcon name="lock" :size="14" />
+            <span>双哈希封存</span>
           </button>
 
-          <!-- 司法验真 -->
-          <button @click="verifyEvidence" :disabled="loading"
-            class="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-medium flex items-center gap-1.5 transition-all cursor-pointer border border-emerald-200 shadow-2xs">
-            <svg class="w-3.5 h-3.5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-            </svg>
-            <span>司法完整性验真</span>
+          <button @click="verifyEvidence" :disabled="loading" class="ui-btn-secondary px-3 py-1.5 text-xs">
+            <AppIcon name="check" :size="14" />
+            <span>完整性验真</span>
           </button>
 
-          <!-- 导出 PCAPNG -->
-          <button @click="exportPcapng" :disabled="loading"
-            class="px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 text-[11px] font-medium flex items-center gap-1.5 transition-all cursor-pointer border border-purple-200 shadow-2xs">
-            <svg class="w-3.5 h-3.5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-            </svg>
-            <span>导出工业级 PCAPNG</span>
+          <button @click="exportPcapng" :disabled="loading" class="ui-btn-secondary px-3 py-1.5 text-xs">
+            <AppIcon name="download" :size="14" />
+            <span>导出 PCAPNG</span>
           </button>
 
-          <!-- 生成司法检验报告 -->
-          <button @click="openReportModal"
-            class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-[11px] font-medium flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs">
-            <svg class="w-3.5 h-3.5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-            </svg>
+          <button @click="openReportModal" class="ui-btn-primary px-3 py-1.5 text-xs">
+            <AppIcon name="document" :size="14" />
             <span>出具 GB/T 29360 报告</span>
           </button>
-
         </div>
       </div>
 
-      <!-- 1.2 态势卡片 (4 列) -->
-      <div class="grid grid-cols-4 gap-2.5">
-        
-        <!-- 卡片 1: 证据链完整性评级 -->
-        <div class="bg-slate-50/80 rounded-xl p-2.5 border border-slate-200/60 flex items-center justify-between">
+      <!-- 1.2 核心指标卡片 (Apple Bento 净数据卡片) -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <div class="ui-sub-card p-3 flex items-center justify-between gap-2">
           <div>
-            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">证据链完整性评级</div>
-            <div class="text-sm font-mono font-bold mt-0.5 flex items-center gap-1.5"
-              :class="verificationReport?.overall_status === 'PASS' ? 'text-emerald-700' : (verificationReport?.overall_status === 'APPENDED' ? 'text-amber-700' : 'text-rose-700')">
-              <span class="w-2 h-2 rounded-full"
-                :class="verificationReport?.overall_status === 'PASS' ? 'bg-emerald-500' : (verificationReport?.overall_status === 'APPENDED' ? 'bg-amber-500' : 'bg-rose-500')"></span>
+            <div class="text-[11px] font-medium" style="color: var(--text-muted);">证据链完整性评级</div>
+            <div
+              class="text-sm font-semibold ui-num mt-1 flex items-center gap-1.5"
+              :class="verificationReport?.overall_status === 'PASS' ? 'text-emerald-600 dark:text-emerald-400' : (verificationReport?.overall_status === 'APPENDED' ? 'text-amber-600 dark:text-amber-400' : 'text-[var(--text-primary)]')"
+            >
+              <span
+                class="w-2 h-2 rounded-full"
+                :class="verificationReport?.overall_status === 'PASS' ? 'bg-emerald-500' : (verificationReport?.overall_status === 'APPENDED' ? 'bg-amber-500' : 'bg-slate-400')"
+              ></span>
               <span>{{ verificationReport?.overall_status || '待核验' }}</span>
             </div>
           </div>
-          <div class="text-[10px] font-mono text-slate-500 bg-white px-2 py-1 rounded-lg border border-slate-200">
-            {{ verificationReport?.items.length || 0 }} 证据文件
+          <div class="ui-pill text-[11px] px-2 py-0.5 rounded-full ui-num">
+            {{ verificationReport?.items.length || 0 }} 文件
           </div>
         </div>
 
-        <!-- 卡片 2: 密码学双哈希封条 -->
-        <div class="bg-slate-50/80 rounded-xl p-2.5 border border-slate-200/60 flex items-center justify-between">
-          <div>
-            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">密码学摘要体制</div>
-            <div class="text-xs font-mono font-bold text-indigo-700 mt-0.5">
+        <div class="ui-sub-card p-3 flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <div class="text-[11px] font-medium" style="color: var(--text-muted);">密码学摘要体制</div>
+            <div class="text-xs font-semibold mt-1" style="color: var(--text-primary);">
               国密 SM3 + SHA-256
             </div>
-            <div class="text-[9px] text-slate-400 font-mono mt-0.5">
+            <div class="text-[11px] ui-num truncate mt-0.5" style="color: var(--text-muted);">
               最近封存: {{ verificationReport?.last_sealed_at || '未封存' }}
             </div>
           </div>
-          <div class="w-7 h-7 rounded-lg bg-indigo-500/10 text-indigo-600 flex items-center justify-center font-mono text-xs font-bold">
-            SM3
+          <div class="w-8 h-8 rounded-xl bg-[var(--surface-glass-pill)] text-[var(--text-secondary)] flex items-center justify-center shrink-0">
+            <AppIcon name="key" :size="15" />
           </div>
         </div>
 
-        <!-- 卡片 3: 网卡捕获保真度 -->
-        <div class="bg-slate-50/80 rounded-xl p-2.5 border border-slate-200/60 flex items-center justify-between">
+        <div class="ui-sub-card p-3 flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <div class="text-[11px] font-medium" style="color: var(--text-muted);">物理捕获保真度</div>
+            <div
+              class="text-sm font-semibold ui-num mt-1 flex items-center gap-1.5"
+              :class="!fidelity || fidelity.packets_received === 0 ? 'text-[var(--text-secondary)]' : (fidelity.is_lossless_certified ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400')"
+            >
+              <span
+                class="w-2 h-2 rounded-full shrink-0"
+                :class="!fidelity || fidelity.packets_received === 0 ? 'bg-slate-400' : (fidelity.is_lossless_certified ? 'bg-emerald-500' : 'bg-amber-500')"
+              ></span>
+              <span class="truncate">{{ fidelity ? fidelity.fidelity_grade : '就绪待机' }}</span>
+            </div>
+            <div class="text-[11px] ui-num truncate mt-0.5" style="color: var(--text-muted);">
+              {{ fidelity ? `丢包: ${fidelity.drop_rate_percentage.toFixed(4)}%` : '等待抓包会话统计' }}
+            </div>
+          </div>
+          <span
+            class="text-[11px] px-2 py-0.5 rounded-full border shrink-0 font-medium"
+            :class="!fidelity || fidelity.packets_received === 0 ? 'ui-pill' : (fidelity.is_lossless_certified ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/12 border-emerald-500/25' : 'text-amber-700 dark:text-amber-300 bg-amber-500/12 border-amber-500/25')"
+          >
+            {{ fidelity && fidelity.packets_received > 0 ? (fidelity.is_lossless_certified ? '零丢包' : '存在丢包') : '待捕获' }}
+          </span>
+        </div>
+
+        <div class="ui-sub-card p-3 flex items-center justify-between gap-2">
           <div>
-            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">网卡物理捕获保真度</div>
-            <div class="text-sm font-mono font-bold text-emerald-700 mt-0.5 flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span>{{ fidelity?.fidelity_grade || 'GRADE_A_LOSSLESS' }}</span>
-            </div>
-            <div class="text-[9px] text-slate-400 font-mono mt-0.5">
-              丢包率: {{ fidelity?.drop_rate_percentage.toFixed(4) || '0.0000' }}% (零丢包)
+            <div class="text-[11px] font-medium" style="color: var(--text-muted);">保管链存证节点</div>
+            <div class="text-lg ui-num font-bold mt-0.5 leading-tight" style="color: var(--text-primary);">
+              {{ chainOfCustody.length }} <span class="text-[11px] font-normal" style="color: var(--text-muted);">节点</span>
             </div>
           </div>
-          <div class="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
-            物理级保真
+          <div class="w-8 h-8 rounded-xl bg-[var(--surface-glass-pill)] text-[var(--text-secondary)] flex items-center justify-center shrink-0">
+            <AppIcon name="link" :size="15" />
           </div>
         </div>
-
-        <!-- 卡片 4: 司法保管链节点数 -->
-        <div class="bg-slate-50/80 rounded-xl p-2.5 border border-slate-200/60 flex items-center justify-between">
-          <div>
-            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">司法保管链存证节点</div>
-            <div class="text-base font-mono font-bold text-slate-800 mt-0.5">
-              {{ chainOfCustody.length }} 节点
-            </div>
-            <div class="text-[9px] text-slate-400 font-mono mt-0.5">
-              链式不可逆哈希校验
-            </div>
-          </div>
-          <div class="w-7 h-7 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center font-mono text-xs font-bold">
-            CoC
-          </div>
-        </div>
-
       </div>
     </section>
 
-    <!-- 2. 主体工作区：左侧证据档案柜 (7列) + 右侧司法保管链流水 (5列) -->
-    <section class="flex-1 grid grid-cols-12 gap-2.5 overflow-hidden min-h-0">
-      
-      <!-- 2.1 左侧：证据档案柜与双哈希固定 (7 列) -->
-      <div class="col-span-7 bg-white/80 backdrop-blur-xl rounded-2xl border border-white/70 p-3 shadow-xs flex flex-col overflow-hidden min-h-0">
-        
+    <!-- 2. 主体工作区 (实体稳态衬底，开放选区) -->
+    <section class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-2.5 overflow-hidden min-h-0 select-text">
+
+      <!-- 2.1 左侧：证据档案柜与双哈希固定 -->
+      <div class="lg:col-span-7 ui-content-card p-3 flex flex-col overflow-hidden min-h-0">
         <div class="flex items-center justify-between mb-2 shrink-0">
           <div class="flex items-center gap-2">
-            <h3 class="text-xs font-bold text-slate-800">司法证据档案柜 (Evidence Vault)</h3>
-            <span class="text-[10px] font-mono text-slate-400">实时文件防篡改与 WORM 状态</span>
+            <h3 class="text-[13px] font-semibold" style="color: var(--text-primary);">司法证据档案柜 (Evidence Vault)</h3>
+            <span class="text-[11px]" style="color: var(--text-muted);">实时文件防篡改与 WORM 状态</span>
           </div>
-          <button @click="loadForensicVault" class="text-[10px] font-mono text-indigo-600 hover:text-indigo-800 cursor-pointer">
-            刷新状态 ⟳
+          <button @click="loadForensicVault" class="ui-btn-secondary px-2.5 py-1 text-[11px]">
+            <AppIcon name="refresh" :size="12" />
+            <span>刷新状态</span>
           </button>
         </div>
 
-        <!-- 表格 -->
-        <div class="flex-1 overflow-y-auto custom-scrollbar border border-slate-100 rounded-xl">
-          <table class="w-full text-left border-collapse text-[11px] font-mono">
-            <thead class="bg-slate-50/90 sticky top-0 border-b border-slate-200 text-slate-500 select-none text-[10px]">
+        <div class="flex-1 overflow-y-auto custom-scrollbar border rounded-xl" style="border-color: var(--border-subtle); background: var(--surface-content-alt);">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="ui-table-head sticky top-0 select-none">
               <tr>
-                <th class="p-2">证据文件名</th>
-                <th class="p-2">大小</th>
-                <th class="p-2">SHA-256 / SM3 摘要</th>
-                <th class="p-2 text-center">状态</th>
-                <th class="p-2 text-center">WORM</th>
-                <th class="p-2 text-right">操作</th>
+                <th class="p-2.5">证据文件名</th>
+                <th class="p-2.5">大小</th>
+                <th class="p-2.5">SHA-256 / SM3 摘要</th>
+                <th class="p-2.5 text-center">状态</th>
+                <th class="p-2.5 text-center">WORM</th>
+                <th class="p-2.5 text-right">操作</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100 text-slate-700">
-              <tr v-for="item in evidenceVault" :key="item.file_name"
-                class="hover:bg-slate-50/60 transition-colors">
-                
-                <td class="p-2 font-bold text-slate-800 flex items-center gap-1.5">
-                  <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
+            <tbody class="divide-y" style="border-color: var(--border-subtle);">
+              <tr v-for="item in evidenceVault" :key="item.file_name" class="hover:bg-[var(--surface-hover)] transition-colors">
+                <td class="p-2.5 font-semibold flex items-center gap-1.5" style="color: var(--text-primary);">
+                  <AppIcon name="document" :size="14" class="shrink-0" style="color: var(--text-muted);" />
                   <span>{{ item.file_name }}</span>
                 </td>
 
-                <td class="p-2 text-slate-500 whitespace-nowrap">
+                <td class="p-2.5 ui-num whitespace-nowrap" style="color: var(--text-secondary);">
                   {{ formatBytes(item.current_size) }}
                 </td>
 
-                <td class="p-2 max-w-[200px]">
-                  <div class="text-[9px] text-slate-500 truncate" :title="item.current_hash">
-                    <span class="text-slate-400">SHA:</span> {{ item.current_hash }}
+                <td class="p-2.5 max-w-[200px] font-mono">
+                  <div class="text-[11px] truncate" style="color: var(--text-secondary);" :title="item.current_hash">
+                    <span style="color: var(--text-muted);">SHA:</span> {{ item.current_hash }}
                   </div>
-                  <div class="text-[9px] text-indigo-600 truncate mt-0.5" :title="item.current_sm3">
-                    <span class="text-indigo-400">SM3:</span> {{ item.current_sm3 }}
+                  <div class="text-[11px] text-indigo-600 dark:text-indigo-300 truncate mt-0.5" :title="item.current_sm3">
+                    <span class="opacity-70">SM3:</span> {{ item.current_sm3 }}
                   </div>
                 </td>
 
-                <td class="p-2 text-center">
-                  <span class="px-1.5 py-0.5 rounded text-[9px] font-bold"
+                <td class="p-2.5 text-center">
+                  <span
+                    class="px-1.5 py-0.5 rounded text-[11px] font-semibold"
                     :class="{
-                      'bg-emerald-100 text-emerald-800': item.status === 'MATCH',
-                      'bg-amber-100 text-amber-800': item.status === 'APPENDED',
-                      'bg-rose-100 text-rose-800': item.status === 'TAMPERED',
-                      'bg-slate-100 text-slate-600': item.status === 'NO_SEAL'
-                    }">
+                      'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300': item.status === 'MATCH',
+                      'bg-amber-500/15 text-amber-700 dark:text-amber-300': item.status === 'APPENDED',
+                      'bg-rose-500/15 text-rose-700 dark:text-rose-300': item.status === 'TAMPERED',
+                      'ui-pill': item.status === 'NO_SEAL'
+                    }"
+                  >
                     {{ item.status }}
                   </span>
                 </td>
 
-                <td class="p-2 text-center">
-                  <span v-if="item.is_worm_locked"
-                    class="px-1.5 py-0.5 rounded text-[9px] bg-purple-100 text-purple-700 font-bold">
-                    🔒 只读锁定
+                <td class="p-2.5 text-center">
+                  <span v-if="item.is_worm_locked" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] bg-purple-500/15 text-purple-700 dark:text-purple-300 font-semibold">
+                    <AppIcon name="lock" :size="11" />
+                    <span>只读锁定</span>
                   </span>
-                  <span v-else class="text-[9px] text-slate-400">
-                    可读写
-                  </span>
+                  <span v-else class="text-[11px]" style="color: var(--text-muted);">可读写</span>
                 </td>
 
-                <td class="p-2 text-right whitespace-nowrap">
+                <td class="p-2.5 text-right whitespace-nowrap">
                   <div class="flex items-center justify-end gap-1">
-                    <button v-if="!item.is_worm_locked" @click="setWormLock(item.file_name)"
-                      class="px-2 py-0.5 rounded bg-purple-50 hover:bg-purple-100 text-purple-700 text-[10px] cursor-pointer border border-purple-200">
+                    <button
+                      v-if="!item.is_worm_locked"
+                      @click="setWormLock(item.file_name)"
+                      class="px-2 py-0.5 rounded bg-purple-500/12 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 text-[11px] cursor-pointer border border-purple-500/25"
+                    >
                       加锁
                     </button>
-                    <button @click="stampTsa(item.file_name)"
-                      class="px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] cursor-pointer border border-indigo-200">
+                    <button
+                      @click="stampTsa(item.file_name)"
+                      class="px-2 py-0.5 rounded bg-indigo-500/12 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[11px] cursor-pointer border border-indigo-500/25"
+                    >
                       TSA
+                    </button>
+                    <button
+                      @click="addEvidenceToDiffQueue(item)"
+                      class="px-2 py-0.5 rounded bg-emerald-500/12 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold cursor-pointer border border-emerald-500/25"
+                      title="将证据文件双哈希指纹及尺寸纳入多组比对队列"
+                    >
+                      + 入队
                     </button>
                   </div>
                 </td>
-
               </tr>
 
               <tr v-if="evidenceVault.length === 0">
-                <td colspan="6" class="p-6 text-center text-slate-400 text-xs font-mono">
+                <td colspan="6" class="p-8 text-center text-xs" style="color: var(--text-muted);">
                   暂无证据文件登记，点击上方【双哈希封存】进行初始固化
                 </td>
               </tr>
@@ -237,130 +225,116 @@
           </table>
         </div>
 
-        <!-- 底部保真度说明卡片 -->
-        <div class="mt-2.5 p-2.5 bg-slate-50/80 rounded-xl border border-slate-200/60 text-[10px] text-slate-500 leading-relaxed font-mono">
-          <div class="flex items-center gap-1.5 font-bold text-slate-700 mb-1">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            <span>硬件层丢包审计证明 (ISB 规范)</span>
+        <div class="ui-sub-card mt-2.5 p-2.5 text-[11px] leading-relaxed" style="color: var(--text-secondary);">
+          <div class="flex items-center gap-1.5 font-semibold mb-1" style="color: var(--text-primary);">
+            <span class="w-1.5 h-1.5 rounded-full" :class="fidelity?.is_lossless_certified ? 'bg-emerald-500' : 'bg-slate-400'"></span>
+            <span>硬件层丢包审计证明 (Npcap / ISB 统计规范)</span>
           </div>
-          <p>{{ fidelity?.statement || '底层网卡及驱动缓冲区统计显示，丢包计数为零，全部链路层以太网帧均实现完整物理级保真捕获。' }}</p>
+          <p>{{ fidelity?.statement || '尚未获取实时捕获统计或处于只读浏览模式，启动底层网卡捕获或执行验真后将在此显示真实物理丢包审计结论。' }}</p>
         </div>
-
       </div>
 
-      <!-- 2.2 右侧：司法证据保管链流水 (5 列) -->
-      <div class="col-span-5 bg-white/80 backdrop-blur-xl rounded-2xl border border-white/70 p-3 shadow-xs flex flex-col overflow-hidden min-h-0">
-        
+      <!-- 2.2 右侧：司法证据保管链流水 -->
+      <div class="lg:col-span-5 ui-content-card p-3 flex flex-col overflow-hidden min-h-0">
         <div class="flex items-center justify-between mb-2 shrink-0">
           <div class="flex items-center gap-2">
-            <h3 class="text-xs font-bold text-slate-800">司法保管链流水 (Chain of Custody)</h3>
-            <span class="text-[10px] font-mono text-slate-400">不可逆链式防篡改</span>
+            <h3 class="text-[13px] font-semibold" style="color: var(--text-primary);">司法保管链流水 (Chain of Custody)</h3>
+            <span class="text-[11px]" style="color: var(--text-muted);">不可逆链式防篡改</span>
           </div>
-          <span class="text-[10px] font-mono text-slate-400">共 {{ chainOfCustody.length }} 条记录</span>
+          <span class="text-[11px] ui-num" style="color: var(--text-muted);">共 {{ chainOfCustody.length }} 条记录</span>
         </div>
 
-        <!-- 保管链时间线列表 -->
-        <div class="flex-1 overflow-y-auto custom-scrollbar border border-slate-100 rounded-xl p-2 flex flex-col gap-2">
-          
-          <div v-for="rec in chainOfCustody" :key="rec.index"
-            class="bg-slate-50/90 rounded-xl p-2.5 border border-slate-200/70 flex flex-col gap-1 text-[10px] font-mono">
-            
-            <div class="flex items-center justify-between text-slate-400">
-              <span class="font-bold text-slate-700">#{{ rec.index }} · {{ rec.action }}</span>
-              <span>{{ rec.timestamp }}</span>
+        <div class="flex-1 overflow-y-auto custom-scrollbar border rounded-xl p-2.5 flex flex-col gap-2" style="border-color: var(--border-subtle); background: var(--surface-content-alt);">
+          <div v-for="rec in chainOfCustody" :key="rec.index" class="ui-sub-card p-2.5 flex flex-col gap-1 text-xs">
+            <div class="flex items-center justify-between ui-num gap-2" style="color: var(--text-muted);">
+              <span class="font-semibold" style="color: var(--text-primary);">#{{ rec.index }} · {{ rec.action }}</span>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[11px]">{{ rec.timestamp }}</span>
+                <button @click="addCustodyToDiffQueue(rec)" class="px-1.5 py-0.5 rounded bg-emerald-500/12 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-[11px] font-semibold cursor-pointer">
+                  + 入队
+                </button>
+              </div>
             </div>
 
-            <div class="text-slate-600 mt-0.5">
-              <span class="text-slate-400">目标:</span> <span class="font-bold text-slate-800">{{ rec.evidence_target }}</span>
-              <span class="mx-1 text-slate-300">|</span>
-              <span class="text-slate-400">经手:</span> {{ rec.operator_id }} / {{ rec.reviewer_id }}
+            <div class="text-[11px] mt-0.5" style="color: var(--text-secondary);">
+              <span style="color: var(--text-muted);">目标:</span> <span class="font-semibold font-mono" style="color: var(--text-primary);">{{ rec.evidence_target }}</span>
+              <span class="mx-1.5 opacity-40">|</span>
+              <span style="color: var(--text-muted);">经手:</span> {{ rec.operator_id }} / {{ rec.reviewer_id }}
             </div>
 
-            <div class="text-slate-500 text-[9px] bg-white p-1.5 rounded-lg border border-slate-200/60 mt-0.5">
+            <div class="text-[11px] p-2 rounded-lg border mt-0.5 font-mono" style="background: var(--surface-content); border-color: var(--border-subtle); color: var(--text-secondary);">
               <div>{{ rec.reason_or_memo }}</div>
-              <div class="text-[8px] text-slate-400 truncate mt-0.5">
+              <div class="truncate mt-0.5" style="color: var(--text-muted);">
                 上一哈希: {{ rec.prev_record_hash }}
               </div>
-              <div class="text-[8px] text-indigo-600 truncate">
+              <div class="text-indigo-600 dark:text-indigo-300 truncate">
                 当前哈希: {{ rec.current_record_hash }}
               </div>
             </div>
-
           </div>
 
-          <div v-if="chainOfCustody.length === 0" class="p-8 text-center text-slate-400 text-xs font-mono">
+          <div v-if="chainOfCustody.length === 0" class="p-8 text-center text-xs" style="color: var(--text-muted);">
             尚未产生司法保管链记录
           </div>
-
         </div>
-
       </div>
-
     </section>
 
     <!-- 3. GB/T 29360 司法检验报告弹窗 -->
-    <div v-if="showReportModal"
-      class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
-        
-        <div class="p-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50/80">
-          <div class="flex items-center gap-2">
-            <h3 class="text-sm font-bold text-slate-800">司法鉴定检验报告 (GB/T 29360-2012)</h3>
-            <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
+    <div v-if="showReportModal" class="ui-modal-backdrop fixed inset-0 flex items-center justify-center z-50 p-4">
+      <div class="ui-modal-surface rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden select-text">
+        <div class="p-3.5 border-b flex items-center justify-between" style="border-color: var(--border-subtle);">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 class="text-sm font-semibold" style="color: var(--text-primary);">司法鉴定检验报告 (GB/T 29360-2012)</h3>
+            <span class="px-2 py-0.5 rounded text-[11px] bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-semibold border border-indigo-500/25">
               法庭抗辩级存证
             </span>
           </div>
-          <button @click="showReportModal = false" class="text-slate-400 hover:text-slate-600 text-base font-bold cursor-pointer">
-            ✕
+          <button @click="showReportModal = false" class="p-1.5 rounded-lg hover:bg-[var(--surface-hover)] cursor-pointer" style="color: var(--text-secondary);">
+            <AppIcon name="close" :size="14" />
           </button>
         </div>
 
-        <div class="p-4 flex-1 overflow-y-auto custom-scrollbar font-mono text-xs text-slate-700 space-y-4">
-          
-          <!-- 报告表单参数 -->
-          <div class="grid grid-cols-3 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+        <div class="p-4 flex-1 overflow-y-auto custom-scrollbar text-xs space-y-4">
+          <div class="ui-sub-card grid grid-cols-1 sm:grid-cols-3 gap-2.5 p-3">
             <div>
-              <label class="text-[10px] font-bold text-slate-500 block mb-0.5">主取证人员:</label>
-              <input v-model="reportInvestigator" class="w-full px-2 py-1 rounded bg-white border border-slate-200 text-xs" />
+              <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">主取证人员:</label>
+              <input v-model="reportInvestigator" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono" />
             </div>
             <div>
-              <label class="text-[10px] font-bold text-slate-500 block mb-0.5">复核人员:</label>
-              <input v-model="reportReviewer" class="w-full px-2 py-1 rounded bg-white border border-slate-200 text-xs" />
+              <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">复核人员:</label>
+              <input v-model="reportReviewer" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono" />
             </div>
             <div>
-              <label class="text-[10px] font-bold text-slate-500 block mb-0.5">案事件编号:</label>
-              <input v-model="reportCaseNumber" class="w-full px-2 py-1 rounded bg-white border border-slate-200 text-xs" />
+              <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">案事件编号:</label>
+              <input v-model="reportCaseNumber" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono" />
             </div>
           </div>
 
-          <button @click="generateReport" :disabled="loading"
-            class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all shadow-xs cursor-pointer">
+          <button @click="generateReport" :disabled="loading" class="ui-btn-primary w-full py-2 text-xs justify-center">
             重新生成报告文本
           </button>
 
-          <!-- 报告预览 Markdown 内容 -->
-          <div v-if="generatedReport" class="bg-slate-900 text-slate-200 p-4 rounded-xl border border-slate-800 font-mono text-[11px] whitespace-pre-wrap leading-relaxed max-h-[40vh] overflow-y-auto custom-scrollbar select-text">
+          <div
+            v-if="generatedReport"
+            class="p-4 rounded-xl border font-mono text-xs whitespace-pre-wrap leading-relaxed max-h-[40vh] overflow-y-auto custom-scrollbar select-text"
+            style="background: var(--surface-input); border-color: var(--border-subtle); color: var(--text-primary);"
+          >
 {{ generatedReport.markdown_report }}
           </div>
-
         </div>
 
-        <div class="p-3 border-t border-slate-200 flex items-center justify-between bg-slate-50/80">
-          <span class="text-[11px] text-slate-400 font-mono">
+        <div class="p-3 border-t flex items-center justify-between flex-wrap gap-2" style="border-color: var(--border-subtle);">
+          <span class="text-[11px]" style="color: var(--text-muted);">
             遵循 GB/T 29360-2012 电子数据取证检验通用技术规范
           </span>
           <div class="flex items-center gap-2">
-            <button v-if="generatedReport" @click="copyReport"
-              class="px-3 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold cursor-pointer">
+            <button v-if="generatedReport" @click="copyReport" class="ui-btn-secondary px-3 py-1.5 text-xs">
               复制报告全文
             </button>
-            <button @click="showReportModal = false"
-              class="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold cursor-pointer">
-              完成
-            </button>
+            <button @click="showReportModal = false" class="ui-btn-primary px-4 py-1.5 text-xs">完成</button>
           </div>
         </div>
-
       </div>
     </div>
 
@@ -371,6 +345,61 @@
 import { notifySuccess, notifyError } from '../composables/useNotification';
 import { ref, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import AppIcon from '../components/AppIcon.vue';
+import { useUniversalDiff } from '../composables/useUniversalDiff';
+
+const diffBus = useUniversalDiff();
+
+function addEvidenceToDiffQueue(item: FileIntegrityResult) {
+  const digestText = `FILE=${item.file_name};STATUS=${item.status};SIZE=${item.current_size};SHA256=${item.current_hash};SM3=${item.current_sm3}`;
+  diffBus.addToQueue({
+    id: `FOR_FILE_${item.file_name}`,
+    label: `[证据] ${item.file_name} (${item.status})`,
+    protocol: 'FORENSICS-VAULT',
+    src: item.file_name,
+    dst: item.is_worm_locked ? 'WORM-LOCKED' : 'RW',
+    format: 'ASCII',
+    isRawText: true,
+    payloadHex: '',
+    rawText: digestText,
+    length: digestText.length,
+    extraFields: {
+      current_hash: item.current_hash,
+      current_sm3: item.current_sm3,
+      expected_hash: item.expected_hash || '-',
+      expected_sm3: item.expected_sm3 || '-',
+      current_size: String(item.current_size),
+      sealed_size: String(item.sealed_size),
+      status: item.status
+    }
+  }, `证据 ${item.file_name}`, false);
+}
+
+function addCustodyToDiffQueue(rec: ChainOfCustodyRecord) {
+  const custodyText = `#${rec.index}|${rec.action}|TARGET=${rec.evidence_target}|PREV=${rec.prev_record_hash}|CURR=${rec.current_record_hash}`;
+  diffBus.addToQueue({
+    id: `FOR_COC_${rec.index}`,
+    label: `[保管链 #${rec.index}] ${rec.action}`,
+    timestamp: rec.timestamp,
+    protocol: 'CHAIN-OF-CUSTODY',
+    src: rec.operator_id,
+    dst: rec.evidence_target,
+    format: 'ASCII',
+    isRawText: true,
+    payloadHex: '',
+    rawText: custodyText,
+    length: custodyText.length,
+    extraFields: {
+      action: rec.action,
+      operator_id: rec.operator_id,
+      reviewer_id: rec.reviewer_id,
+      sha256: rec.sha256,
+      sm3: rec.sm3,
+      prev_record_hash: rec.prev_record_hash,
+      current_record_hash: rec.current_record_hash
+    }
+  }, `保管链 #${rec.index}`, false);
+}
 
 interface FileIntegrityResult {
   file_name: string;
@@ -540,10 +569,10 @@ async function setWormLock(fileName: string) {
 async function stampTsa(fileName: string) {
   try {
     const token = await invoke<any>('generate_tsa_timestamp_cmd', { fileName });
-    notifySuccess('RFC 3161 TSA 时间戳加盖成功', `序列号: ${token.serial_number} | 打标时间: ${token.stamped_at}`);
+    notifySuccess('本地双哈希时间自证封装成功', `状态: ${token.status} | 序列号: ${token.serial_number} | 打标时间: ${token.stamped_at}`);
     await loadChainOfCustody();
   } catch (e) {
-    notifyError('TSA 时间戳加盖受阻', e);
+    notifyError('本地时间戳封装受阻', e);
   }
 }
 

@@ -144,7 +144,8 @@ fn get_windows_registry_serial_ports() -> Vec<String> {
 /// 空间复杂度: O(1)
 fn check_port_availability(port_name: &str) -> bool {
     // 1. 如果已在本探针的并发监听集合中，视为可用且正由本程序掌控
-    if let Ok(map) = ACTIVE_SERIAL_PROBES.lock() {
+    {
+        let map = crate::lock_guard::lock_mutex(&ACTIVE_SERIAL_PROBES, "serial::check_port_availability");
         if map.contains_key(port_name) {
             return true;
         }
@@ -171,7 +172,7 @@ pub fn list_available_serial_ports_detail() -> Vec<SerialPortDetail> {
     let mut detected_names: HashSet<String> = HashSet::new();
 
     let active_ports: HashSet<String> = {
-        let map = ACTIVE_SERIAL_PROBES.lock().unwrap();
+        let map = crate::lock_guard::lock_mutex(&ACTIVE_SERIAL_PROBES, "serial::list_available_serial_ports_detail");
         map.keys().cloned().collect()
     };
 
@@ -281,7 +282,10 @@ pub static ACTIVE_SERIAL_PROBES: Lazy<Arc<Mutex<HashMap<String, SerialProbeHandl
 pub struct SerialBridgeHandle {
     pub bridge_id: String,
     pub port_a: String,
+    pub baud_a: u32,
     pub port_b: String,
+    pub baud_b: u32,
+    pub start_time_str: String,
     pub is_running: Arc<AtomicBool>,
     pub start_time: std::time::Instant,
     pub total_a_to_b_bytes: Arc<AtomicU64>,
@@ -292,10 +296,14 @@ pub struct SerialBridgeHandle {
 pub struct ActiveSerialBridgeInfo {
     pub bridge_id: String,
     pub port_a: String,
+    pub baud_a: u32,
     pub port_b: String,
+    pub baud_b: u32,
+    pub start_time: String,
     pub uptime_secs: u64,
     pub total_a_to_b_bytes: u64,
     pub total_b_to_a_bytes: u64,
+    pub is_running: bool,
 }
 
 /// 全局双串口中继器实例池
@@ -304,7 +312,7 @@ pub static ACTIVE_SERIAL_BRIDGES: Lazy<Arc<Mutex<HashMap<String, SerialBridgeHan
 
 /// 检查是否有任意串口或指定串口正在监听中
 pub fn is_any_serial_running(port: Option<&str>) -> bool {
-    let map = ACTIVE_SERIAL_PROBES.lock().unwrap();
+    let map = crate::lock_guard::lock_mutex(&ACTIVE_SERIAL_PROBES, "serial::is_any_serial_running");
     if let Some(p) = port {
         map.get(p).map(|h| h.is_running.load(Ordering::SeqCst)).unwrap_or(false)
     } else {
@@ -314,7 +322,7 @@ pub fn is_any_serial_running(port: Option<&str>) -> bool {
 
 /// 获取当前所有正在并发监听的串口探针状态
 pub fn list_active_serial_probes() -> Vec<ActiveSerialProbeInfo> {
-    let map = ACTIVE_SERIAL_PROBES.lock().unwrap();
+    let map = crate::lock_guard::lock_mutex(&ACTIVE_SERIAL_PROBES, "serial::list_active_serial_probes");
     map.values()
         .filter(|h| h.is_running.load(Ordering::SeqCst))
         .map(|h| ActiveSerialProbeInfo {
@@ -332,16 +340,20 @@ pub fn list_active_serial_probes() -> Vec<ActiveSerialProbeInfo> {
 
 /// 获取当前所有正在运行的双串口透明中继器状态
 pub fn list_active_serial_bridges() -> Vec<ActiveSerialBridgeInfo> {
-    let map = ACTIVE_SERIAL_BRIDGES.lock().unwrap();
+    let map = crate::lock_guard::lock_mutex(&ACTIVE_SERIAL_BRIDGES, "serial::list_active_serial_bridges");
     map.values()
         .filter(|h| h.is_running.load(Ordering::SeqCst))
         .map(|h| ActiveSerialBridgeInfo {
             bridge_id: h.bridge_id.clone(),
             port_a: h.port_a.clone(),
+            baud_a: h.baud_a,
             port_b: h.port_b.clone(),
+            baud_b: h.baud_b,
+            start_time: h.start_time_str.clone(),
             uptime_secs: h.start_time.elapsed().as_secs(),
             total_a_to_b_bytes: h.total_a_to_b_bytes.load(Ordering::Relaxed),
             total_b_to_a_bytes: h.total_b_to_a_bytes.load(Ordering::Relaxed),
+            is_running: true,
         })
         .collect()
 }
@@ -395,7 +407,7 @@ pub fn start_serial_hotplug_detector(app: tauri::AppHandle) {
 
                 // 检查当前正在并发监听的串口中是否有被意外物理拔出的
                 let active_keys: Vec<String> = {
-                    let map = ACTIVE_SERIAL_PROBES.lock().unwrap();
+                    let map = crate::lock_guard::lock_mutex(&ACTIVE_SERIAL_PROBES, "serial::hotplug_check_active");
                     map.keys().cloned().collect()
                 };
                 for cur in active_keys {
@@ -687,7 +699,7 @@ pub fn dissect_nmea0183(payload: &[u8]) -> Option<NmeaDissection> {
     })
 }
 
-fn parse_data_bits(bits: u8) -> serialport::DataBits {
+pub(crate) fn parse_data_bits(bits: u8) -> serialport::DataBits {
     match bits {
         5 => serialport::DataBits::Five,
         6 => serialport::DataBits::Six,
@@ -696,7 +708,7 @@ fn parse_data_bits(bits: u8) -> serialport::DataBits {
     }
 }
 
-fn parse_parity(parity: &str) -> serialport::Parity {
+pub(crate) fn parse_parity(parity: &str) -> serialport::Parity {
     match parity.to_uppercase().as_str() {
         "ODD" => serialport::Parity::Odd,
         "EVEN" => serialport::Parity::Even,
@@ -704,14 +716,14 @@ fn parse_parity(parity: &str) -> serialport::Parity {
     }
 }
 
-fn parse_stop_bits(bits: u8) -> serialport::StopBits {
+pub(crate) fn parse_stop_bits(bits: u8) -> serialport::StopBits {
     match bits {
         2 => serialport::StopBits::Two,
         _ => serialport::StopBits::One,
     }
 }
 
-fn parse_flow_control(flow: &str) -> serialport::FlowControl {
+pub(crate) fn parse_flow_control(flow: &str) -> serialport::FlowControl {
     match flow.to_uppercase().as_str() {
         "SOFTWARE" => serialport::FlowControl::Software,
         "HARDWARE" => serialport::FlowControl::Hardware,
@@ -738,7 +750,7 @@ pub fn start_serial_probe_with_config(
     }
 
     {
-        let map = ACTIVE_SERIAL_PROBES.lock().unwrap();
+        let map = crate::lock_guard::lock_mutex(&ACTIVE_SERIAL_PROBES, "serial::start_serial_probe_check");
         if let Some(existing) = map.get(clean_port) {
             if existing.is_running.load(Ordering::SeqCst) {
                 return Err(format!("串口 {} 已经处于监听运行中", clean_port));
@@ -769,7 +781,7 @@ pub fn start_serial_probe_with_config(
     let modem_status_thread = modem_status.clone();
 
     {
-        let mut map = ACTIVE_SERIAL_PROBES.lock().unwrap();
+        let mut map = crate::lock_guard::lock_mutex(&ACTIVE_SERIAL_PROBES, "serial::start_serial_probe_insert");
         map.insert(
             port_name_owned.clone(),
             SerialProbeHandle {
@@ -838,7 +850,8 @@ pub fn start_serial_probe_with_config(
                 let cd = port.read_carrier_detect().unwrap_or(false);
 
                 let mut changed = false;
-                if let Ok(mut st) = modem_status_thread.lock() {
+                {
+                    let mut st = crate::lock_guard::lock_mutex(&modem_status_thread, "serial::rx_thread_modem_status");
                     if st.cts != cts || st.dsr != dsr || st.ri != ri || st.cd != cd {
                         st.cts = cts;
                         st.dsr = dsr;
@@ -901,7 +914,8 @@ pub fn start_serial_probe_with_config(
             }
         }
 
-        if let Ok(mut map) = ACTIVE_SERIAL_PROBES.lock() {
+        {
+            let mut map = crate::lock_guard::lock_mutex(&ACTIVE_SERIAL_PROBES, "serial::rx_thread_cleanup");
             map.remove(&port_thread_name);
         }
         let _ = app_clone.emit("system-log", format!("[SERIAL] 物理串口 {} 监听已释放关闭", port_thread_name));
@@ -1078,7 +1092,7 @@ fn emit_serial_rx_packet(
 
 /// 停止指定串口或全部物理串口的采集
 pub fn stop_serial_probe(port_name: Option<&str>) -> String {
-    let mut map = ACTIVE_SERIAL_PROBES.lock().unwrap();
+    let mut map = crate::lock_guard::lock_mutex(&ACTIVE_SERIAL_PROBES, "serial::stop_serial_probe");
     if let Some(p) = port_name {
         let clean = p.trim();
         if let Some(handle) = map.remove(clean) {
@@ -1099,9 +1113,9 @@ pub fn stop_serial_probe(port_name: Option<&str>) -> String {
 /// 获取指定串口的硬件引脚电平状态
 pub fn get_serial_modem_status(port_name: &str) -> Result<SerialModemStatus, String> {
     let clean = port_name.trim();
-    let map = ACTIVE_SERIAL_PROBES.lock().unwrap();
+    let map = crate::lock_guard::lock_mutex(&ACTIVE_SERIAL_PROBES, "serial::get_serial_modem_status_map");
     if let Some(handle) = map.get(clean) {
-        let st = handle.modem_status.lock().map_err(|e| e.to_string())?;
+        let st = crate::lock_guard::lock_mutex(&handle.modem_status, "serial::get_serial_modem_status_inner");
         Ok(st.clone())
     } else {
         // 如果未处于全局监听，临时打开进行单次物理读取
@@ -1143,7 +1157,7 @@ pub fn set_serial_pin_state(
     Ok(())
 }
 
-/// 启动工业级双串口透明中继器 (COM-A <-> COM-B 零延迟透明透传与双向镜像嗅探)
+/// 启动工业级双串口全双工透明中继器 (COM-A ⇄ COM-B 双向独立流线程 + 3.5T 帧边界聚合 + 控制引脚镜像)
 pub fn start_serial_bridge(
     app: tauri::AppHandle,
     port_a: &str,
@@ -1163,42 +1177,59 @@ pub fn start_serial_bridge(
 
     let bridge_id = format!("{}_TO_{}", clean_a, clean_b);
     {
-        let map = ACTIVE_SERIAL_BRIDGES.lock().unwrap();
+        let map = crate::lock_guard::lock_mutex(&ACTIVE_SERIAL_BRIDGES, "serial::start_serial_bridge_check");
         if map.contains_key(&bridge_id) {
             return Err(format!("双串口中继器 {} 已经在运行中", bridge_id));
         }
     }
 
-    let mut port_dev_a = serialport::new(clean_a, config_a.baud_rate)
+    let port_dev_a = serialport::new(clean_a, config_a.baud_rate)
         .data_bits(parse_data_bits(config_a.data_bits))
         .parity(parse_parity(&config_a.parity))
         .stop_bits(parse_stop_bits(config_a.stop_bits))
         .flow_control(parse_flow_control(&config_a.flow_control))
-        .timeout(Duration::from_millis(15))
+        .timeout(Duration::from_millis(8))
         .open()
         .map_err(|e| format!("中继端 A ({}) 打开失败: {}", clean_a, e))?;
 
-    let mut port_dev_b = serialport::new(clean_b, config_b.baud_rate)
+    let port_dev_b = serialport::new(clean_b, config_b.baud_rate)
         .data_bits(parse_data_bits(config_b.data_bits))
         .parity(parse_parity(&config_b.parity))
         .stop_bits(parse_stop_bits(config_b.stop_bits))
         .flow_control(parse_flow_control(&config_b.flow_control))
-        .timeout(Duration::from_millis(15))
+        .timeout(Duration::from_millis(8))
         .open()
         .map_err(|e| format!("中继端 B ({}) 打开失败: {}", clean_b, e))?;
+
+    let a_clone = port_dev_a
+        .try_clone()
+        .map_err(|e| format!("复制串口 A ({}) 全双工句柄失败: {}", clean_a, e))?;
+    let b_clone = port_dev_b
+        .try_clone()
+        .map_err(|e| format!("复制串口 B ({}) 全双工句柄失败: {}", clean_b, e))?;
+    let a_pins = port_dev_a
+        .try_clone()
+        .map_err(|e| format!("复制串口 A ({}) 引脚监控句柄失败: {}", clean_a, e))?;
+    let b_pins = port_dev_b
+        .try_clone()
+        .map_err(|e| format!("复制串口 B ({}) 引脚监控句柄失败: {}", clean_b, e))?;
 
     let is_running = Arc::new(AtomicBool::new(true));
     let total_a_to_b = Arc::new(AtomicU64::new(0));
     let total_b_to_a = Arc::new(AtomicU64::new(0));
+    let start_time_str = chrono::Local::now().format("%H:%M:%S").to_string();
 
     {
-        let mut map = ACTIVE_SERIAL_BRIDGES.lock().unwrap();
+        let mut map = crate::lock_guard::lock_mutex(&ACTIVE_SERIAL_BRIDGES, "serial::start_serial_bridge_insert");
         map.insert(
             bridge_id.clone(),
             SerialBridgeHandle {
                 bridge_id: bridge_id.clone(),
                 port_a: clean_a.to_string(),
+                baud_a: config_a.baud_rate,
                 port_b: clean_b.to_string(),
+                baud_b: config_b.baud_rate,
+                start_time_str,
                 is_running: is_running.clone(),
                 start_time: std::time::Instant::now(),
                 total_a_to_b_bytes: total_a_to_b.clone(),
@@ -1207,48 +1238,134 @@ pub fn start_serial_bridge(
         );
     }
 
-    let app_a = app.clone();
-    let name_a = clean_a.to_string();
-    let name_b = clean_b.to_string();
-    let is_running_a = is_running.clone();
-    let a_to_b_bytes = total_a_to_b.clone();
+    // 线程 1: A -> B 透明转发、3.5T 帧边界聚合与证据链嗅探
+    spawn_bridge_half_duplex_thread(
+        app.clone(),
+        port_dev_a,
+        b_clone,
+        clean_a.to_string(),
+        clean_b.to_string(),
+        "BRIDGE_A_TO_B".to_string(),
+        calculate_3_5t_duration(config_a.baud_rate, config_a.data_bits, &config_a.parity, config_a.stop_bits),
+        is_running.clone(),
+        total_a_to_b.clone(),
+    );
 
-    // 线程 1: A -> B 转发与嗅探
+    // 线程 2: B -> A 双向对称全双工转发与嗅探
+    spawn_bridge_half_duplex_thread(
+        app.clone(),
+        port_dev_b,
+        a_clone,
+        clean_b.to_string(),
+        clean_a.to_string(),
+        "BRIDGE_B_TO_A".to_string(),
+        calculate_3_5t_duration(config_b.baud_rate, config_b.data_bits, &config_b.parity, config_b.stop_bits),
+        is_running.clone(),
+        total_b_to_a.clone(),
+    );
+
+    // 线程 3: 双向 Modem 控制引脚交叉镜像线程 (CTS/DSR -> RTS/DTR 硬件电平透传)
+    let app_pins = app.clone();
+    let pin_a_name = clean_a.to_string();
+    let pin_b_name = clean_b.to_string();
+    let running_pins = is_running.clone();
     std::thread::spawn(move || {
-        let mut buf = [0u8; 2048];
-        while is_running_a.load(Ordering::SeqCst) {
-            match port_dev_a.read(&mut buf) {
-                Ok(n) if n > 0 => {
-                    let chunk = &buf[..n];
-                    let _ = port_dev_b.write_all(chunk);
-                    let _ = port_dev_b.flush();
-                    a_to_b_bytes.fetch_add(n as u64, Ordering::Relaxed);
-
-                    // 广播至主证据链
-                    emit_bridge_packet(&app_a, &name_a, &name_b, chunk, "BRIDGE_A_TO_B");
-                }
-                _ => {
-                    std::thread::sleep(Duration::from_millis(2));
+        let mut dev_a = a_pins;
+        let mut dev_b = b_pins;
+        let mut last_a_cts = false;
+        let mut last_b_cts = false;
+        while running_pins.load(Ordering::Acquire) {
+            if let Ok(a_cts) = dev_a.read_clear_to_send() {
+                if a_cts != last_a_cts {
+                    last_a_cts = a_cts;
+                    let _ = dev_b.write_request_to_send(a_cts);
+                    let _ = app_pins.emit("serial-modem-status-changed", json!({
+                        "port_name": pin_a_name,
+                        "cts": a_cts,
+                        "bridge_mirrored_to": pin_b_name,
+                    }));
                 }
             }
+            if let Ok(b_cts) = dev_b.read_clear_to_send() {
+                if b_cts != last_b_cts {
+                    last_b_cts = b_cts;
+                    let _ = dev_a.write_request_to_send(b_cts);
+                    let _ = app_pins.emit("serial-modem-status-changed", json!({
+                        "port_name": pin_b_name,
+                        "cts": b_cts,
+                        "bridge_mirrored_to": pin_a_name,
+                    }));
+                }
+            }
+            std::thread::sleep(Duration::from_millis(30));
         }
     });
 
     let _ = app.emit(
         "system-log",
-        format!("[SERIAL] 🌉 双串口透明中继器已建立: {} <---> {}", clean_a, clean_b),
+        format!(
+            "[SERIAL] 双串口全双工透明中继器已建立: {} (@{}bps) <===> {} (@{}bps)",
+            clean_a, config_a.baud_rate, clean_b, config_b.baud_rate
+        ),
     );
 
-    Ok(format!("双串口透明中继器 {} 已就绪", bridge_id))
+    Ok(format!("双串口全双工透明中继器 {} 已就绪", bridge_id))
 }
 
-/// 广播双串口中继报文到证据链
-fn emit_bridge_packet(
+#[allow(clippy::too_many_arguments)]
+fn spawn_bridge_half_duplex_thread(
+    app: tauri::AppHandle,
+    mut src_dev: Box<dyn serialport::SerialPort>,
+    mut dst_dev: Box<dyn serialport::SerialPort>,
+    src_name: String,
+    dst_name: String,
+    direction: String,
+    idle_gap: Duration,
+    is_running: Arc<AtomicBool>,
+    byte_counter: Arc<AtomicU64>,
+) {
+    std::thread::spawn(move || {
+        let mut read_buf = [0u8; 2048];
+        let mut frame_acc = Vec::with_capacity(2048);
+        let mut last_rx = std::time::Instant::now();
+
+        while is_running.load(Ordering::Acquire) {
+            match src_dev.read(&mut read_buf) {
+                Ok(n) if n > 0 => {
+                    let chunk = &read_buf[..n];
+                    let _ = dst_dev.write_all(chunk);
+                    let _ = dst_dev.flush();
+                    byte_counter.fetch_add(n as u64, Ordering::Relaxed);
+                    frame_acc.extend_from_slice(chunk);
+                    last_rx = std::time::Instant::now();
+                    if frame_acc.len() >= 1024 {
+                        let out = std::mem::take(&mut frame_acc);
+                        emit_intercept_frame(&app, &src_name, &dst_name, &out, &direction, "SERIAL_BRIDGE");
+                    }
+                }
+                _ => {
+                    if !frame_acc.is_empty() && last_rx.elapsed() >= idle_gap {
+                        let out = std::mem::take(&mut frame_acc);
+                        emit_intercept_frame(&app, &src_name, &dst_name, &out, &direction, "SERIAL_BRIDGE");
+                    }
+                    std::thread::sleep(Duration::from_millis(1));
+                }
+            }
+        }
+        if !frame_acc.is_empty() {
+            emit_intercept_frame(&app, &src_name, &dst_name, &frame_acc, &direction, "SERIAL_BRIDGE");
+        }
+    });
+}
+
+/// 统一广播串口中继 / PTY / Pipe / RFC2217 / WDM 过滤报文到全系统证据链
+pub(crate) fn emit_intercept_frame(
     app: &tauri::AppHandle,
     from_port: &str,
     to_port: &str,
     payload: &[u8],
     direction: &str,
+    transport_tag: &str,
 ) {
     let entropy = ForensicEngine::calculate_entropy(payload);
     let id = SERIAL_COUNTER.fetch_add(1, Ordering::Relaxed);
@@ -1261,11 +1378,12 @@ fn emit_bridge_packet(
 
     let chain_hash = crate::sniffer::advance_global_chain(
         ts_ns,
-        &format!("{}|{}->{}|{}", direction, from_port, to_port, payload_hex),
+        &format!("{}|{}|{}->{}|{}", transport_tag, direction, from_port, to_port, payload_hex),
     );
 
     let mut b_map = dpi::dissect_payload(&protocol, payload);
     b_map.insert("direction".into(), json!(direction));
+    b_map.insert("intercept_engine".into(), json!(transport_tag));
     b_map.insert("relay_from".into(), json!(from_port));
     b_map.insert("relay_to".into(), json!(to_port));
     b_map.insert("bridge_bytes".into(), json!(payload.len()));
@@ -1275,7 +1393,7 @@ fn emit_bridge_packet(
         timestamp: chrono::Local::now().format("%H:%M:%S.%3f").to_string(),
         timestamp_ns: ts_ns,
         direction: direction.into(),
-        transport: "SERIAL_BRIDGE".into(),
+        transport: transport_tag.into(),
         protocol,
         src_ip: from_port.to_string(),
         dst_ip: to_port.to_string(),
@@ -1286,8 +1404,8 @@ fn emit_bridge_packet(
         raw_frame_hex: hex::encode(payload),
         entropy,
         entropy_level: "safe".into(),
-        mac_src: "BRIDGE_A".into(),
-        mac_dst: "BRIDGE_B".into(),
+        mac_src: transport_tag.into(),
+        mac_dst: to_port.to_string(),
         chain_hash,
         business_data: Some(b_map),
         raw_text: Some(crate::sniffer::generate_raw_text_preview(payload)),
@@ -1301,7 +1419,7 @@ fn emit_bridge_packet(
 
 /// 停止双串口透明中继器
 pub fn stop_serial_bridge(bridge_id: Option<&str>) -> String {
-    let mut map = ACTIVE_SERIAL_BRIDGES.lock().unwrap();
+    let mut map = crate::lock_guard::lock_mutex(&ACTIVE_SERIAL_BRIDGES, "serial::stop_serial_bridge");
     if let Some(id) = bridge_id {
         if let Some(handle) = map.remove(id) {
             handle.is_running.store(false, Ordering::SeqCst);
@@ -1334,7 +1452,7 @@ pub fn send_serial_data(
 
     // 1. 检查是否正在被本探针监听中
     let is_handled_by_active_probe = {
-        let map = ACTIVE_SERIAL_PROBES.lock().unwrap();
+        let map = crate::lock_guard::lock_mutex(&ACTIVE_SERIAL_PROBES, "serial::send_serial_data");
         if let Some(handle) = map.get(clean_port) {
             handle.tx_sender.send(payload.to_vec()).map_err(|e| format!("发送队列投递失败: {}", e))?;
             true

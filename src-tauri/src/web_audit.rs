@@ -351,7 +351,8 @@ pub fn record_dns_resolution(client_ip: &str, domain: &str, ips: &[String], ttl_
     }
 
     let now_str = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
-    if let Ok(mut cache) = DNS_IP_CACHE.lock() {
+    {
+        let mut cache = crate::lock_guard::lock_mutex(&DNS_IP_CACHE, "web_audit::record_dns_resolution");
         for ip in ips {
             cache.insert(ip.clone(), DnsCacheItem {
                 domain: domain.to_string(),
@@ -366,20 +367,14 @@ pub fn record_dns_resolution(client_ip: &str, domain: &str, ips: &[String], ttl_
 
 /// 根据目标 IP 自动反查其通过 DNS 解析出的实际域名
 pub fn lookup_domain_for_ip(ip: &str) -> Option<String> {
-    if let Ok(cache) = DNS_IP_CACHE.lock() {
-        cache.get(ip).map(|item| item.domain.clone())
-    } else {
-        None
-    }
+    let cache = crate::lock_guard::lock_mutex(&DNS_IP_CACHE, "web_audit::lookup_domain_for_ip");
+    cache.get(ip).map(|item| item.domain.clone())
 }
 
 /// 获取当前所有 DNS 动态映射表条目
 pub fn get_dns_cache_table() -> Vec<DnsCacheItem> {
-    if let Ok(cache) = DNS_IP_CACHE.lock() {
-        cache.values().cloned().collect()
-    } else {
-        Vec::new()
-    }
+    let cache = crate::lock_guard::lock_mutex(&DNS_IP_CACHE, "web_audit::get_dns_cache_table");
+    cache.values().cloned().collect()
 }
 
 // ============================================================
@@ -594,7 +589,8 @@ pub fn record_web_access_log(mut log: WebAccessLog) {
     log.id = log_id;
 
     // 1. 存入内存环形缓冲
-    if let Ok(mut logs) = WEB_ACCESS_LOGS.lock() {
+    {
+        let mut logs = crate::lock_guard::lock_mutex(&WEB_ACCESS_LOGS, "web_audit::record_web_access_log");
         if logs.len() >= MAX_MEM_LOGS {
             logs.pop_back();
         }
@@ -623,7 +619,8 @@ pub fn get_web_access_logs(
     let limit = limit.unwrap_or(200);
     let mut result = Vec::new();
 
-    if let Ok(logs) = WEB_ACCESS_LOGS.lock() {
+    {
+        let logs = crate::lock_guard::lock_mutex(&WEB_ACCESS_LOGS, "web_audit::get_web_access_logs");
         for log in logs.iter() {
             if let Some(ref cat) = category_filter {
                 if !cat.is_empty() && cat != "ALL" && log.category_code != *cat {
@@ -652,12 +649,9 @@ pub fn get_web_access_logs(
 
 /// 清空当前审计日志
 pub fn clear_web_access_logs() -> bool {
-    if let Ok(mut logs) = WEB_ACCESS_LOGS.lock() {
-        logs.clear();
-        true
-    } else {
-        false
-    }
+    let mut logs = crate::lock_guard::lock_mutex(&WEB_ACCESS_LOGS, "web_audit::clear_web_access_logs");
+    logs.clear();
+    true
 }
 
 /// 获取上网行为多维聚合统计数据
@@ -668,7 +662,8 @@ pub fn get_web_audit_statistics() -> WebAuditStatistics {
     let mut high_risk_count = 0;
     let total_requests;
 
-    if let Ok(logs) = WEB_ACCESS_LOGS.lock() {
+    {
+        let logs = crate::lock_guard::lock_mutex(&WEB_ACCESS_LOGS, "web_audit::get_web_audit_statistics");
         total_requests = logs.len();
         for log in logs.iter() {
             *category_dist.entry(log.category.clone()).or_insert(0) += 1;
@@ -683,8 +678,6 @@ pub fn get_web_audit_statistics() -> WebAuditStatistics {
             let c_entry = client_counts.entry(log.client_ip.clone()).or_insert((0, log.client_hostname.clone().unwrap_or_else(|| log.client_mac.clone())));
             c_entry.0 += 1;
         }
-    } else {
-        total_requests = 0;
     }
 
     // Top 10 域名

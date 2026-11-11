@@ -15,8 +15,8 @@
 //! ==============================================================================
 
 use omni_probe_tauri_lib::analyzer::{
-    compare_universal_payloads, compute_waveform_metrics, compute_mutation_spectrum,
-    UniversalDiffPayload,
+    compare_multi_universal_payloads, compare_universal_payloads, compute_mutation_spectrum,
+    compute_waveform_metrics, UniversalDiffPayload,
 };
 use std::collections::HashMap;
 
@@ -297,4 +297,142 @@ fn test_edge_cases_and_extremes_resilience() {
     assert!(spec[1].mutation_rate > 0.0);
     assert_eq!(spec[2].mutation_rate, 0.0);
     assert!(spec[1].entropy > 0.0, "发生突变的偏移位局部信息熵必定大于 0");
+}
+
+#[test]
+fn test_multi_group_center_star_4_samples_and_ascii_guard() {
+    let mut f1 = HashMap::new();
+    f1.insert("role".to_string(), "PLC".to_string());
+    let mut f2 = HashMap::new();
+    f2.insert("role".to_string(), "Gateway".to_string());
+
+    let items = vec![
+        UniversalDiffPayload {
+            id: Some(1),
+            label: "Modbus 基准 #1".to_string(),
+            timestamp: Some("10:00:01".to_string()),
+            protocol: Some("MODBUS".to_string()),
+            endpoint_src: Some("192.168.1.10:502".to_string()),
+            endpoint_dst: Some("192.168.1.20:502".to_string()),
+            payload_hex: "01 03 00 00 00 02 C4 0B".to_string(),
+            raw_text: None,
+            extra_fields: Some(f1),
+        },
+        UniversalDiffPayload {
+            id: Some(2),
+            label: "网关前插 0xAA #2".to_string(),
+            timestamp: Some("10:00:02".to_string()),
+            protocol: Some("MODBUS".to_string()),
+            endpoint_src: Some("192.168.1.11:502".to_string()),
+            endpoint_dst: Some("192.168.1.20:502".to_string()),
+            payload_hex: "AA 01 03 00 00 00 04 C4 0B".to_string(),
+            raw_text: None,
+            extra_fields: Some(f2),
+        },
+        UniversalDiffPayload {
+            id: Some(3),
+            label: "尾缺 2B #3".to_string(),
+            timestamp: Some("10:00:03".to_string()),
+            protocol: Some("MODBUS".to_string()),
+            endpoint_src: Some("192.168.1.12:502".to_string()),
+            endpoint_dst: Some("192.168.1.20:502".to_string()),
+            payload_hex: "01 03 00 01 00 02".to_string(),
+            raw_text: None,
+            extra_fields: None,
+        },
+        UniversalDiffPayload {
+            id: Some(4),
+            label: "全致基准副本 #4".to_string(),
+            timestamp: Some("10:00:04".to_string()),
+            protocol: Some("MODBUS".to_string()),
+            endpoint_src: Some("192.168.1.10:502".to_string()),
+            endpoint_dst: Some("192.168.1.20:502".to_string()),
+            payload_hex: "01 03 00 00 00 02 C4 0B".to_string(),
+            raw_text: None,
+            extra_fields: None,
+        },
+    ];
+
+    let res = compare_multi_universal_payloads(items.clone(), Some(0)).expect("4 组 Center-Star 对齐必须成功");
+    assert_eq!(res.sample_count, 4);
+    assert_eq!(res.anchor_index, 0);
+    assert!(res.aligned_column_count >= 9, "含前插字节后全局列数应至少 9 列");
+    // 第 0 列应对齐出前插位，锚点此处应补 missing "--"
+    assert_eq!(res.samples[0].aligned_hex.hex_rows[0].cells[0].hex, "--");
+    assert_eq!(res.samples[0].aligned_hex.hex_rows[0].cells[0].diff_type, "missing");
+    assert_eq!(res.samples[1].aligned_hex.hex_rows[0].cells[0].hex, "AA");
+    // 样本 4 与锚点 1 字节完全一致
+    assert_eq!(res.samples[3].mutated_vs_anchor, 0);
+    // extra_fields 中的 role 差异应反映在 field_matrix
+    assert!(res.field_matrix.iter().any(|r| r.field_name == "role" && r.has_difference));
+
+    // 切换第 2 个为 Anchor
+    let switched = compare_multi_universal_payloads(items, Some(1)).expect("切换 Anchor 必须成功");
+    assert_eq!(switched.anchor_index, 1);
+
+    // 验证 BUG-4：ASCII "CAFE" 与 "1234" 置空 payload_hex 时按 4B ASCII 保留，绝不强转 2B Hex
+    let ascii_a = UniversalDiffPayload {
+        id: None,
+        label: "ASCII CAFE".to_string(),
+        timestamp: None,
+        protocol: Some("ASCII".to_string()),
+        endpoint_src: None,
+        endpoint_dst: None,
+        payload_hex: "".to_string(),
+        raw_text: Some("CAFE".to_string()),
+        extra_fields: None,
+    };
+    let ascii_b = UniversalDiffPayload {
+        id: None,
+        label: "ASCII 1234".to_string(),
+        timestamp: None,
+        protocol: Some("ASCII".to_string()),
+        endpoint_src: None,
+        endpoint_dst: None,
+        payload_hex: "".to_string(),
+        raw_text: Some("1234".to_string()),
+        extra_fields: None,
+    };
+    let ascii_res = compare_universal_payloads(ascii_a, ascii_b).expect("ASCII CAFE 比对必须成功");
+    assert_eq!(ascii_res.total_bytes_a, 4);
+    assert_eq!(ascii_res.total_bytes_b, 4);
+}
+
+#[test]
+fn test_large_payload_50kb_universal_diff_oom_defense() {
+    let hex_a = "AA ".repeat(50_000);
+    let mut vec_b = vec!["AA"; 50_000];
+    vec_b[49_999] = "BB";
+    let hex_b = vec_b.join(" ");
+
+    let payload_a = UniversalDiffPayload {
+        id: Some(101),
+        label: "50KB Baseline".to_string(),
+        timestamp: None,
+        protocol: Some("TCP".to_string()),
+        endpoint_src: None,
+        endpoint_dst: None,
+        payload_hex: hex_a,
+        raw_text: None,
+        extra_fields: None,
+    };
+    let payload_b = UniversalDiffPayload {
+        id: Some(102),
+        label: "50KB Mutated".to_string(),
+        timestamp: None,
+        protocol: Some("TCP".to_string()),
+        endpoint_src: None,
+        endpoint_dst: None,
+        payload_hex: hex_b,
+        raw_text: None,
+        extra_fields: None,
+    };
+
+    let start = std::time::Instant::now();
+    let res = compare_universal_payloads(payload_a, payload_b).expect("50KB 比对严禁 OOM 或超限崩溃");
+    let elapsed = start.elapsed();
+    assert_eq!(res.total_bytes_a, 50_000);
+    assert_eq!(res.total_bytes_b, 50_000);
+    assert_eq!(res.mutated_bytes_count, 1);
+    assert!(elapsed.as_millis() < 2000, "前后缀剥离 + LCS 防御下 50KB 单点突变应极速完成: {:?}", elapsed);
 }

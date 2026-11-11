@@ -1,71 +1,74 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md">
-    <div class="w-full max-w-2xl bg-white/95 backdrop-blur-2xl rounded-3xl border border-white/60 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+  <div v-if="isOpen" class="ui-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="ui-modal-surface w-full max-w-2xl rounded-3xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
       <!-- 模态框头部 -->
-      <div class="px-6 py-4 border-b border-slate-200/60 bg-white/40 flex items-center justify-between shrink-0">
+      <div class="ui-nav-glass px-6 py-4 border-b border-(--border-subtle) flex items-center justify-between shrink-0">
         <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 text-sm font-bold shadow-2xs">
-            📟
+          <div class="w-8 h-8 rounded-xl bg-indigo-500/12 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+            <AppIcon name="serial" class="w-4 h-4" />
           </div>
           <div>
-            <h3 class="text-sm font-bold text-slate-900">串口工业通信参数与动态分帧配置</h3>
-            <p class="text-[11px] text-slate-500 font-mono">符合 Modbus RTU / DL/T 645 / NMEA 0183 规约硬件参数与 3.5T 动态超时推导</p>
+            <h3 class="text-sm font-bold text-(--text-primary)">串口工业通信参数与动态分帧配置</h3>
+            <p class="text-xs text-(--text-muted) font-mono-code">符合 Modbus RTU / DL/T 645 / NMEA 0183 规约与 3.5T 超时推导</p>
           </div>
         </div>
-        <button @click="$emit('close')" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer">
-          ✕
+        <button @click="$emit('close')" class="ui-btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center cursor-pointer" aria-label="关闭弹窗">
+          <AppIcon name="close" class="w-4 h-4" />
         </button>
       </div>
 
       <!-- 模态框主体内容 -->
       <div class="p-6 space-y-5 overflow-auto max-h-[75vh] custom-scrollbar">
         <!-- 行业预设模板快捷载入 -->
-        <div class="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-3 flex flex-col gap-2">
-          <div class="flex items-center justify-between text-xs font-bold text-indigo-950">
-            <span>⚡ 行业标准规约预设模板:</span>
-            <span class="text-[10px] text-indigo-600 font-normal">一键载入工控标准物理层与分帧策略</span>
+        <div class="ui-sub-card border-indigo-500/30 rounded-2xl p-3.5 flex flex-col gap-2.5">
+          <div class="flex items-center justify-between text-xs font-bold text-(--text-primary)">
+            <span class="inline-flex items-center gap-1.5">
+              <AppIcon name="zap" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              <span>行业标准规约预设模板:</span>
+            </span>
+            <span class="text-[11px] text-indigo-600 dark:text-indigo-400 font-normal">一键载入工控标准物理层与分帧策略</span>
           </div>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
             <button @click="applyPreset('modbus_rtu')"
-              class="bg-white hover:bg-indigo-100/70 text-indigo-900 border border-indigo-200 p-2 rounded-xl text-left transition-all cursor-pointer shadow-2xs">
-              <div class="font-bold text-[11px]">Modbus RTU</div>
-              <div class="text-[10px] text-slate-500 font-mono">9600, 8-N-1, 3.5T</div>
+              class="ui-content-card hover:border-indigo-500/50 text-(--text-primary) p-2.5 rounded-xl text-left transition-all cursor-pointer">
+              <div class="font-bold text-xs">Modbus RTU</div>
+              <div class="text-[11px] text-(--text-muted) font-mono-code ui-num">9600, 8-N-1, 3.5T</div>
             </button>
             <button @click="applyPreset('dlt645')"
-              class="bg-white hover:bg-indigo-100/70 text-indigo-900 border border-indigo-200 p-2 rounded-xl text-left transition-all cursor-pointer shadow-2xs">
-              <div class="font-bold text-[11px]">DL/T 645 电表</div>
-              <div class="text-[10px] text-slate-500 font-mono">2400, 8-E-1, 3.5T</div>
+              class="ui-content-card hover:border-indigo-500/50 text-(--text-primary) p-2.5 rounded-xl text-left transition-all cursor-pointer">
+              <div class="font-bold text-xs">DL/T 645 电表</div>
+              <div class="text-[11px] text-(--text-muted) font-mono-code ui-num">2400, 8-E-1, 3.5T</div>
             </button>
             <button @click="applyPreset('nmea0183')"
-              class="bg-white hover:bg-indigo-100/70 text-indigo-900 border border-indigo-200 p-2 rounded-xl text-left transition-all cursor-pointer shadow-2xs">
-              <div class="font-bold text-[11px]">NMEA 0183 导航</div>
-              <div class="text-[10px] text-slate-500 font-mono">4800, 8-N-1, CRLF</div>
+              class="ui-content-card hover:border-indigo-500/50 text-(--text-primary) p-2.5 rounded-xl text-left transition-all cursor-pointer">
+              <div class="font-bold text-xs">NMEA 0183 导航</div>
+              <div class="text-[11px] text-(--text-muted) font-mono-code ui-num">4800, 8-N-1, CRLF</div>
             </button>
             <button @click="applyPreset('high_speed')"
-              class="bg-white hover:bg-indigo-100/70 text-indigo-900 border border-indigo-200 p-2 rounded-xl text-left transition-all cursor-pointer shadow-2xs">
-              <div class="font-bold text-[11px]">高速工控串口</div>
-              <div class="text-[10px] text-slate-500 font-mono">115200, 8-N-1, 3.5T</div>
+              class="ui-content-card hover:border-indigo-500/50 text-(--text-primary) p-2.5 rounded-xl text-left transition-all cursor-pointer">
+              <div class="font-bold text-xs">高速工控串口</div>
+              <div class="text-[11px] text-(--text-muted) font-mono-code ui-num">115200, 8-N-1, 3.5T</div>
             </button>
           </div>
         </div>
 
         <!-- 硬件参数配置网格 -->
         <div class="space-y-3">
-          <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">1. 物理层四大参数与流控</h4>
+          <h4 class="text-xs font-bold text-(--text-primary) uppercase tracking-wider">1. 物理层四大参数与流控</h4>
           <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
             <div>
-              <label class="block text-[11px] font-bold text-slate-600 mb-1">目标串口 (COM Port)</label>
+              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">目标串口 (COM Port)</label>
               <select v-model="selectedPort"
-                class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 shadow-2xs">
+                class="ui-input w-full px-2.5 py-1.5 font-mono-code text-xs">
                 <option v-for="p in serialPorts" :key="p" :value="p">{{ p }}</option>
                 <option v-if="serialPorts.length === 0" value="">未发现可用串口</option>
               </select>
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold text-slate-600 mb-1">波特率 (Baud Rate)</label>
+              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">波特率 (Baud Rate)</label>
               <select v-model.number="config.baud_rate"
-                class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 shadow-2xs">
+                class="ui-input w-full px-2.5 py-1.5 font-mono-code ui-num text-xs">
                 <option :value="1200">1200 bps</option>
                 <option :value="2400">2400 bps</option>
                 <option :value="4800">4800 bps</option>
@@ -81,9 +84,9 @@
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold text-slate-600 mb-1">数据位 (Data Bits)</label>
+              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">数据位 (Data Bits)</label>
               <select v-model.number="config.data_bits"
-                class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 shadow-2xs">
+                class="ui-input w-full px-2.5 py-1.5 font-mono-code ui-num text-xs">
                 <option :value="5">5 Bits</option>
                 <option :value="6">6 Bits</option>
                 <option :value="7">7 Bits</option>
@@ -92,9 +95,9 @@
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold text-slate-600 mb-1">奇偶校验位 (Parity)</label>
+              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">奇偶校验位 (Parity)</label>
               <select v-model="config.parity"
-                class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 shadow-2xs">
+                class="ui-input w-full px-2.5 py-1.5 font-mono-code text-xs">
                 <option value="None">None 无校验 (8-N-1)</option>
                 <option value="Odd">Odd 奇校验</option>
                 <option value="Even">Even 偶校验 (DL/T 645)</option>
@@ -102,18 +105,18 @@
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold text-slate-600 mb-1">停止位 (Stop Bits)</label>
+              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">停止位 (Stop Bits)</label>
               <select v-model.number="config.stop_bits"
-                class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 shadow-2xs">
+                class="ui-input w-full px-2.5 py-1.5 font-mono-code ui-num text-xs">
                 <option :value="1">1 停止位</option>
                 <option :value="2">2 停止位</option>
               </select>
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold text-slate-600 mb-1">硬件/软件流控 (Flow Control)</label>
+              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">硬件/软件流控 (Flow Control)</label>
               <select v-model="config.flow_control"
-                class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 shadow-2xs">
+                class="ui-input w-full px-2.5 py-1.5 font-mono-code text-xs">
                 <option value="None">None 无流控</option>
                 <option value="Software">Software 软件流控 (XON/XOFF)</option>
                 <option value="Hardware">Hardware 硬件流控 (RTS/CTS)</option>
@@ -123,19 +126,19 @@
         </div>
 
         <!-- 动态分帧策略配置 -->
-        <div class="space-y-3 border-t border-slate-200/60 pt-4">
-          <div class="flex items-center justify-between">
-            <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">2. 工业级数据流分帧引擎 (Framing Engine)</h4>
-            <span class="text-[10px] text-indigo-600 font-mono font-bold bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-200">
+        <div class="space-y-3 border-t border-(--border-subtle) pt-4">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <h4 class="text-xs font-bold text-(--text-primary) uppercase tracking-wider">2. 工业级数据流分帧引擎 (Framing Engine)</h4>
+            <span class="text-[11px] text-indigo-700 dark:text-indigo-300 font-mono-code ui-num font-bold bg-indigo-500/12 px-2.5 py-0.5 rounded-lg border border-indigo-500/30">
               理论 3.5T 动态超时: {{ calculated3_5tMs.toFixed(2) }} ms
             </span>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
             <div>
-              <label class="block text-[11px] font-bold text-slate-600 mb-1">分帧模式 (Frame Mode)</label>
+              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">分帧模式 (Frame Mode)</label>
               <select v-model="config.frame_mode"
-                class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 shadow-2xs">
+                class="ui-input w-full px-2.5 py-1.5 font-bold text-xs">
                 <option value="Auto3_5T">Auto3_5T: 智能 3.5 字符动态时间超时分帧 (推荐)</option>
                 <option value="TimeoutMs">TimeoutMs: 显式固定静默超时分帧 (ms)</option>
                 <option value="Delimiter">Delimiter: 特殊定界符分帧 (如 0D0A 回车换行)</option>
@@ -145,48 +148,48 @@
 
             <!-- 根据模式显示对应参数输入 -->
             <div v-if="config.frame_mode === 'TimeoutMs'">
-              <label class="block text-[11px] font-bold text-slate-600 mb-1">静默超时毫秒数 (Timeout ms)</label>
+              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">静默超时毫秒数 (Timeout ms)</label>
               <input v-model.number="config.frame_timeout_ms" type="number" min="1" max="10000"
-                class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 shadow-2xs">
+                class="ui-input w-full px-2.5 py-1.5 font-mono-code ui-num text-xs">
             </div>
 
             <div v-else-if="config.frame_mode === 'Delimiter'">
-              <label class="block text-[11px] font-bold text-slate-600 mb-1">定界符十六进制 (Delimiter Hex)</label>
+              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">定界符十六进制 (Delimiter Hex)</label>
               <input v-model="config.frame_delimiter_hex" placeholder="如 0D0A 或 0A"
-                class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 shadow-2xs">
+                class="ui-input w-full px-2.5 py-1.5 font-mono-code text-xs">
             </div>
 
             <div v-else-if="config.frame_mode === 'FixedLength'">
-              <label class="block text-[11px] font-bold text-slate-600 mb-1">每帧固定字节长度 (Fixed Length)</label>
+              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">每帧固定字节长度 (Fixed Length)</label>
               <input v-model.number="config.frame_fixed_length" type="number" min="1" max="65535"
-                class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 shadow-2xs">
+                class="ui-input w-full px-2.5 py-1.5 font-mono-code ui-num text-xs">
             </div>
 
-            <div v-else class="flex items-center text-[11px] text-slate-500 bg-slate-50 p-2 rounded-xl border border-slate-200">
+            <div v-else class="ui-sub-card flex items-center text-xs text-(--text-secondary) p-2.5 rounded-xl">
               <span>根据波特率与字符结构，底层引擎自动计算 3.5 字符无数据静默判定为一帧。</span>
             </div>
           </div>
         </div>
 
         <!-- 启动状态反馈 -->
-        <div v-if="statusMsg" :class="['p-3 rounded-xl text-xs font-mono border',
-          statusMsg.startsWith('✓') ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200']">
+        <div v-if="statusMsg" :class="['p-3 rounded-xl text-xs font-mono-code border select-text',
+          !isStatusError ? 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' : 'bg-rose-500/12 text-rose-700 dark:text-rose-300 border-rose-500/30']">
           {{ statusMsg }}
         </div>
       </div>
 
       <!-- 模态框底部操作栏 -->
-      <div class="px-6 py-3 border-t border-slate-200/60 bg-white/40 flex items-center justify-between shrink-0">
-        <span class="text-[11px] text-slate-500 font-mono">
+      <div class="px-6 py-3 border-t border-(--border-subtle) bg-(--surface-content-alt) flex items-center justify-between shrink-0">
+        <span class="text-xs text-(--text-muted) font-mono-code ui-num">
           当前配置: {{ selectedPort || '未选串口' }} @ {{ config.baud_rate }}bps ({{ config.data_bits }}-{{ config.parity[0] }}-{{ config.stop_bits }})
         </span>
         <div class="flex items-center gap-2">
-          <button @click="$emit('close')" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
+          <button @click="$emit('close')" class="ui-btn-secondary px-3.5 py-1.5 text-xs font-semibold cursor-pointer">
             取消
           </button>
           <button @click="startCaptureWithConfig" :disabled="isStarting || !selectedPort"
-            class="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-xs px-4 py-1.5 rounded-xl font-bold cursor-pointer transition-all shadow-sm active:scale-95 disabled:opacity-40">
-            <span v-if="isStarting" class="animate-spin">⏳ </span>
+            class="ui-btn-primary text-xs px-4 py-1.5 font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-40">
+            <AppIcon v-if="isStarting" name="refresh" class="w-3.5 h-3.5 animate-spin" />
             <span>以专业参数挂钩监听</span>
           </button>
         </div>
@@ -198,6 +201,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import AppIcon from './AppIcon.vue';
 
 const props = defineProps<{
   isOpen: boolean;
@@ -210,6 +214,7 @@ const emit = defineEmits(['close', 'started', 'log']);
 const selectedPort = ref(props.defaultPort || (props.serialPorts.length > 0 ? props.serialPorts[0] : ''));
 const isStarting = ref(false);
 const statusMsg = ref<string | null>(null);
+const isStatusError = ref(false);
 
 const config = ref({
   baud_rate: 9600,
@@ -271,13 +276,15 @@ async function startCaptureWithConfig() {
   if (!selectedPort.value || isStarting.value) return;
   isStarting.value = true;
   statusMsg.value = null;
+  isStatusError.value = false;
 
   try {
     const res = await invoke<string>('start_serial_capture_with_config', {
       port: selectedPort.value,
       config: config.value,
     });
-    statusMsg.value = `✓ ${res}`;
+    isStatusError.value = false;
+    statusMsg.value = res;
     emit('log', res);
     emit('started', { port: selectedPort.value, baudRate: config.value.baud_rate });
     setTimeout(() => {
@@ -285,7 +292,8 @@ async function startCaptureWithConfig() {
       statusMsg.value = null;
     }, 1200);
   } catch (err: any) {
-    statusMsg.value = `❌ 启动失败: ${err?.message || String(err)}`;
+    isStatusError.value = true;
+    statusMsg.value = `启动失败: ${err?.message || String(err)}`;
   } finally {
     isStarting.value = false;
   }

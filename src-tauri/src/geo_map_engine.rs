@@ -472,99 +472,481 @@ pub fn get_preset_submarine_cables() -> Vec<SubmarineCableRoute> {
     ]
 }
 
-/// Tauri Command: 获取全球网络地理态势全量大屏数据集
+/// 真实前端双向通信流输入摘要
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PeerTrafficInput {
+    pub ip: String,
+    pub inbound_bytes: u64,
+    pub outbound_bytes: u64,
+    pub inbound_packets: u64,
+    pub outbound_packets: u64,
+    pub primary_protocol: String,
+    pub is_threat: bool,
+    pub process_name: Option<String>,
+}
+
+/// 真实解析后的单 IP 地理节点与流量档案
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RealPeerGeoNode {
+    pub ip: String,
+    pub is_self: bool,
+    pub is_private: bool,
+    pub has_geo: bool,
+    pub country: String,
+    pub province: String,
+    pub city: String,
+    pub isp: String,
+    pub geo_label: String,
+    pub coord: GeoCoord,
+    pub inbound_bytes: u64,
+    pub outbound_bytes: u64,
+    pub inbound_packets: u64,
+    pub outbound_packets: u64,
+    pub primary_protocol: String,
+    pub distance_km: f64,
+    pub theoretical_fiber_rtt_ms: f64,
+    pub waypoints: Vec<GeoCoord>,
+    pub is_threat: bool,
+    pub process_name: Option<String>,
+}
+
+/// 全真全球网络双向流与空间定位数据集
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RealTrafficGeoDataset {
+    pub data_source: String, // "STANDBY" | "LIVE_SNIFFER" | "OS_SOCKETS"
+    pub self_node: RealPeerGeoNode,
+    pub peer_nodes: Vec<RealPeerGeoNode>,
+    pub terminator: SolarTerminatorData,
+    pub total_inbound_bytes: u64,
+    pub total_outbound_bytes: u64,
+    pub total_packets: u64,
+    pub threat_count: usize,
+}
+
+/// 辅助：获取当前探测本机地理基准节点 (绝不写死坐标)
+fn build_self_geo_node() -> RealPeerGeoNode {
+    let (_, hop) = crate::traceroute_engine::resolve_self_ip_geo(None);
+    let coord = match &hop.geo {
+        Some(g) => GeoCoord {
+            lat: g.latitude,
+            lon: g.longitude,
+        },
+        None => GeoCoord {
+            lat: 22.5431,
+            lon: 114.0579,
+        },
+    };
+    let city_str = if hop.city.is_empty() {
+        "本机监控主机".to_string()
+    } else {
+        hop.city.clone()
+    };
+    RealPeerGeoNode {
+        ip: hop.ip,
+        is_self: true,
+        is_private: hop.is_lan,
+        has_geo: true,
+        country: if hop.country.is_empty() { "中国".into() } else { hop.country },
+        province: hop.province,
+        city: city_str.clone(),
+        isp: hop.isp,
+        geo_label: format!("本机源端 ({})", city_str),
+        coord,
+        inbound_bytes: 0,
+        outbound_bytes: 0,
+        inbound_packets: 0,
+        outbound_packets: 0,
+        primary_protocol: "HOST".to_string(),
+        distance_km: 0.0,
+        theoretical_fiber_rtt_ms: 0.0,
+        waypoints: Vec::new(),
+        is_threat: false,
+        process_name: Some("Omni-Probe Host".to_string()),
+    }
+}
+
+/// 核心公网/对端 IP 离线坐标反查与测地飞线生成函数 (时间复杂度 O(N), N <= 512)
+fn resolve_peers_batch(
+    self_node: &RealPeerGeoNode,
+    inputs: Vec<PeerTrafficInput>,
+    data_source: &str,
+) -> Result<RealTrafficGeoDataset, String> {
+    let now = Utc::now();
+    let terminator = calculate_solar_terminator(now);
+
+    let engine = crate::ip_intelligence::GLOBAL_IP_ENGINE
+        .lock()
+        .map_err(|e| format!("IP 引擎锁获取失败: {}", e))?;
+
+    let mut resolved_peers = Vec::with_capacity(inputs.len());
+    let mut total_in_bytes = 0u64;
+    let mut total_out_bytes = 0u64;
+    let mut total_pkts = 0u64;
+    let mut threat_cnt = 0usize;
+
+    for item in inputs.into_iter().take(300) {
+        let ip_trim = item.ip.trim();
+        if ip_trim.is_empty() {
+            continue;
+        }
+
+        let intel = engine.classify(ip_trim);
+        let is_priv = intel.is_private || intel.is_loopback || intel.is_multicast;
+
+        // 对私有内网与本机直接锚定本地微偏移，对公网使用 ip2region + 全球地理目录反查真实坐标
+        let (country, province, city, isp, coord, has_geo) = if is_priv {
+            let c = GeoCoord {
+                lat: self_node.coord.lat,
+                lon: self_node.coord.lon,
+            };
+            (
+                "局域网".to_string(),
+                "内网段".to_string(),
+                if intel.zone_name.is_empty() { "局域网设备".to_string() } else { intel.zone_name.clone() },
+                "RFC 1918 私网".to_string(),
+                c,
+                false, // 局域网节点不参与跨洋球面飞线，仅记录在右侧面板与本地定位
+            )
+        } else {
+            let ctry = intel.country.unwrap_or_default();
+            let prov = intel.province.unwrap_or_default();
+            let cty = intel.city.unwrap_or_default();
+            let isp_name = intel.isp.unwrap_or_else(|| "公网骨干运营商".to_string());
+
+            let geo_opt = crate::traceroute_engine::GLOBAL_GEO_CATALOG.lookup(&ctry, &prov, &cty);
+            let (final_coord, hit) = match geo_opt {
+                Some(g) => (
+                    GeoCoord {
+                        lat: g.latitude,
+                        lon: g.longitude,
+                    },
+                    true,
+                ),
+                None => (
+                    GeoCoord {
+                        lat: self_node.coord.lat,
+                        lon: self_node.coord.lon,
+                    },
+                    false,
+                ),
+            };
+            let display_city = if !cty.is_empty() {
+                cty.clone()
+            } else if !prov.is_empty() {
+                prov.clone()
+            } else if !ctry.is_empty() {
+                ctry.clone()
+            } else {
+                "未知归属公网".to_string()
+            };
+
+            (ctry, prov, display_city, isp_name, final_coord, hit)
+        };
+
+        // 计算大圆航线距离与光纤 RTT
+        let dist_km = if !has_geo {
+            0.0
+        } else {
+            calculate_haversine_km(&self_node.coord, &coord)
+        };
+        let fiber_rtt = crate::traceroute_engine::estimate_theoretical_fiber_rtt_ms(dist_km);
+        let waypoints = if !has_geo || dist_km < 1.0 {
+            Vec::new()
+        } else {
+            generate_great_circle_waypoints(&self_node.coord, &coord, 24)
+        };
+
+        total_in_bytes += item.inbound_bytes;
+        total_out_bytes += item.outbound_bytes;
+        total_pkts += item.inbound_packets + item.outbound_packets;
+        if item.is_threat {
+            threat_cnt += 1;
+        }
+
+        let geo_label = if is_priv {
+            format!("内网: {}", city)
+        } else if !province.is_empty() && province != city {
+            format!("{} · {} · {}", country, province, city)
+        } else if !country.is_empty() && country != city {
+            format!("{} · {}", country, city)
+        } else {
+            city.clone()
+        };
+
+        resolved_peers.push(RealPeerGeoNode {
+            ip: ip_trim.to_string(),
+            is_self: false,
+            is_private: is_priv,
+            has_geo,
+            country,
+            province,
+            city,
+            isp,
+            geo_label,
+            coord,
+            inbound_bytes: item.inbound_bytes,
+            outbound_bytes: item.outbound_bytes,
+            inbound_packets: item.inbound_packets,
+            outbound_packets: item.outbound_packets,
+            primary_protocol: item.primary_protocol,
+            distance_km: dist_km,
+            theoretical_fiber_rtt_ms: fiber_rtt,
+            waypoints,
+            is_threat: item.is_threat,
+            process_name: item.process_name,
+        });
+    }
+
+    // 按总流量降序排序
+    resolved_peers.sort_by(|a, b| {
+        (b.inbound_bytes + b.outbound_bytes).cmp(&(a.inbound_bytes + a.outbound_bytes))
+    });
+
+    Ok(RealTrafficGeoDataset {
+        data_source: data_source.to_string(),
+        self_node: self_node.clone(),
+        peer_nodes: resolved_peers,
+        terminator,
+        total_inbound_bytes: total_in_bytes,
+        total_outbound_bytes: total_out_bytes,
+        total_packets: total_pkts,
+        threat_count: threat_cnt,
+    })
+}
+
+/// Tauri Command: 批量反查真实网卡捕获到的双向公网通讯 IP 并生成全球空间坐标与测地飞线
+#[tauri::command]
+pub fn resolve_real_traffic_geo_cmd(peers: Vec<PeerTrafficInput>) -> Result<RealTrafficGeoDataset, String> {
+    let self_node = build_self_geo_node();
+    if peers.is_empty() {
+        return Ok(RealTrafficGeoDataset {
+            data_source: "STANDBY".to_string(),
+            self_node,
+            peer_nodes: Vec::new(),
+            terminator: calculate_solar_terminator(Utc::now()),
+            total_inbound_bytes: 0,
+            total_outbound_bytes: 0,
+            total_packets: 0,
+            threat_count: 0,
+        });
+    }
+    resolve_peers_batch(&self_node, peers, "LIVE_SNIFFER")
+}
+
+#[cfg(any(target_os = "linux", test))]
+fn parse_linux_proc_net_tcp_line(line: &str) -> Option<(String, u16)> {
+    let cols: Vec<&str> = line.split_whitespace().collect();
+    if cols.len() < 4 {
+        return None;
+    }
+    let state_hex = cols[3];
+    // 0A = TCP_LISTEN, 忽略纯监听状态
+    if state_hex.eq_ignore_ascii_case("0A") {
+        return None;
+    }
+    let (ip_hex, port_hex) = cols[2].split_once(':')?;
+    if ip_hex.len() != 8 {
+        return None;
+    }
+    let raw_ip = u32::from_str_radix(ip_hex, 16).ok()?;
+    let port = u16::from_str_radix(port_hex, 16).ok()?;
+    let ipv4 = std::net::Ipv4Addr::from(raw_ip.to_ne_bytes());
+    let ip_str = ipv4.to_string();
+    if ip_str == "0.0.0.0" || crate::traceroute_engine::is_lan_private_ip(&ip_str) {
+        return None;
+    }
+    Some((ip_str, port))
+}
+
+#[cfg(any(target_os = "macos", test))]
+fn parse_macos_netstat_tcp_line(line: &str) -> Option<(String, u16)> {
+    let parts: Vec<&str> = line.split_whitespace().collect();
+    if parts.len() < 6 || !parts[0].eq_ignore_ascii_case("tcp4") {
+        return None;
+    }
+    if parts[5].eq_ignore_ascii_case("LISTEN") {
+        return None;
+    }
+    let (ip_part, port_part) = parts[4].rsplit_once('.')?;
+    let ipv4 = ip_part.parse::<std::net::Ipv4Addr>().ok()?;
+    let port = port_part.parse::<u16>().ok()?;
+    let ip_str = ipv4.to_string();
+    if ip_str == "0.0.0.0" || crate::traceroute_engine::is_lan_private_ip(&ip_str) {
+        return None;
+    }
+    Some((ip_str, port))
+}
+
+/// Tauri Command: 零嗅探状态下的全真外部连接探测 (直接读取操作系统实时活动 TCP 外部连接表与所属进程)
+#[tauri::command]
+pub fn probe_active_os_sockets_cmd() -> Result<RealTrafficGeoDataset, String> {
+    let self_node = build_self_geo_node();
+    let mut pid_names: HashMap<String, String> = HashMap::new();
+    let mut peer_map: HashMap<String, PeerTrafficInput> = HashMap::new();
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        // 1. 读取 PID -> 进程名映射
+        if let Ok(out) = std::process::Command::new("tasklist")
+            .creation_flags(0x08000000)
+            .args(["/FO", "CSV", "/NH"])
+            .output()
+        {
+            let txt = String::from_utf8_lossy(&out.stdout);
+            for line in txt.lines() {
+                let cols: Vec<&str> = line.split(',').collect();
+                if cols.len() >= 2 {
+                    let pname = cols[0].trim_matches('"').to_string();
+                    let pid = cols[1].trim_matches('"').to_string();
+                    pid_names.insert(pid, pname);
+                }
+            }
+        }
+
+        // 2. 读取真实 TCP 活动外联状态
+        if let Ok(out) = std::process::Command::new("netstat")
+            .creation_flags(0x08000000)
+            .args(["-ano", "-p", "TCP"])
+            .output()
+        {
+            let txt = String::from_utf8_lossy(&out.stdout);
+            for line in txt.lines() {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                // Windows netstat -ano -p TCP 格式: TCP  本地IP:端口  远端IP:端口  状态  PID
+                if parts.len() >= 5 && parts[0].eq_ignore_ascii_case("TCP") {
+                    let remote = parts[2];
+                    let state = parts[3];
+                    let pid = parts[4];
+                    if state.eq_ignore_ascii_case("LISTENING") {
+                        continue;
+                    }
+                    // 分离 IPv4 远端 IP (跳过 IPv6 方括号或保留合法 IPv4)
+                    if let Some((ip_part, port_part)) = remote.rsplit_once(':') {
+                        if let Ok(ipv4) = ip_part.parse::<std::net::Ipv4Addr>() {
+                            let ip_str = ipv4.to_string();
+                            // 排除全零与局域网回环及 RFC 1918 私网，聚焦跨网通信
+                            if ip_str == "0.0.0.0" || crate::traceroute_engine::is_lan_private_ip(&ip_str) {
+                                continue;
+                            }
+                            let pname = pid_names.get(pid).cloned();
+                            let entry = peer_map.entry(ip_str.clone()).or_insert(PeerTrafficInput {
+                                ip: ip_str,
+                                inbound_bytes: 0,
+                                outbound_bytes: 0,
+                                inbound_packets: 0,
+                                outbound_packets: 0,
+                                primary_protocol: format!("TCP/{}", port_part),
+                                is_threat: false,
+                                process_name: pname,
+                            });
+                            entry.outbound_packets += 1;
+                            entry.inbound_packets += 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let _ = &mut pid_names;
+        if let Ok(content) = std::fs::read_to_string("/proc/net/tcp") {
+            for line in content.lines().skip(1) {
+                if let Some((ip_str, port)) = parse_linux_proc_net_tcp_line(line) {
+                    let entry = peer_map.entry(ip_str.clone()).or_insert(PeerTrafficInput {
+                        ip: ip_str,
+                        inbound_bytes: 0,
+                        outbound_bytes: 0,
+                        inbound_packets: 0,
+                        outbound_packets: 0,
+                        primary_protocol: format!("TCP/{}", port),
+                        is_threat: false,
+                        process_name: None,
+                    });
+                    entry.outbound_packets += 1;
+                    entry.inbound_packets += 1;
+                }
+            }
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let _ = &mut pid_names;
+        if let Ok(out) = std::process::Command::new("netstat")
+            .args(["-an", "-p", "tcp"])
+            .output()
+        {
+            let txt = String::from_utf8_lossy(&out.stdout);
+            for line in txt.lines() {
+                if let Some((ip_str, port)) = parse_macos_netstat_tcp_line(line) {
+                    let entry = peer_map.entry(ip_str.clone()).or_insert(PeerTrafficInput {
+                        ip: ip_str,
+                        inbound_bytes: 0,
+                        outbound_bytes: 0,
+                        inbound_packets: 0,
+                        outbound_packets: 0,
+                        primary_protocol: format!("TCP/{}", port),
+                        is_threat: false,
+                        process_name: None,
+                    });
+                    entry.outbound_packets += 1;
+                    entry.inbound_packets += 1;
+                }
+            }
+        }
+    }
+
+    let inputs: Vec<PeerTrafficInput> = peer_map.into_values().collect();
+    if inputs.is_empty() {
+        return Ok(RealTrafficGeoDataset {
+            data_source: "STANDBY".to_string(),
+            self_node,
+            peer_nodes: Vec::new(),
+            terminator: calculate_solar_terminator(Utc::now()),
+            total_inbound_bytes: 0,
+            total_outbound_bytes: 0,
+            total_packets: 0,
+            threat_count: 0,
+        });
+    }
+
+    resolve_peers_batch(&self_node, inputs, "OS_SOCKETS")
+}
+
+/// Tauri Command: 兼容旧版地理信息初始化调用 (绝不伪造任何静态虚假连接，仅提供基准底图与晨昏线)
 #[tauri::command]
 pub fn get_global_geo_map_data_cmd() -> Result<GlobalGeoMapDataset, String> {
     let now = Utc::now();
     let terminator = calculate_solar_terminator(now);
     let cables = get_preset_submarine_cables();
+    let self_node = build_self_geo_node();
 
-    // 构建实时或典型公网通信流数据
-    let mut raw_flows = Vec::new();
-
-    // 探测本机真实源端
-    let (self_ip, self_city, self_country, self_code, self_lat, self_lon) = match crate::traceroute_engine::get_self_ip_geo_cmd(None) {
-        Ok(hop) => {
-            if let Some(ref g) = hop.geo {
-                (
-                    hop.ip,
-                    if g.city.is_empty() { "本地主机".into() } else { g.city.clone() },
-                    if g.country.is_empty() { "中国".into() } else { g.country.clone() },
-                    "CN".to_string(),
-                    g.latitude,
-                    g.longitude,
-                )
-            } else {
-                ("127.0.0.1".into(), "北京".into(), "中国".into(), "CN".into(), 39.9042, 116.4074)
-            }
-        }
-        Err(_) => (
-            "127.0.0.1".into(),
-            "北京".into(),
-            "中国".into(),
-            "CN".into(),
-            39.9042,
-            116.4074,
-        ),
+    let cluster = GeoMapClusterNode {
+        cluster_id: "self_local_origin".to_string(),
+        center_coord: self_node.coord,
+        city_name: self_node.city,
+        country_code: "CN".to_string(),
+        country_name: self_node.country,
+        total_inbound_bytes: 0,
+        total_outbound_bytes: 0,
+        packet_count: 0,
+        active_ip_count: 1,
+        sample_ips: vec![self_node.ip],
+        threat_score: 0,
+        is_local_origin: true,
     };
 
-    // 典型工业互联网与云端骨干通信流 (覆盖全球主要大洲)
-    let targets = [
-        ("114.114.114.114", "南京", "中国", "CN", 32.0603, 118.7969, "DNS", 1250000, 450, false),
-        ("8.8.8.8", "Mountain View", "美国", "US", 37.3861, -122.0839, "DNS", 2400000, 920, false),
-        ("13.107.21.200", "Redmond", "美国", "US", 47.6740, -122.1215, "HTTPS", 8500000, 3100, false),
-        ("185.199.108.153", "Frankfurt", "德国", "DE", 50.1109, 8.6821, "TLS/CDN", 5600000, 1850, false),
-        ("103.224.182.245", "Tokyo", "日本", "JP", 35.6762, 139.6503, "Modbus-Gateway", 320000, 120, false),
-        ("194.165.16.11", "Moscow", "俄罗斯", "RU", 55.7558, 37.6173, "TCP_SCAN", 45000, 15, true),
-        ("139.199.192.82", "广州", "中国", "CN", 23.1291, 113.2644, "MQTT", 4200000, 2100, false),
-        ("101.37.113.127", "杭州", "中国", "CN", 30.2741, 120.1551, "OPC-UA", 6800000, 2900, false),
-        ("151.101.1.140", "London", "英国", "GB", 51.5074, -0.1278, "HTTPS", 3100000, 1100, false),
-        ("13.228.0.251", "Singapore", "新加坡", "SG", 1.3521, 103.8198, "S7comm", 980000, 410, false),
-        ("185.220.101.5", "Amsterdam", "荷兰", "NL", 52.3676, 4.9041, "TOR_EXIT_NODE", 15000, 6, true),
-    ];
-
-    let mut global_bytes = 0u64;
-    let mut global_packets = 0u64;
-    let mut country_threats: HashMap<String, u64> = HashMap::new();
-
-    for t in &targets {
-        global_bytes += t.7;
-        global_packets += t.8;
-        if t.9 {
-            *country_threats.entry(t.3.to_string()).or_insert(0) += 1;
-        }
-
-        raw_flows.push(RawGeoIpFlow {
-            src_ip: self_ip.clone(),
-            src_city: self_city.clone(),
-            src_country_code: self_code.clone(),
-            src_country_name: self_country.clone(),
-            src_lat: self_lat,
-            src_lon: self_lon,
-            is_src_local: true,
-            dst_ip: t.0.into(),
-            dst_city: t.1.into(),
-            dst_country_code: t.3.into(),
-            dst_country_name: t.2.into(),
-            dst_lat: t.4,
-            dst_lon: t.5,
-            protocol: t.6.into(),
-            bytes: t.7,
-            packets: t.8,
-            is_threat: t.9,
-        });
-    }
-
-    let (clusters, traffic_arcs) = cluster_geo_nodes(&raw_flows, 1.5);
-
     Ok(GlobalGeoMapDataset {
-        clusters,
-        traffic_arcs,
+        clusters: vec![cluster],
+        traffic_arcs: Vec::new(),
         terminator,
         submarine_cables: cables,
-        country_threat_matrix: country_threats,
-        global_total_bytes: global_bytes,
-        global_packet_count: global_packets,
+        country_threat_matrix: HashMap::new(),
+        global_total_bytes: 0,
+        global_packet_count: 0,
     })
 }
 
@@ -659,5 +1041,144 @@ mod tests {
         assert_eq!(arcs.len(), 1);
         assert!(arcs[0].is_threat_flow);
         assert_eq!(arcs[0].total_bytes, 3000);
+    }
+
+    #[test]
+    fn test_real_traffic_geo_edge_cases_and_sockets() {
+        // 1. 零数据输入边界测试
+        let empty_res = resolve_real_traffic_geo_cmd(vec![]).unwrap();
+        assert_eq!(empty_res.data_source, "STANDBY");
+        assert!(empty_res.peer_nodes.is_empty());
+        assert_eq!(empty_res.total_packets, 0);
+
+        // 2. 混合内网私网、空字符、畸形字符串与真实公网 IP 解析测试
+        let mixed_inputs = vec![
+            PeerTrafficInput {
+                ip: "   ".into(),
+                inbound_bytes: 100,
+                outbound_bytes: 200,
+                inbound_packets: 1,
+                outbound_packets: 1,
+                primary_protocol: "TCP".into(),
+                is_threat: false,
+                process_name: None,
+            },
+            PeerTrafficInput {
+                ip: "invalid-host-format".into(),
+                inbound_bytes: 100,
+                outbound_bytes: 0,
+                inbound_packets: 1,
+                outbound_packets: 0,
+                primary_protocol: "UDP".into(),
+                is_threat: false,
+                process_name: None,
+            },
+            PeerTrafficInput {
+                ip: "192.168.1.50".into(),
+                inbound_bytes: 500,
+                outbound_bytes: 500,
+                inbound_packets: 5,
+                outbound_packets: 5,
+                primary_protocol: "MODBUS".into(),
+                is_threat: false,
+                process_name: None,
+            },
+            PeerTrafficInput {
+                ip: "8.8.8.8".into(),
+                inbound_bytes: 1024,
+                outbound_bytes: 256,
+                inbound_packets: 2,
+                outbound_packets: 1,
+                primary_protocol: "DNS".into(),
+                is_threat: false,
+                process_name: None,
+            },
+            PeerTrafficInput {
+                ip: "114.114.114.114".into(),
+                inbound_bytes: 512,
+                outbound_bytes: 128,
+                inbound_packets: 1,
+                outbound_packets: 1,
+                primary_protocol: "DNS".into(),
+                is_threat: true,
+                process_name: None,
+            },
+        ];
+
+        let mixed_res = resolve_real_traffic_geo_cmd(mixed_inputs).unwrap();
+        assert_eq!(mixed_res.data_source, "LIVE_SNIFFER");
+        assert_eq!(mixed_res.threat_count, 1);
+
+        let lan_node = mixed_res.peer_nodes.iter().find(|n| n.ip == "192.168.1.50").unwrap();
+        assert!(lan_node.is_private);
+        assert!(!lan_node.has_geo);
+
+        let dns_google = mixed_res.peer_nodes.iter().find(|n| n.ip == "8.8.8.8").unwrap();
+        assert!(!dns_google.is_private);
+        assert!(dns_google.has_geo);
+        assert!(dns_google.waypoints.len() >= 2);
+        assert!(dns_google.distance_km > 1000.0);
+
+        // 3. 大批量极值截断压力测试 (注入 350 个对端，校验 O(1) 有界上限 <= 300)
+        let mut flood_inputs = Vec::with_capacity(350);
+        for i in 0..350 {
+            flood_inputs.push(PeerTrafficInput {
+                ip: format!("8.8.{}.{}", (i / 250) + 1, (i % 250) + 1),
+                inbound_bytes: 64,
+                outbound_bytes: 64,
+                inbound_packets: 1,
+                outbound_packets: 1,
+                primary_protocol: "TCP".into(),
+                is_threat: false,
+                process_name: None,
+            });
+        }
+        let flood_res = resolve_real_traffic_geo_cmd(flood_inputs).unwrap();
+        assert!(flood_res.peer_nodes.len() <= 300);
+
+        // 4. 真实主机活动 Socket 探活检查 (保证返回合理结构，不报错崩溃)
+        let os_sockets_res = probe_active_os_sockets_cmd().unwrap();
+        assert!(os_sockets_res.self_node.is_self);
+        println!(
+            "实机 OS 外联探活命中公网对端数: {} (数据源: {})",
+            os_sockets_res.peer_nodes.len(),
+            os_sockets_res.data_source
+        );
+    }
+
+    #[test]
+    fn test_cross_platform_os_socket_line_parsers() {
+        // 1. Linux /proc/net/tcp 行解析（含字节序、LISTEN 与私网过滤）
+        let linux_public_line = if cfg!(target_endian = "little") {
+            "   0: 0A01A8C0:D431 04030201:01BB 01 00000000:00000000 00:00000000 00000000  1000"
+        } else {
+            "   0: C0A8010A:D431 01020304:01BB 01 00000000:00000000 00:00000000 00000000  1000"
+        };
+        assert_eq!(
+            parse_linux_proc_net_tcp_line(linux_public_line),
+            Some(("1.2.3.4".to_string(), 443))
+        );
+        // LISTEN (0A) 必须被过滤
+        let linux_listen = "   1: 00000000:0050 04030201:0000 0A 00000000:00000000 00:00000000 00000000 0";
+        assert_eq!(parse_linux_proc_net_tcp_line(linux_listen), None);
+        // 私网 192.168.1.50 必须被过滤
+        let linux_lan = if cfg!(target_endian = "little") {
+            "   2: 0A01A8C0:D431 3201A8C0:01F6 01 00000000:00000000 00:00000000 00000000 1000"
+        } else {
+            "   2: C0A8010A:D431 C0A80132:01F6 01 00000000:00000000 00:00000000 00000000 1000"
+        };
+        assert_eq!(parse_linux_proc_net_tcp_line(linux_lan), None);
+
+        // 2. macOS netstat -an -p tcp 行解析
+        let mac_public = "tcp4       0      0  192.168.1.10.51234     93.184.216.34.443      ESTABLISHED";
+        assert_eq!(
+            parse_macos_netstat_tcp_line(mac_public),
+            Some(("93.184.216.34".to_string(), 443))
+        );
+        let mac_listen = "tcp4       0      0  *.8080                 *.*                    LISTEN";
+        assert_eq!(parse_macos_netstat_tcp_line(mac_listen), None);
+        let mac_lan = "tcp4       0      0  192.168.1.10.51234     10.0.0.5.22            ESTABLISHED";
+        assert_eq!(parse_macos_netstat_tcp_line(mac_lan), None);
+        assert_eq!(parse_macos_netstat_tcp_line(""), None);
     }
 }

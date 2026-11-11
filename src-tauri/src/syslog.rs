@@ -68,22 +68,19 @@ pub fn format_rfc5424(facility: u8, severity: u8, app_name: &str, msg: &str) -> 
 /// 集中外发日志入口（非阻塞安全分流）
 pub fn emit_syslog(severity: u8, message: &str) {
     let (enabled, server_ip, server_port, proto, facility, app_name) = {
-        if let Ok(mut cfg) = GLOBAL_SYSLOG.lock() {
-            if !cfg.enabled || severity > cfg.min_severity {
-                return;
-            }
-            cfg.sent_count += 1;
-            (
-                cfg.enabled,
-                cfg.server_ip.clone(),
-                cfg.server_port,
-                cfg.protocol.clone(),
-                cfg.facility,
-                cfg.app_name.clone(),
-            )
-        } else {
+        let mut cfg = crate::lock_guard::lock_mutex(&GLOBAL_SYSLOG, "syslog::emit_syslog");
+        if !cfg.enabled || severity > cfg.min_severity {
             return;
         }
+        cfg.sent_count += 1;
+        (
+            cfg.enabled,
+            cfg.server_ip.clone(),
+            cfg.server_port,
+            cfg.protocol.clone(),
+            cfg.facility,
+            cfg.app_name.clone(),
+        )
     };
 
     if !enabled {
@@ -118,7 +115,7 @@ pub fn emit_syslog(severity: u8, message: &str) {
 // ---- Tauri 命令支持 ----
 
 pub fn get_syslog_config() -> SyslogConfig {
-    GLOBAL_SYSLOG.lock().map(|c| c.clone()).unwrap_or_default()
+    crate::lock_guard::lock_mutex(&GLOBAL_SYSLOG, "syslog::get_syslog_config").clone()
 }
 
 pub fn save_syslog_config(new_cfg: SyslogConfig) {
@@ -126,14 +123,13 @@ pub fn save_syslog_config(new_cfg: SyslogConfig) {
     if let Ok(json_str) = serde_json::to_string_pretty(&new_cfg) {
         let _ = std::fs::write(path, json_str);
     }
-    if let Ok(mut c) = GLOBAL_SYSLOG.lock() {
-        *c = new_cfg;
-    }
+    let mut c = crate::lock_guard::lock_mutex(&GLOBAL_SYSLOG, "syslog::save_syslog_config");
+    *c = new_cfg;
 }
 
 pub async fn test_send_syslog(test_msg: &str) -> Result<String, String> {
     let (server_ip, server_port, proto, facility, app_name) = {
-        let cfg = GLOBAL_SYSLOG.lock().map_err(|e| e.to_string())?;
+        let cfg = crate::lock_guard::lock_mutex(&GLOBAL_SYSLOG, "syslog::test_send_syslog_read");
         (
             cfg.server_ip.clone(),
             cfg.server_port,
@@ -160,7 +156,8 @@ pub async fn test_send_syslog(test_msg: &str) -> Result<String, String> {
         stream.write_all(format!("{}\n", raw_rfc).as_bytes()).await.map_err(|e| e.to_string())?;
     }
 
-    if let Ok(mut cfg) = GLOBAL_SYSLOG.lock() {
+    {
+        let mut cfg = crate::lock_guard::lock_mutex(&GLOBAL_SYSLOG, "syslog::test_send_syslog_count");
         cfg.sent_count += 1;
     }
 

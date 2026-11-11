@@ -1,70 +1,72 @@
 <template>
   <div class="flex-1 flex flex-col gap-3 overflow-hidden">
-    <!-- 顶部会话链路与通信节点配置面板 -->
-    <div class="bg-white/90 rounded-2xl border border-white/80 shadow p-4 shrink-0 flex flex-col gap-3">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+    <!-- 顶部会话链路与通信节点配置面板 (实体工作区面板) -->
+    <div class="ui-content-card p-4 shrink-0 flex flex-col gap-3">
+      <div class="flex items-center justify-between border-b pb-2.5 flex-wrap gap-2" style="border-color: var(--border-subtle)">
         <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
-            🔄
+          <div class="w-8 h-8 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-700 dark:text-sky-300 flex items-center justify-center shrink-0">
+            <AppIcon name="refresh" :size="16" />
           </div>
           <div>
-            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-              <span>双向会话流与节点交互观测器 (Bidirectional Session Flow Inspector)</span>
+            <h2 class="text-sm font-bold flex items-center gap-1.5" style="color: var(--text-primary)">
+              <span>双向会话流与节点交互观测器</span>
             </h2>
-            <p class="text-[10px] text-slate-400 mt-0.5">
+            <p class="text-[11px] mt-0.5" style="color: var(--text-muted)">
               精准追踪发起端设备向目标端设备发送的业务报文，以及目标端反馈的应答与真实时序往返
             </p>
           </div>
         </div>
 
-        <!-- 右侧指标与控制开关 -->
-        <div class="flex items-center gap-2">
-          <button @click="autoScroll = !autoScroll"
-            :class="['text-xs px-2.5 py-1.5 rounded-lg border transition-all font-medium flex items-center gap-1',
-              autoScroll ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-500 border-slate-200']">
-            <span>{{ autoScroll ? '⚡ 自动跟踪最新' : '⏸ 暂停自动滚屏' }}</span>
-          </button>
-        </div>
+        <button @click="autoScroll = !autoScroll"
+          :class="['text-xs px-3 py-1.5 rounded-xl border transition-colors font-semibold flex items-center gap-1.5 cursor-pointer',
+            autoScroll ? 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/35' : 'ui-pill']">
+          <AppIcon :name="autoScroll ? 'zap' : 'pause'" :size="12" />
+          <span>{{ autoScroll ? '自动跟踪最新' : '暂停自动滚屏' }}</span>
+        </button>
       </div>
 
       <!-- 通信节点配置与会话链路选择 -->
-      <div class="grid grid-cols-[1fr_1fr_260px] gap-3 items-end">
-        <!-- 发起端设备 (Client / Source) -->
+      <div class="grid grid-cols-1 lg:grid-cols-[1fr_1fr_260px] gap-3 items-end">
         <div class="flex flex-col gap-1">
           <div class="flex items-center justify-between">
-            <label class="text-[10px] font-bold text-blue-700 uppercase flex items-center gap-1">
-              <span>🔵 发起端设备 (Client / Source)</span>
+            <label class="text-[11px] font-bold text-sky-700 dark:text-sky-300 uppercase flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full bg-sky-500"></span>
+              <span>发起端设备 (Client / Source)</span>
             </label>
-            <span class="text-[9px] text-slate-400">支持多 IP 逗号分隔，留空匹配所有通信源</span>
+            <span class="text-[11px]" style="color: var(--text-muted)">支持多 IP 逗号分隔</span>
           </div>
           <div class="relative">
-            <input v-model="sourceInitiatorIp" placeholder="如: 192.168.1.10, 192.168.1.20 (逗号分隔)"
-              class="w-full bg-blue-50/40 border border-blue-200 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-800 focus:outline-none focus:border-blue-400">
-            <button v-if="sourceInitiatorIp" @click="sourceInitiatorIp = ''" class="absolute right-2 top-1.5 text-slate-400 hover:text-slate-600 text-xs">✕</button>
+            <input v-model="sourceInitiatorIp" placeholder="如: 192.168.1.10, 192.168.1.20"
+              class="ui-input ui-num px-3 py-1.5 text-xs pr-7">
+            <button v-if="sourceInitiatorIp" @click="sourceInitiatorIp = ''" class="absolute right-2 top-1.5 cursor-pointer" style="color: var(--text-muted)">
+              <AppIcon name="close" :size="12" />
+            </button>
           </div>
         </div>
 
-        <!-- 目标端设备 (Server / Target) -->
         <div class="flex flex-col gap-1">
           <div class="flex items-center justify-between">
-            <label class="text-[10px] font-bold text-indigo-700 uppercase flex items-center gap-1">
-              <span>🟣 目标端设备 (Server / Target)</span>
+            <label class="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 uppercase flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+              <span>目标端设备 (Server / Target)</span>
             </label>
-            <span class="text-[9px] text-slate-400">支持 IP 或端口 (如: 192.168.1.100 或 8080)</span>
+            <span class="text-[11px]" style="color: var(--text-muted)">支持 IP 或端口</span>
           </div>
           <div class="relative">
-            <input v-model="targetCenterIp" placeholder="如: 192.168.1.100 或 8080 (IP 或端口)"
-              class="w-full bg-indigo-50/40 border border-indigo-200 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-800 focus:outline-none focus:border-indigo-400">
-            <button v-if="targetCenterIp" @click="targetCenterIp = ''" class="absolute right-2 top-1.5 text-slate-400 hover:text-slate-600 text-xs">✕</button>
+            <input v-model="targetCenterIp" placeholder="如: 192.168.1.100 或 8080"
+              class="ui-input ui-num px-3 py-1.5 text-xs pr-7">
+            <button v-if="targetCenterIp" @click="targetCenterIp = ''" class="absolute right-2 top-1.5 cursor-pointer" style="color: var(--text-muted)">
+              <AppIcon name="close" :size="12" />
+            </button>
           </div>
         </div>
 
-        <!-- 自动提取的活跃会话链路对下拉列表 -->
         <div class="flex flex-col gap-1">
-          <label class="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
-            <span>⚡ 活跃会话链路对 (Active Session Pairs)</span>
+          <label class="text-[11px] font-bold uppercase flex items-center gap-1" style="color: var(--text-muted)">
+            <AppIcon name="link" :size="12" />
+            <span>活跃会话链路对</span>
           </label>
-          <select @change="onSelectActiveFlow($event)" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-mono text-slate-700 focus:outline-none">
+          <select @change="onSelectActiveFlow($event)" class="ui-input ui-num px-2.5 py-1.5 text-xs cursor-pointer">
             <option value="">-- 选择识别到的双向会话对 --</option>
             <option v-for="pair in activeFlowPairs" :key="pair.key" :value="pair.key">
               {{ pair.label }} ({{ pair.count }} 帧)
@@ -73,215 +75,210 @@
         </div>
       </div>
 
-      <!-- 快速标签：一键添加已感知资产 -->
-      <div v-if="assets && assets.length > 0" class="flex items-center gap-1.5 flex-wrap pt-1 border-t border-slate-100/60">
-        <span class="text-[10px] text-slate-400 font-medium">快速加入发起端设备:</span>
+      <!-- 快速标签 -->
+      <div v-if="assets && assets.length > 0" class="flex items-center gap-1.5 flex-wrap pt-1.5 border-t" style="border-color: var(--border-subtle)">
+        <span class="text-[11px] font-medium" style="color: var(--text-muted)">快速加入发起端设备:</span>
         <button v-for="ast in assets.slice(0, 8)" :key="ast.ip"
           @click="addAssetToSource(ast.ip)"
-          class="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-700 border border-slate-200 transition-colors">
+          class="text-[11px] ui-num px-2 py-0.5 rounded-md ui-pill cursor-pointer">
           + {{ ast.ip }}
         </button>
       </div>
 
       <!-- 统计指标条 -->
-      <div class="grid grid-cols-4 gap-2 pt-1 border-t border-slate-100/60 text-xs font-mono">
-        <div class="bg-blue-50/50 border border-blue-100 rounded-lg p-2 flex justify-between items-center">
-          <span class="text-[10px] text-blue-600 font-bold uppercase">发起端 ➔ 目标端 发送</span>
-          <span class="font-extrabold text-blue-900">{{ forwardCount }} 帧 ({{ formatBytes(forwardBytes) }})</span>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 pt-1.5 border-t text-xs ui-num" style="border-color: var(--border-subtle)">
+        <div class="ui-sub-card p-2 flex justify-between items-center bg-sky-500/8 border-sky-500/25">
+          <span class="text-[11px] text-sky-700 dark:text-sky-300 font-bold">发起 → 目标</span>
+          <span class="font-bold" style="color: var(--text-primary)">{{ forwardCount }} 帧 ({{ formatBytes(forwardBytes) }})</span>
         </div>
-        <div class="bg-indigo-50/50 border border-indigo-100 rounded-lg p-2 flex justify-between items-center">
-          <span class="text-[10px] text-indigo-600 font-bold uppercase">目标端 ➔ 发起端 反馈</span>
-          <span class="font-extrabold text-indigo-900">{{ reverseCount }} 帧 ({{ formatBytes(reverseBytes) }})</span>
+        <div class="ui-sub-card p-2 flex justify-between items-center bg-indigo-500/8 border-indigo-500/25">
+          <span class="text-[11px] text-indigo-700 dark:text-indigo-300 font-bold">目标 → 发起</span>
+          <span class="font-bold" style="color: var(--text-primary)">{{ reverseCount }} 帧 ({{ formatBytes(reverseBytes) }})</span>
         </div>
-        <div class="bg-emerald-50/50 border border-emerald-100 rounded-lg p-2 flex justify-between items-center">
-          <span class="text-[10px] text-emerald-600 font-bold uppercase">双向交互闭环率</span>
-          <span class="font-extrabold text-emerald-800">{{ completionRate }}%</span>
+        <div class="ui-sub-card p-2 flex justify-between items-center bg-emerald-500/8 border-emerald-500/25">
+          <span class="text-[11px] text-emerald-700 dark:text-emerald-300 font-bold">交互闭环率</span>
+          <span class="font-bold text-emerald-700 dark:text-emerald-300">{{ completionRate }}%</span>
         </div>
-        <div class="bg-amber-50/50 border border-amber-100 rounded-lg p-2 flex justify-between items-center">
-          <span class="text-[10px] text-amber-700 font-bold uppercase">平均响应时延</span>
-          <span class="font-extrabold text-amber-900">{{ avgLatencyMs > 0 ? avgLatencyMs.toFixed(1) + ' ms' : '-' }}</span>
+        <div class="ui-sub-card p-2 flex justify-between items-center bg-amber-500/8 border-amber-500/25">
+          <span class="text-[11px] text-amber-700 dark:text-amber-300 font-bold">平均响应时延</span>
+          <span class="font-bold text-amber-700 dark:text-amber-300">{{ avgLatencyMs > 0 ? avgLatencyMs.toFixed(1) + ' ms' : '-' }}</span>
         </div>
       </div>
     </div>
 
     <!-- 主体：左侧双向时序对话流 + 右侧当前选中报文深度看板 -->
     <div class="flex-1 flex gap-3 overflow-hidden min-h-0">
-      <!-- 左侧：双向对话流时序区 (Dialogue Stream) -->
-      <div class="flex-1 bg-white/90 rounded-2xl border border-white/80 shadow flex flex-col overflow-hidden">
-        <div class="px-4 py-2.5 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between shrink-0">
+      <div class="flex-1 ui-content-card flex flex-col overflow-hidden min-w-0">
+        <div class="px-4 py-2.5 border-b flex items-center justify-between shrink-0 flex-wrap gap-2" style="background: var(--surface-content-alt); border-color: var(--border-subtle)">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-slate-700">双向通信往返时序流 (Bidirectional Stream)</span>
-            <span class="text-[10px] font-mono px-2 py-0.2 rounded-full bg-blue-100 text-blue-800 font-bold">
+            <span class="text-xs font-bold" style="color: var(--text-primary)">双向通信往返时序流</span>
+            <span class="text-[11px] ui-num px-2 py-0.5 rounded-full bg-sky-500/12 text-sky-700 dark:text-sky-300 font-bold">
               {{ flowDialogueList.length }} 笔记录
             </span>
           </div>
-          <div class="flex items-center gap-2 text-[10px] text-slate-400">
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-500 inline-block"></span> 左侧: 发起端 ➔ 目标端 (请求/上报)</span>
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-indigo-500 inline-block"></span> 右侧: 目标端 ➔ 发起端 (反馈/应答)</span>
+          <div class="flex items-center gap-3 text-[11px]" style="color: var(--text-muted)">
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-sky-500 inline-block"></span> 发起 → 目标</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-indigo-500 inline-block"></span> 目标 → 发起</span>
           </div>
         </div>
 
-        <!-- 对话流滚动列表 -->
-        <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3" ref="dialogueContainerRef">
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3 select-text" ref="dialogueContainerRef">
           <div v-for="item in flowDialogueList" :key="item.id"
             :class="[
-              'flex flex-col max-w-[85%] transition-all cursor-pointer p-3 rounded-2xl border shadow-xs',
-              item.isForward ? 'self-start bg-blue-50/70 border-blue-200/80 hover:border-blue-400' : 'self-end bg-indigo-50/70 border-indigo-200/80 hover:border-indigo-400',
-              selectedPacket?.id === item.id ? 'ring-2 ring-blue-500 shadow-md' : ''
+              'flex flex-col max-w-[85%] transition-colors cursor-pointer p-3 rounded-2xl border shadow-2xs',
+              item.isForward ? 'self-start bg-sky-500/10 border-sky-500/30 hover:border-sky-500/60' : 'self-end bg-indigo-500/10 border-indigo-500/30 hover:border-indigo-500/60',
+              selectedPacket?.id === item.id ? 'ring-2 ring-sky-500' : ''
             ]"
             @click="selectPacket(item)">
             
-            <!-- 气泡头部 -->
-            <div class="flex items-center justify-between gap-3 text-[10px] font-mono mb-1.5 pb-1 border-b border-slate-200/60">
-              <div class="flex items-center gap-1.5 font-bold">
-                <span :class="['px-1.5 py-0.2 rounded text-[9px]', item.isForward ? 'bg-blue-600 text-white' : 'bg-indigo-600 text-white']">
-                  {{ item.isForward ? '发起端 ➔ 目标端' : '目标端 ➔ 发起端' }}
+            <div class="flex items-center justify-between gap-3 text-[11px] ui-num mb-1.5 pb-1 border-b" style="border-color: var(--border-subtle)">
+              <div class="flex items-center gap-1.5 font-bold min-w-0">
+                <span :class="['px-1.5 py-0.5 rounded text-[11px] shrink-0', item.isForward ? 'bg-sky-600 text-white' : 'bg-indigo-600 text-white']">
+                  {{ item.isForward ? '发起 → 目标' : '目标 → 发起' }}
                 </span>
-                <span class="text-slate-800">{{ item.src_ip }}:{{ item.src_port }} ➔ {{ item.dst_ip }}:{{ item.dst_port }}</span>
+                <span class="truncate" style="color: var(--text-primary)">{{ item.src_ip }}:{{ item.src_port }} → {{ item.dst_ip }}:{{ item.dst_port }}</span>
               </div>
-              <div class="flex items-center gap-2 text-slate-400">
-                <span v-if="!item.isForward && item.latencyMs !== undefined" class="text-emerald-700 font-bold bg-emerald-100/80 px-1.5 py-0.2 rounded">
+              <div class="flex items-center gap-2 shrink-0" style="color: var(--text-muted)">
+                <span v-if="!item.isForward && item.latencyMs !== undefined" class="text-emerald-700 dark:text-emerald-300 font-bold bg-emerald-500/15 px-1.5 py-0.5 rounded">
                   Δt +{{ item.latencyMs }}ms
                 </span>
                 <span>{{ item.timestamp }}</span>
               </div>
             </div>
 
-            <!-- 规约与功能码 -->
-            <div class="flex items-center justify-between gap-2 mb-1.5">
-              <div class="flex items-center gap-1.5">
-                <span :class="['text-[10px] font-bold px-2 py-0.5 rounded', protocolBadgeColor(item.protocol)]">
+            <div class="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span :class="['text-[11px] font-bold px-2 py-0.5 rounded border', protocolBadgeColor(item.protocol)]">
                   {{ item.protocol }}
                 </span>
-                <span v-if="item.business_data?.function_name" class="text-xs font-bold text-blue-900 bg-white/80 px-2 py-0.5 rounded border border-blue-100">
+                <span v-if="item.business_data?.function_name" class="text-xs font-bold text-blue-700 dark:text-sky-300 ui-pill px-2 py-0.5 rounded">
                   {{ item.business_data.function_name }} ({{ item.business_data.function_code }})
                 </span>
-                <span v-if="item.business_data?.telemetry_station_bcd" class="text-[10px] font-mono text-teal-800 bg-teal-100/80 px-1.5 py-0.5 rounded">
-                  终端/站号: {{ item.business_data.telemetry_station_bcd }}
+                <span v-if="item.business_data?.telemetry_station_bcd" class="text-[11px] ui-num text-teal-700 dark:text-teal-300 bg-teal-500/15 px-1.5 py-0.5 rounded">
+                  站号: {{ item.business_data.telemetry_station_bcd }}
                 </span>
               </div>
-              <span class="text-[10px] font-mono text-slate-400 font-semibold">{{ item.length }} Bytes</span>
+              <span class="text-[11px] ui-num font-semibold" style="color: var(--text-muted)">{{ item.length }} Bytes</span>
             </div>
 
-            <!-- 数据载荷预览 -->
-            <div class="rounded-xl p-2 text-xs font-mono leading-relaxed break-all select-all border bg-amber-50/60 border-amber-200/80 text-amber-950 font-semibold">
+            <div class="rounded-xl p-2 text-xs font-mono-code leading-relaxed break-all select-text border bg-amber-500/10 border-amber-500/25 font-medium" style="color: var(--text-primary)">
               {{ item.raw_text || item.payload_hex?.slice(0, 100) || '[EMPTY PAYLOAD]' }}
             </div>
 
-            <!-- 气泡底栏快捷按钮 -->
-            <div class="flex items-center justify-between mt-2 pt-1 border-t border-slate-200/40 text-[10px]">
-              <span class="text-slate-400 font-mono">
-                Shannon: {{ item.entropy.toFixed(2) }}
-              </span>
-              <button @click.stop="$emit('openDeepDissector', item)" class="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-0.5">
-                <span>🔍 查看全景报文详情 ➔</span>
+            <div class="flex items-center justify-between mt-2 pt-1 border-t text-[11px]" style="border-color: var(--border-subtle)">
+              <span class="ui-num" style="color: var(--text-muted)">Shannon: {{ item.entropy.toFixed(2) }}</span>
+              <button @click.stop="$emit('openDeepDissector', item)" class="font-semibold flex items-center gap-1 cursor-pointer hover:underline" style="color: var(--accent-primary-text)">
+                <AppIcon name="search" :size="11" />
+                <span>查看全景报文详情</span>
+                <AppIcon name="arrow-right" :size="11" />
               </button>
             </div>
           </div>
 
-          <div v-if="flowDialogueList.length === 0" class="flex flex-col items-center justify-center h-full text-slate-400 text-xs py-16">
-            <span class="text-3xl mb-2">🔄</span>
-            <span class="font-bold text-slate-600">等待匹配双向交互报文...</span>
-            <span class="text-[11px] text-slate-400 mt-1">
-              请检查上方发起端设备与目标端/中心端设备过滤条件，或在右上角选择已识别的活跃双向会话对
-            </span>
-          </div>
+          <EmptyState
+            v-if="flowDialogueList.length === 0"
+            class="py-12"
+            icon="refresh"
+            title="等待匹配双向交互报文"
+            description="请检查上方发起端与目标端过滤条件，或在右上角下拉选择活跃双向会话对。"
+          />
         </div>
       </div>
 
       <!-- 右侧：当前选中报文深度联动剖析看板 -->
-      <div class="w-96 bg-white/90 rounded-2xl border border-white/80 shadow flex flex-col overflow-hidden shrink-0">
-        <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between shrink-0">
+      <aside class="w-80 xl:w-96 ui-content-card flex flex-col overflow-hidden shrink-0">
+        <div class="px-4 py-3 border-b flex items-center justify-between shrink-0" style="background: var(--surface-content-alt); border-color: var(--border-subtle)">
           <div>
-            <h3 class="text-xs font-bold text-slate-800">当前报文深度剖析</h3>
-            <p class="text-[10px] text-slate-400 mt-0.5">双向流选中帧详查</p>
+            <h3 class="text-xs font-bold" style="color: var(--text-primary)">当前报文深度剖析</h3>
+            <p class="text-[11px] mt-0.5" style="color: var(--text-muted)">双向流选中帧详查</p>
           </div>
           <button v-if="selectedPacket" @click="$emit('openDeepDissector', selectedPacket)"
-            class="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer">
-            <span>🔍 全屏剖析</span>
+            class="ui-btn-primary text-[11px] px-2.5 py-1 rounded-lg">
+            <AppIcon name="search" :size="12" />
+            <span>全屏剖析</span>
           </button>
         </div>
 
-        <div v-if="selectedPacket" class="flex-1 overflow-y-auto custom-scrollbar p-3.5 space-y-3">
-          <!-- 基础元组 -->
-          <div class="bg-slate-50 border border-slate-100 rounded-xl p-2.5 text-xs font-mono space-y-1">
+        <div v-if="selectedPacket" class="flex-1 overflow-y-auto custom-scrollbar p-3.5 space-y-3 select-text">
+          <div class="ui-sub-card p-2.5 text-xs ui-num space-y-1">
             <div class="flex justify-between">
-              <span class="text-slate-400 text-[10px]">帧序号 / 协议:</span>
-              <span class="font-bold text-blue-700">#{{ selectedPacket.id }} - {{ selectedPacket.protocol }}</span>
+              <span class="text-[11px]" style="color: var(--text-muted)">帧序号 / 协议:</span>
+              <span class="font-bold" style="color: var(--accent-primary-text)">#{{ selectedPacket.id }} - {{ selectedPacket.protocol }}</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-slate-400 text-[10px]">通信源:</span>
-              <span class="font-semibold text-slate-800">{{ selectedPacket.src_ip }}:{{ selectedPacket.src_port }}</span>
+              <span class="text-[11px]" style="color: var(--text-muted)">通信源:</span>
+              <span class="font-semibold" style="color: var(--text-primary)">{{ selectedPacket.src_ip }}:{{ selectedPacket.src_port }}</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-slate-400 text-[10px]">目标端:</span>
-              <span class="font-semibold text-slate-800">{{ selectedPacket.dst_ip }}:{{ selectedPacket.dst_port }}</span>
+              <span class="text-[11px]" style="color: var(--text-muted)">目标端:</span>
+              <span class="font-semibold" style="color: var(--text-primary)">{{ selectedPacket.dst_ip }}:{{ selectedPacket.dst_port }}</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-slate-400 text-[10px]">传输层 / 长度:</span>
-              <span class="text-slate-700">{{ selectedPacket.transport }} | {{ selectedPacket.length }} 字节</span>
+              <span class="text-[11px]" style="color: var(--text-muted)">传输层 / 长度:</span>
+              <span style="color: var(--text-secondary)">{{ selectedPacket.transport }} | {{ selectedPacket.length }} 字节</span>
             </div>
           </div>
 
-          <!-- 规约结构化解析卡片 -->
-          <div v-if="selectedPacket.business_data && Object.keys(selectedPacket.business_data).length > 0" 
-            class="bg-indigo-50/40 border border-indigo-100 rounded-xl p-2.5 space-y-1.5">
-            <span class="text-[10px] font-bold text-indigo-900 uppercase block">📊 规约结构化字段</span>
-            <div v-for="(val, k) in selectedPacket.business_data" :key="k" class="flex justify-between items-center text-xs font-mono py-0.5 border-b border-indigo-100/50 last:border-0">
-              <span class="text-slate-400 text-[10px]">{{ k }}</span>
-              <span class="font-bold text-indigo-950">{{ val }}</span>
+          <div v-if="selectedPacket.business_data && Object.keys(selectedPacket.business_data).length > 0"
+            class="ui-sub-card bg-indigo-500/8 border-indigo-500/25 p-2.5 space-y-1.5">
+            <span class="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 uppercase flex items-center gap-1">
+              <AppIcon name="layers" :size="12" />
+              <span>规约结构化字段</span>
+            </span>
+            <div v-for="(val, k) in selectedPacket.business_data" :key="k" class="flex justify-between items-center text-xs ui-num py-0.5 border-b last:border-0" style="border-color: var(--border-subtle)">
+              <span class="text-[11px]" style="color: var(--text-muted)">{{ k }}</span>
+              <span class="font-bold" style="color: var(--text-primary)">{{ val }}</span>
             </div>
           </div>
 
-          <!-- 明文展示 -->
           <div class="space-y-1">
             <div class="flex items-center justify-between">
-              <span class="text-[10px] font-bold text-slate-400 uppercase">
-                客观真实原始明文
-              </span>
-              <span class="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-900">
-                原始真实
-              </span>
+              <span class="text-[11px] font-bold uppercase" style="color: var(--text-muted)">客观真实原始明文</span>
+              <span class="text-[11px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300">原始真实</span>
             </div>
-            <div class="rounded-xl p-2.5 text-[11px] font-mono leading-relaxed break-all select-all border max-h-36 overflow-y-auto custom-scrollbar bg-amber-50/40 border-amber-200 text-amber-950 font-semibold">
+            <div class="ui-input font-mono-code p-2.5 text-[11px] leading-relaxed break-all select-text max-h-36 overflow-y-auto custom-scrollbar">
               {{ selectedPacket.raw_text || '[EMPTY]' }}
             </div>
           </div>
 
-          <!-- 十六进制转储预览 -->
           <div class="space-y-1">
-            <span class="text-[10px] font-bold text-slate-400 uppercase">十六进制与 ASCII 转储</span>
-            <div class="bg-slate-900 rounded-xl p-2 text-[9px] font-mono text-emerald-400 select-all max-h-40 overflow-auto custom-scrollbar leading-snug whitespace-pre">
+            <span class="text-[11px] font-bold uppercase" style="color: var(--text-muted)">十六进制与 ASCII 转储</span>
+            <div class="ui-input font-mono-code p-2.5 text-[11px] text-emerald-700 dark:text-emerald-400 select-text max-h-40 overflow-auto custom-scrollbar leading-snug whitespace-pre">
               <div v-for="(line, idx) in formatAlignedHexDump(selectedPacket.payload_hex).slice(0, 10)" :key="idx">{{ line }}</div>
-              <div v-if="formatAlignedHexDump(selectedPacket.payload_hex).length > 10" class="text-slate-500 italic mt-1">
+              <div v-if="formatAlignedHexDump(selectedPacket.payload_hex).length > 10" class="italic mt-1" style="color: var(--text-muted)">
                 ... 还有 {{ formatAlignedHexDump(selectedPacket.payload_hex).length - 10 }} 行，点击全屏剖析查看全部
               </div>
             </div>
           </div>
 
-          <!-- 操作按钮 -->
-          <div class="flex flex-col gap-1.5 pt-1 border-t border-slate-100">
-            <button @click="$emit('replay', selectedPacket)" class="w-full bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs py-1.5 rounded-lg font-medium">
-              ▶ 物理重放报文
+          <div class="flex flex-col gap-1.5 pt-1 border-t" style="border-color: var(--border-subtle)">
+            <button @click="$emit('replay', selectedPacket)" class="w-full ui-btn-secondary justify-center text-xs py-1.5 rounded-lg">
+              <AppIcon name="play" :size="12" />
+              <span>物理重放报文</span>
             </button>
-            <button @click="$emit('saveBaseline', selectedPacket)" class="w-full bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-200 text-xs py-1.5 rounded-lg font-medium">
-              💾 固化为历史基线
+            <button @click="$emit('saveBaseline', selectedPacket)" class="w-full ui-btn-primary justify-center text-xs py-1.5 rounded-lg">
+              <AppIcon name="archive" :size="12" />
+              <span>固化为历史基线</span>
             </button>
           </div>
         </div>
 
-        <div v-else class="flex-1 flex flex-col items-center justify-center text-slate-400 p-6 text-center">
-          <div class="text-2xl mb-2">👈</div>
-          <p class="text-xs font-medium">点击左侧对话流中的气泡</p>
-          <p class="text-[10px] mt-1 text-slate-400">即可在此查看其规约拆解与十六进制转储</p>
-        </div>
-      </div>
+        <EmptyState
+          v-else
+          class="flex-1 p-6"
+          icon="info"
+          title="选择对话流气泡"
+          description="点击左侧任意双向报文气泡，即可在此查看其规约拆解与十六进制转储。"
+        />
+      </aside>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue';
+import AppIcon from './AppIcon.vue';
+import EmptyState from './EmptyState.vue';
 
 interface PacketRecord {
   id: number;
@@ -389,8 +386,8 @@ function parseTimestampMs(tsStr: string, timestampNs?: number | string): number 
     try {
       const ns = typeof timestampNs === 'string' ? BigInt(timestampNs) : BigInt(Math.floor(timestampNs));
       return Number(ns / 1_000_000n);
-    } catch {
-      // 降级使用字符串解析
+    } catch (err) {
+      console.warn('[FlowDialogueInspector] BigInt ns parse failed, falling back to string parsing:', timestampNs, err);
     }
   }
   if (!tsStr || typeof tsStr !== 'string') return null;
@@ -478,13 +475,13 @@ function selectPacket(p: PacketRecord) {
 }
 
 function protocolBadgeColor(proto: string): string {
-  if (!proto) return 'bg-slate-100 text-slate-600';
-  if (proto.includes('SL651')) return 'bg-teal-100 text-teal-800';
-  if (proto.includes('MODBUS')) return 'bg-amber-100 text-amber-800';
-  if (proto.includes('MQTT')) return 'bg-purple-100 text-purple-800';
-  if (proto.includes('HTTP')) return 'bg-blue-100 text-blue-800';
-  if (proto.includes('HJ212')) return 'bg-emerald-100 text-emerald-800';
-  return 'bg-slate-100 text-slate-700';
+  if (!proto) return 'ui-pill';
+  if (proto.includes('SL651')) return 'bg-teal-500/12 text-teal-700 dark:text-teal-300 border-teal-500/25';
+  if (proto.includes('MODBUS')) return 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/25';
+  if (proto.includes('MQTT')) return 'bg-purple-500/12 text-purple-700 dark:text-purple-300 border-purple-500/25';
+  if (proto.includes('HTTP')) return 'bg-blue-500/12 text-blue-700 dark:text-sky-300 border-blue-500/25';
+  if (proto.includes('HJ212')) return 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/25';
+  return 'ui-pill';
 }
 
 function formatAlignedHexDump(hexStr: string): string[] {

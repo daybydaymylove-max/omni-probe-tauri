@@ -1,43 +1,46 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-150">
-    <div class="w-full max-w-2xl bg-white/95 backdrop-blur-2xl rounded-3xl border border-white/60 shadow-2xl flex flex-col overflow-hidden max-h-[85vh]">
+  <div v-if="isOpen" class="ui-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
+    <div class="ui-modal-surface w-full max-w-2xl rounded-3xl flex flex-col overflow-hidden max-h-[85vh]">
       
       <!-- 1. 顶栏 -->
-      <div class="px-6 py-4 border-b border-slate-200/60 bg-white/40 flex items-center justify-between shrink-0">
+      <div class="ui-nav-glass px-6 py-4 border-b border-(--border-subtle) flex items-center justify-between shrink-0">
         <div class="flex items-center gap-2.5">
-          <span class="w-3 h-3 rounded-full bg-indigo-600 shadow-sm"></span>
+          <div class="w-8 h-8 rounded-xl bg-indigo-500/12 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+            <AppIcon name="shield" class="w-4 h-4" />
+          </div>
           <div>
-            <h3 class="text-sm font-bold text-slate-900">内网私网 CIDR 资产定义与安全域管理</h3>
-            <p class="text-[11px] text-slate-500 font-mono">100% 物理隔离离线匹配，为进出流量自动标注企业业务域与安全等级</p>
+            <h3 class="text-sm font-bold text-(--text-primary)">内网私网 CIDR 资产定义与安全域管理</h3>
+            <p class="text-xs text-(--text-muted) font-mono-code">离线匹配进出流量，自动标注业务域与安全等级</p>
           </div>
         </div>
-        <button @click="$emit('close')" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer">
-          ✕
+        <button @click="$emit('close')" class="ui-btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center cursor-pointer" aria-label="关闭弹窗">
+          <AppIcon name="close" class="w-4 h-4" />
         </button>
       </div>
 
       <!-- 2. 规则列表与新增表单 -->
-      <div class="p-6 overflow-auto custom-scrollbar space-y-4 text-xs font-mono">
+      <div class="p-6 overflow-auto custom-scrollbar space-y-4 text-xs">
         <!-- 新增规则表单 -->
-        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3">
-          <div class="font-bold text-slate-800 flex items-center gap-2">
-            <span>➕ 添加自定义网段资产规则</span>
+        <div class="ui-sub-card p-4 rounded-2xl space-y-3">
+          <div class="font-bold text-(--text-primary) flex items-center gap-1.5">
+            <AppIcon name="plus" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            <span>添加自定义网段资产规则</span>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-2.5">
             <div>
-              <label class="block text-[10px] text-slate-500 font-semibold mb-1">CIDR 网段</label>
+              <label class="block text-[11px] text-(--text-muted) font-semibold mb-1">CIDR 网段</label>
               <input v-model="newRule.cidr" placeholder="如: 192.168.1.0/24"
-                class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-mono">
+                class="ui-input w-full px-2.5 py-1.5 text-xs font-mono-code">
             </div>
             <div>
-              <label class="block text-[10px] text-slate-500 font-semibold mb-1">安全域/分区名称</label>
+              <label class="block text-[11px] text-(--text-muted) font-semibold mb-1">安全域/分区名称</label>
               <input v-model="newRule.zone_name" placeholder="如: 生产控制PLC区"
-                class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs">
+                class="ui-input w-full px-2.5 py-1.5 text-xs">
             </div>
             <div>
-              <label class="block text-[10px] text-slate-500 font-semibold mb-1">安全等级</label>
+              <label class="block text-[11px] text-(--text-muted) font-semibold mb-1">安全等级</label>
               <select v-model="newRule.security_level"
-                class="w-full bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs">
+                class="ui-input w-full px-2 py-1.5 text-xs">
                 <option value="核心">核心 (Core)</option>
                 <option value="重要">重要 (Important)</option>
                 <option value="普通">普通 (Normal)</option>
@@ -45,14 +48,14 @@
               </select>
             </div>
             <div>
-              <label class="block text-[10px] text-slate-500 font-semibold mb-1">描述与责任人</label>
+              <label class="block text-[11px] text-(--text-muted) font-semibold mb-1">描述与责任人</label>
               <input v-model="newRule.description" placeholder="如: 车间生产线"
-                class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs">
+                class="ui-input w-full px-2.5 py-1.5 text-xs">
             </div>
           </div>
           <div class="flex justify-end">
             <button @click="addRule" :disabled="!newRule.cidr.trim() || !newRule.zone_name.trim()"
-              class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-xl font-bold transition-all shadow-xs cursor-pointer disabled:opacity-40">
+              class="ui-btn-primary px-4 py-1.5 text-xs font-bold cursor-pointer disabled:opacity-40">
               添加规则
             </button>
           </div>
@@ -60,48 +63,55 @@
 
         <!-- 当前规则列表 -->
         <div>
-          <div class="font-bold text-slate-800 mb-2 flex items-center justify-between">
-            <span>当前已加载的网段资产规则 ({{ rules.length }} 条)</span>
-            <span class="text-[10px] text-slate-400 font-normal">匹配遵循最长前缀优先原则</span>
+          <div class="font-bold text-(--text-primary) mb-2 flex items-center justify-between">
+            <span>当前已加载的网段资产规则 (<span class="ui-num">{{ rules.length }}</span> 条)</span>
+            <span class="text-[11px] text-(--text-muted) font-normal">匹配遵循最长前缀优先原则</span>
           </div>
 
           <div class="space-y-2">
             <div v-for="(rule, idx) in rules" :key="idx"
-              class="p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between shadow-2xs hover:border-indigo-300 transition-colors">
-              <div class="space-y-0.5">
-                <div class="flex items-center gap-2">
-                  <span class="font-bold text-indigo-700">{{ rule.cidr }}</span>
-                  <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-800 border border-indigo-200">
+              class="ui-content-card p-3 rounded-xl flex items-center justify-between gap-2 hover:border-indigo-500/40 transition-colors">
+              <div class="space-y-0.5 min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="font-bold text-indigo-600 dark:text-indigo-400 font-mono-code ui-num select-text">{{ rule.cidr }}</span>
+                  <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-500/12 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">
                     {{ rule.zone_name }}
                   </span>
                   <span :class="[
-                    'px-1.5 py-0.5 rounded text-[9px] font-bold',
-                    rule.security_level === '核心' ? 'bg-rose-100 text-rose-800' :
-                    rule.security_level === '重要' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
+                    'px-1.5 py-0.5 rounded text-[11px] font-bold border',
+                    rule.security_level === '核心' ? 'bg-rose-500/12 text-rose-700 dark:text-rose-300 border-rose-500/30' :
+                    rule.security_level === '重要' ? 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/30' : 'ui-pill text-(--text-secondary)'
                   ]">
                     {{ rule.security_level }}
                   </span>
                 </div>
-                <div class="text-[11px] text-slate-400">{{ rule.description || '无补充描述' }}</div>
+                <div class="text-[11px] text-(--text-muted) select-text">{{ rule.description || '无补充描述' }}</div>
               </div>
 
-              <button @click="removeRule(idx)" class="text-rose-500 hover:text-rose-700 hover:bg-rose-50 p-1.5 rounded-lg transition-colors cursor-pointer text-xs">
+              <button @click="removeRule(idx)" class="ui-btn-danger px-2.5 py-1 text-xs font-semibold cursor-pointer shrink-0">
                 删除
               </button>
             </div>
+
+            <EmptyState
+              v-if="rules.length === 0"
+              icon="shield"
+              title="暂无自定义 CIDR 规则"
+              description="请在上方填入内网网段与安全域信息，保存后将注入流分类引擎。"
+            />
           </div>
         </div>
       </div>
 
       <!-- 3. 底栏 -->
-      <div class="px-6 py-3 border-t border-slate-200/60 bg-white/40 flex items-center justify-between shrink-0">
-        <span class="text-[11px] text-slate-400 font-mono">修改后将实时注入流分析引擎</span>
+      <div class="px-6 py-3 border-t border-(--border-subtle) bg-(--surface-content-alt) flex items-center justify-between shrink-0">
+        <span class="text-xs text-(--text-muted) font-mono-code">修改后将实时注入流分析引擎</span>
         <div class="flex items-center gap-2">
-          <button @click="$emit('close')" class="px-4 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
+          <button @click="$emit('close')" class="ui-btn-secondary px-4 py-1.5 text-xs font-semibold cursor-pointer">
             关闭
           </button>
           <button @click="saveRules" :disabled="isSaving"
-            class="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 text-white text-xs px-5 py-1.5 rounded-xl font-bold cursor-pointer transition-all shadow-sm active:scale-95 disabled:opacity-40">
+            class="ui-btn-primary text-xs px-5 py-1.5 font-bold cursor-pointer disabled:opacity-40">
             <span v-if="isSaving">保存中...</span>
             <span v-else>保存并生效</span>
           </button>
@@ -115,6 +125,8 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import AppIcon from './AppIcon.vue';
+import EmptyState from './EmptyState.vue';
 
 interface CidrRule {
   cidr: string;

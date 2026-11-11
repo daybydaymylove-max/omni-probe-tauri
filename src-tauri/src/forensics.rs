@@ -68,30 +68,28 @@ pub fn init_data_dir(dir: PathBuf) {
     if let Err(e) = std::fs::create_dir_all(&dir) {
         eprintln!("[FORENSICS] 数据目录创建失败 {}: {}", dir.display(), e);
     }
-    if let Ok(mut d) = DATA_DIR.lock() {
-        *d = dir;
-    }
+    let mut d = crate::lock_guard::lock_mutex(&DATA_DIR, "forensics::init_data_dir");
+    *d = dir;
 }
 
 /// 证据文件名注入（lib.rs setup 期在 init_data_dir 与 config 加载之后、嗅探启动之前调用）
 /// 此后所有 writer Lazy 首次打开均使用最终文件名
 pub fn init_evidence_names(app_pcap: String, jsonl: String, log: String) {
-    if let Ok(mut n) = EVIDENCE_NAMES.lock() {
-        if !app_pcap.is_empty() {
-            n.app_pcap = app_pcap;
-        }
-        if !jsonl.is_empty() {
-            n.jsonl = jsonl;
-        }
-        if !log.is_empty() {
-            n.log = log;
-        }
+    let mut n = crate::lock_guard::lock_mutex(&EVIDENCE_NAMES, "forensics::init_evidence_names");
+    if !app_pcap.is_empty() {
+        n.app_pcap = app_pcap;
+    }
+    if !jsonl.is_empty() {
+        n.jsonl = jsonl;
+    }
+    if !log.is_empty() {
+        n.log = log;
     }
 }
 
 /// 拼接数据目录绝对路径（全部文件 IO 的唯一出口）
 pub fn data_path(name: &str) -> PathBuf {
-    let p = DATA_DIR.lock().unwrap().join(name);
+    let p = crate::lock_guard::lock_mutex(&DATA_DIR, "forensics::data_path").join(name);
     let _ = std::fs::create_dir_all(
         p.parent().map(|d| d.to_path_buf()).unwrap_or_else(|| PathBuf::from(".")),
     );
@@ -100,19 +98,19 @@ pub fn data_path(name: &str) -> PathBuf {
 
 /// 取证据文件当前注册名（按类别）
 fn evidence_name_l2() -> String {
-    EVIDENCE_NAMES.lock().unwrap().l2_pcap.clone()
+    crate::lock_guard::lock_mutex(&EVIDENCE_NAMES, "forensics::evidence_name_l2").l2_pcap.clone()
 }
 
 fn evidence_name_app_pcap() -> String {
-    EVIDENCE_NAMES.lock().unwrap().app_pcap.clone()
+    crate::lock_guard::lock_mutex(&EVIDENCE_NAMES, "forensics::evidence_name_app_pcap").app_pcap.clone()
 }
 
 fn evidence_name_jsonl() -> String {
-    EVIDENCE_NAMES.lock().unwrap().jsonl.clone()
+    crate::lock_guard::lock_mutex(&EVIDENCE_NAMES, "forensics::evidence_name_jsonl").jsonl.clone()
 }
 
 fn evidence_name_log() -> String {
-    EVIDENCE_NAMES.lock().unwrap().log.clone()
+    crate::lock_guard::lock_mutex(&EVIDENCE_NAMES, "forensics::evidence_name_log").log.clone()
 }
 
 /// 可追加式 PCAP 写入器（手写标准 libpcap 文件格式，零第三方依赖）
@@ -187,32 +185,28 @@ impl ForensicEngine {
     /// 将原始以太网帧写入 L2 取证库 forensic_capture.pcap
     /// 使用阻塞锁（临界区仅一次 write syscall，耗时微秒级），杜绝 try_lock 锁忙静默丢包
     pub fn write_packet(&self, data: &[u8]) {
-        if let Ok(mut guard) = GLOBAL_L2_PCAP.lock() {
-            if let Some(w) = guard.as_mut() {
-                w.write_packet(data);
-            }
+        let mut guard = crate::lock_guard::lock_mutex(&GLOBAL_L2_PCAP, "forensics::write_packet_l2");
+        if let Some(w) = guard.as_mut() {
+            w.write_packet(data);
         }
     }
 
     /// 解决 Windows 文件独占锁问题，安全截断 L2 取证库
     pub fn truncate_pcap() -> Result<(), String> {
-        if let Ok(mut lock) = GLOBAL_L2_PCAP.lock() {
-            *lock = None;
-            let name = evidence_name_l2();
-            let path = data_path(&name);
-            let file = OpenOptions::new()
-                .create(true)
-                .write(true)
-                .truncate(true)
-                .open(&path)
-                .map_err(|e| e.to_string())?;
-            file.set_len(0).map_err(|e| e.to_string())?;
-            drop(file);
-            *lock = AppendablePcapWriter::open(&path.to_string_lossy());
-            Ok(())
-        } else {
-            Err("未能获取 PCAP 文件锁".into())
-        }
+        let mut lock = crate::lock_guard::lock_mutex(&GLOBAL_L2_PCAP, "forensics::truncate_pcap");
+        *lock = None;
+        let name = evidence_name_l2();
+        let path = data_path(&name);
+        let file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(&path)
+            .map_err(|e| e.to_string())?;
+        file.set_len(0).map_err(|e| e.to_string())?;
+        drop(file);
+        *lock = AppendablePcapWriter::open(&path.to_string_lossy());
+        Ok(())
     }
 
     /// 香农信息熵算法（纯 Rust 零分配实现）
@@ -370,7 +364,8 @@ pub fn write_app_packet(
             f
         }
     };
-    if let Ok(mut guard) = GLOBAL_APP_PCAP.lock() {
+    {
+        let mut guard = crate::lock_guard::lock_mutex(&GLOBAL_APP_PCAP, "forensics::write_app_pcap");
         if let Some(w) = guard.as_mut() {
             w.write_packet(&frame);
         }
@@ -471,9 +466,8 @@ static GLOBAL_JSONL_SINK: Lazy<Arc<Mutex<DailyRotatingJsonlSink>>> =
 
 /// 结构化记录落盘统一收口（所有 PacketRecord / HoneypotRecord 产生点调用）
 pub fn write_jsonl_record(record_json: &str) {
-    if let Ok(mut sink) = GLOBAL_JSONL_SINK.lock() {
-        sink.write_record(record_json);
-    }
+    let mut sink = crate::lock_guard::lock_mutex(&GLOBAL_JSONL_SINK, "forensics::write_jsonl_record");
+    sink.write_record(record_json);
 }
 
 // ============================================================
@@ -492,20 +486,19 @@ static GLOBAL_LOG_FILE: Lazy<Arc<Mutex<Option<File>>>> = Lazy::new(|| {
 
 /// 引擎日志落盘（带本地时间戳前缀，线程安全）
 pub fn write_log_line(msg: &str) {
-    if let Ok(mut guard) = GLOBAL_LOG_FILE.lock() {
-        if guard.is_none() {
-            let name = evidence_name_log();
-            *guard = OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(data_path(&name))
-                .ok();
-        }
-        if let Some(f) = guard.as_mut() {
-            let ts = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
-            let _ = writeln!(f, "[{}] {}", ts, msg);
-            let _ = f.flush();
-        }
+    let mut guard = crate::lock_guard::lock_mutex(&GLOBAL_LOG_FILE, "forensics::write_log_line");
+    if guard.is_none() {
+        let name = evidence_name_log();
+        *guard = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(data_path(&name))
+            .ok();
+    }
+    if let Some(f) = guard.as_mut() {
+        let ts = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
+        let _ = writeln!(f, "[{}] {}", ts, msg);
+        let _ = f.flush();
     }
 }
 
@@ -518,46 +511,40 @@ pub fn system_log(app: &tauri::AppHandle, msg: String) {
 /// 安全截断 listener.log（clear_logs 使用，drop 句柄后置零重建）
 pub fn truncate_log() -> Result<(), String> {
     let name = evidence_name_log();
-    if let Ok(mut guard) = GLOBAL_LOG_FILE.lock() {
-        *guard = None;
-        let f = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(data_path(&name))
-            .map_err(|e| e.to_string())?;
-        f.set_len(0).map_err(|e| e.to_string())?;
-        drop(f);
-        *guard = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(data_path(&name))
-            .ok();
-        Ok(())
-    } else {
-        Err("未能获取 listener.log 文件锁".into())
-    }
+    let mut guard = crate::lock_guard::lock_mutex(&GLOBAL_LOG_FILE, "forensics::truncate_log");
+    *guard = None;
+    let f = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(data_path(&name))
+        .map_err(|e| e.to_string())?;
+    f.set_len(0).map_err(|e| e.to_string())?;
+    drop(f);
+    *guard = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(data_path(&name))
+        .ok();
+    Ok(())
 }
 
 /// 安全截断 capture.pcap（clear_logs 使用）
 pub fn truncate_app_pcap() -> Result<(), String> {
     let name = evidence_name_app_pcap();
     let path = data_path(&name);
-    if let Ok(mut lock) = GLOBAL_APP_PCAP.lock() {
-        *lock = None;
-        let f = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&path)
-            .map_err(|e| e.to_string())?;
-        f.set_len(0).map_err(|e| e.to_string())?;
-        drop(f);
-        *lock = AppendablePcapWriter::open(&path.to_string_lossy());
-        Ok(())
-    } else {
-        Err("未能获取 capture.pcap 文件锁".into())
-    }
+    let mut lock = crate::lock_guard::lock_mutex(&GLOBAL_APP_PCAP, "forensics::truncate_app_pcap");
+    *lock = None;
+    let f = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(&path)
+        .map_err(|e| e.to_string())?;
+    f.set_len(0).map_err(|e| e.to_string())?;
+    drop(f);
+    *lock = AppendablePcapWriter::open(&path.to_string_lossy());
+    Ok(())
 }
 
 /// 安全截断 received_data.jsonl 并删除全部历史轮转归档（clear_logs 使用）
@@ -576,27 +563,24 @@ pub fn truncate_jsonl() -> Result<(), String> {
     }
 
     // 2. drop sink 句柄 → truncate 当前文件 → 重建 sink（保持轮转基准为今天）
-    if let Ok(mut sink) = GLOBAL_JSONL_SINK.lock() {
-        sink.file = None;
-        let f = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(data_path(&base_name))
-            .map_err(|e| e.to_string())?;
-        f.set_len(0).map_err(|e| e.to_string())?;
-        drop(f);
-        sink.current_date = chrono::Local::now().format("%Y-%m-%d").to_string();
-        sink.base_name = base_name.clone();
-        sink.file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(data_path(&base_name))
-            .ok();
-        Ok(())
-    } else {
-        Err("未能获取 received_data.jsonl 文件锁".into())
-    }
+    let mut sink = crate::lock_guard::lock_mutex(&GLOBAL_JSONL_SINK, "forensics::truncate_jsonl");
+    sink.file = None;
+    let f = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(data_path(&base_name))
+        .map_err(|e| e.to_string())?;
+    f.set_len(0).map_err(|e| e.to_string())?;
+    drop(f);
+    sink.current_date = chrono::Local::now().format("%Y-%m-%d").to_string();
+    sink.base_name = base_name.clone();
+    sink.file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(data_path(&base_name))
+        .ok();
+    Ok(())
 }
 
 // ============================================================
@@ -881,29 +865,29 @@ pub fn generate_tsa_timestamp(target_file: &str) -> Result<TsaTimestampToken, St
     let serial = format!("{:x}", now_dt.timestamp_millis());
     let hashed_msg = format!("SHA256:{}|SM3:{}", sha256, sm3);
 
-    // 构造模拟 RFC 3161 DER Token 摘要 (ASN.1 结构指纹)
-    let token_raw = format!("TSA_TOKEN_V1|{}|{}|{}", serial, stamped_at, hashed_msg);
+    // 构造本地离线双哈希时间自证封装摘要 (非第三方联网 RFC 3161 TSA 签发)
+    let token_raw = format!("LOCAL_SEAL_V1|{}|{}|{}", serial, stamped_at, hashed_msg);
     let mut token_hasher = sha2::Sha256::new();
     token_hasher.update(token_raw.as_bytes());
     let token_hex = format!("{:x}", token_hasher.finalize());
 
     let token = TsaTimestampToken {
         stamped_at,
-        tsa_server: "National Time Service Center / Certified TSA Node".to_string(),
-        policy_oid: "1.2.156.10197.1.501 (GB/T RFC3161 TSA Policy)".to_string(),
+        tsa_server: "Local Offline Dual-Hash Forensic Seal (本地离线双哈希自证封装)".to_string(),
+        policy_oid: "LOCAL-SELF-SEAL-V1 (Offline Dual-Hash Integrity Anchor)".to_string(),
         serial_number: serial,
         hash_algorithm: "SHA-256 + SM3 (Dual-Hash)".to_string(),
         hashed_message: hashed_msg,
-        status: "GRANTED".to_string(),
+        status: "LOCAL_SEALED".to_string(),
         token_hex: token_hex.clone(),
     };
 
     record_coc_event(
         "TSA_STAMP",
-        "SYSTEM_TSA",
+        "SYSTEM_LOCAL_SEAL",
         "AUDITOR_01",
         target_file,
-        &format!("加盖 RFC 3161 可信时间戳 (Serial: {})", token.serial_number),
+        &format!("加盖本地离线双哈希时间自证封装 (Serial: {})", token.serial_number),
         std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0),
         &sha256,
         &sm3,
@@ -1130,12 +1114,18 @@ pub fn generate_judicial_inspection_report(
     let now = chrono::Local::now();
     let report_id = format!("REP-GBT29360-{}", now.format("%Y%m%d%H%M%S"));
 
-    // 获取保真度证明 (读取环形缓冲区累计或驱动统计)
-    let fidelity = crate::pcap_engine::generate_fidelity_certificate(
-        crate::pcap_engine::GLOBAL_RING_BUFFER.lock().unwrap().stats().0 as u64,
-        0,
-        0,
-    );
+    // 获取真实保真度证明 (优先读取 Npcap 底层物理捕获与驱动丢包原子计数器)
+    let recv = crate::sniffer::CAPTURE_RECEIVED_PACKETS.load(std::sync::atomic::Ordering::Relaxed);
+    let drop_drv = crate::sniffer::CAPTURE_DROPPED_DRIVER.load(std::sync::atomic::Ordering::Relaxed);
+    let drop_if = crate::sniffer::CAPTURE_DROPPED_INTERFACE.load(std::sync::atomic::Ordering::Relaxed);
+    let pkt_count = if recv > 0 {
+        recv
+    } else {
+        crate::lock_guard::lock_mutex(&crate::pcap_engine::GLOBAL_RING_BUFFER, "forensics::export_forensic_package")
+            .stats()
+            .0 as u64
+    };
+    let fidelity = crate::pcap_engine::generate_fidelity_certificate(pkt_count, drop_drv, drop_if);
 
     let tsa_token = generate_tsa_timestamp("capture.pcap").ok();
 
@@ -1149,8 +1139,8 @@ pub fn generate_judicial_inspection_report(
     md.push("---".to_string());
     md.push("## 一、数据捕获物理保真度证明".to_string());
     md.push(format!("- **捕获总帧数**: {} 帧", fidelity.packets_received));
-    md.push(format!("- **接口丢包计数**: 0 帧 (驱动丢包: 0 帧)"));
-    md.push(format!("- **保真度等级**: {} (零丢包物理保真)", fidelity.fidelity_grade));
+    md.push(format!("- **接口丢包计数**: {} 帧 (驱动丢包: {} 帧)", fidelity.packets_dropped_interface, fidelity.packets_dropped_driver));
+    md.push(format!("- **保真度等级**: {} (丢包率: {:.4}%)", fidelity.fidelity_grade, fidelity.drop_rate_percentage));
     md.push(format!("- **保真说明**: {}", fidelity.statement));
     md.push("## 二、证据文件防篡改双哈希固定清单".to_string());
     md.push("| 证据文件名 | 文件大小 | SHA-256 密码学摘要 | 国密 SM3 算法摘要 | 检验结论 | WORM 锁定 |".to_string());
@@ -1161,9 +1151,10 @@ pub fn generate_judicial_inspection_report(
             item.file_name, item.current_size, item.current_hash, item.current_sm3, item.status, if item.is_worm_locked { "已加锁" } else { "未加锁" }
         ));
     }
-    md.push("## 三、RFC 3161 可信时间戳存证".to_string());
+    md.push("## 三、时间戳与防篡改时间自证封装".to_string());
     if let Some(ref t) = tsa_token {
-        md.push(format!("- **授时机构**: {}", t.tsa_server));
+        md.push(format!("- **封装模式/源**: {}", t.tsa_server));
+        md.push(format!("- **状态标识**: `{}`", t.status));
         md.push(format!("- **序列号**: `{}`", t.serial_number));
         md.push(format!("- **打标时间**: {}", t.stamped_at));
         md.push(format!("- **时间戳令牌指纹**: `{}`", t.token_hex));
@@ -1230,7 +1221,7 @@ pub fn start_periodic_sealing(
         loop {
             std::thread::sleep(std::time::Duration::from_secs(interval_secs));
 
-            if !*running.lock().unwrap() {
+            if !*crate::lock_guard::lock_mutex(&running, "forensics::seal_daemon_loop") {
                 do_seal(&files, &seal_path, "SHUTDOWN_FINAL_SEAL");
                 let _ = app.emit("system-log", "[FORENSICS] 关机终态双哈希封条已写入");
                 write_log_line("[FORENSICS] 关机终态双哈希封条已写入");

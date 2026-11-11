@@ -191,13 +191,16 @@ impl MultiResolutionTimeSeriesPool {
         self.total_packets_processed.fetch_add(1, Ordering::Relaxed);
         self.total_bytes_processed.fetch_add(bytes, Ordering::Relaxed);
 
-        if let Ok(mut sec) = self.second_ring.write() {
+        {
+            let mut sec = crate::lock_guard::write_rwlock(&self.second_ring, "metrics_timeseries::record_sec");
             sec.record(timestamp_s, bytes, is_industrial, is_write, is_threat_or_error);
         }
-        if let Ok(mut min) = self.minute_ring.write() {
+        {
+            let mut min = crate::lock_guard::write_rwlock(&self.minute_ring, "metrics_timeseries::record_min");
             min.record(timestamp_s, bytes, is_industrial, is_write, is_threat_or_error);
         }
-        if let Ok(mut hr) = self.hour_ring.write() {
+        {
+            let mut hr = crate::lock_guard::write_rwlock(&self.hour_ring, "metrics_timeseries::record_hr");
             hr.record(timestamp_s, bytes, is_industrial, is_write, is_threat_or_error);
         }
     }
@@ -206,25 +209,16 @@ impl MultiResolutionTimeSeriesPool {
     pub fn get_series(&self, resolution: TimeResolution, current_time_s: u64) -> Vec<TimeSeriesBucket> {
         match resolution {
             TimeResolution::Second => {
-                if let Ok(sec) = self.second_ring.read() {
-                    sec.get_aligned_series(current_time_s)
-                } else {
-                    Vec::new()
-                }
+                let sec = crate::lock_guard::read_rwlock(&self.second_ring, "metrics_timeseries::get_series_sec");
+                sec.get_aligned_series(current_time_s)
             }
             TimeResolution::Minute => {
-                if let Ok(min) = self.minute_ring.read() {
-                    min.get_aligned_series(current_time_s)
-                } else {
-                    Vec::new()
-                }
+                let min = crate::lock_guard::read_rwlock(&self.minute_ring, "metrics_timeseries::get_series_min");
+                min.get_aligned_series(current_time_s)
             }
             TimeResolution::Hour => {
-                if let Ok(hr) = self.hour_ring.read() {
-                    hr.get_aligned_series(current_time_s)
-                } else {
-                    Vec::new()
-                }
+                let hr = crate::lock_guard::read_rwlock(&self.hour_ring, "metrics_timeseries::get_series_hr");
+                hr.get_aligned_series(current_time_s)
             }
         }
     }
@@ -294,8 +288,8 @@ impl IndustrialTopologyHeatmap {
         }
 
         let key = Self::cell_key(src_ip, dst_ip);
-        let mut map = self.matrix.lock().unwrap();
-        let mut lru = self.lru_order.lock().unwrap();
+        let mut map = crate::lock_guard::lock_mutex(&self.matrix, "metrics_timeseries::heatmap_record_matrix");
+        let mut lru = crate::lock_guard::lock_mutex(&self.lru_order, "metrics_timeseries::heatmap_record_lru");
 
         if let Some(cell) = map.get_mut(&key) {
             cell.interaction_count = cell.interaction_count.saturating_add(1);
@@ -343,7 +337,7 @@ impl IndustrialTopologyHeatmap {
 
     /// 获取活跃通信拓扑矩阵列表 (按交互频次降序排序)
     pub fn get_top_heatmap(&self, limit: usize) -> Vec<TopologyHeatmapCell> {
-        let map = self.matrix.lock().unwrap();
+        let map = crate::lock_guard::lock_mutex(&self.matrix, "metrics_timeseries::get_top_heatmap");
         let mut list: Vec<TopologyHeatmapCell> = map.values().cloned().collect();
         // 优先按写操作频次降序，次选按总交互频次降序
         list.sort_by(|a, b| {
@@ -356,7 +350,7 @@ impl IndustrialTopologyHeatmap {
 
     /// 获取当前常驻节点对数量
     pub fn total_pairs(&self) -> usize {
-        let map = self.matrix.lock().unwrap();
+        let map = crate::lock_guard::lock_mutex(&self.matrix, "metrics_timeseries::total_pairs");
         map.len()
     }
 }

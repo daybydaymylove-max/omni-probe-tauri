@@ -181,6 +181,11 @@ impl RollingPcapWriter {
         }
     }
 
+    /// 运行时动态切换物理抓包截断窗口 (SnaplenMode)
+    pub fn set_snaplen_mode(&mut self, mode: SnaplenMode) {
+        self.config.snaplen_mode = mode;
+    }
+
     /// 写入单个报文
     pub fn write_packet(&mut self, data: &[u8], ts_sec: u32, ts_usec: u32) -> Result<(), String> {
         if !self.config.enabled {

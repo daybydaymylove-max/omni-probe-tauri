@@ -697,7 +697,7 @@ pub fn decrypt_stream_payload(
     }
 
     // 6. 根据提取的密钥初始化会话状态
-    if let (Some(ref c_secret_hex), Some(ref s_secret_hex)) = (
+    if let (Some(c_secret_hex), Some(s_secret_hex)) = (
         &keylog_entry.client_traffic_secret_0,
         &keylog_entry.server_traffic_secret_0,
     ) {

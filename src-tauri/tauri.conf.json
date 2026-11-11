@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "omni-probe-tauri",
-  "version": "0.2.4",
+  "version": "0.3.1",
   "identifier": "com.chinacpu.omni-probe-tauri",
   "build": {
     "beforeBuildCommand": "npm run build",
@@ -11,7 +11,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Omni-Probe 工业级全能网络探针系统 v0.2.4",
+        "title": "Omni-Probe 工业级全能网络探针系统 v0.3.1",
         "width": 1440,
         "height": 900,
         "minWidth": 1024,
@@ -21,6 +21,7 @@
         "decorations": true,
         "shadow": true,
         "visible": true,
+        "dragDropEnabled": true,
         "url": "index.html"
       }
     ],
@@ -31,6 +32,12 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "publisher": "ChinaCPU Engineering Team",
+    "homepage": "https://github.com/daybydaymylove-max/omni-probe-tauri",
+    "copyright": "Copyright © 2024-2026 ChinaCPU Engineering Team & Omni-Probe Contributors",
+    "category": "DeveloperTool",
+    "shortDescription": "工业级多总线协议审计与原生桌面网络探针系统",
+    "longDescription": "Omni-Probe 是一款基于 Rust 与 Tauri 构建的原生桌面多总线分析软件，涵盖网络抓包、USB/串口透明代理诊断、FastCDC 大二进制差分比对、Center-Star 多组样本对齐、离线地理路由测绘与本地原生文件系统持久化集成。",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

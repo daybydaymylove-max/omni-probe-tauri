@@ -67,6 +67,9 @@ pub struct PacketRecord {
 }
 
 static PACKET_COUNTER: AtomicU64 = AtomicU64::new(0);
+pub static CAPTURE_RECEIVED_PACKETS: AtomicU64 = AtomicU64::new(0);
+pub static CAPTURE_DROPPED_DRIVER: AtomicU64 = AtomicU64::new(0);
+pub static CAPTURE_DROPPED_INTERFACE: AtomicU64 = AtomicU64::new(0);
 
 /// 当前活动 TCP 连接数（双轨 + 蜜罐统一计数，供 Prometheus probe_active_connections 暴露）
 pub static GLOBAL_ICS_ACL_ENGINE: once_cell::sync::Lazy<std::sync::Arc<std::sync::RwLock<crate::ics_acl::IcsAclEngine>>> = once_cell::sync::Lazy::new(|| {
@@ -99,7 +102,7 @@ static GLOBAL_CHAIN_HASH: once_cell::sync::Lazy<Arc<Mutex<String>>> =
 /// 保证证据链单一连续：chain[n] = SHA256(chain[n-1] | timestamp_ns | record_sig)
 /// 返回本条记录的链哈希。合成记录（ARP 雷达）在 record_sig 中携带 SYNTHETIC 前缀显式标注。
 pub fn advance_global_chain(ts_ns: u128, record_sig: &str) -> String {
-    let mut gh = GLOBAL_CHAIN_HASH.lock().unwrap();
+    let mut gh = crate::lock_guard::lock_mutex(&GLOBAL_CHAIN_HASH, "sniffer::advance_global_chain");
     let sig = format!("{}|{}|{}", *gh, ts_ns, record_sig);
     let h = format!("{:x}", sha2::Sha256::digest(sig.as_bytes()));
     *gh = h.clone();
@@ -133,7 +136,7 @@ pub fn generate_raw_text_preview(data: &[u8]) -> String {
 pub fn is_npcap_driver_available() -> bool {
     unsafe {
         #[link(name = "kernel32")]
-        extern "system" {
+        unsafe extern "system" {
             fn LoadLibraryA(lpLibFileName: *const i8) -> usize;
             fn FreeLibrary(hLibModule: usize) -> i32;
         }
@@ -255,10 +258,14 @@ pub fn process_industrial_transaction_step(
             &record.src_ip, record.src_port, &record.dst_ip, record.dst_port,
         );
 
-        if let Ok(mut tracker) = crate::industrial_transaction::GLOBAL_TRANSACTION_TRACKER.lock() {
+        {
+            let mut tracker = crate::lock_guard::lock_mutex(
+                &crate::industrial_transaction::GLOBAL_TRANSACTION_TRACKER,
+                "sniffer::track_industrial_modbus_transaction",
+            );
             // 判定方向: dst_port == 502 或请求报文
             if record.dst_port == 502 || (record.src_port != 502 && func_code < 0x80 && payload_bytes.len() >= 12) {
-                let is_write = func_code == 0x05 || func_code == 0x06 || func_code == 0x0F || func_code == 0x10;
+                let is_write = matches!(func_code, 0x05 | 0x06 | 0x0F | 0x10 | 0x15 | 0x16 | 0x17);
                 let addr = if payload_bytes.len() >= 10 {
                     Some(u16::from_be_bytes([payload_bytes[8], payload_bytes[9]]) as u32)
                 } else {
@@ -278,6 +285,9 @@ pub fn process_industrial_transaction_step(
                     0x06 => "Write Single Register",
                     0x0F => "Write Multiple Coils",
                     0x10 => "Write Multiple Registers",
+                    0x15 => "Write File Record",
+                    0x16 => "Mask Write Register",
+                    0x17 => "Read/Write Multiple Registers",
                     _ => "Modbus Operation",
                 }.to_string();
 
@@ -374,7 +384,11 @@ pub fn process_incoming_record(app: &tauri::AppHandle, mut record: PacketRecord)
     crate::analyzer::record_cross_bus_event(bus_type, record.id, record.timestamp_ns, &record.protocol, &payload_bytes);
 
     // 1. IP 资产与地理情报自动打标 (Zero-Leakage 离线分析)
-    if let Ok(ip_engine) = crate::ip_intelligence::GLOBAL_IP_ENGINE.lock() {
+    {
+        let ip_engine = crate::lock_guard::lock_mutex(
+            &crate::ip_intelligence::GLOBAL_IP_ENGINE,
+            "sniffer::process_incoming_record_ip_intel",
+        );
         let src_intel = ip_engine.classify(&record.src_ip);
         let dst_intel = ip_engine.classify(&record.dst_ip);
 
@@ -400,7 +414,11 @@ pub fn process_incoming_record(app: &tauri::AppHandle, mut record: PacketRecord)
 
     // 2. 存入内存环形缓冲区 (固定内存配额，防 OOM)
     let raw_bytes = hex::decode(&record.raw_frame_hex).unwrap_or_else(|_| hex::decode(&record.payload_hex).unwrap_or_default());
-    if let Ok(mut ring) = crate::pcap_engine::GLOBAL_RING_BUFFER.lock() {
+    {
+        let mut ring = crate::lock_guard::lock_mutex(
+            &crate::pcap_engine::GLOBAL_RING_BUFFER,
+            "sniffer::process_incoming_record_ring",
+        );
         let ts_sec = (record.timestamp_ns / 1_000_000_000) as u32;
         let ts_usec = ((record.timestamp_ns % 1_000_000_000) / 1000) as u32;
         ring.push(crate::pcap_engine::RawPacketItem {
@@ -414,7 +432,11 @@ pub fn process_incoming_record(app: &tauri::AppHandle, mut record: PacketRecord)
     }
 
     // 3. 持续滚动落盘 (Rolling PCAPNG)
-    if let Ok(mut writer) = crate::pcap_engine::GLOBAL_ROLLING_WRITER.lock() {
+    {
+        let mut writer = crate::lock_guard::lock_mutex(
+            &crate::pcap_engine::GLOBAL_ROLLING_WRITER,
+            "sniffer::process_incoming_record_rolling",
+        );
         let ts_sec = (record.timestamp_ns / 1_000_000_000) as u32;
         let ts_usec = ((record.timestamp_ns % 1_000_000_000) / 1000) as u32;
         let _ = writer.write_packet(&raw_bytes, ts_sec, ts_usec);
@@ -422,7 +444,11 @@ pub fn process_incoming_record(app: &tauri::AppHandle, mut record: PacketRecord)
 
     // 4. 双向会话流 (Biflow) 与 TCP 乱序重组引擎
     let payload_bytes = hex::decode(&record.payload_hex).unwrap_or_default();
-    if let Ok(mut flow_engine) = crate::stream_reassembly::GLOBAL_FLOW_ENGINE.lock() {
+    {
+        let mut flow_engine = crate::lock_guard::lock_mutex(
+            &crate::stream_reassembly::GLOBAL_FLOW_ENGINE,
+            "sniffer::process_incoming_record_flow",
+        );
         if record.transport == "TCP" {
             let seq = record.business_data.as_ref()
                 .and_then(|m| m.get("sequence_number"))
@@ -577,12 +603,82 @@ pub fn process_incoming_record(app: &tauri::AppHandle, mut record: PacketRecord)
     // (6) 违规外联审查 (非授信外网连接与黑名单资产审计)
     crate::audit_confidentiality::inspect_egress_domain(&record.src_ip, &record.dst_ip);
 
-    // (7) Aho-Corasick 多模式线速威胁特征深度扫描 (对标 Snort / Suricata Hyperscan)
-    let threat_hits = if !payload_bytes.is_empty() {
+    // (6.5) QUIC / HTTP/3 自动零配置初始解密流水线 (UDP 443)
+    if record.transport == "UDP" && (record.src_port == 443 || record.dst_port == 443) && !payload_bytes.is_empty() {
+        if let Some(dec) = crate::quic_engine::try_passive_decrypt_quic(&payload_bytes) {
+            record.protocol = "QUIC/HTTP3".to_string();
+            let mut bdata = record.business_data.take().unwrap_or_default();
+            bdata.insert("quic_decrypted".into(), serde_json::json!(true));
+            bdata.insert("quic_packet_type".into(), serde_json::json!(format!("{:?}", dec.packet_type)));
+            bdata.insert("quic_packet_number".into(), serde_json::json!(dec.packet_number));
+            bdata.insert("quic_frames_count".into(), serde_json::json!(dec.parsed_frames.len()));
+            record.business_data = Some(bdata);
+        }
+    }
+
+    // (6.6) TLS JA3/JA4 指纹提取与恶意 C2 库实时碰撞流水线
+    let mut tls_threat_hit: Option<crate::threat_detector::ThreatHit> = None;
+    if record.transport == "TCP" && payload_bytes.len() >= 43 && payload_bytes[0] == 0x16 && payload_bytes[1] == 0x03 {
+        if let Some((ja3, ja4, hit_opt)) = crate::tls_fingerprint::inspect_and_record_tls(
+            &payload_bytes,
+            &record.src_ip,
+            &record.dst_ip,
+            record.src_port,
+            record.dst_port,
+            &record.timestamp,
+        ) {
+            let mut bdata = record.business_data.take().unwrap_or_default();
+            bdata.insert("tls_ja3_hash".into(), serde_json::json!(ja3));
+            bdata.insert("tls_ja4".into(), serde_json::json!(ja4));
+            if let Some(ref th) = hit_opt {
+                bdata.insert("tls_c2_family".into(), serde_json::json!(th.malware_family));
+                tls_threat_hit = Some(th.to_threat_hit(910001));
+            }
+            record.business_data = Some(bdata);
+        }
+    }
+
+    // (7) 多引擎并联线速深度入侵检测 (Aho-Corasick + Suricata DSL + Glushkov 位并行正则自动机 + TLS 指纹 C2)
+    let mut threat_hits = if !payload_bytes.is_empty() {
         crate::threat_detector::detect_threats_in_payload(&payload_bytes)
     } else {
         Vec::new()
     };
+
+    if !payload_bytes.is_empty() {
+        let is_to_srv = record.dst_port < 1024 || record.dst_port == 502 || record.dst_port == 102;
+        threat_hits.extend(crate::threat_dsl::scan_with_global_suricata(&payload_bytes, is_to_srv));
+
+        {
+            let gl_engine = crate::lock_guard::read_rwlock(
+                &crate::glushkov_engine::GLOBAL_HYPERSCAN_ENGINE,
+                "sniffer::process_incoming_record_hyperscan",
+            );
+            for gm in gl_engine.scan_block(&payload_bytes) {
+                threat_hits.push(crate::threat_detector::ThreatHit {
+                    signature_id: gm.rule_id,
+                    name: gm.rule_name,
+                    category: gm.threat_class,
+                    severity: "HIGH".to_string(),
+                    match_start: gm.match_end_offset.saturating_sub(gm.snippet.len()),
+                    match_end: gm.match_end_offset,
+                    matched_bytes_hex: gm.snippet,
+                    description: "Glushkov Bit-Parallel DFA/NFA Pattern Hit".to_string(),
+                });
+            }
+        }
+    }
+
+    if let Some(t_hit) = tls_threat_hit {
+        threat_hits.push(t_hit);
+    }
+
+    if let Some(mut topo) = crate::lock_guard::try_lock_mutex(
+        &crate::snmp_topology::GLOBAL_TOPOLOGY_TREE,
+        "sniffer::process_incoming_record_topology",
+    ) {
+        topo.ingest_flow(&record.src_ip, &record.dst_ip, record.length as u64, !threat_hits.is_empty());
+    }
 
     if !threat_hits.is_empty() {
         let mut bdata = record.business_data.take().unwrap_or_default();
@@ -615,7 +711,9 @@ pub fn process_incoming_record(app: &tauri::AppHandle, mut record: PacketRecord)
             } else {
                 None
             };
-            let is_write = func_code.map(|f| f == 0x05 || f == 0x06 || f == 0x0F || f == 0x10).unwrap_or(false);
+            let is_write = func_code
+                .map(|f| matches!(f, 0x05 | 0x06 | 0x0F | 0x10 | 0x15 | 0x16 | 0x17))
+                .unwrap_or(false);
 
             let ctx = crate::ics_acl::IcsInspectionContext {
                 protocol: crate::ics_acl::IcsProtocol::ModbusTcp,
@@ -628,7 +726,11 @@ pub fn process_incoming_record(app: &tauri::AppHandle, mut record: PacketRecord)
                 is_write_operation: is_write,
             };
 
-            if let Ok(acl_guard) = GLOBAL_ICS_ACL_ENGINE.read() {
+            {
+                let acl_guard = crate::lock_guard::read_rwlock(
+                    &GLOBAL_ICS_ACL_ENGINE,
+                    "sniffer::process_incoming_record_ics_acl",
+                );
                 let decision = acl_guard.evaluate(&ctx);
                 if decision.is_violation {
                     let mut bdata = record.business_data.take().unwrap_or_default();
@@ -1184,7 +1286,7 @@ pub fn start_dual_track_services(app: tauri::AppHandle, running: Arc<Mutex<bool>
                 }
             };
 
-            while *run_tcp.lock().unwrap() {
+            while *crate::lock_guard::lock_mutex(&run_tcp, "sniffer::dual_track_tcp_accept") {
                 match listener.accept() {
                     Ok((stream, peer_addr)) => {
                         // TCP_CONNECT 带外事件（对齐 Python SYS_CTRL 连接生命周期）
@@ -1225,7 +1327,7 @@ pub fn start_dual_track_services(app: tauri::AppHandle, running: Arc<Mutex<bool>
                         format!("[DUAL-TRACK] ✅ 应用层双轨捕获端口已就绪 -> UDP :{}", port),
                     );
                     let mut buf = [0u8; 65535];
-                    while *run_udp.lock().unwrap() {
+                    while *crate::lock_guard::lock_mutex(&run_udp, "sniffer::dual_track_udp_recv") {
                         match socket.recv_from(&mut buf) {
                             Ok((n, peer_addr)) if n > 0 => {
                                 let payload = &buf[..n];
@@ -1315,7 +1417,7 @@ pub fn start_dual_track_services(app: tauri::AppHandle, running: Arc<Mutex<bool>
 
 #[cfg(windows)]
 #[link(name = "iphlpapi")]
-extern "system" {
+unsafe extern "system" {
     fn SendARP(
         dest_ip: u32,
         src_ip: u32,
@@ -1367,7 +1469,7 @@ pub fn start_native_lan_sniffer(app: tauri::AppHandle, running: Arc<Mutex<bool>>
             };
 
             let mut buf = [0u8; 8192];
-            while *run_sub.lock().unwrap() {
+            while *crate::lock_guard::lock_mutex(&run_sub, "sniffer::native_lan_recv") {
                 match socket.recv_from(&mut buf) {
                     Ok((n, peer_addr)) if n > 0 => {
                         let payload = &buf[..n];
@@ -1446,140 +1548,7 @@ pub fn start_native_lan_sniffer(app: tauri::AppHandle, running: Arc<Mutex<bool>>
 }
 
 /// 局域网全网段设备雷达自动扫描激活（LAN Subnet ARP Radar Sweep）
-/// 周期性向当前局域网段发起轻量级 ARP 探活，激发物理交换机广播与局域网终端回包，全量点亮态势大屏与拓扑图
-
-/// 启动工业工控规约全息演示流引擎 (Industrial Protocol Live Simulation Engine)
-/// 场景：现场免驱运行、本地演示或离线审计时，持续注入真实结构化的 Modbus-TCP, S7Comm, IEC-104, MQTT, SL651, HTTP 规约通信序列
-/// 所有生成的报文均完整通过四阶段 DPI 解包、字段解析、熵值检测、IP 资产情报标记和证据链持久化
-pub fn start_industrial_demo_stream(app: tauri::AppHandle, running: Arc<Mutex<bool>>) {
-    std::thread::Builder::new()
-        .name("omni-industrial-demo-stream".into())
-        .spawn(move || {
-            // 稍等 500ms 确保前端监听器和底层服务已就绪
-            std::thread::sleep(Duration::from_millis(500));
-
-            let (my_ip, _) = detect_primary_ipv4_and_subnet();
-            let my_ip_str = my_ip.to_string();
-            let octets = my_ip.octets();
-            let subnet = format!("{}.{}.{}", octets[0], octets[1], octets[2]);
-
-            // 工业拓扑仿真终端
-            let plc_modbus_ip = format!("{}.50", subnet);
-            let plc_s7_ip = format!("{}.60", subnet);
-            let rtu_iec104_ip = format!("{}.70", subnet);
-            let iot_mqtt_ip = format!("{}.80", subnet);
-            let hydro_sl651_ip = format!("{}.90", subnet);
-            let gateway_ip = format!("{}.1", subnet);
-
-            let mut seq = 0u64;
-
-            while *running.lock().unwrap() {
-                seq += 1;
-                let step = seq % 6;
-
-                let (src_ip, dst_ip, src_port, dst_port, transport, protocol, payload) = match step {
-                    0 => {
-                        // 1. Modbus-TCP: 读保持寄存器 (FC=03, 寄存器 40001, 数量 10)
-                        let raw = vec![
-                            0x00, (seq & 0xFF) as u8, 0x00, 0x00, 0x00, 0x06, 0x01, 0x03, 0x00, 0x64, 0x00, 0x0A
-                        ];
-                        (my_ip_str.clone(), plc_modbus_ip.clone(), 50200 + (seq % 100) as u16, 502, "TCP", "MODBUS_TCP", raw)
-                    }
-                    1 => {
-                        // 2. 西门子 S7Comm: 工业 PLC 读写 (Job Read Var DB1.DBD0)
-                        let raw = vec![
-                            0x03, 0x00, 0x00, 0x1F, 0x02, 0xF0, 0x80, 0x32, 0x01, 0x00, 0x00, 0x00,
-                            (seq & 0xFF) as u8, 0x00, 0x0E, 0x00, 0x00, 0x04, 0x01, 0x12, 0x0A, 0x10,
-                            0x02, 0x00, 0x01, 0x00, 0x01, 0x84, 0x00, 0x00, 0x00
-                        ];
-                        (my_ip_str.clone(), plc_s7_ip.clone(), 49152 + (seq % 100) as u16, 102, "TCP", "S7COMM", raw)
-                    }
-                    2 => {
-                        // 3. 电力规约 IEC 60870-5-104: APDU 遥信单点信息
-                        let raw = vec![
-                            0x68, 0x0E, ((seq * 2) & 0xFE) as u8, 0x00, 0x00, 0x00, 0x01, 0x01, 0x03, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x01
-                        ];
-                        (rtu_iec104_ip.clone(), my_ip_str.clone(), 2404, 58000 + (seq % 100) as u16, "TCP", "IEC104", raw)
-                    }
-                    3 => {
-                        // 4. 物联网 MQTT: 工业传感器温湿度遥测发布
-                                                let sensor_str = format!("TEMP_{:02}", seq % 16);
-                        let deg = 36.5 + ((seq % 20) as f64) * 0.4;
-                        let json_data = serde_json::json!({
-                            "sensor_id": sensor_str,
-                            "deg_c": deg,
-                            "pressure_kpa": 101.3
-                        }).to_string();
-                        let topic = b"/factory/workshop1/telemetry";
-                        let mut raw = vec![0x30, (2 + topic.len() + json_data.len()) as u8, 0x00, topic.len() as u8];
-                        raw.extend_from_slice(topic);
-                        raw.extend_from_slice(json_data.as_bytes());
-                        (iot_mqtt_ip.clone(), my_ip_str.clone(), 1883, 52100 + (seq % 100) as u16, "TCP", "MQTT", raw)
-                    }
-                    4 => {
-                        // 5. 水利水资源 SL651 规约: 遥测终端水质采样
-                        let raw = vec![
-                            0x7E, 0x7E, 0x01, 0x23, 0x45, 0x67, 0x89, 0x32, 0x00, 0x12, 0x02, 0x20, 0x26, 0x11, 0x06, 0x19, 0x00, 0x00, 0xF1, 0xF1, 0x01, 0x00, 0x03, 0x7E
-                        ];
-                        (hydro_sl651_ip.clone(), my_ip_str.clone(), 5003, 53200 + (seq % 100) as u16, "UDP", "SL651", raw)
-                    }
-                    _ => {
-                        // 6. 局域网 SCADA 监控心跳
-                        let raw = "GET /api/v1/health/probe HTTP/1.1\r\nHost: scada-master.internal\r\nUser-Agent: OmniProbe/4.1\r\n\r\n".as_bytes().to_vec();
-                        (my_ip_str.clone(), gateway_ip.clone(), 54100 + (seq % 100) as u16, 80, "TCP", "HTTP", raw)
-                    }
-                };
-
-                let now_ns = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
-                let now_str = chrono::Local::now().format("%H:%M:%S.%3f").to_string();
-                let entropy = ForensicEngine::calculate_entropy(&payload);
-                let entropy_level = classify_entropy(entropy);
-                let payload_hex = hex::encode(&payload);
-                let raw_text = Some(generate_raw_text_preview(&payload));
-
-                let mut bdata = dpi::dissect_payload(&protocol, &payload);
-                if bdata.is_empty() {
-                    bdata.insert("transport".into(), json!(transport));
-                    bdata.insert("inferred_protocol".into(), json!(protocol));
-                }
-                bdata.insert("simulation_demo".into(), json!(true));
-
-                let pkt_id = PACKET_COUNTER.fetch_add(1, Ordering::Relaxed);
-                let chain_hash = advance_global_chain(now_ns, &payload_hex);
-
-                let record = PacketRecord {
-                    id: pkt_id,
-                    chain_hash,
-                    timestamp: now_str,
-                    timestamp_ns: now_ns,
-                    src_ip: src_ip.clone(),
-                    dst_ip: dst_ip.clone(),
-                    mac_src: format!("52:54:00:12:{:02x}:{:02x}", (seq >> 8) & 0xFF, seq & 0xFF),
-                    mac_dst: "52:54:00:88:99:AA".to_string(),
-                    protocol: protocol.to_string(),
-                    length: payload.len() + 54,
-                    entropy,
-                    entropy_level,
-                    src_port,
-                    dst_port,
-                    transport: transport.to_string(),
-                    payload_hex,
-                    raw_text,
-                    business_data: Some(bdata),
-                    direction: if src_ip == my_ip_str { "OUTBOUND".into() } else { "INBOUND".into() },
-                    raw_frame_hex: String::new(),
-                };
-
-                process_incoming_record(&app, record);
-
-                // 平滑演示间隔：400 毫秒，呈现流畅的工控动态大屏
-                std::thread::sleep(Duration::from_millis(400));
-            }
-        })
-        .ok();
-}
-
-
+/// 周期性向当前局域网段发起真实 ARP 探活，仅记录产生真实响应的物理局域网资产。
 pub fn trigger_lan_radar_discovery(app: tauri::AppHandle) {
     let running = crate::PROBE_RUNNING.clone();
 
@@ -1615,7 +1584,7 @@ pub fn trigger_lan_radar_discovery(app: tauri::AppHandle) {
         #[allow(unused_variables, unused_assignments)]
         let mut round = 0u64;
 
-        while *running.lock().unwrap() {
+        while *crate::lock_guard::lock_mutex(&running, "sniffer::lan_radar_outer") {
             round += 1;
 
             #[cfg(windows)]
@@ -1637,7 +1606,7 @@ pub fn trigger_lan_radar_discovery(app: tauri::AppHandle) {
                         let end_h = std::cmp::min((chunk_idx + 1) * 64, 254);
 
                         for host_id in start_h..=end_h {
-                            if !*run_check.lock().unwrap() {
+                            if !*crate::lock_guard::lock_mutex(&run_check, "sniffer::lan_radar_win_chunk") {
                                 break;
                             }
                             if host_id == my_host as usize {
@@ -1764,7 +1733,7 @@ pub fn trigger_lan_radar_discovery(app: tauri::AppHandle) {
 
                         if let Ok(socket) = std::net::UdpSocket::bind("0.0.0.0:0") {
                             for host_id in start_h..=end_h {
-                                if !*run_sub.lock().unwrap() {
+                                if !*crate::lock_guard::lock_mutex(&run_sub, "sniffer::lan_radar_udp_chunk") {
                                     break;
                                 }
                                 if host_id == my_host as usize {
@@ -1800,7 +1769,7 @@ pub fn trigger_lan_radar_discovery(app: tauri::AppHandle) {
 
             // 保持周期性轮询（每隔 8 秒执行一次局域网探活保持）
             for _ in 0..16 {
-                if !*running.lock().unwrap() {
+                if !*crate::lock_guard::lock_mutex(&running, "sniffer::lan_radar_sleep") {
                     break;
                 }
                 std::thread::sleep(Duration::from_millis(500));
@@ -1811,98 +1780,6 @@ pub fn trigger_lan_radar_discovery(app: tauri::AppHandle) {
             "system-log",
             "[LAN-RADAR] 局域网全网段雷达扫描已安全退出".to_string(),
         );
-    });
-}
-
-/// 启动持续探针自检与心跳守护（Heartbeat Probe Daemon）
-/// 确保启动嗅探后立即点亮全链路通信，并在静默网络中周期性（每5秒）持续产生真实可度量的探针健康流
-pub fn start_heartbeat_probe_daemon(app: tauri::AppHandle, running: Arc<Mutex<bool>>) {
-    std::thread::spawn(move || {
-        use std::io::Write;
-        // 等待 150ms 确保双轨 TCP 监听已完全就绪
-        std::thread::sleep(Duration::from_millis(150));
-
-        let (local_ip, local_mac) = get_local_identity();
-        let mut count = 0u64;
-
-        while *running.lock().unwrap() {
-            count += 1;
-
-            let req_str = format!(
-                "GET /api/v1/omni-probe-health?seq={} HTTP/1.1\r\nHost: {}:8080\r\nUser-Agent: OmniProbe/2026 Industrial-Engine\r\nConnection: close\r\n\r\n",
-                count, local_ip
-            );
-            let req_bytes = req_str.as_bytes();
-            let req_hex = hex::encode(req_bytes);
-            let id = PACKET_COUNTER.fetch_add(1, Ordering::Relaxed);
-            let ts_ns = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
-            let timestamp = chrono::Local::now().format("%H:%M:%S.%3f").to_string();
-            let entropy = ForensicEngine::calculate_entropy(req_bytes);
-
-            let chain_hash = advance_global_chain(
-                ts_ns,
-                &format!("{}:HEALTH_PROBE->{}:8080|HTTP_REQ|{}", local_ip, local_ip, req_hex),
-            );
-
-            let mut b_map = HashMap::new();
-            b_map.insert("probe_type".into(), json!("HEARTBEAT_HEALTH"));
-            b_map.insert("target_endpoint".into(), json!(format!("{}:8080", local_ip)));
-            b_map.insert("http_method".into(), json!("GET"));
-            b_map.insert("health_uri".into(), json!("/api/v1/omni-probe-health"));
-            b_map.insert("sequence".into(), json!(count));
-
-            let probe_record = PacketRecord {
-                id,
-                timestamp,
-                timestamp_ns: ts_ns,
-                direction: "PORT_OUTBOUND".into(),
-                transport: "TCP".into(),
-                protocol: "HTTP_REQ".into(),
-                src_ip: local_ip.clone(),
-                dst_ip: "127.0.0.1".into(),
-                src_port: 50000 + (count % 10000) as u16,
-                dst_port: 8080,
-                length: req_bytes.len(),
-                payload_hex: req_hex,
-                raw_frame_hex: String::new(),
-                entropy,
-                entropy_level: classify_entropy(entropy),
-                mac_src: local_mac.clone(),
-                mac_dst: "LOCAL_LOOPBACK".into(),
-                chain_hash,
-                business_data: Some(b_map),
-                raw_text: Some(format!("GET /api/v1/omni-probe-health?seq={} HTTP/1.1", count)),
-            };
-
-            // 无论底层物理网络状态如何，探针出站记录立即推入分析流水线
-            process_incoming_record(&app, probe_record);
-
-            // 真实尝试向本地双轨服务发起物理连接
-            let mut connected = false;
-            for _ in 0..3 {
-                if let Ok(mut stream) = std::net::TcpStream::connect("127.0.0.1:8080") {
-                    let _ = stream.write_all(req_bytes);
-                    connected = true;
-                    break;
-                }
-                std::thread::sleep(Duration::from_millis(100));
-            }
-
-            if count == 1 && connected {
-                let _ = app.emit(
-                    "system-log",
-                    "[PROBE] 📡 全链路通信自检通过，态势感知与捕获通道已全面点亮！".to_string(),
-                );
-            }
-
-            // 保持每 5 秒一次周期性健康自检流
-            for _ in 0..10 {
-                if !*running.lock().unwrap() {
-                    break;
-                }
-                std::thread::sleep(Duration::from_millis(500));
-            }
-        }
     });
 }
 
@@ -1937,7 +1814,7 @@ mod win_raw {
     }
 
     #[link(name = "ws2_32")]
-    extern "system" {
+    unsafe extern "system" {
         pub fn WSAStartup(w_version_requested: u16, lp_wsa_data: *mut WSADATA) -> i32;
         pub fn WSACleanup() -> i32;
         pub fn socket(af: i32, socket_type: i32, protocol: i32) -> usize;
@@ -1966,12 +1843,94 @@ mod win_raw {
 /// 数据链路层，故无法应用 BPF 过滤表达式：recv 到的全部 IPv4 包均进入取证流水线
 /// （全量保全语义，符合取证"宁全勿漏"原则）。BPF 过滤仅在 run_sniffer_pipeline
 /// 的 L2 Npcap 路径生效；用户设置非空过滤器时由调用方显式告知此边界，杜绝静默降级。
+#[inline]
+fn current_epoch_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64
+}
+
+/// 统一处置 L3 IPv4 原生报文切片（共用于 Win32 RIO 物理大页批处理与标准 Raw Socket 降级路径）
+#[cfg(windows)]
+fn process_raw_ipv4_slice(app: &tauri::AppHandle, packet_data: &[u8]) {
+    if is_sniffer_paused() {
+        return;
+    }
+
+    let now_ms = current_epoch_ms();
+    match crate::xdp_engine::GLOBAL_XDP_ENGINE.process_ipv4_packet(packet_data, now_ms) {
+        crate::xdp_engine::XdpAction::Drop => {
+            // 命中 XDP/eBPF 黑名单或抗洪峰策略：在解剖与前端队列之前立即零成本丢弃
+        }
+        crate::xdp_engine::XdpAction::Bypass => {
+            // 命中大象流旁路直通：仅计量高并发吞吐与 IO 图谱，免去昂贵的逐包全量解析与前端分发
+            GLOBAL_PACKETS_TOTAL.fetch_add(1, Ordering::Relaxed);
+            GLOBAL_BYTES_TOTAL.fetch_add(packet_data.len() as u64, Ordering::Relaxed);
+            crate::analyzer::record_packet_io(packet_data.len(), None, false);
+        }
+        _ => {
+            let mut local_chain_view = String::new();
+            if let Some(record) = parse_ipv4_raw_packet(packet_data, &mut local_chain_view) {
+                process_incoming_record(app, record);
+            }
+        }
+    }
+}
+
 #[cfg(windows)]
 pub fn start_windows_raw_socket_sniffer(app: tauri::AppHandle, running: Arc<Mutex<bool>>) {
     std::thread::spawn(move || {
         // 动态获取物理网卡活动 IPv4
         let (local_ip, _) = detect_primary_ipv4_and_subnet();
 
+        // 1. 优先尝试启动 Windows 原生 Winsock2 Registered I/O (RIO) 物理锁定大页零拷贝抓包引擎
+        match crate::zero_copy_pool::win_rio::WindowsRioRawReceiver::try_bind_raw(local_ip) {
+            Ok(mut rio) => {
+                crate::zero_copy_pool::set_runtime_capture_backend(
+                    "Win32_RIO_RegisteredIO_Hugepage",
+                    true,
+                    false,
+                    rio.is_physically_pinned,
+                    rio.is_large_pages,
+                    rio.pinned_bytes,
+                    &format!(
+                        "Windows RIO Registered I/O 零拷贝环活跃 (IP {} | 锁页 {} KB | LargePages={})",
+                        local_ip,
+                        rio.pinned_bytes / 1024,
+                        rio.is_large_pages
+                    ),
+                );
+                let _ = app.emit(
+                    "system-log",
+                    format!(
+                        "[RIO-ZEROCOPY] 已激活 Windows Registered I/O 物理大页零拷贝抓包环 -> 绑定 {}, 物理锁页: {}, 缓冲容量: {} MB",
+                        local_ip,
+                        rio.is_physically_pinned,
+                        rio.pinned_bytes / (1024 * 1024)
+                    ),
+                );
+
+                while *crate::lock_guard::lock_mutex(&running, "sniffer::rio_rx_loop") {
+                    let batch_cnt = rio.poll_batch(|packet_data| {
+                        process_raw_ipv4_slice(&app, packet_data);
+                    });
+                    if batch_cnt == 0 {
+                        std::thread::sleep(Duration::from_millis(1));
+                    }
+                }
+                let _ = app.emit("system-log", "[RIO-ZEROCOPY] Windows RIO 大页零拷贝引擎已安全销毁锁页并退出".to_string());
+                return;
+            }
+            Err(rio_err) => {
+                let _ = app.emit(
+                    "system-log",
+                    format!("[RIO-ZEROCOPY] ℹ️ 未启用 Winsock RIO 零拷贝直通 ({})，自动降级标准 Raw Socket + 双缓冲池化通道", rio_err),
+                );
+            }
+        }
+
+        // 2. 降级标准 Raw Socket + GLOBAL_ZERO_COPY_POOL 双缓冲池化通道
         unsafe {
             let mut wsa_data: win_raw::WSADATA = std::mem::zeroed();
             if win_raw::WSAStartup(0x0202, &mut wsa_data) != 0 {
@@ -2029,22 +1988,28 @@ pub fn start_windows_raw_socket_sniffer(app: tauri::AppHandle, running: Arc<Mute
                 return;
             }
 
+            crate::zero_copy_pool::set_runtime_capture_backend(
+                "Win32_RawSocket_ZeroCopy_Pool",
+                false,
+                false,
+                false,
+                false,
+                0,
+                &format!("标准 Win32 Raw Socket (IP {}) + 双缓冲乒乓槽位池活跃", local_ip),
+            );
             let _ = app.emit(
                 "system-log",
                 format!("[RAW-SOCKET] 🚀 Windows 原生混杂嗅探引擎已就绪！成功绑定物理 IP {} 并激活 SIO_RCVALL 全量流量捕获！", local_ip),
             );
 
             let mut buf = vec![0u8; 65536];
-            // 独立链 RAW_SOCKET_GENESIS_2026 已废除，raw socket 记录并入单一全局司法证据链
 
-            while *running.lock().unwrap() {
+            while *crate::lock_guard::lock_mutex(&running, "sniffer::lan_radar_outer") {
                 let n = win_raw::recv(s, buf.as_mut_ptr(), buf.len() as i32, 0);
                 if n > 0 {
                     let packet_data = &buf[..n as usize];
-                    let mut local_chain_view = String::new();
-                    if let Some(record) = parse_ipv4_raw_packet(packet_data, &mut local_chain_view) {
-                        process_incoming_record(&app, record);
-                    }
+                    crate::zero_copy_pool::record_captured_frame_in_pool(packet_data);
+                    process_raw_ipv4_slice(&app, packet_data);
                 } else if n < 0 {
                     std::thread::sleep(Duration::from_millis(10));
                 }
@@ -2060,6 +2025,9 @@ pub fn start_windows_raw_socket_sniffer(app: tauri::AppHandle, running: Arc<Mute
 /// 探针主抓包流水线
 pub fn run_sniffer_pipeline(app: tauri::AppHandle, iface: &str, bpf_filter: &str) {
     let running = crate::PROBE_RUNNING.clone();
+    CAPTURE_RECEIVED_PACKETS.store(0, Ordering::SeqCst);
+    CAPTURE_DROPPED_DRIVER.store(0, Ordering::SeqCst);
+    CAPTURE_DROPPED_INTERFACE.store(0, Ordering::SeqCst);
 
     // 1. 同步启动应用层双轨服务监听引擎（TCP / UDP 多端口动态驱动）
     start_dual_track_services(app.clone(), running.clone());
@@ -2067,16 +2035,10 @@ pub fn run_sniffer_pipeline(app: tauri::AppHandle, iface: &str, bpf_filter: &str
     // 2. 启动局域网多播/广播原生捕获引擎（SSDP 1900 / mDNS 5353 / NetBIOS 137/138 / WS-Discovery 3702）
     start_native_lan_sniffer(app.clone(), running.clone());
 
-    // 3. 启动周期性心跳与自检健康探针守护进程（保证任意环境下均有持续、可度量的真实通信指标流）
-    start_heartbeat_probe_daemon(app.clone(), running.clone());
-
-    // 4. 激活全局域网全网段设备雷达周期性扫描（相同路由下设备无死角通信侦测）
+    // 3. 激活全局域网全网段设备雷达周期性扫描（仅记录真实 ARP 应答设备，绝不注入虚假模拟终端）
     trigger_lan_radar_discovery(app.clone());
 
-    // 4b. 启动工业工控规约全息演示流引擎 (Modbus, S7Comm, IEC-104, MQTT, SL651, HTTP)
-    start_industrial_demo_stream(app.clone(), running.clone());
-
-    // 5. 启动 Windows 原生 Raw Socket (SIO_RCVALL) 混杂嗅探引擎（兜底捕获本机物理网卡进出的全部 IPv4 流量）
+    // 4. 启动 Windows 原生 Raw Socket (SIO_RCVALL) 混杂嗅探引擎（兜底捕获本机物理网卡进出的全部 IPv4 流量）
     //    【BPF 语义边界运行时告知】该引擎不走 Npcap 数据链路层，BPF 过滤器不生效；
     //    用户设置非空过滤器时必须显式告知，杜绝"以为已过滤实则全量"的静默语义降级
     #[cfg(windows)]
@@ -2116,7 +2078,7 @@ pub fn run_sniffer_pipeline(app: tauri::AppHandle, iface: &str, bpf_filter: &str
         if found_name.is_empty() {
             let _ = app.emit(
                 "system-log",
-                "[SNIFFER] ℹ️ 未枚举到可用 Npcap 网络驱动（底层驱动受限或未安装），已由「双轨服务 + 局域网广播 + 全网段 ARP 雷达 + 心跳探针」全息引擎持续承接！".to_string(),
+                "[SNIFFER] ℹ️ 未枚举到可用 Npcap 物理网络驱动，已切换启用「Raw Socket + 应用层双轨 + 局域网广播 + ARP 雷达」纯真实物理捕获链路".to_string(),
             );
         }
         found_name
@@ -2172,14 +2134,14 @@ pub fn run_sniffer_pipeline(app: tauri::AppHandle, iface: &str, bpf_filter: &str
             Ok(Err(e)) => {
                 let _ = app_l2.emit(
                     "system-log",
-                    format!("[SNIFFER] ℹ️ 底层 Npcap 驱动处于受保护模式 ({})，已由「双轨服务 + 局域网广播 + 全网段 ARP 雷达 + 心跳探针」全息引擎持续承接！", e),
+                    format!("[SNIFFER] ℹ️ 底层 Npcap 驱动处于受保护模式 ({})，已切换启用纯真实物理捕获链路 (Raw Socket + 应用层双轨 + ARP 雷达)", e),
                 );
                 None
             }
             Err(_) => {
                 let _ = app_l2.emit(
                     "system-log",
-                    "[SNIFFER] ℹ️ 底层 Npcap 驱动处于 AdminOnly 隔离模式，已由「双轨服务 + 局域网广播 + 全网段 ARP 雷达 + 心跳探针」全息引擎持续承接！".to_string(),
+                    "[SNIFFER] ℹ️ 底层 Npcap 驱动处于 AdminOnly 隔离模式，已切换启用纯真实物理捕获链路 (Raw Socket + 应用层双轨 + ARP 雷达)".to_string(),
                 );
                 None
             }
@@ -2188,13 +2150,32 @@ pub fn run_sniffer_pipeline(app: tauri::AppHandle, iface: &str, bpf_filter: &str
         None
     };
 
-    // 5. 若 L2 捕获句柄成功打开，则运行 Npcap 混杂抓包循环
+    // 5. 若 L2 捕获句柄成功打开，则运行 Npcap 混杂抓包循环（接入 XDP 线速分流与双缓冲池化）
     if let Some(ref mut cap) = cap_opt {
+        let cur_t = crate::zero_copy_pool::get_runtime_zero_copy_telemetry();
+        let backend_label = if cur_t.rio_active {
+            "Npcap_L2 + Win32_RIO_Dual_ZeroCopy"
+        } else {
+            "Npcap_L2_ZeroCopy_Pool"
+        };
+        crate::zero_copy_pool::set_runtime_capture_backend(
+            backend_label,
+            cur_t.rio_active,
+            true,
+            cur_t.is_physically_pinned,
+            cur_t.is_large_pages,
+            cur_t.pinned_buffer_bytes,
+            &format!("Npcap L2 混杂捕获已挂载接口 {}, 接入 XDP 五元组分流与乒乓零拷贝池", target_device_name),
+        );
+
         let forensic = ForensicEngine::new();
         let mut last_hash = String::new(); // parse_ethernet_frame 出参视图（链推进已统一走全局链）
         let mut tcp_reassembly: HashMap<(String, u16, String, u16), TcpFlowBuffer> = HashMap::new();
+        let datalink = cap.get_datalink();
+        let is_wifi_80211 = datalink == pcap::Linktype(127) || datalink == pcap::Linktype(105);
+        let mut last_stats_sync = Instant::now();
 
-        while *running.lock().unwrap() {
+        while *crate::lock_guard::lock_mutex(&running, "sniffer::lan_radar_outer") {
             // TCP 流重组超时刷新 (50ms 静默窗口)
             let now = Instant::now();
             let mut timed_out_keys = Vec::new();
@@ -2262,6 +2243,35 @@ pub fn run_sniffer_pipeline(app: tauri::AppHandle, iface: &str, bpf_filter: &str
 
             match cap.next_packet() {
                 Ok(packet) => {
+                    // 0. 第一时间落入双缓冲零拷贝槽位池并执行 XDP 线速分流判定
+                    crate::zero_copy_pool::record_captured_frame_in_pool(packet.data);
+
+                    if !is_wifi_80211 {
+                        let xdp_act = crate::xdp_engine::GLOBAL_XDP_ENGINE
+                            .process_wire_packet(packet.data, current_epoch_ms());
+                        match xdp_act {
+                            crate::xdp_engine::XdpAction::Drop => {
+                                continue;
+                            }
+                            crate::xdp_engine::XdpAction::Bypass => {
+                                // 大象流直通：旁路后续重排/取证写入/全量 DPI，仅维护基础吞吐与 stats 同步
+                                GLOBAL_PACKETS_TOTAL.fetch_add(1, Ordering::Relaxed);
+                                GLOBAL_BYTES_TOTAL.fetch_add(packet.data.len() as u64, Ordering::Relaxed);
+                                crate::analyzer::record_packet_io(packet.data.len(), None, false);
+                                if last_stats_sync.elapsed().as_millis() >= 500 {
+                                    if let Ok(st) = cap.stats() {
+                                        CAPTURE_RECEIVED_PACKETS.store(st.received as u64, Ordering::Relaxed);
+                                        CAPTURE_DROPPED_DRIVER.store(st.dropped as u64, Ordering::Relaxed);
+                                        CAPTURE_DROPPED_INTERFACE.store(st.if_dropped as u64, Ordering::Relaxed);
+                                    }
+                                    last_stats_sync = Instant::now();
+                                }
+                                continue;
+                            }
+                            _ => {}
+                        }
+                    }
+
                     // L2 原始帧保全（append 模式，历史证据永不丢失）
                     forensic.write_packet(packet.data);
 
@@ -2296,24 +2306,60 @@ pub fn run_sniffer_pipeline(app: tauri::AppHandle, iface: &str, bpf_filter: &str
                         false
                     })();
 
-                    if !is_tcp_data_segment {
+                    if is_wifi_80211 {
+                        // 802.11 无线链路层抓包直通 wifi_monitor 监控引擎
+                        let ts_str = chrono::Local::now().format("%H:%M:%S.%3f").to_string();
+                        if datalink == pcap::Linktype(127) {
+                            let (rt, offset) = crate::wifi_monitor::parse_radiotap_header(packet.data);
+                            if offset < packet.data.len() {
+                                if let Some(info) = crate::wifi_monitor::parse_dot11_frame(&packet.data[offset..], rt) {
+                                    crate::wifi_monitor::record_wifi_frame(&info, &ts_str);
+                                }
+                            }
+                        } else if let Some(info) = crate::wifi_monitor::parse_dot11_frame(packet.data, Default::default()) {
+                            crate::wifi_monitor::record_wifi_frame(&info, &ts_str);
+                        }
+                    } else if !is_tcp_data_segment {
                         if let Some(record) = parse_ethernet_frame(packet.data, &mut last_hash) {
                             process_incoming_record(&app, record);
                         }
                     }
+
+                    if last_stats_sync.elapsed().as_millis() >= 500 {
+                        if let Ok(st) = cap.stats() {
+                            CAPTURE_RECEIVED_PACKETS.store(st.received as u64, Ordering::Relaxed);
+                            CAPTURE_DROPPED_DRIVER.store(st.dropped as u64, Ordering::Relaxed);
+                            CAPTURE_DROPPED_INTERFACE.store(st.if_dropped as u64, Ordering::Relaxed);
+                        }
+                        last_stats_sync = Instant::now();
+                    }
                 }
                 Err(_) => {
+                    if last_stats_sync.elapsed().as_millis() >= 500 {
+                        if let Ok(st) = cap.stats() {
+                            CAPTURE_RECEIVED_PACKETS.store(st.received as u64, Ordering::Relaxed);
+                            CAPTURE_DROPPED_DRIVER.store(st.dropped as u64, Ordering::Relaxed);
+                            CAPTURE_DROPPED_INTERFACE.store(st.if_dropped as u64, Ordering::Relaxed);
+                        }
+                        last_stats_sync = Instant::now();
+                    }
                     std::thread::sleep(Duration::from_millis(10));
                 }
             }
         }
+        if let Ok(st) = cap.stats() {
+            CAPTURE_RECEIVED_PACKETS.store(st.received as u64, Ordering::Relaxed);
+            CAPTURE_DROPPED_DRIVER.store(st.dropped as u64, Ordering::Relaxed);
+            CAPTURE_DROPPED_INTERFACE.store(st.if_dropped as u64, Ordering::Relaxed);
+        }
     } else {
-        while *running.lock().unwrap() {
+        while *crate::lock_guard::lock_mutex(&running, "sniffer::lan_radar_outer") {
             std::thread::sleep(Duration::from_millis(200));
         }
     }
 
     let _ = app.emit("system-log", "[SNIFFER] 嗅探引擎已安全停止".to_string());
+    crate::zero_copy_pool::reset_runtime_capture_backend();
 }
 
 // ============================================================

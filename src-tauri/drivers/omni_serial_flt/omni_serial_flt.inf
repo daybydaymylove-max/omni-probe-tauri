@@ -1,0 +1,42 @@
+; Omni-Probe Serial Ports Class Upper Filter INF
+; 将 omni_serial_flt.sys 安装为 Windows Ports (COM & LPT) 设备类上层过滤驱动
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = Ports
+ClassGuid   = {4d36e978-e325-11ce-bfc1-08002be10318}
+Provider    = %ManufacturerName%
+DriverVer   = 11/11/2026,1.0.0.26100
+CatalogFile = omni_serial_flt.cat
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,
+
+[SourceDisksFiles]
+omni_serial_flt.sys = 1
+
+[DefaultInstall.NT$ARCH$]
+CopyFiles = @omni_serial_flt.sys
+AddReg    = OmniSerialFlt_ClassAddReg
+
+[DefaultInstall.NT$ARCH$.Services]
+AddService = OmniSerialFlt, , OmniSerialFlt_Service_Inst
+
+[OmniSerialFlt_ClassAddReg]
+; 在 Ports 类 UpperFilters 列表中追加 OmniSerialFlt，不覆盖已有系统串口过滤驱动
+HKLM,SYSTEM\CurrentControlSet\Control\Class\{4d36e978-e325-11ce-bfc1-08002be10318},UpperFilters,0x00010008,"OmniSerialFlt"
+
+[OmniSerialFlt_Service_Inst]
+DisplayName    = %ServiceDesc%
+ServiceType    = 1 ; SERVICE_KERNEL_DRIVER
+StartType      = 0 ; SERVICE_BOOT_START
+ErrorControl   = 1 ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %13%\omni_serial_flt.sys
+
+[Strings]
+ManufacturerName = "Omni-Probe Industrial Telemetry"
+DiskName         = "Omni-Probe Serial Filter Installation Disk"
+ServiceDesc      = "Omni-Probe Kernel Serial Port Upper Filter Driver"

@@ -1,75 +1,77 @@
 <template>
-  <div class="h-full w-full flex flex-col overflow-hidden bg-slate-100/40 dark:bg-slate-900/40 backdrop-blur-2xl p-3 gap-2.5 select-none font-sans">
+  <div class="h-full w-full flex flex-col overflow-hidden gap-2.5 select-none font-sans">
     
-    <!-- 顶栏：工作台标识、运行态指示与统计概览 (Apple 2026 Liquid Glass) -->
-    <header class="glass-surface rounded-2xl px-4 py-2.5 flex items-center justify-between shrink-0 shadow-sm border border-slate-200/80 dark:border-white/10">
+    <!-- 顶栏：工作台标识、运行态指示与统计概览 (Liquid Glass 浮动导航层) -->
+    <header class="ui-nav-glass rounded-2xl px-4 py-2.5 flex items-center justify-between shrink-0 flex-wrap gap-2">
+      <span class="lens-edge-lip" aria-hidden="true"></span>
       <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-sky-500/25 font-mono font-bold text-xs">
-          NET
+        <div class="w-8 h-8 rounded-xl bg-[var(--accent-primary-soft)] text-[var(--accent-primary-text)] border border-[var(--accent-primary)]/20 flex items-center justify-center shrink-0">
+          <AppIcon name="terminal" :size="16" />
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h2 class="text-xs font-bold text-slate-800 dark:text-slate-100 tracking-tight">
+            <h2 class="text-[13px] font-bold tracking-tight" style="color: var(--text-primary)">
               工业级全双工网络调试助手
             </h2>
-            <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold flex items-center gap-1 border shadow-2xs"
+            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold flex items-center gap-1.5 border ui-num"
               :class="isRunning
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/70 dark:text-emerald-300 dark:border-emerald-700'
-                : 'bg-slate-100 text-slate-600 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'">
+                ? 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'">
               <span class="w-1.5 h-1.5 rounded-full shrink-0"
-                :class="isRunning ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'"></span>
-              <span>{{ isRunning ? `会话运行中: ${sessionStatus}` : '○ 会话待命 (IDLE)' }}</span>
+                :class="isRunning ? 'bg-emerald-500' : 'bg-slate-400'"></span>
+              <span>{{ isRunning ? `会话运行中: ${sessionStatus}` : '会话待命 (IDLE)' }}</span>
             </span>
           </div>
-          <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
+          <p class="text-[11px] mt-0.5" style="color: var(--text-muted)">
             全双工异步通信 · TCP 客户端/服务端 · UDP 单播/广播/组播 · 帧超时断包 · 工业规约双向校验
           </p>
         </div>
       </div>
 
       <!-- 右侧快速统计概览与联动按钮 -->
-      <div class="flex items-center gap-3 text-xs font-mono">
+      <div class="flex items-center gap-2.5 text-xs ui-num">
         <!-- 统计胶囊 -->
-        <div class="flex items-center gap-2.5 glass-pill px-3 py-1 rounded-xl border border-slate-200/60 dark:border-white/10 text-[11px]">
-          <span class="text-slate-500 dark:text-slate-400">RX:</span>
+        <div class="flex items-center gap-2.5 ui-pill px-3 py-1 rounded-xl text-[11px]">
+          <span style="color: var(--text-muted)">RX:</span>
           <span class="font-bold text-emerald-700 dark:text-emerald-400">{{ formatBytes(stats.rxBytes) }} ({{ stats.rxPackets }} 帧)</span>
-          <span class="text-slate-300 dark:text-slate-600">|</span>
-          <span class="text-slate-500 dark:text-slate-400">TX:</span>
+          <span style="color: var(--border-strong)">|</span>
+          <span style="color: var(--text-muted)">TX:</span>
           <span class="font-bold text-sky-700 dark:text-sky-400">{{ formatBytes(stats.txBytes) }} ({{ stats.txPackets }} 帧)</span>
         </div>
 
-        <button @click="resetStats" class="glass-pill p-1.5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 rounded-xl cursor-pointer transition-colors" title="复位收发统计">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
+        <button @click="resetStats" class="ui-pill p-1.5 rounded-xl cursor-pointer" title="复位收发统计">
+          <AppIcon name="refresh" :size="14" />
         </button>
 
-        <button @click="$emit('switchWorkbench', 'traffic')" class="glass-pill px-2.5 py-1 rounded-xl text-[10px] font-bold text-sky-700 dark:text-sky-300 hover:text-sky-900 flex items-center gap-1 cursor-pointer transition-colors" title="前往全息流量分析大盘">
-          <span>↗ 全息流量大盘</span>
+        <button @click="$emit('switchWorkbench', 'traffic')" class="ui-pill px-2.5 py-1 rounded-xl text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer" style="color: var(--accent-primary-text)" title="前往流量分析看板">
+          <AppIcon name="traffic" :size="13" />
+          <span>流量分析看板</span>
+          <AppIcon name="arrow-right" :size="11" />
         </button>
       </div>
     </header>
 
     <!-- 主工作区：三栏布局 (左控制 / 中收发终端 / 右工控模板与多指令矩阵) -->
-    <div class="flex-1 grid grid-cols-12 gap-2.5 min-h-0">
+    <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-2.5 min-h-0">
       
       <!-- 1. 左栏：协议模式与套接字控制面板 (3 列) -->
-      <aside class="col-span-3 glass-surface rounded-2xl p-3.5 flex flex-col gap-3 overflow-y-auto custom-scrollbar border border-slate-200/80 dark:border-white/10 shadow-sm">
+      <aside class="lg:col-span-3 ui-content-card p-3.5 flex flex-col gap-3 overflow-y-auto custom-scrollbar">
         
         <!-- 协议模式切换胶囊 -->
         <div>
-          <label class="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block mb-1.5 font-mono">通信规约模式</label>
-          <div class="grid grid-cols-3 gap-1 glass-pill p-0.5 rounded-xl border border-slate-200/60 dark:border-white/10">
+          <label class="text-[11px] font-bold uppercase tracking-wider block mb-1.5" style="color: var(--text-secondary)">通信规约模式</label>
+          <div class="grid grid-cols-3 gap-1 ui-pill p-0.5 rounded-xl">
             <button
               v-for="m in protocolModes"
               :key="m.id"
               @click="!isRunning && (selectedMode = m.id)"
               :disabled="isRunning"
-              :class="['py-1 rounded-lg text-xs font-bold transition-all cursor-pointer text-center',
+              :class="['py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer text-center',
                 selectedMode === m.id
-                  ? 'bg-sky-500/20 text-sky-800 dark:text-sky-300 shadow-2xs border border-sky-400/40'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white',
+                  ? 'bg-sky-500/18 text-sky-700 dark:text-sky-300 border border-sky-500/35'
+                  : 'hover:bg-black/5 dark:hover:bg-white/5',
                 isRunning ? 'opacity-50 cursor-not-allowed' : '']"
+              :style="selectedMode !== m.id ? { color: 'var(--text-secondary)' } : undefined"
             >
               {{ m.label }}
             </button>
@@ -77,27 +79,27 @@
         </div>
 
         <!-- 参数配置表单 -->
-        <div class="space-y-2.5 font-mono text-xs">
+        <div class="space-y-2.5 text-xs">
           <!-- TCP Client 参数 -->
           <template v-if="selectedMode === 'TCP_CLIENT'">
             <div>
               <div class="flex items-center justify-between mb-1">
-                <label class="text-[10px] font-bold text-slate-700 dark:text-slate-300">目标远端 IP (Host)</label>
-                <div class="flex items-center gap-1 text-[9px] text-sky-700 dark:text-sky-400 cursor-pointer">
+                <label class="text-[11px] font-semibold" style="color: var(--text-secondary)">目标远端 IP (Host)</label>
+                <div class="flex items-center gap-1.5 text-[11px] ui-num cursor-pointer" style="color: var(--accent-primary-text)">
                   <span @click="targetIp = '127.0.0.1'" class="hover:underline">127.0.0.1</span>
-                  <span>·</span>
+                  <span style="color: var(--text-muted)">·</span>
                   <span @click="targetIp = '192.168.1.100'" class="hover:underline">192.168.1.100</span>
                 </div>
               </div>
-              <input v-model="targetIp" :disabled="isRunning" placeholder="127.0.0.1" class="form-input-box" />
+              <input v-model="targetIp" :disabled="isRunning" placeholder="127.0.0.1" class="ui-input ui-num" />
             </div>
 
             <div>
               <div class="flex items-center justify-between mb-1">
-                <label class="text-[10px] font-bold text-slate-700 dark:text-slate-300">目标服务端口 (Port)</label>
-                <span class="text-[9px] text-slate-500 font-normal">标准工控/Web</span>
+                <label class="text-[11px] font-semibold" style="color: var(--text-secondary)">目标服务端口 (Port)</label>
+                <span class="text-[11px]" style="color: var(--text-muted)">标准工控/Web</span>
               </div>
-              <input v-model.number="targetPort" :disabled="isRunning" type="number" placeholder="8080" class="form-input-box mb-1.5" />
+              <input v-model.number="targetPort" :disabled="isRunning" type="number" placeholder="8080" class="ui-input ui-num mb-1.5" />
               <!-- 快捷端口一键填入微胶囊 -->
               <div class="flex flex-wrap gap-1">
                 <button
@@ -105,7 +107,7 @@
                   :key="p.port"
                   @click="!isRunning && (targetPort = p.port)"
                   :disabled="isRunning"
-                  class="px-1.5 py-0.5 rounded text-[9px] font-bold glass-pill border border-slate-200 dark:border-white/10 hover:border-sky-400 text-slate-700 dark:text-slate-300 hover:text-sky-700 cursor-pointer transition-colors"
+                  class="px-2 py-0.5 rounded text-[11px] font-medium glass-pill hover:border-blue-500 text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer transition-colors"
                   :title="p.desc"
                 >
                   {{ p.port }} {{ p.label }}
@@ -118,30 +120,28 @@
           <template v-else-if="selectedMode === 'TCP_SERVER'">
             <div>
               <div class="flex items-center justify-between mb-1">
-                <label class="text-[10px] font-bold text-slate-700 dark:text-slate-300">本地监听网卡与 IP</label>
-                <button @click="loadLocalIpAddresses" class="text-[9px] text-sky-700 dark:text-sky-400 hover:underline cursor-pointer" title="刷新本机网卡列表">
-                  ↻ 刷新网卡
+                <label class="text-[11px] font-semibold" style="color: var(--text-secondary);">本地监听网卡与 IP</label>
+                <button @click="loadLocalIpAddresses" class="text-[11px] text-blue-600 dark:text-sky-400 hover:underline cursor-pointer flex items-center gap-1" title="刷新本机网卡列表">
+                  <AppIcon name="refresh" :size="11" />
+                  <span>刷新网卡</span>
                 </button>
               </div>
-              <!-- 本机网卡智能选择下拉框 -->
-              <select v-model="localBindIp" :disabled="isRunning" class="form-input-box font-mono mb-1 text-[11px]">
-                <option v-for="ipInfo in localIpList" :key="ipInfo.ip" :value="ipInfo.ip">
-                  {{ ipInfo.name }}
-                </option>
+              <select v-model="localBindIp" :disabled="isRunning" class="ui-input w-full px-2.5 py-1.5 font-mono mb-1.5 text-xs">
+                <option v-for="ipInfo in localIpList" :key="ipInfo.ip" :value="ipInfo.ip">{{ ipInfo.name }}</option>
               </select>
-              <input v-model="localBindIp" :disabled="isRunning" placeholder="0.0.0.0" class="form-input-box text-[11px]" title="或自由手动编辑 IP" />
+              <input v-model="localBindIp" :disabled="isRunning" placeholder="0.0.0.0" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono" title="或自由手动编辑 IP" />
             </div>
 
             <div>
-              <label class="text-[10px] font-bold text-slate-700 dark:text-slate-300 block mb-1">本地监听端口</label>
-              <input v-model.number="localBindPort" :disabled="isRunning" type="number" placeholder="8080" class="form-input-box mb-1" />
+              <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-secondary);">本地监听端口</label>
+              <input v-model.number="localBindPort" :disabled="isRunning" type="number" placeholder="8080" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono ui-num mb-1.5" />
               <div class="flex flex-wrap gap-1">
                 <button
                   v-for="p in quickPorts"
                   :key="p.port"
                   @click="!isRunning && (localBindPort = p.port)"
                   :disabled="isRunning"
-                  class="px-1.5 py-0.5 rounded text-[9px] font-bold glass-pill border border-slate-200 dark:border-white/10 hover:border-sky-400 text-slate-700 dark:text-slate-300 hover:text-sky-700 cursor-pointer transition-colors"
+                  class="px-2 py-0.5 rounded text-[11px] font-medium glass-pill hover:border-blue-500 text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer transition-colors"
                   :title="p.desc"
                 >
                   {{ p.port }} {{ p.label }}
@@ -149,16 +149,17 @@
               </div>
             </div>
 
-            <!-- TCP Server 连接池管理 -->
-            <div class="pt-1 border-t border-slate-200/60 dark:border-white/10">
+            <div class="pt-1.5 border-t" style="border-color: var(--border-subtle);">
               <div class="flex items-center justify-between mb-1">
-                <label class="text-[10px] font-bold text-slate-700 dark:text-slate-300">活动客户端连接池</label>
-                <span class="text-[9px] font-bold px-1.5 py-0.2 rounded-full"
-                  :class="activeClients.length > 0 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-slate-100 text-slate-500'">
+                <label class="text-[11px] font-semibold" style="color: var(--text-secondary);">活动客户端连接池</label>
+                <span
+                  class="text-[11px] font-semibold px-2 py-0.5 rounded-full ui-num"
+                  :class="activeClients.length > 0 ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' : 'ui-pill'"
+                >
                   {{ activeClients.length }} 在线
                 </span>
               </div>
-              <select v-model="selectedClientTarget" class="form-input-box font-mono text-[11px]">
+              <select v-model="selectedClientTarget" class="ui-input w-full px-2.5 py-1.5 font-mono text-xs">
                 <option value="">-- [广播群发] 全部在线客户端 --</option>
                 <option v-for="c in activeClients" :key="c" :value="c">指定端点: {{ c }}</option>
               </select>
@@ -169,198 +170,169 @@
           <template v-else-if="selectedMode === 'UDP'">
             <div class="grid grid-cols-2 gap-1.5">
               <div>
-                <label class="text-[10px] font-bold text-slate-700 dark:text-slate-300 block mb-1">本地绑定端口</label>
-                <input v-model.number="localBindPort" :disabled="isRunning" type="number" placeholder="0 (随机)" class="form-input-box" />
+                <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-secondary);">本地绑定端口</label>
+                <input v-model.number="localBindPort" :disabled="isRunning" type="number" placeholder="0 (随机)" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono ui-num" />
               </div>
               <div>
-                <label class="text-[10px] font-bold text-slate-700 dark:text-slate-300 block mb-1">目标远端端口</label>
-                <input v-model.number="targetPort" placeholder="8080" class="form-input-box" />
+                <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-secondary);">目标远端端口</label>
+                <input v-model.number="targetPort" placeholder="8080" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono ui-num" />
               </div>
             </div>
             <div>
               <div class="flex items-center justify-between mb-1">
-                <label class="text-[10px] font-bold text-slate-700 dark:text-slate-300">目标主机 IP</label>
-                <span class="text-[9px] text-sky-700 dark:text-sky-400 cursor-pointer hover:underline" @click="targetIp = '255.255.255.255'">广播 255.255.255.255</span>
+                <label class="text-[11px] font-semibold" style="color: var(--text-secondary);">目标主机 IP</label>
+                <span class="text-[11px] text-blue-600 dark:text-sky-400 cursor-pointer hover:underline" @click="targetIp = '255.255.255.255'">广播 255.255.255.255</span>
               </div>
-              <input v-model="targetIp" placeholder="127.0.0.1 或 255.255.255.255" class="form-input-box" />
+              <input v-model="targetIp" placeholder="127.0.0.1 或 255.255.255.255" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono" />
             </div>
           </template>
 
           <!-- 帧断包超时阈值 -->
-          <div class="pt-1 border-t border-slate-200/60 dark:border-white/10">
+          <div class="pt-1.5 border-t" style="border-color: var(--border-subtle);">
             <div class="flex items-center justify-between mb-1">
-              <label class="text-[10px] font-bold text-slate-700 dark:text-slate-300">帧间隔断包切分阈值</label>
-              <span class="text-[10px] font-bold text-sky-700 dark:text-sky-400">{{ frameTimeoutMs }} ms</span>
+              <label class="text-[11px] font-semibold" style="color: var(--text-secondary);">帧间隔断包切分阈值</label>
+              <span class="text-[11px] font-semibold text-blue-600 dark:text-sky-400 ui-num">{{ frameTimeoutMs }} ms</span>
             </div>
-            <input v-model.number="frameTimeoutMs" :disabled="isRunning" type="range" min="5" max="200" step="5" class="w-full accent-sky-500 cursor-pointer" />
-            <p class="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">碎片数据接收间隔超过该时长，自动定界为完整规约帧上屏</p>
+            <input v-model.number="frameTimeoutMs" :disabled="isRunning" type="range" min="5" max="200" step="5" class="w-full accent-blue-600 cursor-pointer" />
+            <p class="text-[11px] mt-0.5 leading-tight" style="color: var(--text-muted);">碎片数据接收间隔超过该时长，自动定界为完整规约帧上屏</p>
           </div>
         </div>
 
-        <!-- 会话启停大按钮 -->
+        <!-- 会话启停按钮 -->
         <div class="mt-auto pt-2">
           <button
             @click="toggleSession"
-            :class="['w-full py-2.5 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95 cursor-pointer flex items-center justify-center gap-1.5',
-              isRunning
-                ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-500/25'
-                : 'bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white shadow-sky-500/25']"
+            :class="['w-full py-2.5 rounded-xl font-semibold text-xs transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2',
+              isRunning ? 'bg-rose-600 hover:bg-rose-500 text-white' : 'ui-btn-primary justify-center']"
           >
-            <span class="w-2 h-2 rounded-full" :class="isRunning ? 'bg-white animate-ping' : 'bg-white/80'"></span>
-            <span>{{ isRunning ? '■ 停止会话并释放套接字' : '▶ 启动并建立通信套接字' }}</span>
+            <AppIcon :name="isRunning ? 'stop' : 'play'" :size="13" />
+            <span>{{ isRunning ? '停止会话并释放套接字' : '启动并建立通信套接字' }}</span>
           </button>
         </div>
       </aside>
 
       <!-- 2. 中栏：全双工终端核心区 (6 列) -->
-      <main class="col-span-6 flex flex-col gap-2.5 min-h-0">
-        
-        <!-- 上部：数据接收终端 (RX Terminal) -->
-        <div class="flex-1 glass-surface rounded-2xl flex flex-col overflow-hidden shadow-sm min-h-0 border border-slate-200/80 dark:border-white/10">
-          
-          <!-- 接收区顶栏控制条 -->
-          <div class="px-3.5 py-1.5 border-b border-slate-200/60 dark:border-white/10 flex items-center justify-between bg-white/40 dark:bg-black/20 text-xs shrink-0 backdrop-blur-md">
+      <main class="lg:col-span-6 flex flex-col gap-2.5 min-h-0">
+        <!-- 上部：数据接收终端 (RX Terminal - 实体衬底) -->
+        <div class="flex-1 ui-content-card flex flex-col overflow-hidden min-h-0">
+          <div class="px-3.5 py-2 border-b flex items-center justify-between text-xs shrink-0 flex-wrap gap-2" style="border-color: var(--border-subtle);">
             <div class="flex items-center gap-2.5">
-              <span class="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_#10B981]"></span>
+              <span class="font-semibold flex items-center gap-1.5" style="color: var(--text-primary);">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                 <span>数据接收终端 (RX)</span>
-                <span class="text-[10px] font-mono text-slate-500">[{{ filteredPacketLog.length }} / {{ packetLog.length }} 帧]</span>
+                <span class="text-[11px] ui-num" style="color: var(--text-muted);">[{{ filteredPacketLog.length }} / {{ packetLog.length }} 帧]</span>
               </span>
-              <!-- HEX / ASCII 切换 -->
-              <div class="flex items-center glass-pill p-0.5 rounded-lg text-[10px] font-mono">
-                <button @click="rxFormat = 'HEX'" :class="['px-2 py-0.5 rounded-md transition-all font-bold cursor-pointer', rxFormat === 'HEX' ? 'bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 shadow-2xs' : 'text-slate-600 dark:text-slate-400']">HEX</button>
-                <button @click="rxFormat = 'ASCII'" :class="['px-2 py-0.5 rounded-md transition-all font-bold cursor-pointer', rxFormat === 'ASCII' ? 'bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 shadow-2xs' : 'text-slate-600 dark:text-slate-400']">ASCII</button>
+              <div class="flex items-center glass-pill p-0.5 rounded-lg text-[11px] font-mono">
+                <button @click="rxFormat = 'HEX'" :class="['px-2 py-0.5 rounded-md transition-all font-semibold cursor-pointer', rxFormat === 'HEX' ? 'bg-blue-600 text-white' : 'text-[var(--text-secondary)]']">HEX</button>
+                <button @click="rxFormat = 'ASCII'" :class="['px-2 py-0.5 rounded-md transition-all font-semibold cursor-pointer', rxFormat === 'ASCII' ? 'bg-blue-600 text-white' : 'text-[var(--text-secondary)]']">ASCII</button>
               </div>
             </div>
 
-            <!-- 控制开关群与搜索 -->
-            <div class="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300">
-              <!-- 关键字过滤输入框 -->
-              <div class="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white/60 dark:bg-black/30 border border-slate-300/60 dark:border-white/10 text-[10px]">
-                <span>🔍</span>
-                <input v-model="rxSearchQuery" placeholder="过滤关键字 / HEX..." class="bg-transparent outline-none w-24 text-[10px] font-mono text-slate-800 dark:text-slate-200" />
-                <button v-if="rxSearchQuery" @click="rxSearchQuery = ''" class="text-slate-400 hover:text-slate-700 cursor-pointer">✕</button>
+            <div class="flex items-center gap-2 text-[11px] flex-wrap" style="color: var(--text-secondary);">
+              <div class="flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px]" style="background: var(--surface-input); border-color: var(--border-subtle);">
+                <AppIcon name="search" :size="11" style="color: var(--text-muted);" />
+                <input v-model="rxSearchQuery" placeholder="过滤关键字 / HEX..." class="bg-transparent outline-none w-24 text-[11px] font-mono" style="color: var(--text-primary);" />
+                <button v-if="rxSearchQuery" @click="rxSearchQuery = ''" class="cursor-pointer" style="color: var(--text-muted);">
+                  <AppIcon name="close" :size="11" />
+                </button>
               </div>
 
               <label class="flex items-center gap-1 cursor-pointer select-none">
-                <input type="checkbox" v-model="showTimestamp" class="accent-sky-500 rounded" />
-                <span class="text-[10px]">时标</span>
+                <input type="checkbox" v-model="showTimestamp" class="accent-blue-600 rounded" />
+                <span>时标</span>
               </label>
 
               <label class="flex items-center gap-1 cursor-pointer select-none">
-                <input type="checkbox" v-model="autoScroll" class="accent-sky-500 rounded" />
-                <span class="text-[10px]">滚屏</span>
+                <input type="checkbox" v-model="autoScroll" class="accent-blue-600 rounded" />
+                <span>滚屏</span>
               </label>
 
-              <!-- 暂停接收开关 -->
               <button
                 @click="isRxPaused = !isRxPaused"
-                :class="['px-1.5 py-0.5 rounded text-[10px] font-bold border cursor-pointer transition-colors',
-                  isRxPaused ? 'bg-amber-100 text-amber-900 border-amber-300' : 'glass-pill text-slate-600 dark:text-slate-300']"
-                :title="isRxPaused ? '已暂停刷新视窗，点击恢复' : '点击暂停滚屏刷新以供排查'"
+                :class="['px-2 py-0.5 rounded-lg text-[11px] font-semibold border cursor-pointer transition-colors flex items-center gap-1',
+                  isRxPaused ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30' : 'ui-pill']"
               >
-                {{ isRxPaused ? '⏸ 已暂停' : '▶ 接收中' }}
+                <AppIcon :name="isRxPaused ? 'pause' : 'play'" :size="10" />
+                <span>{{ isRxPaused ? '已暂停' : '接收中' }}</span>
               </button>
 
-              <button @click="packetLog = []" class="px-1.5 py-0.5 glass-pill rounded text-[10px] text-slate-500 hover:text-slate-800 cursor-pointer">清屏</button>
-              <button @click="diffBus.openScratchpad()" class="px-2 py-0.5 glass-pill rounded text-[10px] text-indigo-700 dark:text-indigo-300 font-bold hover:text-indigo-900 cursor-pointer flex items-center gap-1" title="打开自由数据差分工作台 (支持手动粘贴对比)">
-                <span>⚖️ 自由比对</span>
+              <button @click="packetLog = []" class="ui-btn-secondary px-2 py-0.5 text-[11px]">清屏</button>
+              <button @click="diffBus.openScratchpad()" class="ui-btn-secondary px-2 py-0.5 text-[11px] text-indigo-600 dark:text-indigo-300" title="打开自由数据差分工作台">
+                <AppIcon name="scale" :size="11" />
+                <span>比对</span>
               </button>
-              <button @click="exportLog" class="px-2 py-0.5 glass-pill rounded text-[10px] text-sky-700 dark:text-sky-300 font-bold hover:text-sky-900 cursor-pointer">导出</button>
+              <button @click="exportLog" class="ui-btn-secondary px-2 py-0.5 text-[11px]">导出</button>
             </div>
           </div>
 
-          <!-- 消息流滚动画布 -->
-          <div ref="rxScrollContainer" class="flex-1 overflow-y-auto custom-scrollbar p-2.5 space-y-1.5 font-mono text-xs select-text">
+          <div ref="rxScrollContainer" class="flex-1 overflow-y-auto custom-scrollbar p-2.5 space-y-1.5 font-mono text-xs select-text" style="background: var(--surface-content-alt);">
             <div
               v-for="item in filteredPacketLog"
               :key="item.id"
-              class="group relative p-2 rounded-xl border transition-all text-xs"
+              class="group relative p-2.5 rounded-xl border transition-all text-xs"
               :class="item.direction === 'RX'
-                ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/70 dark:border-emerald-800/40'
-                : 'bg-sky-50/50 dark:bg-sky-950/20 border-sky-200/70 dark:border-sky-800/40'"
+                ? 'bg-emerald-500/8 border-emerald-500/25'
+                : 'bg-blue-500/8 border-blue-500/25'"
             >
-              <!-- 消息头元数据 -->
-              <div class="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 mb-1 border-b border-slate-200/50 dark:border-white/5 pb-0.5">
+              <div class="flex items-center justify-between text-[11px] mb-1 border-b pb-1 flex-wrap gap-1" style="border-color: var(--border-subtle); color: var(--text-muted);">
                 <div class="flex items-center gap-1.5">
                   <span
-                    class="px-1.5 py-0.2 rounded font-bold uppercase text-[9px] shadow-2xs"
-                    :class="item.direction === 'RX' ? 'bg-emerald-600 text-white' : 'bg-sky-600 text-white'"
+                    class="px-1.5 py-0.5 rounded font-semibold uppercase text-[11px]"
+                    :class="item.direction === 'RX' ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white'"
                   >
                     {{ item.direction }}
                   </span>
-                  <span class="font-bold text-slate-800 dark:text-slate-200">{{ item.remote_addr }}</span>
-                  <span class="font-medium text-slate-600 dark:text-slate-400">({{ item.length }} B)</span>
+                  <span class="font-semibold ui-num" style="color: var(--text-primary);">{{ item.remote_addr }}</span>
+                  <span class="ui-num">({{ item.length }} B)</span>
                 </div>
-                <div class="flex items-center gap-2">
-                  <span v-if="showTimestamp" class="text-slate-500 dark:text-slate-400">{{ formatTime(item.timestamp_ms) }}</span>
-                  
-                  <!-- 悬停快捷操作按钮组 -->
+                <div class="flex items-center gap-1.5">
+                  <span v-if="showTimestamp" class="ui-num">{{ formatTime(item.timestamp_ms) }}</span>
+
                   <div class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                    <button @click="copyText(item.payload_hex)" class="px-1 py-0.2 rounded bg-white dark:bg-slate-800 border text-[9px] text-slate-700 dark:text-slate-200 hover:text-sky-600 cursor-pointer" title="复制 HEX">
-                      HEX
-                    </button>
-                    <button @click="copyText(item.payload_text)" class="px-1 py-0.2 rounded bg-white dark:bg-slate-800 border text-[9px] text-slate-700 dark:text-slate-200 hover:text-sky-600 cursor-pointer" title="复制 ASCII">
-                      TXT
-                    </button>
-                    <button @click="fillTxInput(item.payload_hex)" class="px-1 py-0.2 rounded bg-sky-50 text-sky-800 border border-sky-200 text-[9px] font-bold hover:bg-sky-100 cursor-pointer" title="转入发送区重发">
-                      ↩ 载入
-                    </button>
-                    <button @click="inspectPacketInModal(item)" class="px-1 py-0.2 rounded bg-indigo-50 text-indigo-800 border border-indigo-200 text-[9px] font-bold hover:bg-indigo-100 cursor-pointer" title="在 Omni-Probe 报文分析器中全景解构此帧">
-                      🔬 解构
-                    </button>
-                    <button @click="setDiffSlotA(item)" class="px-1.5 py-0.2 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-[9px] font-bold hover:bg-blue-100 cursor-pointer" title="存入全局比对槽位 A (基准)">
-                      ⚖️ 设为 A
-                    </button>
-                    <button @click="setDiffSlotB(item)" class="px-1.5 py-0.2 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-[9px] font-bold hover:bg-indigo-100 cursor-pointer" title="存入全局比对槽位 B 并立即拉起波形与差分对比">
-                      ⚖️ 设为 B
-                    </button>
+                    <button @click="copyText(item.payload_hex)" class="ui-pill px-1.5 py-0.5 text-[11px] cursor-pointer" title="复制 HEX">HEX</button>
+                    <button @click="copyText(item.payload_text)" class="ui-pill px-1.5 py-0.5 text-[11px] cursor-pointer" title="复制 ASCII">TXT</button>
+                    <button @click="fillTxInput(item.payload_hex)" class="px-1.5 py-0.5 rounded bg-blue-500/12 text-blue-700 dark:text-sky-300 border border-blue-500/25 text-[11px] font-semibold cursor-pointer" title="转入发送区重发">载入</button>
+                    <button @click="inspectPacketInModal(item)" class="px-1.5 py-0.5 rounded bg-indigo-500/12 text-indigo-700 dark:text-indigo-300 border border-indigo-500/25 text-[11px] font-semibold cursor-pointer" title="全景解构此帧">解构</button>
+                    <button @click="setDiffSlotA(item)" class="px-1.5 py-0.5 rounded bg-blue-500/12 text-blue-700 dark:text-sky-300 border border-blue-500/25 text-[11px] font-semibold cursor-pointer">设为 A</button>
+                    <button @click="setDiffSlotB(item)" class="px-1.5 py-0.5 rounded bg-indigo-500/12 text-indigo-700 dark:text-indigo-300 border border-indigo-500/25 text-[11px] font-semibold cursor-pointer">设为 B</button>
+                    <button @click="addLogToDiffQueue(item)" class="px-1.5 py-0.5 rounded bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-[11px] font-semibold cursor-pointer" title="加入全局多组比对队列">+ 入队</button>
                   </div>
                 </div>
               </div>
 
-              <!-- HEX 显示 (双字符空格分块，高对比度工业等宽字阶) -->
-              <div v-if="rxFormat === 'HEX'" class="break-all tracking-wider font-mono font-semibold text-slate-800 dark:text-slate-100 leading-relaxed text-[11px]">
+              <div v-if="rxFormat === 'HEX'" class="break-all tracking-wider font-mono font-semibold leading-relaxed text-[11px]" style="color: var(--text-primary);">
                 {{ formatHexSpaced(item.payload_hex) }}
               </div>
-              <!-- ASCII 纯文本 -->
-              <div v-else class="break-all whitespace-pre-wrap font-mono text-slate-800 dark:text-slate-100 leading-relaxed text-[11px]">
+              <div v-else class="break-all whitespace-pre-wrap font-mono leading-relaxed text-[11px]" style="color: var(--text-primary);">
                 {{ item.payload_text }}
               </div>
             </div>
 
-            <!-- 空态提示 -->
-            <div v-if="filteredPacketLog.length === 0" class="h-full flex flex-col items-center justify-center text-slate-400 text-xs py-10 gap-1.5 select-none">
-              <div class="w-10 h-10 rounded-xl glass-pill flex items-center justify-center text-slate-400 text-lg mb-1">
-                📡
-              </div>
-              <span class="font-bold text-slate-700 dark:text-slate-300">暂无通信数据流水</span>
-              <span class="text-[10px] text-slate-500 font-mono">启动会话后收发报文将在此毫秒级实时显现，支持十六进制与 ASCII 实时双模解析</span>
-            </div>
+            <EmptyState
+              v-if="filteredPacketLog.length === 0"
+              icon="radar"
+              title="暂无通信数据流水"
+              description="启动会话后收发报文将在此毫秒级实时显现，支持十六进制与 ASCII 双模解析。"
+            />
           </div>
         </div>
 
         <!-- 下部：数据发送控制终端 (TX Terminal) -->
-        <div class="h-48 glass-surface rounded-2xl flex flex-col overflow-hidden shadow-sm shrink-0 border border-slate-200/80 dark:border-white/10">
-          
-          <!-- 发送控制工具栏 -->
-          <div class="px-3.5 py-1.5 border-b border-slate-200/60 dark:border-white/10 flex items-center justify-between bg-white/40 dark:bg-black/20 text-xs shrink-0 backdrop-blur-md">
-            <div class="flex items-center gap-2.5">
-              <span class="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-sky-500 shadow-[0_0_6px_#0EA5E9]"></span>
+        <div class="h-56 ui-content-card flex flex-col overflow-hidden shrink-0">
+          <div class="px-3.5 py-1.5 border-b flex items-center justify-between text-xs shrink-0 flex-wrap gap-2" style="border-color: var(--border-subtle);">
+            <div class="flex items-center gap-2.5 shrink-0">
+              <span class="font-semibold text-xs flex items-center gap-1.5 whitespace-nowrap" style="color: var(--text-primary);">
+                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
                 <span>数据发送终端 (TX)</span>
               </span>
-              <!-- 发送格式 HEX / ASCII -->
-              <div class="flex items-center glass-pill p-0.5 rounded-lg text-[10px] font-mono">
-                <button @click="txFormat = 'HEX'" :class="['px-2 py-0.5 rounded-md transition-all font-bold cursor-pointer', txFormat === 'HEX' ? 'bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 shadow-2xs' : 'text-slate-600 dark:text-slate-400']">HEX</button>
-                <button @click="txFormat = 'ASCII'" :class="['px-2 py-0.5 rounded-md transition-all font-bold cursor-pointer', txFormat === 'ASCII' ? 'bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 shadow-2xs' : 'text-slate-600 dark:text-slate-400']">ASCII</button>
+              <div class="flex items-center glass-pill p-0.5 rounded-lg text-[11px] font-mono shrink-0">
+                <button @click="txFormat = 'HEX'" :class="['px-2 py-0.5 rounded-md transition-all font-semibold cursor-pointer', txFormat === 'HEX' ? 'bg-blue-600 text-white' : 'text-[var(--text-secondary)]']">HEX</button>
+                <button @click="txFormat = 'ASCII'" :class="['px-2 py-0.5 rounded-md transition-all font-semibold cursor-pointer', txFormat === 'ASCII' ? 'bg-blue-600 text-white' : 'text-[var(--text-secondary)]']">ASCII</button>
               </div>
             </div>
 
-            <!-- 校验和、换行与轮发 -->
-            <div class="flex items-center gap-2 text-[11px]">
-              <!-- 工业级校验和选择器 -->
-              <select v-model="appendChecksum" class="form-input-box py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-200 w-auto">
+            <div class="flex items-center gap-2 text-[11px] flex-wrap">
+              <select v-model="appendChecksum" style="width: auto" class="ui-input px-2 py-1 text-[11px] font-semibold shrink-0">
                 <option value="NONE">无校验和</option>
                 <option value="MODBUS_CRC16">Modbus CRC-16 (低字节在前)</option>
                 <option value="CRC32">CRC-32 (IEEE 802.3)</option>
@@ -368,57 +340,49 @@
                 <option value="BCC">异或校验 (BCC/XOR)</option>
               </select>
 
-              <!-- 发送换行符 -->
-              <select v-model="newlineType" class="form-input-box py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-200 w-auto">
+              <select v-model="newlineType" style="width: auto" class="ui-input px-2 py-1 text-[11px] font-semibold shrink-0">
                 <option value="NONE">无换行</option>
                 <option value="CRLF">\r\n (CRLF)</option>
                 <option value="LF">\n (LF)</option>
                 <option value="CR">\r (CR)</option>
               </select>
 
-              <!-- 定时自动循环发送 -->
-              <div class="flex items-center gap-1 pl-2 border-l border-slate-200/80 dark:border-white/10">
-                <label class="flex items-center gap-1 text-slate-600 dark:text-slate-300 cursor-pointer select-none">
-                  <input type="checkbox" v-model="autoRepeat" @change="toggleAutoRepeat" class="accent-sky-500 rounded" />
-                  <span class="text-[10px] font-bold">自动轮发</span>
+              <div class="flex items-center gap-1 pl-2 border-l shrink-0 whitespace-nowrap" style="border-color: var(--border-subtle);">
+                <label class="flex items-center gap-1 cursor-pointer select-none whitespace-nowrap" style="color: var(--text-secondary);">
+                  <input type="checkbox" v-model="autoRepeat" @change="toggleAutoRepeat" class="accent-blue-600 rounded" />
+                  <span class="text-[11px] font-semibold">自动轮发</span>
                 </label>
-                <input v-model.number="repeatIntervalMs" type="number" min="50" max="60000" class="w-14 px-1 py-0.5 text-[10px] font-mono border rounded bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-center" />
-                <span class="text-[10px] text-slate-400">ms</span>
+                <input v-model.number="repeatIntervalMs" type="number" min="50" max="60000" style="width: 72px" class="ui-input px-1.5 py-0.5 text-[11px] ui-num text-center shrink-0" />
+                <span class="text-[11px]" style="color: var(--text-muted);">ms</span>
               </div>
             </div>
           </div>
 
-          <!-- 发送文本域与操作区 -->
           <div class="flex-1 flex p-2 gap-2 min-h-0">
             <div class="flex-1 flex flex-col relative min-h-0">
               <textarea
                 v-model="txPayload"
-                :placeholder="txFormat === 'HEX' ? '输入待发送的十六进制字节流，如: 01 03 00 00 00 02 (支持自动格式整理)' : '输入待发送的 ASCII 文本字符内容...'"
-                class="flex-1 w-full bg-white/70 dark:bg-black/30 border rounded-xl p-2 font-mono text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/30 resize-none transition-colors"
-                :class="hexValidation.valid ? 'border-slate-300/80 dark:border-white/10' : 'border-rose-400 ring-1 ring-rose-400/30'"
+                :placeholder="txFormat === 'HEX' ? '输入待发送的十六进制字节流，如: 01 03 00 00 00 02' : '输入待发送的 ASCII 文本字符内容...'"
+                class="ui-input flex-1 w-full p-2 font-mono text-xs resize-none"
+                :class="hexValidation.valid ? '' : 'border-rose-500'"
                 @keydown.ctrl.enter="sendPayload"
               />
-              
-              <!-- 底部状态指示条 (HEX 有效性、字节数与动态校验和预知) -->
-              <div class="flex items-center justify-between px-2 py-1 text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-slate-50/80 dark:bg-slate-900/40 rounded-b-xl border-t border-slate-200/50 dark:border-white/5">
+
+              <div class="flex items-center justify-between px-2 py-1 text-[11px] font-mono rounded-b-xl border-t" style="border-color: var(--border-subtle); color: var(--text-muted);">
                 <div class="flex items-center gap-2">
-                  <span v-if="txFormat === 'HEX'" :class="hexValidation.valid ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 font-bold'">
+                  <span v-if="txFormat === 'HEX'" :class="hexValidation.valid ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400 font-semibold'">
                     {{ hexValidation.message }}
                   </span>
-                  <span v-else class="text-slate-600 dark:text-slate-300">
-                    字符长度: {{ txPayload.length }} 字符
-                  </span>
-                  
-                  <!-- 动态校验和预知微胶囊 -->
-                  <span v-if="previewChecksum && appendChecksum !== 'NONE'" class="px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300 font-bold text-[9px]">
+                  <span v-else>字符长度: {{ txPayload.length }} 字符</span>
+
+                  <span v-if="previewChecksum && appendChecksum !== 'NONE'" class="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/25 font-semibold text-[11px]">
                     + {{ appendChecksum }}: [{{ previewChecksum }}]
                   </span>
                 </div>
 
-                <!-- 历史快速选用下拉 -->
                 <div v-if="txHistoryList.length > 0" class="flex items-center gap-1">
                   <span>历史:</span>
-                  <select @change="txPayload = ($event.target as HTMLSelectElement).value" class="bg-transparent text-slate-700 dark:text-slate-300 text-[10px] outline-none max-w-[120px] truncate cursor-pointer">
+                  <select @change="txPayload = ($event.target as HTMLSelectElement).value" class="bg-transparent text-[11px] outline-none max-w-[120px] truncate cursor-pointer" style="color: var(--text-primary);">
                     <option value="">-- 最近发送 --</option>
                     <option v-for="(h, idx) in txHistoryList" :key="idx" :value="h">{{ h }}</option>
                   </select>
@@ -426,49 +390,39 @@
               </div>
             </div>
 
-            <!-- 右侧动作按钮列 -->
             <div class="flex flex-col gap-1.5 w-28 shrink-0">
               <button
                 @click="compareTxWithLastRx"
                 :disabled="!txPayload.trim() || !lastRxItem"
-                class="px-2 py-1 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-800 dark:text-indigo-200 border border-indigo-400/30 font-bold text-[10px] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1 shadow-2xs"
-                title="一键对比当前发送区请求报文与最新收到的响应帧 (Hex 同步 + 变异波率)"
+                class="ui-btn-secondary py-1 px-2 text-[11px] justify-center"
+                title="对比请求报文与最新响应帧"
               >
-                <span>⚖️ 请求 vs 响应</span>
+                <AppIcon name="scale" :size="11" />
+                <span>请求 vs 响应</span>
               </button>
               <button
                 @click="sendPayload"
                 :disabled="!isRunning || !txPayload.trim() || (txFormat === 'HEX' && !hexValidation.valid)"
-                class="flex-1 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white font-bold text-xs shadow-sm transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer disabled:opacity-40 active:scale-95"
+                class="ui-btn-primary flex-1 flex-col justify-center gap-0.5 text-xs"
               >
                 <span>立即发送</span>
-                <span class="text-[9px] font-normal opacity-80">(Ctrl+Enter)</span>
-              </button>
-              
-              <button
-                v-if="txFormat === 'HEX'"
-                @click="formatTxHex"
-                class="py-1 text-[10px] text-slate-600 dark:text-slate-300 hover:text-sky-600 glass-pill rounded-lg cursor-pointer font-mono"
-                title="自动将十六进制字节按空格规范对齐"
-              >
-                整理格式
+                <span class="text-[11px] font-normal opacity-80">(Ctrl+Enter)</span>
               </button>
 
-              <button @click="txPayload = ''" class="py-1 text-[10px] text-slate-400 hover:text-rose-500 glass-pill rounded-lg cursor-pointer">
-                清空输入
-              </button>
+              <div class="grid grid-cols-2 gap-1">
+                <button v-if="txFormat === 'HEX'" @click="formatTxHex" class="ui-btn-secondary py-1 px-1 text-[11px] justify-center">整理</button>
+                <button @click="txPayload = ''" :class="txFormat === 'HEX' ? '' : 'col-span-2'" class="ui-btn-secondary py-1 px-1 text-[11px] justify-center">清空</button>
+              </div>
             </div>
           </div>
         </div>
       </main>
 
-      <!-- 3. 右栏：工控规约载荷模板与快捷多指令调度矩阵 (3 列) -->
-      <aside class="col-span-3 glass-surface rounded-2xl p-3.5 flex flex-col gap-3 overflow-y-auto custom-scrollbar border border-slate-200/80 dark:border-white/10 shadow-sm">
-        
-        <!-- 标准工控协议模板一键加载 -->
+      <!-- 3. 右栏：工控规约载荷模板与快捷多指令调度矩阵 -->
+      <aside class="lg:col-span-3 ui-content-card p-3.5 flex flex-col gap-3 overflow-y-auto custom-scrollbar">
         <div>
-          <label class="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block mb-1.5 font-mono">标准工控规约载荷模板</label>
-          <select @change="applyProtocolPreset(($event.target as HTMLSelectElement).value); ($event.target as HTMLSelectElement).value = ''" class="form-input-box text-[11px] font-mono">
+          <label class="text-[11px] font-semibold block mb-1.5" style="color: var(--text-secondary);">标准工控规约载荷模板</label>
+          <select @change="applyProtocolPreset(($event.target as HTMLSelectElement).value); ($event.target as HTMLSelectElement).value = ''" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono">
             <option value="">-- 一键填入工业标准载荷 --</option>
             <option value="modbus_read">Modbus-TCP: 读保持寄存器 0-1 (Func 03)</option>
             <option value="modbus_write">Modbus-TCP: 写单个保持寄存器 (Func 06)</option>
@@ -481,77 +435,61 @@
           </select>
         </div>
 
-        <!-- 预设多指令快捷调度列表 (Preset Command Matrix) -->
-        <div class="flex-1 flex flex-col min-h-0 border-t border-slate-200/60 dark:border-white/10 pt-2.5">
+        <div class="flex-1 flex flex-col min-h-0 border-t pt-2.5" style="border-color: var(--border-subtle);">
           <div class="flex items-center justify-between mb-1.5">
             <div class="flex items-center gap-1.5">
-              <span class="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase font-mono">多指令快捷调度矩阵</span>
-              <span class="text-[9px] text-slate-400">({{ presetCommands.length }})</span>
+              <span class="text-[11px] font-semibold" style="color: var(--text-secondary);">多指令快捷调度矩阵</span>
+              <span class="text-[11px] ui-num" style="color: var(--text-muted);">({{ presetCommands.length }})</span>
             </div>
-            <button @click="addNewPreset" class="text-[10px] text-sky-700 dark:text-sky-400 font-bold hover:underline cursor-pointer">
+            <button @click="addNewPreset" class="text-[11px] text-blue-600 dark:text-sky-400 font-semibold hover:underline cursor-pointer">
               + 添加指令
             </button>
           </div>
 
-          <!-- 全量指令循环轮发控制器 (Sequence Poller) -->
-          <div class="glass-pill p-2 rounded-xl mb-2 border border-slate-200/80 dark:border-white/10 flex items-center justify-between">
-            <div class="flex items-center gap-1.5">
+          <div class="ui-sub-card p-2 mb-2 flex items-center justify-between flex-wrap gap-1.5">
+            <div class="flex items-center gap-1.5 flex-wrap">
               <button
                 @click="toggleSequencePoller"
-                :class="['px-2 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors flex items-center gap-1',
-                  isSequencePolling
-                    ? 'bg-rose-600 text-white'
-                    : 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white']"
+                :class="['px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer transition-colors inline-flex items-center gap-1 whitespace-nowrap shrink-0',
+                  isSequencePolling ? 'bg-rose-600 text-white' : 'bg-blue-600 text-white']"
                 :disabled="!isRunning || presetCommands.length === 0"
               >
-                <span>{{ isSequencePolling ? '■ 停止轮发' : '⚡ 序列轮发' }}</span>
+                <AppIcon :name="isSequencePolling ? 'stop' : 'zap'" :size="11" />
+                <span>{{ isSequencePolling ? '停止轮发' : '序列轮发' }}</span>
               </button>
-              <span class="text-[10px] text-slate-500 font-mono">步长:</span>
-              <input v-model.number="sequenceIntervalMs" type="number" min="100" max="10000" class="w-12 px-1 text-[10px] font-mono border rounded bg-white dark:bg-slate-800 text-center" />
-              <span class="text-[10px] text-slate-400 font-mono">ms</span>
+              <span class="text-[11px] whitespace-nowrap" style="color: var(--text-muted);">步长:</span>
+              <input v-model.number="sequenceIntervalMs" type="number" min="100" max="10000" style="width: 72px" class="ui-input px-1.5 py-0.5 text-[11px] ui-num text-center shrink-0" />
+              <span class="text-[11px] whitespace-nowrap" style="color: var(--text-muted);">ms</span>
             </div>
-            <span v-if="isSequencePolling" class="text-[9px] font-bold text-emerald-600 animate-pulse font-mono">
+            <span v-if="isSequencePolling" class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 ui-num">
               发送中 #{{ activeSequenceIdx + 1 }}
             </span>
           </div>
 
-          <!-- 指令卡片列表 -->
           <div class="flex-1 overflow-y-auto custom-scrollbar space-y-1.5 pr-0.5">
             <div
               v-for="(cmd, idx) in presetCommands"
               :key="idx"
-              class="glass-pill rounded-xl p-2 text-xs font-mono space-y-1 border transition-all"
-              :class="isSequencePolling && activeSequenceIdx === idx
-                ? 'border-sky-500 ring-2 ring-sky-500/20 bg-sky-50/50'
-                : 'border-slate-200/60 dark:border-white/10'"
+              class="ui-sub-card p-2 text-xs font-mono space-y-1 transition-all"
+              :class="isSequencePolling && activeSequenceIdx === idx ? 'border-blue-500 ring-1 ring-blue-500/30' : ''"
             >
-              <div class="flex items-center justify-between text-[10px]">
-                <input v-model="cmd.name" @change="savePresetsToStorage" class="font-bold text-slate-800 dark:text-slate-100 bg-transparent border-b border-transparent focus:border-sky-400 outline-none w-32" />
+              <div class="flex items-center justify-between text-[11px]">
+                <input v-model="cmd.name" @change="savePresetsToStorage" class="font-semibold bg-transparent border-b border-transparent focus:border-blue-500 outline-none w-32" style="color: var(--text-primary);" />
                 <div class="flex items-center gap-1">
-                  <button @click="sendSpecificPreset(cmd)" :disabled="!isRunning" class="px-2 py-0.5 bg-sky-600 hover:bg-sky-700 text-white rounded text-[9px] font-bold cursor-pointer disabled:opacity-40">
-                    发送
-                  </button>
-                  <button @click="deletePreset(idx)" class="text-slate-400 hover:text-rose-500 text-[10px] px-1 cursor-pointer" title="删除该指令">
-                    ✕
+                  <button @click="sendSpecificPreset(cmd)" :disabled="!isRunning" class="ui-btn-primary px-2 py-0.5 text-[11px]">发送</button>
+                  <button @click="deletePreset(idx)" class="p-1 cursor-pointer hover:text-rose-500" style="color: var(--text-muted);" title="删除该指令">
+                    <AppIcon name="close" :size="11" />
                   </button>
                 </div>
               </div>
-              <input v-model="cmd.payload" @change="savePresetsToStorage" placeholder="HEX 字节流" class="w-full bg-white/90 dark:bg-black/40 border border-slate-200/80 dark:border-white/10 rounded px-1.5 py-0.5 text-[10px] text-slate-800 dark:text-slate-200 font-mono" />
+              <input v-model="cmd.payload" @change="savePresetsToStorage" placeholder="HEX 字节流" class="ui-input w-full px-2 py-1 text-[11px] font-mono" />
             </div>
           </div>
         </div>
-
       </aside>
-
     </div>
 
-    <!-- 全景报文深度解构模态框 (与 Omni-Probe 探针核心完全打通) -->
-    <PacketDetailModal
-      :is-open="isDetailModalOpen"
-      :packet="modalPacket"
-      @close="isDetailModalOpen = false"
-    />
-
+    <PacketDetailModal :is-open="isDetailModalOpen" :packet="modalPacket" @close="isDetailModalOpen = false" />
   </div>
 </template>
 
@@ -559,6 +497,9 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import AppIcon from '../components/AppIcon.vue';
+import EmptyState from '../components/EmptyState.vue';
+import { saveTextViaNativeDesktop } from '../composables/useDesktopSave';
 import {
   notifySuccess,
   notifyInfo,
@@ -681,36 +622,40 @@ const lastRxItem = computed(() => {
   return null;
 });
 
-function setDiffSlotA(item: PacketLogItem) {
-  diffBus.setSlotA({
+function buildLogDiffPayload(item: PacketLogItem) {
+  return {
     id: item.id,
     label: `[${item.direction}] ${item.remote_addr}`,
     timestamp: formatTime(item.timestamp_ms),
     direction: item.direction,
-    mode: selectedMode.value,
-    endpoint: item.remote_addr,
+    protocol: selectedMode.value,
+    src: item.direction === 'TX' ? item.local_addr : item.remote_addr,
+    dst: item.direction === 'TX' ? item.remote_addr : item.local_addr,
     payloadHex: item.payload_hex,
-    payloadAscii: item.payload_text,
-    byteLength: item.length
-  }, `套接字调试 ${item.direction} #${item.id}`);
+    rawText: item.payload_text,
+    length: item.length,
+    extraFields: {
+      direction: item.direction,
+      transport_mode: selectedMode.value,
+      local_endpoint: item.local_addr || '-',
+      remote_endpoint: item.remote_addr || '-'
+    }
+  };
+}
+
+function setDiffSlotA(item: PacketLogItem) {
+  diffBus.setSlotA(buildLogDiffPayload(item), `套接字调试 ${item.direction} #${item.id}`);
 }
 
 function setDiffSlotB(item: PacketLogItem) {
-  diffBus.setSlotB({
-    id: item.id,
-    label: `[${item.direction}] ${item.remote_addr}`,
-    timestamp: formatTime(item.timestamp_ms),
-    direction: item.direction,
-    mode: selectedMode.value,
-    endpoint: item.remote_addr,
-    payloadHex: item.payload_hex,
-    payloadAscii: item.payload_text,
-    byteLength: item.length
-  }, `套接字调试 ${item.direction} #${item.id}`);
-
+  diffBus.setSlotB(buildLogDiffPayload(item), `套接字调试 ${item.direction} #${item.id}`);
   if (diffBus.slotA.value) {
     diffBus.compareSlots();
   }
+}
+
+function addLogToDiffQueue(item: PacketLogItem) {
+  diffBus.addToQueue(buildLogDiffPayload(item), `套接字 ${item.direction} #${item.id}`, false);
 }
 
 function compareTxWithLastRx() {
@@ -718,28 +663,33 @@ function compareTxWithLastRx() {
     notifyWarning('提示', '尚未捕获到任何对端响应帧，请先发送并接收数据');
     return;
   }
-  const cleanHex = txFormat.value === 'HEX' ? txPayload.value.replace(/[\s\r\n\t]/g, '') : '';
+  const isAsciiMode = txFormat.value === 'ASCII';
+  const cleanHex = !isAsciiMode ? txPayload.value.replace(/[\s\r\n\t]/g, '') : '';
   const txItem = {
     id: 'TX_DRAFT',
     label: `[TX 请求帧] ${targetIp.value || '127.0.0.1'}:${targetPort.value || 0}`,
     timestamp: new Date().toLocaleTimeString(),
     direction: 'TX',
-    mode: selectedMode.value,
-    endpoint: `${targetIp.value || '127.0.0.1'}:${targetPort.value || 0}`,
-    payloadHex: cleanHex || txPayload.value,
-    payloadAscii: txFormat.value === 'ASCII' ? txPayload.value : '',
-    byteLength: cleanHex ? cleanHex.length / 2 : txPayload.value.length
+    protocol: selectedMode.value,
+    src: localBindIp.value || '0.0.0.0',
+    dst: `${targetIp.value || '127.0.0.1'}:${targetPort.value || 0}`,
+    format: isAsciiMode ? 'ASCII' : 'HEX',
+    isRawText: isAsciiMode,
+    payloadHex: cleanHex,
+    rawText: isAsciiMode ? txPayload.value : '',
+    length: cleanHex ? cleanHex.length / 2 : txPayload.value.length
   };
   const rxItem = {
     id: lastRxItem.value.id,
     label: `[RX 最新回复] ${lastRxItem.value.remote_addr}`,
     timestamp: formatTime(lastRxItem.value.timestamp_ms),
     direction: 'RX',
-    mode: selectedMode.value,
-    endpoint: lastRxItem.value.remote_addr,
+    protocol: selectedMode.value,
+    src: lastRxItem.value.remote_addr,
+    dst: lastRxItem.value.local_addr || '0.0.0.0',
     payloadHex: lastRxItem.value.payload_hex,
-    payloadAscii: lastRxItem.value.payload_text,
-    byteLength: lastRxItem.value.length
+    rawText: lastRxItem.value.payload_text,
+    length: lastRxItem.value.length
   };
   diffBus.openUniversalDiff(txItem, rxItem, 'hex');
 }
@@ -982,7 +932,9 @@ async function sendPayload() {
       if (txHistoryList.value.length > 10) txHistoryList.value.pop();
       try {
         localStorage.setItem('omni_probe_net_assist_tx_history_v1', JSON.stringify(txHistoryList.value));
-      } catch {}
+      } catch (err) {
+        console.warn('[NetAssist] persist tx history to localStorage failed:', err);
+      }
     }
   } catch (e) {
     notifyError('发送数据受阻', e);
@@ -1011,7 +963,9 @@ function deletePreset(idx: number) {
 function savePresetsToStorage() {
   try {
     localStorage.setItem('omni_probe_net_assist_presets_v1', JSON.stringify(presetCommands.value));
-  } catch {}
+  } catch (err) {
+    console.warn('[NetAssist] persist preset commands to localStorage failed:', err);
+  }
 }
 
 function toggleAutoRepeat() {
@@ -1096,7 +1050,7 @@ function applyProtocolPreset(type: string) {
       break;
     case 'http_probe':
       txFormat.value = 'ASCII';
-      txPayload.value = 'GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nUser-Agent: OmniProbe-SocketDebugger/0.2.4\r\nConnection: close\r\n\r\n';
+      txPayload.value = 'GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nUser-Agent: OmniProbe-SocketDebugger/0.3.1\r\nConnection: close\r\n\r\n';
       break;
     case 'sl651_telemetry':
       txPayload.value = '7E 7E 01 00 00 00 00 01 00 02 32 00 00 03 14 00 00 00';
@@ -1105,7 +1059,7 @@ function applyProtocolPreset(type: string) {
   notifyInfo('工控规约模板已载入', `已将 ${type} 报文载入发送终端`);
 }
 
-function exportLog() {
+async function exportLog() {
   if (packetLog.value.length === 0) {
     notifyWarning('导出提示', '当前无数据记录可供导出');
     return;
@@ -1113,14 +1067,13 @@ function exportLog() {
   const lines = packetLog.value.map(p => {
     return `[${formatTime(p.timestamp_ms)}] [${p.direction}] ${p.remote_addr} (${p.length} Bytes)\nHEX: ${p.payload_hex}\nTXT: ${p.payload_text}\n`;
   });
-  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `OmniProbe_SocketLog_${Date.now()}.txt`;
-  a.click();
-  URL.revokeObjectURL(url);
-  notifySuccess('通信日志导出成功', '已生成纯文本日志文件并已启动下载');
+  await saveTextViaNativeDesktop(
+    `OmniProbe_SocketLog_${Date.now()}.txt`,
+    lines.join('\n'),
+    '通信日志文本 (*.txt)',
+    '*.txt;*.log',
+    '导出网络调试通信日志'
+  );
 }
 
 // 在全景报文分析模态框中解构此报文
@@ -1143,11 +1096,11 @@ function inspectPacketInModal(item: PacketLogItem) {
     transport: item.mode.includes('TCP') ? 'TCP' : 'UDP',
     payload_hex: item.payload_hex,
     raw_text: item.payload_text,
-    entropy: 4.5,
+    entropy: 0,
     entropy_level: 'normal',
-    mac_src: '00:1B:21:A4:B0:12',
-    mac_dst: '00:50:56:C0:00:08',
-    chain_hash: 'NET_ASSIST_GENESIS_CHAIN',
+    mac_src: '-- (Socket 通道)',
+    mac_dst: '-- (Socket 通道)',
+    chain_hash: `NET_ASSIST_${item.id}`,
     business_data: undefined,
   };
   isDetailModalOpen.value = true;
@@ -1174,15 +1127,17 @@ onMounted(async () => {
       }
     }
 
-    // 检查是否有来自流量大盘右键推送的载荷
+    // 检查是否有来自全息流量分析台右键推送的载荷
     const incoming = localStorage.getItem('omni_probe_net_assist_incoming_payload');
     if (incoming) {
       txPayload.value = formatHexSpaced(incoming);
       txFormat.value = 'HEX';
       localStorage.removeItem('omni_probe_net_assist_incoming_payload');
-      notifyInfo('已载入待测报文载荷', '来自全息流量分析大盘的快捷推送');
+      notifyInfo('已载入待测报文载荷', '来自全息流量分析台的快捷推送');
     }
-  } catch {}
+  } catch (err) {
+    console.warn('[NetAssist] restore persisted storage or incoming payload failed:', err);
+  }
 
   // 监听数据包事件
   unlistenPacket = await listen<PacketLogItem>('net-assist-packet', (event) => {
@@ -1226,8 +1181,16 @@ onMounted(async () => {
     }
   });
 
-  // 监听客户端连接池更新
-  unlistenClients = await listen<any>('net-assist-clients', (event) => {
+  // 监听客户端连接池更新并主动同步一次现有在连客户端
+  try {
+    const curClients = await invoke<string[]>('get_net_assist_clients_cmd');
+    if (Array.isArray(curClients)) {
+      activeClients.value = curClients;
+    }
+  } catch (e) {
+    console.error('同步在连客户端清单失败:', e);
+  }
+  unlistenClients = await listen<{ active_clients?: string[]; event_type?: string; client_addr?: string }>('net-assist-clients', (event) => {
     activeClients.value = event.payload.active_clients || [];
     if (event.payload.event_type === 'CONNECTED') {
       notifyInfo('新客户端接入', `端点: ${event.payload.client_addr} 已连接`);
@@ -1245,28 +1208,3 @@ onUnmounted(() => {
   if (sequenceTimer) clearInterval(sequenceTimer);
 });
 </script>
-
-<style scoped>
-.form-input-box {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(203, 213, 225, 0.8);
-  border-radius: 0.75rem;
-  padding: 0.35rem 0.65rem;
-  font-size: 0.75rem;
-  color: #0f172a;
-  outline: none;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-:global(.theme-apple-dark) .form-input-box {
-  background: rgba(15, 23, 42, 0.8);
-  border-color: rgba(255, 255, 255, 0.15);
-  color: #f8fafc;
-}
-
-.form-input-box:focus {
-  border-color: rgba(14, 165, 233, 0.7);
-  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.15);
-}
-</style>

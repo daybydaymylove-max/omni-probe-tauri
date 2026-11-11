@@ -122,17 +122,15 @@ impl MonotonicTimeNormalizer {
 
     /// 校准特定总线相对于系统基准时间的估算偏移
     pub fn calibrate_offset(&self, bus: BusType, offset_ns: i128) {
-        if let Ok(mut map) = self.bus_offsets.lock() {
-            map.insert(bus, offset_ns);
-        }
+        let mut map = crate::lock_guard::lock_mutex(&self.bus_offsets, "cross_bus_diagnostic::calibrate_offset");
+        map.insert(bus, offset_ns);
     }
 
     /// 将硬件原始时间戳对齐为全局单调递增纳秒时间戳 (保证单调非递减)
     pub fn normalize(&self, bus: BusType, raw_timestamp_ns: u128) -> u128 {
-        let offset = if let Ok(map) = self.bus_offsets.lock() {
+        let offset = {
+            let map = crate::lock_guard::lock_mutex(&self.bus_offsets, "cross_bus_diagnostic::normalize_offset");
             *map.get(&bus).unwrap_or(&0)
-        } else {
-            0
         };
 
         let calculated_ns = if offset >= 0 {
@@ -141,18 +139,15 @@ impl MonotonicTimeNormalizer {
             raw_timestamp_ns.saturating_sub((-offset) as u128)
         };
 
-        if let Ok(mut last) = self.last_normalized_ns.lock() {
-            let final_ns = if calculated_ns <= *last {
-                // 单调底限保护: 遭遇时间戳回退或 NTP 跳变，强制微纳秒递增
-                *last + 1
-            } else {
-                calculated_ns
-            };
-            *last = final_ns;
-            final_ns
+        let mut last = crate::lock_guard::lock_mutex(&self.last_normalized_ns, "cross_bus_diagnostic::normalize_monotonic");
+        let final_ns = if calculated_ns <= *last {
+            // 单调底限保护: 遭遇时间戳回退或 NTP 跳变，强制微纳秒递增
+            *last + 1
         } else {
             calculated_ns
-        }
+        };
+        *last = final_ns;
+        final_ns
     }
 }
 
@@ -259,7 +254,7 @@ impl CrossBusDiagnosticEngine {
             };
             let tx_id = format!("CASCADE_{}_{:02X}_{:02X}_{}", proto_family, unit, fc, pdu_sig);
 
-            let mut pending = self.pending_requests.lock().unwrap();
+            let mut pending = crate::lock_guard::lock_mutex(&self.pending_requests, "cross_bus_diagnostic::record_request");
 
             // 若已有同指纹事务且源总线不同，判定为跨总线网关转发动作 (Forwarding)
             if let Some(existing) = pending.get_mut(&tx_id) {
@@ -309,7 +304,7 @@ impl CrossBusDiagnosticEngine {
         let is_tcp = bus == BusType::Ethernet;
 
         if let Some((unit, fc, _)) = Self::extract_modbus_pdu(payload, is_tcp) {
-            let mut pending = self.pending_requests.lock().unwrap();
+            let mut pending = crate::lock_guard::lock_mutex(&self.pending_requests, "cross_bus_diagnostic::record_response");
             let mut matched_key = None;
 
             // 在未结事务中匹配 Unit 与 FC (考虑 Modbus 响应 FC 或异常码 FC + 0x80)
@@ -357,7 +352,7 @@ impl CrossBusDiagnosticEngine {
                     };
 
                     if let Some(fwd_ms) = fwd_latency_ms {
-                        let mut acc = self.total_forward_latency_acc_ms.lock().unwrap();
+                        let mut acc = crate::lock_guard::lock_mutex(&self.total_forward_latency_acc_ms, "cross_bus_diagnostic::record_response_acc");
                         *acc += fwd_ms;
                     }
 
@@ -376,7 +371,7 @@ impl CrossBusDiagnosticEngine {
                         remedy_suggestion: remedy,
                     };
 
-                    let mut history = self.completed_diagnostics.lock().unwrap();
+                    let mut history = crate::lock_guard::lock_mutex(&self.completed_diagnostics, "cross_bus_diagnostic::record_response_history");
                     history.push_back(record.clone());
                     while history.len() > 1000 {
                         history.pop_front();
@@ -394,7 +389,7 @@ impl CrossBusDiagnosticEngine {
     pub fn report_physical_crc_error(&self, bus: BusType, timestamp_ns: u128) {
         if bus == BusType::Serial {
             self.crc_error_count.fetch_add(1, Ordering::Relaxed);
-            let mut errs = self.crc_error_timestamps.lock().unwrap();
+            let mut errs = crate::lock_guard::lock_mutex(&self.crc_error_timestamps, "cross_bus_diagnostic::report_physical_crc_error");
             errs.push_back(timestamp_ns);
             while errs.len() > 200 {
                 errs.pop_front();
@@ -407,7 +402,7 @@ impl CrossBusDiagnosticEngine {
         let mut timed_out_records = Vec::new();
         let timeout_window_ns = 1_500_000_000u128; // 1.5 秒无响应判定为超时
 
-        let mut pending = self.pending_requests.lock().unwrap();
+        let mut pending = crate::lock_guard::lock_mutex(&self.pending_requests, "cross_bus_diagnostic::sweep_timeouts_pending");
         let mut expired_keys = Vec::new();
 
         for (k, req) in pending.iter() {
@@ -417,7 +412,7 @@ impl CrossBusDiagnosticEngine {
         }
 
         let has_recent_crc_errors = {
-            let errs = self.crc_error_timestamps.lock().unwrap();
+            let errs = crate::lock_guard::lock_mutex(&self.crc_error_timestamps, "cross_bus_diagnostic::sweep_timeouts_crc");
             if let Some(&last_err_ns) = errs.back() {
                 current_norm_ns.saturating_sub(last_err_ns) < 3_000_000_000 // 3秒内有 CRC 错误
             } else {
@@ -466,7 +461,7 @@ impl CrossBusDiagnosticEngine {
 
                 timed_out_records.push(record.clone());
 
-                let mut history = self.completed_diagnostics.lock().unwrap();
+                let mut history = crate::lock_guard::lock_mutex(&self.completed_diagnostics, "cross_bus_diagnostic::sweep_timeouts_history");
                 history.push_back(record);
                 while history.len() > 1000 {
                     history.pop_front();
@@ -479,7 +474,7 @@ impl CrossBusDiagnosticEngine {
 
     /// 获取最近的跨总线级联诊断历史记录
     pub fn get_recent_diagnostics(&self, limit: usize) -> Vec<CascadeDiagnosticRecord> {
-        let history = self.completed_diagnostics.lock().unwrap();
+        let history = crate::lock_guard::lock_mutex(&self.completed_diagnostics, "cross_bus_diagnostic::get_recent_diagnostics");
         history.iter().rev().take(limit).cloned().collect()
     }
 
@@ -493,7 +488,7 @@ impl CrossBusDiagnosticEngine {
 
         let total_successful = normal + bottleneck;
         let avg_lat = if total_successful > 0 {
-            let acc = self.total_forward_latency_acc_ms.lock().unwrap();
+            let acc = crate::lock_guard::lock_mutex(&self.total_forward_latency_acc_ms, "cross_bus_diagnostic::get_metrics_snapshot");
             *acc / (total_successful as f64)
         } else {
             0.0

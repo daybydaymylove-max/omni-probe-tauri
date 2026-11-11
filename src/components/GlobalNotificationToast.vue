@@ -16,15 +16,16 @@
       <div
         v-for="item in notifications"
         :key="item.id"
-        class="pointer-events-auto relative overflow-hidden rounded-2xl p-3.5 border shadow-xl backdrop-blur-xl transition-all duration-200 select-none"
+        class="pointer-events-auto relative overflow-hidden ui-modal-surface rounded-2xl p-3.5 transition-all duration-200 select-none"
         :class="themeClasses(item.type)"
         @mouseenter="pauseTimer(item.id)"
         @mouseleave="resumeTimer(item.id)"
       >
+        <span class="lens-edge-lip" aria-hidden="true"></span>
         <div class="flex items-start gap-3">
           <!-- 状态指示图标 -->
           <div
-            class="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center shadow-inner"
+            class="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center"
             :class="iconBgClasses(item.type)"
           >
             <!-- 成功 -->
@@ -72,13 +73,13 @@
           <!-- 内容主体 -->
           <div class="flex-1 min-w-0 pr-1">
             <div class="flex items-center gap-2">
-              <span class="font-bold text-xs tracking-wide text-slate-800 dark:text-slate-100">
+              <span class="font-bold text-xs tracking-wide text-(--text-primary)">
                 {{ item.title }}
               </span>
               <!-- 风暴去重计数胶囊 -->
               <span
                 v-if="item.count > 1"
-                class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold tracking-tight bg-slate-200/80 dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 border border-slate-300/60 dark:border-slate-600/60"
+                class="ui-pill px-1.5 py-0.2 rounded-full text-[11px] ui-num font-mono-code font-bold tracking-tight text-(--text-primary)"
               >
                 ×{{ item.count }}
               </span>
@@ -86,7 +87,7 @@
 
             <p
               v-if="item.message"
-              class="mt-1 text-xs text-slate-600 dark:text-slate-300 leading-relaxed break-words font-sans"
+              class="mt-1 text-xs text-(--text-secondary) leading-relaxed break-words select-text"
             >
               {{ item.message }}
             </p>
@@ -95,7 +96,7 @@
             <div v-if="item.action" class="mt-2.5">
               <button
                 @click="handleAction(item)"
-                class="px-2.5 py-1 text-[11px] font-medium rounded-lg transition-all duration-150 shadow-sm active:scale-95 cursor-pointer"
+                class="px-2.5 py-1 text-[11px] font-medium rounded-lg transition-all duration-150 active:scale-95 cursor-pointer"
                 :class="actionButtonClasses(item.type)"
               >
                 {{ item.action.label }}
@@ -106,7 +107,7 @@
           <!-- 手动关闭按钮 -->
           <button
             @click="removeNotification(item.id)"
-            class="flex-shrink-0 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors p-1 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50 cursor-pointer"
+            class="ui-btn-secondary flex-shrink-0 p-1 rounded-lg cursor-pointer"
             aria-label="关闭当前提示"
           >
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -116,7 +117,7 @@
         </div>
 
         <!-- 底部微光自动倒计时进度条 -->
-        <div class="absolute bottom-0 left-0 right-0 h-[2px] bg-slate-200/40 dark:bg-slate-700/40 overflow-hidden">
+        <div class="absolute bottom-0 left-0 right-0 h-[2px] bg-(--border-subtle) overflow-hidden">
           <div
             class="h-full transition-all duration-100 ease-linear"
             :class="progressBarClasses(item.type)"
@@ -146,26 +147,26 @@ let tickInterval: any = null;
 function themeClasses(type: NotificationType): string {
   switch (type) {
     case 'success':
-      return 'bg-white/90 dark:bg-slate-900/90 border-emerald-500/35 dark:border-emerald-500/40 shadow-emerald-500/10';
+      return 'border-emerald-500/40 shadow-emerald-500/10';
     case 'info':
-      return 'bg-white/90 dark:bg-slate-900/90 border-sky-500/35 dark:border-sky-500/40 shadow-sky-500/10';
+      return 'border-sky-500/40 shadow-sky-500/10';
     case 'warning':
-      return 'bg-white/90 dark:bg-slate-900/90 border-amber-500/35 dark:border-amber-500/40 shadow-amber-500/10';
+      return 'border-amber-500/40 shadow-amber-500/10';
     case 'error':
-      return 'bg-white/90 dark:bg-slate-900/90 border-rose-500/35 dark:border-rose-500/40 shadow-rose-500/10';
+      return 'border-rose-500/40 shadow-rose-500/10';
   }
 }
 
 function iconBgClasses(type: NotificationType): string {
   switch (type) {
     case 'success':
-      return 'bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 dark:border-emerald-800/60';
+      return 'bg-emerald-500/15 border border-emerald-500/30';
     case 'info':
-      return 'bg-sky-50 dark:bg-sky-950/60 border border-sky-200/60 dark:border-sky-800/60';
+      return 'bg-sky-500/15 border border-sky-500/30';
     case 'warning':
-      return 'bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800/60';
+      return 'bg-amber-500/15 border border-amber-500/30';
     case 'error':
-      return 'bg-rose-50 dark:bg-rose-950/60 border border-rose-200/60 dark:border-rose-800/60';
+      return 'bg-rose-500/15 border border-rose-500/30';
   }
 }
 

@@ -770,11 +770,11 @@ static GLOBAL_THREAT_DETECTOR: Lazy<RwLock<AhoCorasickAutomaton>> = Lazy::new(||
 
 /// 对报文载荷执行全局多模式检测
 pub fn detect_threats_in_payload(payload: &[u8]) -> Vec<ThreatHit> {
-    if let Ok(guard) = GLOBAL_THREAT_DETECTOR.read() {
-        guard.scan(payload)
-    } else {
-        Vec::new()
-    }
+    let guard = crate::lock_guard::read_rwlock(
+        &GLOBAL_THREAT_DETECTOR,
+        "threat_detector::detect_threats_in_payload",
+    );
+    guard.scan(payload)
 }
 
 // ============================================================

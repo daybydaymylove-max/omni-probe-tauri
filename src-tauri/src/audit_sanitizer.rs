@@ -244,7 +244,10 @@ pub fn verify_sanitization_compliance(sanitized_text: &str) -> SanitizationAudit
 }
 
 pub fn get_sanitization_policies() -> Vec<SanitizationPolicy> {
-    let store = POLICIES_STORE.lock().unwrap();
+    let store = crate::lock_guard::lock_mutex(
+        &POLICIES_STORE,
+        "audit_sanitizer::get_sanitization_policies",
+    );
     store.policies.clone()
 }
 

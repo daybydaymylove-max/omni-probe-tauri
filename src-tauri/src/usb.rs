@@ -31,10 +31,12 @@ pub struct UsbDeviceInfo {
 
 /// 停止 USB 嗅探引擎
 pub fn stop_usb_sniffer() {
-    if let Ok(mut r) = USB_RUNNING.lock() {
+    {
+        let mut r = crate::lock_guard::lock_mutex(&USB_RUNNING, "usb::stop_usb_sniffer_flag");
         *r = false;
     }
-    if let Ok(mut child_opt) = USB_CHILD.lock() {
+    {
+        let mut child_opt = crate::lock_guard::lock_mutex(&USB_CHILD, "usb::stop_usb_sniffer_child");
         if let Some(mut child) = child_opt.take() {
             let _ = child.kill();
         }
@@ -90,7 +92,7 @@ mod win_setupapi {
     }
 
     #[link(name = "setupapi")]
-    extern "system" {
+    unsafe extern "system" {
         pub fn SetupDiGetClassDevsW(
             class_guid: *const c_void,
             enumerator: *const u16,
@@ -135,18 +137,20 @@ mod win_setupapi {
         let mut buf = [0u8; 1024];
         let mut req_size = 0u32;
         let mut reg_type = 0u32;
-        let res = SetupDiGetDeviceRegistryPropertyW(
-            hdev,
-            dev_data,
-            prop,
-            &mut reg_type,
-            buf.as_mut_ptr(),
-            buf.len() as u32,
-            &mut req_size,
-        );
+        let res = unsafe {
+            SetupDiGetDeviceRegistryPropertyW(
+                hdev,
+                dev_data,
+                prop,
+                &mut reg_type,
+                buf.as_mut_ptr(),
+                buf.len() as u32,
+                &mut req_size,
+            )
+        };
         if res != 0 && req_size > 0 {
             let u16_len = req_size as usize / 2;
-            let u16_slice = std::slice::from_raw_parts(buf.as_ptr() as *const u16, u16_len);
+            let u16_slice = unsafe { std::slice::from_raw_parts(buf.as_ptr() as *const u16, u16_len) };
             let end = u16_slice.iter().position(|&c| c == 0).unwrap_or(u16_len);
             String::from_utf16_lossy(&u16_slice[..end]).trim().to_string()
         } else {
@@ -966,10 +970,62 @@ pub fn build_usb_event_record(
     }
 }
 
+/// 从 USB URB 或 USBPcap 载荷中提取蓝牙 HCI H4 / LE Advertising 帧并严密校验结构真实性
+fn try_dissect_usb_bluetooth(
+    payload: &[u8],
+) -> Option<crate::bluetooth_monitor::BluetoothDissectionInfo> {
+    if payload.len() < 6 {
+        return None;
+    }
+    // 剥离 Windows USBPcap 标准 URB 头部 (headerLen 小端 u16 通常为 27 或 28 字节)
+    let urb_slice = if payload.len() >= 28 {
+        let header_len = u16::from_le_bytes([payload[0], payload[1]]) as usize;
+        if (27..=64).contains(&header_len) && header_len < payload.len() {
+            &payload[header_len..]
+        } else {
+            payload
+        }
+    } else {
+        payload
+    };
+
+    let validate = |info: crate::bluetooth_monitor::BluetoothDissectionInfo| {
+        if matches!(
+            info.hci_type,
+            crate::bluetooth_monitor::HciPacketType::Unknown(_)
+        ) {
+            return None;
+        }
+        let has_semantic_feature = info.ble_adv_type.is_some()
+            || info.l2cap_cid.is_some()
+            || !info.security_alerts.is_empty();
+        if has_semantic_feature {
+            Some(info)
+        } else {
+            None
+        }
+    };
+
+    if let Some(info) = crate::bluetooth_monitor::parse_bluetooth_packet(urb_slice).and_then(validate)
+    {
+        return Some(info);
+    }
+
+    // 兼容 USB Bluetooth Interrupt Endpoint 直接负载 HCI Event (无 0x04 前导 H4 Indicator)
+    if urb_slice.len() >= 14 && urb_slice[0] == 0x3E && urb_slice[2] == 0x02 {
+        let mut h4_buf = Vec::with_capacity(1 + urb_slice.len());
+        h4_buf.push(0x04);
+        h4_buf.extend_from_slice(urb_slice);
+        return crate::bluetooth_monitor::parse_bluetooth_packet(&h4_buf).and_then(validate);
+    }
+
+    None
+}
+
 /// 启动 USB 嗅探引擎（双轨架构：支持驱动级 USBPcap URB 抓包与 Windows 原生 PnP 设备总线审计）
 pub fn start_usb_sniffer(app: tauri::AppHandle) -> Result<String, String> {
     {
-        let mut r = USB_RUNNING.lock().unwrap();
+        let mut r = crate::lock_guard::lock_mutex(&USB_RUNNING, "usb::start_usb_sniffer_flag");
         if *r {
             return Ok("[USB] USB 嗅探引擎已在运行中".into());
         }
@@ -1007,7 +1063,8 @@ pub fn start_usb_sniffer(app: tauri::AppHandle) -> Result<String, String> {
                 None => return,
             };
 
-            if let Ok(mut child_lock) = USB_CHILD.lock() {
+            {
+                let mut child_lock = crate::lock_guard::lock_mutex(&USB_CHILD, "usb::start_usb_sniffer_child");
                 *child_lock = Some(child);
             }
 
@@ -1016,7 +1073,7 @@ pub fn start_usb_sniffer(app: tauri::AppHandle) -> Result<String, String> {
             let mut reader = BufReader::new(stdout);
             let mut buf = [0u8; 1024];
 
-            while *running.lock().unwrap() {
+            while *crate::lock_guard::lock_mutex(&running, "usb::usbpcap_read_loop") {
                 match reader.read(&mut buf) {
                     Ok(n) if n > 0 => {
                         let payload = &buf[..n];
@@ -1044,8 +1101,9 @@ pub fn start_usb_sniffer(app: tauri::AppHandle) -> Result<String, String> {
 
                         let mut protocol = "USBPcap".to_string();
                         let mut summary_text = format!("USB URB 总线报文 [USBPcap1 -> Host] 长度: {}B", n);
+                        let ts_str = chrono::Local::now().format("%H:%M:%S.%3f").to_string();
 
-                        // 深度应用层规约剖析 (SCSI / HID / CDC)
+                        // 深度应用层规约剖析 (SCSI / HID / CDC / Bluetooth HCI)
                         if let Some(scsi) = dissect_usb_mass_storage(payload) {
                             protocol = "USB_SCSI".into();
                             summary_text = scsi.summary.clone();
@@ -1057,7 +1115,8 @@ pub fn start_usb_sniffer(app: tauri::AppHandle) -> Result<String, String> {
 
                             // 触发物理 BadUSB 行为审计器
                             let epoch_ms = (ts_ns / 1_000_000) as u64;
-                            if let Ok(mut auditor) = GLOBAL_BADUSB_AUDITOR.lock() {
+                            {
+                                let mut auditor = crate::lock_guard::lock_mutex(&GLOBAL_BADUSB_AUDITOR, "usb::badusb_audit_keystroke");
                                 if let Some(alert) = auditor.audit_keystroke(&kbd, epoch_ms) {
                                     entropy_level = "critical";
                                     summary_text = format!("[BADUSB 拦截] {}", alert.description);
@@ -1069,11 +1128,21 @@ pub fn start_usb_sniffer(app: tauri::AppHandle) -> Result<String, String> {
                             protocol = "USB_HID_MOUSE".into();
                             summary_text = mou.summary.clone();
                             b_map.insert("usb_hid_mouse".into(), serde_json::to_value(&mou).unwrap_or_default());
+                        } else if let Some(bt) = try_dissect_usb_bluetooth(payload) {
+                            protocol = "BLUETOOTH_HCI".into();
+                            summary_text = format!(
+                                "Bluetooth {:?} [{}]{}",
+                                bt.hci_type,
+                                bt.address,
+                                bt.device_name.as_deref().map(|d| format!(" ({})", d)).unwrap_or_default()
+                            );
+                            crate::bluetooth_monitor::record_bluetooth_packet(&bt, &ts_str);
+                            b_map.insert("bluetooth_hci".into(), serde_json::to_value(&bt).unwrap_or_default());
                         }
 
                         let record = PacketRecord {
                             id,
-                            timestamp: chrono::Local::now().format("%H:%M:%S.%3f").to_string(),
+                            timestamp: ts_str,
                             timestamp_ns: ts_ns,
                             direction: "USB_BUS".into(),
                             transport: "USB".into(),
@@ -1139,7 +1208,7 @@ fn start_native_usb_pnp_mode(app: tauri::AppHandle) -> Result<String, String> {
             .map(|d| (d.instance_id.clone(), d))
             .collect();
 
-        while *running.lock().unwrap() {
+        while *crate::lock_guard::lock_mutex(&running, "usb::pnp_poll_loop") {
             // 800ms 高灵敏度轮询周期 (SetupAPI DIGCF_PRESENT 耗时 < 2ms)
             std::thread::sleep(std::time::Duration::from_millis(800));
 

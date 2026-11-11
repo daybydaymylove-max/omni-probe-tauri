@@ -1,66 +1,68 @@
 <template>
-  <div v-if="isOpen && packet" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md">
-    <!-- 模态框主体 (Apple Glassmorphism 工业级弹窗) -->
-    <div class="w-full max-w-5xl max-h-[92vh] bg-white/95 backdrop-blur-2xl rounded-3xl border border-white/60 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+  <div v-if="isOpen && packet" class="fixed inset-0 z-50 flex items-center justify-center p-4 ui-modal-backdrop">
+    <div class="w-full max-w-5xl max-h-[92vh] ui-modal-surface rounded-3xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
       
-      <!-- 顶栏：报文元数据与关闭按钮 -->
-      <div class="px-6 py-4 border-b border-slate-200/60 bg-white/50 flex items-center justify-between shrink-0">
+      <!-- 顶栏：报文元数据与关闭按钮 (Liquid Glass) -->
+      <header class="ui-nav-glass border-b px-6 py-3.5 flex items-center justify-between shrink-0 flex-wrap gap-3">
         <div class="flex items-center gap-3">
-          <span class="w-3.5 h-3.5 rounded-full bg-blue-600 shadow-xs flex items-center justify-center">
-            <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
-          </span>
+          <span class="w-3 h-3 rounded-full bg-sky-500 shrink-0"></span>
           <div>
-            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <span>工业全景深度解剖器 (Packet Deep Inspector)</span>
-              <span class="text-xs font-mono text-slate-500 font-normal">#{{ packet.id }}</span>
-              <span class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/15 text-emerald-700 border border-emerald-500/30">
+            <h3 class="text-sm font-bold flex items-center gap-2 flex-wrap" style="color: var(--text-primary)">
+              <span>工业全景深度解剖器</span>
+              <span class="text-xs ui-num font-normal" style="color: var(--text-muted)">#{{ packet.id }}</span>
+              <span class="text-[11px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                 纯自主内生解析
               </span>
             </h3>
-            <div class="text-[11px] font-mono text-slate-500 flex items-center gap-2 mt-0.5">
-              <span>捕获时间: <strong>{{ packet.timestamp }}</strong></span>
-              <span>•</span>
-              <span>长度: <strong>{{ packet.length }}</strong> 字节</span>
-              <span>•</span>
-              <span>总线: <strong>{{ packet.transport }}</strong></span>
-              <span>•</span>
-              <span>规约: <strong class="text-blue-700">{{ packet.protocol }}</strong></span>
+            <div class="text-[11px] ui-num flex items-center gap-2 mt-0.5 flex-wrap" style="color: var(--text-muted)">
+              <span>捕获时间: <strong style="color: var(--text-secondary)">{{ packet.timestamp }}</strong></span>
+              <span>·</span>
+              <span>长度: <strong style="color: var(--text-secondary)">{{ packet.length }}</strong> 字节</span>
+              <span>·</span>
+              <span>总线: <strong style="color: var(--text-secondary)">{{ packet.transport }}</strong></span>
+              <span>·</span>
+              <span>规约: <strong class="text-blue-700 dark:text-sky-300">{{ packet.protocol }}</strong></span>
             </div>
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
-          <button @click="copyHex" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80 shadow-2xs transition-all cursor-pointer">
-            {{ isHexCopied ? '已复制 HEX ✓' : '复制 HEX' }}
+        <div class="flex items-center gap-2 flex-wrap">
+          <button @click="copyHex" class="ui-btn-secondary text-xs px-3 py-1.5 rounded-xl">
+            <AppIcon :name="isHexCopied ? 'check' : 'code'" :size="12" />
+            <span>{{ isHexCopied ? '已复制 HEX' : '复制 HEX' }}</span>
           </button>
-          <button @click="copyAscii" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/80 hover:bg-white text-slate-700 border border-slate-200/80 shadow-2xs transition-all cursor-pointer">
-            {{ isAsciiCopied ? '已复制 ASCII ✓' : '复制 ASCII' }}
+          <button @click="copyAscii" class="ui-btn-secondary text-xs px-3 py-1.5 rounded-xl">
+            <AppIcon :name="isAsciiCopied ? 'check' : 'document'" :size="12" />
+            <span>{{ isAsciiCopied ? '已复制 ASCII' : '复制 ASCII' }}</span>
           </button>
-          <button @click="$emit('replayPacket', packet)" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 border border-blue-200/80 shadow-2xs transition-all cursor-pointer">
-            L4 重放
+          <button @click="$emit('replayPacket', packet)" class="ui-btn-primary text-xs px-3 py-1.5 rounded-xl">
+            <AppIcon name="play" :size="12" />
+            <span>L4 重放</span>
           </button>
-          <button @click="$emit('saveBaseline', packet)" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-teal-500/10 hover:bg-teal-500/20 text-teal-800 border border-teal-200/80 shadow-2xs transition-all cursor-pointer">
-            存为基线
+          <button @click="$emit('saveBaseline', packet)" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-teal-500/15 hover:bg-teal-500/25 text-teal-700 dark:text-teal-300 border border-teal-500/30 transition-colors cursor-pointer flex items-center gap-1">
+            <AppIcon name="archive" :size="12" />
+            <span>存为基线</span>
           </button>
-          <button @click="$emit('close')" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer ml-2">
-            ✕
+          <button @click="$emit('close')" class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer ml-1" title="关闭">
+            <AppIcon name="close" :size="15" />
           </button>
         </div>
-      </div>
+      </header>
 
-      <!-- 选项卡切换 (苹果下划线微动效) -->
-      <div class="px-6 border-b border-slate-200/50 bg-slate-50/60 flex items-center gap-4 text-xs font-semibold shrink-0">
+      <!-- 选项卡切换 -->
+      <div class="px-6 border-b flex items-center gap-5 text-xs font-semibold shrink-0 overflow-x-auto" style="background: var(--surface-content-alt); border-color: var(--border-subtle)">
         <button v-for="tab in tabs" :key="tab.id" @click="selectTab(tab.id)"
           :class="[
-            'py-3 transition-all cursor-pointer border-b-2 flex items-center gap-2',
-            activeTab === tab.id ? 'border-blue-600 text-blue-700 font-bold' : 'border-transparent text-slate-500 hover:text-slate-800'
-          ]">
+            'py-3 transition-colors cursor-pointer border-b-2 flex items-center gap-2 shrink-0',
+            activeTab === tab.id ? 'border-sky-500 font-bold' : 'border-transparent hover:opacity-80'
+          ]"
+          :style="{ color: activeTab === tab.id ? 'var(--accent-primary-text)' : 'var(--text-muted)' }">
           <span>{{ tab.label }}</span>
           <span v-if="tab.badge" :class="[
-            'text-[9px] px-2 py-0.5 rounded-full font-mono font-bold border',
-            tab.id === 'native_tree' ? 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30' :
-            tab.id === 'tshark' ? 'bg-indigo-500/15 text-indigo-700 border-indigo-500/30' :
-            'bg-slate-200/60 text-slate-600 border-slate-300/60'
+            'text-[11px] px-2 py-0.5 rounded-full ui-num font-bold border',
+            tab.id === 'native_tree' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' :
+            tab.id === 'tshark' ? 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30' :
+            'ui-pill'
           ]">
             {{ tab.badge }}
           </span>
@@ -68,261 +70,248 @@
       </div>
 
       <!-- 模态框主体内容 -->
-      <div class="flex-1 overflow-auto custom-scrollbar p-6 min-h-[380px] max-h-[62vh]">
+      <div class="flex-1 overflow-auto custom-scrollbar p-6 min-h-[380px] max-h-[62vh]" style="background: var(--surface-content)">
         
-        <!-- =================================================================== -->
-        <!-- 选项卡 1：自研全协议原生逐层解剖树 (OSI 7 层展开) - 离线内网核心主力 -->
-        <!-- =================================================================== -->
-        <div v-if="activeTab === 'native_tree'" class="space-y-3 font-mono text-xs">
-          <!-- 顶部状态提示：标明纯内生自主运行，零网络依赖 -->
-          <div class="bg-gradient-to-r from-emerald-50/90 to-teal-50/90 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-emerald-200/80 flex items-center justify-between text-xs">
-            <div class="flex items-center gap-2 text-emerald-900">
-              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <!-- 选项卡 1：自研全协议原生逐层解剖树 -->
+        <div v-if="activeTab === 'native_tree'" class="space-y-3 text-xs">
+          <div class="px-4 py-2.5 rounded-2xl border bg-emerald-500/10 border-emerald-500/25 flex items-center justify-between text-xs flex-wrap gap-2">
+            <div class="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
               <span class="font-bold">自主内生全协议状态机解构中</span>
-              <span class="text-emerald-700 font-normal">· 无需第三方驱动/工具 · 纯 Rust 微秒级深度解析</span>
+              <span class="font-normal opacity-80">· 无需第三方工具 · 纯 Rust 深度解析</span>
             </div>
-            <div class="text-[11px] text-emerald-800/80">
+            <div class="text-[11px] ui-num text-emerald-700 dark:text-emerald-300">
               <span>协议层级: <strong>{{ nativeProtocolLayers.length }}</strong> 层</span>
-              <span class="mx-2">•</span>
+              <span class="mx-2">·</span>
               <span>解析字段: <strong>{{ totalNativeFieldsCount }}</strong> 项</span>
             </div>
           </div>
 
-          <!-- OSI 逐层折叠树 -->
           <div class="space-y-2.5">
-            <div v-for="layer in nativeProtocolLayers" :key="layer.id"
-              class="bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200/80 overflow-hidden shadow-2xs transition-all">
-              
-              <!-- 协议层头部栏 -->
+            <div v-for="layer in nativeProtocolLayers" :key="layer.id" class="ui-content-card overflow-hidden">
               <div @click="toggleNativeLayer(layer.id)"
-                class="px-4 py-3 bg-slate-50/80 hover:bg-slate-100/80 border-b border-slate-200/50 flex items-center justify-between cursor-pointer transition-colors select-none">
-                <div class="flex items-center gap-3">
-                  <span class="text-slate-400 font-mono text-xs">{{ expandedNativeLayers[layer.id] ? '▼' : '▶' }}</span>
-                  <span :class="['px-2 py-0.5 rounded-lg text-[10px] font-bold tracking-wider uppercase', layer.badgeClass]">
+                class="px-4 py-3 border-b flex items-center justify-between cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors select-none"
+                style="background: var(--surface-content-alt); border-color: var(--border-subtle)">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <AppIcon :name="expandedNativeLayers[layer.id] ? 'chevron-down' : 'chevron-right'" :size="14" style="color: var(--text-muted)" />
+                  <span :class="['px-2 py-0.5 rounded-lg text-[11px] font-bold tracking-wider uppercase border', layer.badgeClass]">
                     {{ layer.badge }}
                   </span>
-                  <span class="font-bold text-slate-800 text-xs">{{ layer.title }}</span>
-                  <span class="text-slate-400 text-[11px] font-normal hidden sm:inline">{{ layer.subtitle }}</span>
+                  <span class="font-bold text-xs" style="color: var(--text-primary)">{{ layer.title }}</span>
+                  <span class="text-[11px] font-normal hidden sm:inline truncate" style="color: var(--text-muted)">{{ layer.subtitle }}</span>
                 </div>
-                <div class="flex items-center gap-2">
-                  <span v-if="layer.warning" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-700 border border-rose-500/30">
+                <div class="flex items-center gap-2 shrink-0">
+                  <span v-if="layer.warning" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30">
                     {{ layer.warning }}
                   </span>
-                  <span class="text-[10px] text-slate-400 font-mono">
+                  <span class="text-[11px] ui-num" style="color: var(--text-muted)">
                     {{ layer.fields.length }} 个参数
                   </span>
                 </div>
               </div>
 
-              <!-- 协议层详细字段网格 -->
-              <div v-if="expandedNativeLayers[layer.id]" class="p-3 bg-white/50">
+              <div v-if="expandedNativeLayers[layer.id]" class="p-3">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <div v-for="field in layer.fields" :key="field.name"
-                    class="bg-white/90 p-2.5 rounded-xl border border-slate-200/60 hover:border-blue-300 transition-colors flex flex-col gap-1 shadow-2xs">
+                    class="ui-sub-card p-2.5 hover:border-sky-500/40 transition-colors flex flex-col gap-1">
                     <div class="flex items-center justify-between text-[11px]">
-                      <span class="text-slate-500 font-semibold">{{ field.label }}</span>
-                      <span class="text-[10px] font-mono text-slate-400 uppercase">{{ field.name }}</span>
+                      <span class="font-semibold" style="color: var(--text-secondary)">{{ field.label }}</span>
+                      <span class="text-[11px] ui-num uppercase" style="color: var(--text-muted)">{{ field.name }}</span>
                     </div>
                     <div class="flex items-center justify-between gap-2 mt-0.5">
-                      <span :class="['font-mono font-bold text-xs break-all select-text', field.highlightClass || 'text-slate-800']">
+                      <span :class="['ui-num font-bold text-xs break-all select-text', field.highlightClass || '']" :style="!field.highlightClass ? { color: 'var(--text-primary)' } : undefined">
                         {{ field.value }}
                       </span>
-                      <span v-if="field.hexDesc" class="text-[10px] text-slate-400 font-mono shrink-0">
+                      <span v-if="field.hexDesc" class="text-[11px] ui-num shrink-0" style="color: var(--text-muted)">
                         {{ field.hexDesc }}
                       </span>
                     </div>
-                    <div v-if="field.extraNote" class="text-[10px] text-slate-500 bg-slate-50 px-2 py-1 rounded mt-0.5">
+                    <div v-if="field.extraNote" class="text-[11px] px-2 py-1 rounded mt-0.5" style="background: var(--surface-content); color: var(--text-secondary)">
                       {{ field.extraNote }}
                     </div>
                   </div>
                 </div>
               </div>
-
             </div>
           </div>
         </div>
 
-        <!-- =================================================================== -->
-        <!-- 选项卡 2：16 字节对齐 HexDump + ASCII (暗夜微光磨砂终端) -->
-        <!-- =================================================================== -->
+        <!-- 选项卡 2：16 字节对齐 HexDump + ASCII -->
         <div v-else-if="activeTab === 'hexdump'" class="h-full flex flex-col gap-2">
-          <div class="flex items-center justify-between text-xs text-slate-500 font-mono">
+          <div class="flex items-center justify-between text-xs ui-num" style="color: var(--text-muted)">
             <span>标准 16 字节边界对齐物理转储 (Offset | 00..07 08..0F | ASCII)</span>
             <span>载荷长度: {{ cleanHex.length / 2 }} Bytes</span>
           </div>
 
-          <div class="flex-1 bg-slate-900/90 backdrop-blur-xl text-slate-100 p-4 rounded-2xl font-mono text-xs overflow-auto border border-white/10 shadow-inner">
-            <div class="text-slate-500 font-bold border-b border-slate-800 pb-1 mb-2 select-none">
+          <div class="flex-1 ui-sub-card p-4 font-mono-code text-xs overflow-auto select-text">
+            <div class="font-bold border-b pb-1.5 mb-2 select-none" style="color: var(--text-muted); border-color: var(--border-subtle)">
               偏移量 | 00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F | ASCII 文本解析
             </div>
-            <div v-for="(line, idx) in formattedHexLines" :key="idx" class="leading-relaxed hover:bg-white/5 px-1 rounded transition-colors">
-              <span class="text-slate-500">{{ line.offset }} | </span>
-              <span class="text-emerald-400 font-semibold">{{ line.part1 }} </span>
-              <span class="text-slate-600"> </span>
-              <span class="text-teal-300 font-semibold">{{ line.part2 }} | </span>
-              <span class="text-sky-300">{{ line.ascii }}</span>
+            <div v-for="(line, idx) in formattedHexLines" :key="idx" class="leading-relaxed hover:bg-black/5 dark:hover:bg-white/5 px-1 rounded transition-colors">
+              <span style="color: var(--text-muted)">{{ line.offset }} | </span>
+              <span class="text-emerald-700 dark:text-emerald-400 font-semibold">{{ line.part1 }} </span>
+              <span style="color: var(--border-strong)"> </span>
+              <span class="text-teal-700 dark:text-teal-300 font-semibold">{{ line.part2 }} | </span>
+              <span class="text-sky-700 dark:text-sky-300">{{ line.ascii }}</span>
             </div>
-            <div v-if="formattedHexLines.length === 0" class="text-slate-500 text-center py-12">
-              该数据包无应用层载荷 (仅包含物理/链路层握手控制元数据)
-            </div>
+            <EmptyState
+              v-if="formattedHexLines.length === 0"
+              class="py-10"
+              icon="code"
+              title="无应用层载荷"
+              description="该数据包仅包含物理层与链路层握手控制元数据。"
+            />
           </div>
         </div>
 
-        <!-- 选项卡 2：分层报头树 (L2-L4) (苹果毛玻璃折叠卡片) -->
-        <div v-else-if="activeTab === 'layers'" class="space-y-4 font-mono text-xs">
-          <!-- L2 链路层 -->
-          <div class="bg-white/70 backdrop-blur-md p-4 rounded-2xl border border-white/80 shadow-2xs">
-            <div class="font-bold text-slate-900 text-sm mb-2 flex items-center gap-2">
+        <!-- 选项卡 3：分层报头树 (L2-L4) -->
+        <div v-else-if="activeTab === 'layers'" class="space-y-4 ui-num text-xs select-text">
+          <div class="ui-content-card p-4">
+            <div class="font-bold text-sm mb-2.5 flex items-center gap-2 font-sans" style="color: var(--text-primary)">
               <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
               <span>Layer 2: Data Link Layer (数据链路层 / 以太网)</span>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-slate-600">
-              <div>源 MAC: <strong class="text-slate-900 block font-mono">{{ packet.mac_src || '00:00:00:00:00:00' }}</strong></div>
-              <div>目的 MAC: <strong class="text-slate-900 block font-mono">{{ packet.mac_dst || '00:00:00:00:00:00' }}</strong></div>
-              <div>以太网类型: <strong class="text-slate-900 block">IPv4 (0x0800)</strong></div>
-              <div>帧总长度: <strong class="text-slate-900 block">{{ packet.length }} Bytes</strong></div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3" style="color: var(--text-secondary)">
+              <div>源 MAC: <strong class="block font-bold" style="color: var(--text-primary)">{{ packet.mac_src || '00:00:00:00:00:00' }}</strong></div>
+              <div>目的 MAC: <strong class="block font-bold" style="color: var(--text-primary)">{{ packet.mac_dst || '00:00:00:00:00:00' }}</strong></div>
+              <div>以太网类型: <strong class="block font-bold" style="color: var(--text-primary)">IPv4 (0x0800)</strong></div>
+              <div>帧总长度: <strong class="block font-bold" style="color: var(--text-primary)">{{ packet.length }} Bytes</strong></div>
             </div>
           </div>
 
-          <!-- L3 网络层 -->
-          <div class="bg-white/70 backdrop-blur-md p-4 rounded-2xl border border-white/80 shadow-2xs">
-            <div class="font-bold text-slate-900 text-sm mb-2 flex items-center gap-2">
+          <div class="ui-content-card p-4">
+            <div class="font-bold text-sm mb-2.5 flex items-center gap-2 font-sans" style="color: var(--text-primary)">
               <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
               <span>Layer 3: Internet Protocol (网络层 / IPv4)</span>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-slate-600">
-              <div>源 IP: <strong class="text-blue-700 block font-bold font-mono" :title="formatRemoteIp(packet)">{{ formatRemoteIp(packet) }}</strong></div>
-              <div>目的 IP: <strong class="text-blue-700 block font-bold font-mono">{{ packet.dst_ip }}</strong></div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3" style="color: var(--text-secondary)">
+              <div>源 IP: <strong class="text-blue-700 dark:text-sky-300 block font-bold" :title="formatRemoteIp(packet)">{{ formatRemoteIp(packet) }}</strong></div>
+              <div>目的 IP: <strong class="text-blue-700 dark:text-sky-300 block font-bold">{{ packet.dst_ip }}</strong></div>
               <div>信息熵 (Entropy): 
-                <strong :class="packet.entropy >= 7.5 ? 'text-rose-600 font-bold block' : 'text-slate-900 block'">
+                <strong :class="packet.entropy >= 7.5 ? 'text-rose-700 dark:text-rose-400 font-bold block' : 'font-bold block'" :style="packet.entropy < 7.5 ? { color: 'var(--text-primary)' } : undefined">
                   {{ packet.entropy ? packet.entropy.toFixed(3) : '0.000' }} ({{ packet.entropy_level }})
                 </strong>
               </div>
-              <div>防篡改哈希: <span class="text-[10px] text-slate-500 block truncate" :title="packet.chain_hash">{{ packet.chain_hash }}</span></div>
+              <div>防篡改哈希: <span class="text-[11px] block truncate" style="color: var(--text-muted)" :title="packet.chain_hash">{{ packet.chain_hash }}</span></div>
             </div>
             <div v-if="packet.business_data?.src_geo || packet.business_data?.src_zone"
-              class="mt-3 pt-3 border-t border-slate-200/60 grid grid-cols-2 md:grid-cols-4 gap-3 text-slate-600">
-              <div>源 IP 归属地: <strong class="text-slate-900 block">{{ packet.business_data?.src_geo || '未知' }}</strong></div>
-              <div>安全域划分: <strong class="text-indigo-700 block">{{ packet.business_data?.src_zone || '未划分' }}</strong></div>
-              <div>网络运营商 (ISP): <strong class="text-slate-900 block">{{ packet.business_data?.src_isp || 'N/A' }}</strong></div>
-              <div>目的端安全域: <strong class="text-slate-900 block">{{ packet.business_data?.dst_zone || '未划分' }}</strong></div>
+              class="mt-3 pt-3 border-t grid grid-cols-2 md:grid-cols-4 gap-3" style="border-color: var(--border-subtle); color: var(--text-secondary)">
+              <div>源 IP 归属地: <strong class="block" style="color: var(--text-primary)">{{ packet.business_data?.src_geo || '未知' }}</strong></div>
+              <div>安全域划分: <strong class="text-indigo-700 dark:text-indigo-300 block">{{ packet.business_data?.src_zone || '未划分' }}</strong></div>
+              <div>网络运营商 (ISP): <strong class="block" style="color: var(--text-primary)">{{ packet.business_data?.src_isp || 'N/A' }}</strong></div>
+              <div>目的端安全域: <strong class="block" style="color: var(--text-primary)">{{ packet.business_data?.dst_zone || '未划分' }}</strong></div>
             </div>
           </div>
 
-          <!-- L4 传输层 -->
-          <div class="bg-white/70 backdrop-blur-md p-4 rounded-2xl border border-white/80 shadow-2xs">
-            <div class="font-bold text-slate-900 text-sm mb-2 flex items-center gap-2">
+          <div class="ui-content-card p-4">
+            <div class="font-bold text-sm mb-2.5 flex items-center gap-2 font-sans" style="color: var(--text-primary)">
               <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
               <span>Layer 4: Transport Layer (传输层 / {{ packet.transport }})</span>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-slate-600">
-              <div>传输协议: <strong class="text-indigo-700 block font-bold">{{ packet.transport }}</strong></div>
-              <div>源端口 (R-Port/Sport): <strong class="text-slate-900 block font-bold">{{ packet.src_port }}</strong></div>
-              <div>目的端口 (L-Port/Dport): <strong class="text-slate-900 block font-bold">{{ packet.dst_port }}</strong></div>
-              <div>规约特征: <strong class="text-emerald-700 block font-bold">{{ packet.protocol }}</strong></div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3" style="color: var(--text-secondary)">
+              <div>传输协议: <strong class="text-indigo-700 dark:text-indigo-300 block font-bold">{{ packet.transport }}</strong></div>
+              <div>源端口: <strong class="block font-bold" style="color: var(--text-primary)">{{ packet.src_port }}</strong></div>
+              <div>目的端口: <strong class="block font-bold" style="color: var(--text-primary)">{{ packet.dst_port }}</strong></div>
+              <div>规约特征: <strong class="text-emerald-700 dark:text-emerald-400 block font-bold">{{ packet.protocol }}</strong></div>
             </div>
           </div>
         </div>
 
-        <!-- 选项卡 3：原生工控与通用规约解析字典 -->
+        <!-- 选项卡 4：原生工控与通用规约解析字典 -->
         <div v-else-if="activeTab === 'dissection'" class="h-full">
-          <div v-if="packet.business_data && Object.keys(packet.business_data).length > 0"
-            class="bg-white/70 backdrop-blur-md rounded-2xl p-5 border border-white/80 shadow-2xs">
-            <div class="font-bold text-slate-900 text-sm mb-3 border-b border-slate-200/60 pb-2 flex items-center justify-between">
+          <div v-if="packet.business_data && Object.keys(packet.business_data).length > 0" class="ui-content-card p-5">
+            <div class="font-bold text-sm mb-3 border-b pb-2 flex items-center justify-between" style="color: var(--text-primary); border-color: var(--border-subtle)">
               <span>{{ packet.protocol }} 原生 Rust 规约字典解析明细</span>
-              <span class="text-xs font-normal text-slate-400">共 {{ Object.keys(packet.business_data).length }} 项字段</span>
+              <span class="text-xs font-normal ui-num" style="color: var(--text-muted)">共 {{ Object.keys(packet.business_data).length }} 项字段</span>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-xs">
-              <div v-for="(val, key) in packet.business_data" :key="key"
-                class="bg-white/90 backdrop-blur-sm p-3 rounded-xl border border-slate-200/70 flex flex-col gap-1 shadow-2xs">
-                <span class="text-slate-400 text-[10px] uppercase font-bold tracking-wider">{{ key }}</span>
-                <span class="text-slate-800 font-bold text-sm break-all">{{ val }}</span>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 ui-num text-xs select-text">
+              <div v-for="(val, key) in packet.business_data" :key="key" class="ui-sub-card p-3 flex flex-col gap-1">
+                <span class="text-[11px] uppercase font-bold tracking-wider" style="color: var(--text-muted)">{{ key }}</span>
+                <span class="font-bold text-sm break-all" style="color: var(--text-primary)">{{ val }}</span>
               </div>
             </div>
           </div>
-          <div v-else class="flex flex-col items-center justify-center h-full text-slate-400 text-xs py-16 gap-2">
-            <span>该数据包未匹配到原生专精规约字典，或载荷属于特种非标编码</span>
-            <button @click="selectTab('tshark')" class="mt-2 px-3.5 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 font-semibold border border-indigo-200 transition-all cursor-pointer">
-              一键调用【Wireshark 3000+ 全量通用解剖引擎】剖析 ➔
-            </button>
-          </div>
+          <EmptyState
+            v-else
+            class="py-14"
+            icon="layers"
+            title="未匹配原生专精规约字典"
+            description="载荷可能属于非标编码，可调用 Wireshark 全量通用解剖引擎继续探测。"
+          >
+            <template #actions>
+              <button @click="selectTab('tshark')" class="ui-btn-secondary text-xs">
+                <span>切换至 Wireshark 全量通用解剖引擎</span>
+                <AppIcon name="arrow-right" :size="12" />
+              </button>
+            </template>
+          </EmptyState>
         </div>
 
-        <!-- 选项卡 4：Wireshark 3000+ 官方全量解剖树 (双轨万能桥接引擎) -->
-        <!-- =================================================================== -->
+        <!-- 选项卡 5：Wireshark 3000+ 官方全量解剖树 -->
         <div v-else-if="activeTab === 'tshark'" class="space-y-4">
-          <!-- 引擎状态仪表盘 -->
-          <div class="bg-gradient-to-r from-indigo-50/80 to-blue-50/80 backdrop-blur-md p-4 rounded-2xl border border-indigo-200/60 flex items-center justify-between">
+          <div class="ui-sub-card p-4 flex items-center justify-between flex-wrap gap-3">
             <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-md">
+              <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
                 WS
               </div>
               <div>
-                <div class="text-xs font-bold text-slate-900 flex items-center gap-2">
+                <div class="text-xs font-bold flex items-center gap-2 flex-wrap" style="color: var(--text-primary)">
                   <span>Wireshark / TShark 官方全量解剖引擎</span>
-                  <span v-if="tsharkStatus?.is_available" class="text-[10px] bg-emerald-500/15 text-emerald-700 px-2 py-0.5 rounded-full font-mono font-bold border border-emerald-500/30">
+                  <span v-if="tsharkStatus?.is_available" class="text-[11px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full ui-num font-bold border border-emerald-500/30">
                     引擎在线 (3,200+ 规约库)
                   </span>
-                  <span v-else class="text-[10px] bg-amber-500/15 text-amber-700 px-2 py-0.5 rounded-full font-mono font-bold border border-amber-500/30">
-                    未检测到引擎 (当前处于纯离线自研引擎接管态)
+                  <span v-else class="text-[11px] bg-amber-500/15 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full ui-num font-bold border border-amber-500/30">
+                    未检测到引擎 (纯离线自研引擎接管)
                   </span>
                 </div>
-                <div class="text-[11px] text-slate-500 font-mono mt-0.5">
-                  {{ tsharkStatus?.version || 'TShark 检测中...' }} · 跨进程纯内存管道 (零 GPL 污染 · 零 C 崩溃隐患)
+                <div class="text-[11px] ui-num mt-0.5" style="color: var(--text-muted)">
+                  {{ tsharkStatus?.version || 'TShark 检测中...' }} · 跨进程纯内存管道
                 </div>
               </div>
             </div>
 
-            <div class="flex items-center gap-2">
-              <button @click="runTsharkDissection" :disabled="tsharkLoading || !tsharkStatus?.is_available"
-                class="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5">
-                <span v-if="tsharkLoading" class="animate-spin">⟳</span>
-                <span>{{ tsharkLoading ? '正在解剖...' : '重新全量解剖' }}</span>
-              </button>
-            </div>
+            <button @click="runTsharkDissection" :disabled="tsharkLoading || !tsharkStatus?.is_available" class="ui-btn-primary text-xs px-3.5 py-1.5 rounded-xl">
+              <AppIcon name="refresh" :size="12" :class="tsharkLoading ? 'animate-spin' : ''" />
+              <span>{{ tsharkLoading ? '正在解剖...' : '重新全量解剖' }}</span>
+            </button>
           </div>
 
-          <!-- 解剖结果展示区 -->
-          <div v-if="tsharkLoading" class="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">
-            <div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-            <span class="text-xs font-mono">正在通过内存管道调用 Wireshark 3000+ 解剖器...</span>
+          <div v-if="tsharkLoading" class="flex flex-col items-center justify-center py-16 gap-3" style="color: var(--text-muted)">
+            <div class="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
+            <span class="text-xs ui-num">正在通过内存管道调用 Wireshark 解剖器...</span>
           </div>
 
           <div v-else-if="tsharkResult && tsharkResult.success" class="space-y-3">
-            <!-- 概要卡片 -->
-            <div class="bg-white/80 backdrop-blur-md px-4 py-2.5 rounded-xl border border-slate-200/80 flex items-center justify-between text-xs font-mono">
-              <span class="text-slate-700 font-semibold">{{ tsharkResult.summary_text }}</span>
-              <span class="text-slate-400 text-[11px]">执行耗时: <strong>{{ tsharkResult.execution_time_ms }}</strong> ms</span>
+            <div class="ui-sub-card px-4 py-2.5 flex items-center justify-between text-xs ui-num">
+              <span class="font-semibold" style="color: var(--text-primary)">{{ tsharkResult.summary_text }}</span>
+              <span class="text-[11px]" style="color: var(--text-muted)">执行耗时: <strong>{{ tsharkResult.execution_time_ms }}</strong> ms</span>
             </div>
 
-            <!-- 分层折叠树 -->
             <div class="space-y-2.5">
-              <div v-for="(layerData, layerName) in tsharkResult.layers" :key="layerName"
-                class="bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200/80 overflow-hidden shadow-2xs">
-                
-                <!-- 协议层头部折叠开关 -->
+              <div v-for="(layerData, layerName) in tsharkResult.layers" :key="layerName" class="ui-content-card overflow-hidden">
                 <div @click="toggleLayerExpand(String(layerName))"
-                  class="px-4 py-2.5 bg-slate-50/70 hover:bg-slate-100/70 border-b border-slate-200/50 flex items-center justify-between cursor-pointer transition-colors">
-                  <div class="flex items-center gap-2 text-xs font-bold text-slate-800 font-mono">
-                    <span class="text-slate-400 select-none">{{ expandedLayers[String(layerName)] ? '▼' : '▶' }}</span>
-                    <span class="text-blue-700 uppercase">{{ layerName }}</span>
-                    <span class="text-[11px] font-normal text-slate-500">协议层</span>
+                  class="px-4 py-2.5 hover:bg-black/5 dark:hover:bg-white/5 border-b flex items-center justify-between cursor-pointer transition-colors"
+                  style="background: var(--surface-content-alt); border-color: var(--border-subtle)">
+                  <div class="flex items-center gap-2 text-xs font-bold ui-num" style="color: var(--text-primary)">
+                    <AppIcon :name="expandedLayers[String(layerName)] ? 'chevron-down' : 'chevron-right'" :size="13" style="color: var(--text-muted)" />
+                    <span class="text-blue-700 dark:text-sky-300 uppercase">{{ layerName }}</span>
+                    <span class="text-[11px] font-normal font-sans" style="color: var(--text-muted)">协议层</span>
                   </div>
-                  <span class="text-[10px] text-slate-400 font-mono">
+                  <span class="text-[11px] ui-num" style="color: var(--text-muted)">
                     {{ isObject(layerData) ? Object.keys(layerData).length + ' 项属性' : '基础标量' }}
                   </span>
                 </div>
 
-                <!-- 协议层字段展开明细 -->
-                <div v-if="expandedLayers[String(layerName)]" class="p-3 text-xs font-mono bg-white/40">
+                <div v-if="expandedLayers[String(layerName)]" class="p-3 text-xs ui-num">
                   <div v-if="isObject(layerData)" class="space-y-1">
                     <div v-for="(val, field) in layerData" :key="field"
-                      class="grid grid-cols-1 md:grid-cols-3 gap-2 py-1 px-2 rounded hover:bg-slate-50 transition-colors border-b border-slate-100/60 last:border-0">
-                      <span class="text-slate-500 text-[11px] font-semibold truncate" :title="String(field)">{{ field }}</span>
-                      <span class="col-span-2 text-slate-800 break-all select-text font-mono text-[11px]">{{ formatLayerValue(val) }}</span>
+                      class="grid grid-cols-1 md:grid-cols-3 gap-2 py-1 px-2 rounded hover:bg-black/5 dark:hover:bg-white/5 transition-colors border-b last:border-0"
+                      style="border-color: var(--border-subtle)">
+                      <span class="text-[11px] font-semibold truncate" style="color: var(--text-muted)" :title="String(field)">{{ field }}</span>
+                      <span class="col-span-2 break-all select-text text-[11px]" style="color: var(--text-primary)">{{ formatLayerValue(val) }}</span>
                     </div>
                   </div>
-                  <div v-else class="text-slate-700 p-2 break-all select-text">
+                  <div v-else class="p-2 break-all select-text" style="color: var(--text-primary)">
                     {{ layerData }}
                   </div>
                 </div>
@@ -330,34 +319,35 @@
             </div>
           </div>
 
-          <!-- 未安装或离线环境提示 -->
-          <div v-else
-            class="bg-slate-50/90 border border-slate-200 rounded-2xl p-6 text-center space-y-2">
-            <div class="text-slate-700 font-bold text-sm">当前处于纯自主内生解析模式</div>
-            <div class="text-xs text-slate-500 font-mono">
-              宿主机未安装 Wireshark 或处于纯离线内网隔离环境。系统的所有采集、解析、威胁阻断、时序基线均由自研纯 Rust 原生引擎 100% 独立承担，无需外置工具。
-            </div>
-            <div class="pt-2">
-              <button @click="selectTab('native_tree')" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-sm transition-all cursor-pointer">
-                返回查看【自研全协议原生逐层解剖树】 ➔
+          <EmptyState
+            v-else
+            class="py-10"
+            icon="cpu"
+            title="当前处于纯自主内生解析模式"
+            description="宿主机未安装 Wireshark 或处于隔离环境，所有采集、解析与时序基线均由自研纯 Rust 原生引擎独立完成。"
+          >
+            <template #actions>
+              <button @click="selectTab('native_tree')" class="ui-btn-primary text-xs">
+                <span>查看自研原生逐层解剖树</span>
+                <AppIcon name="arrow-right" :size="12" />
               </button>
-            </div>
-          </div>
+            </template>
+          </EmptyState>
         </div>
 
       </div>
 
       <!-- 底栏状态汇总 -->
-      <div class="px-6 py-3 border-t border-slate-200/60 bg-slate-50/50 flex items-center justify-between text-[11px] text-slate-500 font-mono shrink-0">
+      <footer class="px-6 py-3 border-t flex items-center justify-between text-[11px] ui-num shrink-0 flex-wrap gap-2" style="background: var(--surface-content-alt); border-color: var(--border-subtle); color: var(--text-muted)">
         <div class="flex items-center gap-2">
-          <span>防篡改哈希: <strong class="text-slate-700 font-normal truncate max-w-[280px] inline-block align-bottom" :title="packet.chain_hash">{{ packet.chain_hash }}</strong></span>
+          <span>防篡改哈希: <strong class="font-normal truncate max-w-[280px] inline-block align-bottom" style="color: var(--text-primary)" :title="packet.chain_hash">{{ packet.chain_hash }}</strong></span>
         </div>
         <div class="flex items-center gap-3">
-          <span>信息熵: <strong>{{ packet.entropy ? packet.entropy.toFixed(3) : '0.000' }}</strong> ({{ packet.entropy_level }})</span>
-          <span>•</span>
-          <span class="text-emerald-700 font-semibold">自研纯 Rust 内核运行正常</span>
+          <span>信息熵: <strong style="color: var(--text-primary)">{{ packet.entropy ? packet.entropy.toFixed(3) : '0.000' }}</strong> ({{ packet.entropy_level }})</span>
+          <span>·</span>
+          <span class="text-emerald-700 dark:text-emerald-400 font-semibold">自研纯 Rust 内核运行正常</span>
         </div>
-      </div>
+      </footer>
 
     </div>
   </div>
@@ -366,6 +356,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import AppIcon from './AppIcon.vue';
+import EmptyState from './EmptyState.vue';
 interface PacketRecord {
   id: number;
   timestamp: string;
@@ -379,6 +371,7 @@ interface PacketRecord {
   dst_port: number;
   length: number;
   payload_hex: string;
+  raw_frame_hex?: string;
   entropy: number;
   entropy_level: string;
   mac_src: string;
@@ -453,32 +446,98 @@ interface NativeLayer {
   fields: NativeField[];
 }
 
+interface RealParsedHeaders {
+  ipTtl?: number;
+  ipTotalLen?: number;
+  ipFlagsDesc?: string;
+  tcpSeq?: number;
+  tcpAck?: number;
+  tcpFlagsDesc?: string;
+  tcpWindow?: number;
+  tcpChecksumHex?: string;
+}
+
+function parseRealEthernetHeaders(rawFrameHex?: string): RealParsedHeaders {
+  if (!rawFrameHex) return {};
+  const cleaned = rawFrameHex.replace(/\s+/g, '');
+  if (cleaned.length < 68) return {}; // 至少 14B Ethernet + 20B IPv4
+  const bytes: number[] = [];
+  for (let i = 0; i + 1 < cleaned.length; i += 2) {
+    const v = parseInt(cleaned.slice(i, i + 2), 16);
+    if (Number.isNaN(v)) return {};
+    bytes.push(v);
+  }
+  if (bytes.length < 34) return {};
+  const isVlan = bytes[12] === 0x81 && bytes[13] === 0x00;
+  const ethLen = isVlan ? 18 : 14;
+  if (bytes.length < ethLen + 20) return {};
+  const etherType = (bytes[ethLen - 2] << 8) | bytes[ethLen - 1];
+  if (etherType !== 0x0800) return {}; // 仅解析 IPv4 首部
+
+  const ipVer = bytes[ethLen] >> 4;
+  const ihl = (bytes[ethLen] & 0x0f) * 4;
+  if (ipVer !== 4 || ihl < 20 || bytes.length < ethLen + ihl) return {};
+
+  const ipTotalLen = (bytes[ethLen + 2] << 8) | bytes[ethLen + 3];
+  const flagsBits = (bytes[ethLen + 6] >> 5) & 0x07;
+  const ipFlagsDesc = (flagsBits & 0x02) !== 0
+    ? "0x02 (Don't Fragment / DF)"
+    : ((flagsBits & 0x01) !== 0 ? '0x01 (More Fragments / MF)' : `0x${flagsBits.toString(16).padStart(2, '0')}`);
+  const ipTtl = bytes[ethLen + 8];
+  const ipProto = bytes[ethLen + 9];
+
+  const out: RealParsedHeaders = { ipTtl, ipTotalLen, ipFlagsDesc };
+  if (ipProto === 6 && bytes.length >= ethLen + ihl + 20) {
+    const tcpOff = ethLen + ihl;
+    const tcpSeq = (((bytes[tcpOff + 4] << 24) | (bytes[tcpOff + 5] << 16) | (bytes[tcpOff + 6] << 8) | bytes[tcpOff + 7]) >>> 0);
+    const tcpAck = (((bytes[tcpOff + 8] << 24) | (bytes[tcpOff + 9] << 16) | (bytes[tcpOff + 10] << 8) | bytes[tcpOff + 11]) >>> 0);
+    const rawFlags = bytes[tcpOff + 13];
+    const flagNames: string[] = [];
+    if (rawFlags & 0x01) flagNames.push('FIN');
+    if (rawFlags & 0x02) flagNames.push('SYN');
+    if (rawFlags & 0x04) flagNames.push('RST');
+    if (rawFlags & 0x08) flagNames.push('PSH');
+    if (rawFlags & 0x10) flagNames.push('ACK');
+    if (rawFlags & 0x20) flagNames.push('URG');
+    const tcpFlagsDesc = flagNames.length > 0 ? `${flagNames.join(', ')} (0x${rawFlags.toString(16).padStart(2, '0')})` : `0x${rawFlags.toString(16).padStart(2, '0')}`;
+    const tcpWindow = (bytes[tcpOff + 14] << 8) | bytes[tcpOff + 15];
+    const tcpChecksumHex = `0x${((bytes[tcpOff + 16] << 8) | bytes[tcpOff + 17]).toString(16).toUpperCase().padStart(4, '0')}`;
+    out.tcpSeq = tcpSeq;
+    out.tcpAck = tcpAck;
+    out.tcpFlagsDesc = tcpFlagsDesc;
+    out.tcpWindow = tcpWindow;
+    out.tcpChecksumHex = tcpChecksumHex;
+  }
+  return out;
+}
+
 const nativeProtocolLayers = computed<NativeLayer[]>(() => {
   const p = props.packet;
   if (!p) return [];
 
   const layers: NativeLayer[] = [];
   const bdata = p.business_data || {};
+  const parsedHdr = parseRealEthernetHeaders(p.raw_frame_hex);
 
   // ---------------------------------------------------------------------------
   // 1. Frame 物理与时间戳元数据层
   // ---------------------------------------------------------------------------
   const frameFields: NativeField[] = [
-    { name: 'frame.number', label: '全局报文序号 (ID)', value: `#${p.id}`, highlightClass: 'text-blue-700' },
+    { name: 'frame.number', label: '全局报文序号 (ID)', value: `#${p.id}`, highlightClass: 'text-blue-700 dark:text-sky-300' },
     { name: 'frame.time', label: '系统捕获绝对时间', value: p.timestamp },
     { name: 'frame.time_ns', label: '纳秒单调时钟戳 (Epoch ns)', value: String(p.timestamp_ns || 'N/A') },
     { name: 'frame.len', label: '物理帧原始长度', value: `${p.length} 字节`, hexDesc: `0x${p.length.toString(16).toUpperCase()}` },
     { name: 'frame.cap_len', label: '探针捕获存储长度', value: `${cleanHex.value.length / 2} 字节` },
-    { name: 'frame.entropy', label: '香农信息熵 (Entropy)', value: `${p.entropy ? p.entropy.toFixed(4) : '0.0000'} bit/B (${p.entropy_level})`, highlightClass: p.entropy >= 7.2 ? 'text-amber-600 font-bold' : 'text-slate-800' },
+    { name: 'frame.entropy', label: '香农信息熵 (Entropy)', value: `${p.entropy ? p.entropy.toFixed(4) : '0.0000'} bit/B (${p.entropy_level})`, highlightClass: p.entropy >= 7.2 ? 'text-amber-700 dark:text-amber-300 font-bold' : '' },
     { name: 'frame.merkle_hash', label: '防伪存证链式哈希 (SHA256)', value: p.chain_hash || 'PENDING' },
-    { name: 'frame.bus_mode', label: '采集总线与流向', value: `${p.transport} · ${p.direction}`, highlightClass: 'text-indigo-700' },
+    { name: 'frame.bus_mode', label: '采集总线与流向', value: `${p.transport} · ${p.direction}`, highlightClass: 'text-indigo-700 dark:text-indigo-300' },
   ];
   layers.push({
     id: 'frame',
     title: 'Frame 1: 物理层与到达时序元数据',
     subtitle: `到达时间: ${p.timestamp} · 长度: ${p.length}B`,
     badge: 'PHY/TS',
-    badgeClass: 'bg-slate-200 text-slate-700',
+    badgeClass: 'ui-pill',
     fields: frameFields,
   });
 
@@ -492,20 +551,20 @@ const nativeProtocolLayers = computed<NativeLayer[]>(() => {
     : (p.src_ip.includes(':') ? '0x86DD (IPv6)' : p.protocol === 'ARP' ? '0x0806 (ARP)' : '0x0800 (IPv4)');
 
   const ethFields: NativeField[] = [
-    { name: 'eth.dst', label: '目的物理 MAC 地址', value: `${p.mac_dst || '00:00:00:00:00:00'}${dstVendor}`, highlightClass: 'text-slate-900 font-bold' },
-    { name: 'eth.src', label: '源物理 MAC 地址', value: `${p.mac_src || '00:00:00:00:00:00'}${srcVendor}`, highlightClass: 'text-slate-900 font-bold' },
-    { name: 'eth.type', label: '以太网协议类型 (EtherType)', value: etherType, highlightClass: 'text-blue-700 font-mono' },
-    { name: 'eth.fcs', label: '帧校验和 (FCS)', value: 'Verified (Good / Offloaded)' },
+    { name: 'eth.dst', label: '目的物理 MAC 地址', value: `${p.mac_dst || '00:00:00:00:00:00'}${dstVendor}`, highlightClass: 'font-bold' },
+    { name: 'eth.src', label: '源物理 MAC 地址', value: `${p.mac_src || '00:00:00:00:00:00'}${srcVendor}`, highlightClass: 'font-bold' },
+    { name: 'eth.type', label: '以太网协议类型 (EtherType)', value: etherType, highlightClass: 'text-blue-700 dark:text-sky-300 font-mono-code' },
+    { name: 'eth.fcs', label: '帧校验和 (FCS)', value: '物理 NIC 校验 (驱动层剥离 FCS 尾帧)' },
   ];
   if (bdata.src_device_cat) {
-    ethFields.push({ name: 'eth.src_category', label: '源端工业设备类型', value: String(bdata.src_device_cat), highlightClass: 'text-indigo-700 font-bold' });
+    ethFields.push({ name: 'eth.src_category', label: '源端工业设备类型', value: String(bdata.src_device_cat), highlightClass: 'text-indigo-700 dark:text-indigo-300 font-bold' });
   }
   layers.push({
     id: 'ethernet',
     title: 'Layer 2: Ethernet II (以太网数据链路层)',
-    subtitle: `${p.mac_src || '00:..'}${srcVendor} ➔ ${p.mac_dst || '00:..'}${dstVendor}`,
+    subtitle: `${p.mac_src || '00:..'}${srcVendor} → ${p.mac_dst || '00:..'}${dstVendor}`,
     badge: bdata.is_industrial_l2 ? 'IND ETH' : 'L2 ETH',
-    badgeClass: bdata.is_industrial_l2 ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-blue-100 text-blue-700 border border-blue-200',
+    badgeClass: bdata.is_industrial_l2 ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30' : 'bg-blue-500/15 text-blue-700 dark:text-sky-300 border-blue-500/30',
     fields: ethFields,
   });
 
@@ -513,12 +572,12 @@ const nativeProtocolLayers = computed<NativeLayer[]>(() => {
   // 3. Layer 3: Internet Protocol 网络层 (IPv4 / IPv6 / ARP)
   // ---------------------------------------------------------------------------
   const netFields: NativeField[] = [
-    { name: 'ip.src', label: '源网络 IP 地址', value: p.src_ip, highlightClass: 'text-blue-700 font-bold' },
-    { name: 'ip.dst', label: '目的网络 IP 地址', value: p.dst_ip, highlightClass: 'text-blue-700 font-bold' },
+    { name: 'ip.src', label: '源网络 IP 地址', value: p.src_ip, highlightClass: 'text-blue-700 dark:text-sky-300 font-bold' },
+    { name: 'ip.dst', label: '目的网络 IP 地址', value: p.dst_ip, highlightClass: 'text-blue-700 dark:text-sky-300 font-bold' },
     { name: 'ip.proto', label: '传输层规约代码', value: `${p.transport} (${p.transport === 'TCP' ? 6 : p.transport === 'UDP' ? 17 : 1})` },
-    { name: 'ip.ttl', label: '生存时间 (TTL)', value: String(bdata.ip_ttl || 64) },
-    { name: 'ip.total_len', label: 'IP 报文总长度', value: `${p.length - 14} 字节` },
-    { name: 'ip.flags', label: '分片标志 (Flags)', value: "0x02, Don't fragment (DF)" },
+    { name: 'ip.ttl', label: '生存时间 (TTL)', value: bdata.ip_ttl !== undefined ? String(bdata.ip_ttl) : (parsedHdr.ipTtl !== undefined ? String(parsedHdr.ipTtl) : '未提取 (非原始 L3 头)') },
+    { name: 'ip.total_len', label: 'IP 报文总长度', value: parsedHdr.ipTotalLen !== undefined ? `${parsedHdr.ipTotalLen} 字节` : `${Math.max(0, p.length - 14)} 字节 (含载荷估计)` },
+    { name: 'ip.flags', label: '分片标志 (Flags)', value: parsedHdr.ipFlagsDesc ?? '未提取 (无原始 IP 头部字节)' },
   ];
 
   if (bdata.src_geo || bdata.src_zone || bdata.src_isp) {
@@ -526,7 +585,7 @@ const nativeProtocolLayers = computed<NativeLayer[]>(() => {
       name: 'ip.src_geo',
       label: '源端地理定位与安全域',
       value: `${bdata.src_geo || '本地局域网'} [${bdata.src_zone || '工业控制网'}]`,
-      highlightClass: 'text-indigo-700 font-semibold',
+      highlightClass: 'text-indigo-700 dark:text-indigo-300 font-semibold',
       extraNote: bdata.src_isp ? `运营商: ${bdata.src_isp}` : undefined,
     });
   }
@@ -534,9 +593,9 @@ const nativeProtocolLayers = computed<NativeLayer[]>(() => {
   layers.push({
     id: 'network',
     title: `Layer 3: Internet Protocol (${p.src_ip.includes(':') ? 'IPv6' : 'IPv4'})`,
-    subtitle: `${p.src_ip} ➔ ${p.dst_ip}`,
+    subtitle: `${p.src_ip} → ${p.dst_ip}`,
     badge: 'L3 IP',
-    badgeClass: 'bg-emerald-100 text-emerald-800 border border-emerald-200',
+    badgeClass: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
     fields: netFields,
   });
 
@@ -545,31 +604,31 @@ const nativeProtocolLayers = computed<NativeLayer[]>(() => {
   // ---------------------------------------------------------------------------
   const transFields: NativeField[] = [
     { name: 'trans.srcport', label: '源端口 (Source Port)', value: String(p.src_port) },
-    { name: 'trans.dstport', label: '目的端口 (Dest Port)', value: String(p.dst_port), highlightClass: 'text-indigo-700 font-bold' },
-    { name: 'trans.service', label: '推断工业服务', value: p.protocol, highlightClass: 'text-emerald-700 font-bold' },
+    { name: 'trans.dstport', label: '目的端口 (Dest Port)', value: String(p.dst_port), highlightClass: 'text-indigo-700 dark:text-indigo-300 font-bold' },
+    { name: 'trans.service', label: '推断工业服务', value: p.protocol, highlightClass: 'text-emerald-700 dark:text-emerald-300 font-bold' },
   ];
 
   if (p.transport === 'TCP') {
-    const seq = bdata.sequence_number || 1000;
-    const ack = bdata.acknowledgment_number || 1;
-    const win = bdata.window_size || 65535;
-    const flags = bdata.flags || 'ACK, PSH';
+    const seq = bdata.sequence_number ?? parsedHdr.tcpSeq;
+    const ack = bdata.acknowledgment_number ?? parsedHdr.tcpAck;
+    const win = bdata.window_size ?? parsedHdr.tcpWindow;
+    const flags = bdata.flags ?? parsedHdr.tcpFlagsDesc;
 
     transFields.push(
-      { name: 'tcp.seq', label: '序列号 (Sequence Number)', value: String(seq) },
-      { name: 'tcp.ack', label: '确认号 (Acknowledgment Number)', value: String(ack) },
-      { name: 'tcp.flags', label: 'TCP 标志位集合 (Flags)', value: String(flags), highlightClass: 'text-purple-700 font-bold' },
-      { name: 'tcp.window_size', label: '接收窗口大小 (Window Size)', value: `${win} 字节` },
-      { name: 'tcp.checksum', label: '传输层校验和', value: '0x7CB2 (Correct / Valid)' },
+      { name: 'tcp.seq', label: '序列号 (Sequence Number)', value: seq !== undefined ? String(seq) : '未提取 (无 L4 原始头)' },
+      { name: 'tcp.ack', label: '确认号 (Acknowledgment Number)', value: ack !== undefined ? String(ack) : '未提取 (无 L4 原始头)' },
+      { name: 'tcp.flags', label: 'TCP 标志位集合 (Flags)', value: flags ? String(flags) : '未提取 (Socket 应用层直采)', highlightClass: 'text-purple-700 dark:text-purple-300 font-bold' },
+      { name: 'tcp.window_size', label: '接收窗口大小 (Window Size)', value: win !== undefined ? `${win} 字节` : '未提取' },
+      { name: 'tcp.checksum', label: '传输层校验和', value: parsedHdr.tcpChecksumHex ?? '由操作系统协议栈 / NIC 校验' },
     );
   }
 
   layers.push({
     id: 'transport',
     title: `Layer 4: Transport Layer (${p.transport})`,
-    subtitle: `端口映射: ${p.src_port} ➔ ${p.dst_port} [${p.protocol}]`,
+    subtitle: `端口映射: ${p.src_port} → ${p.dst_port} [${p.protocol}]`,
     badge: 'L4 TRANS',
-    badgeClass: 'bg-purple-100 text-purple-700 border border-purple-200',
+    badgeClass: 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30',
     fields: transFields,
   });
 
@@ -581,7 +640,6 @@ const nativeProtocolLayers = computed<NativeLayer[]>(() => {
 
   // 逐项转换 business_data 为深度工控展开字段
   for (const [key, val] of Object.entries(bdata)) {
-    // 过滤掉已在 L3/L4 呈现的基础字段
     if (['src_geo', 'src_zone', 'src_isp', 'dst_zone', 'sequence_number', 'acknowledgment_number', 'window_size', 'flags', 'ip_ttl'].includes(key)) {
       continue;
     }
@@ -597,13 +655,13 @@ const nativeProtocolLayers = computed<NativeLayer[]>(() => {
       name: `app.${key}`,
       label: fieldLabel,
       value: strVal,
-      highlightClass: isDangerousWrite ? 'text-rose-700 font-bold' : 'text-slate-800',
+      highlightClass: isDangerousWrite ? 'text-rose-700 dark:text-rose-300 font-bold' : undefined,
     });
   }
 
   if (appFields.length === 0) {
     appFields.push(
-      { name: 'app.protocol', label: '应用层规约识别', value: p.protocol, highlightClass: 'text-blue-700 font-bold' },
+      { name: 'app.protocol', label: '应用层规约识别', value: p.protocol, highlightClass: 'text-blue-700 dark:text-sky-300 font-bold' },
       { name: 'app.payload_size', label: '有效载荷长度', value: `${cleanHex.value.length / 2} 字节` },
       { name: 'app.raw_preview', label: '载荷数据摘要', value: p.raw_text || (cleanHex.value.slice(0, 32) + '...') },
     );
@@ -614,13 +672,13 @@ const nativeProtocolLayers = computed<NativeLayer[]>(() => {
     title: `Layer 7: ${p.protocol} 工业规约语义层`,
     subtitle: `深度解析业务功能码与工业过程参数`,
     badge: 'L7 APP',
-    badgeClass: 'bg-amber-100 text-amber-800 border border-amber-200',
+    badgeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
     warning: isDangerousWrite ? '包含写控制/覆写操作' : undefined,
     fields: appFields,
   });
 
   // ---------------------------------------------------------------------------
-  // 6. 工业网络安全审查与合规层 (若存在越权、威胁特征或 ICS-ACL 违规)
+  // 6. 工业网络安全审查与合规层
   // ---------------------------------------------------------------------------
   const hasAclViolation = Boolean(bdata.ics_acl_violation);
   if (isDangerousWrite || p.entropy >= 7.5 || hasAclViolation) {
@@ -629,15 +687,15 @@ const nativeProtocolLayers = computed<NativeLayer[]>(() => {
         name: 'sec.audit_status', 
         label: '工业控制安全策略审查', 
         value: hasAclViolation 
-          ? `🚫 严重违规: 触发工控访问控制 (ICS-ACL) 拦截 - ${(bdata.ics_acl_violation as any)?.violation_reason || '未授权访问'}`
-          : (isDangerousWrite ? '⚠️ 违规警示: 捕获到控制器关键写操作' : '安全合规'), 
-        highlightClass: hasAclViolation || isDangerousWrite ? 'text-rose-600 font-bold' : 'text-emerald-700' 
+          ? `严重违规: 触发工控访问控制 (ICS-ACL) 拦截 - ${(bdata.ics_acl_violation as any)?.violation_reason || '未授权访问'}`
+          : (isDangerousWrite ? '违规警示: 捕获到控制器关键写操作' : '安全合规'), 
+        highlightClass: hasAclViolation || isDangerousWrite ? 'text-rose-700 dark:text-rose-300 font-bold' : 'text-emerald-700 dark:text-emerald-300' 
       },
       { 
         name: 'sec.risk_level', 
         label: '工业风险评估等级', 
         value: hasAclViolation ? 'CRITICAL (IEC 62443 细粒度控制边界阻断)' : (isDangerousWrite ? 'HIGH (高风险业务写操作)' : 'LOW (稳态通信)'),
-        highlightClass: hasAclViolation || isDangerousWrite ? 'text-rose-700 font-bold' : 'text-slate-700'
+        highlightClass: hasAclViolation || isDangerousWrite ? 'text-rose-700 dark:text-rose-300 font-bold' : undefined
       },
       {
         name: 'sec.iec62443_rule',
@@ -654,7 +712,7 @@ const nativeProtocolLayers = computed<NativeLayer[]>(() => {
       title: 'Security Audit: 工控合规与威胁防范审查',
       subtitle: hasAclViolation ? '工控细粒度访问控制违规告警' : (isDangerousWrite ? '监测到向控制器下发写参数操作' : '安全策略全量合规'),
       badge: hasAclViolation ? 'ACL BLOCK' : 'AUDIT',
-      badgeClass: 'bg-rose-100 text-rose-800 border border-rose-200',
+      badgeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30',
       warning: hasAclViolation ? '工控边界策略违规阻断' : '工控安全合规事件',
       fields: secFields,
     });

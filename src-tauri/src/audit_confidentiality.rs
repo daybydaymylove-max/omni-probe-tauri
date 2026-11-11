@@ -273,8 +273,11 @@ pub fn inspect_confidentiality_stream(
 
     // 记录告警并入库落盘
     if !detected_hits.is_empty() {
-        if let Ok(mut state) = CONFIDENTIALITY_STATE.lock() {
-            for (cat, lvl, _sev, target, summary) in detected_hits {
+        let mut state = crate::lock_guard::lock_mutex(
+            &CONFIDENTIALITY_STATE,
+            "audit_confidentiality::inspect_confidentiality_leak",
+        );
+        for (cat, lvl, _sev, target, summary) in detected_hits {
                 let id = ALERT_ID_SEQ.fetch_add(1, Ordering::Relaxed);
                 let detail = serde_json::json!({
                     "protocol": protocol,
@@ -302,7 +305,6 @@ pub fn inspect_confidentiality_stream(
                 }
                 state.alerts.push_back(alert);
             }
-        }
     }
 }
 
@@ -369,7 +371,11 @@ pub fn inspect_egress_domain(
 
             append_alert_to_disk(&alert);
 
-            if let Ok(mut state) = CONFIDENTIALITY_STATE.lock() {
+            {
+                let mut state = crate::lock_guard::lock_mutex(
+                    &CONFIDENTIALITY_STATE,
+                    "audit_confidentiality::inspect_egress_domain",
+                );
                 if state.alerts.len() >= MAX_CONFIDENTIALITY_ALERTS {
                     state.alerts.pop_front();
                 }
@@ -388,10 +394,15 @@ pub fn verify_usb_storage_compliance(
     pid: &str,
     instance_id: &str,
 ) {
-    let state = CONFIDENTIALITY_STATE.lock().unwrap();
-    let is_authorized = state.rules.authorized_media_whitelist.iter().any(|item| {
-        item.vid.eq_ignore_ascii_case(vid) && item.pid.eq_ignore_ascii_case(pid)
-    });
+    let is_authorized = {
+        let state = crate::lock_guard::lock_mutex(
+            &CONFIDENTIALITY_STATE,
+            "audit_confidentiality::verify_usb_storage_compliance_whitelist",
+        );
+        state.rules.authorized_media_whitelist.iter().any(|item| {
+            item.vid.eq_ignore_ascii_case(vid) && item.pid.eq_ignore_ascii_case(pid)
+        })
+    };
 
     if !is_authorized {
         let (ts_str, ts_ns) = (
@@ -420,13 +431,14 @@ pub fn verify_usb_storage_compliance(
 
         append_alert_to_disk(&alert);
 
-        drop(state);
-        if let Ok(mut st) = CONFIDENTIALITY_STATE.lock() {
-            if st.alerts.len() >= MAX_CONFIDENTIALITY_ALERTS {
-                st.alerts.pop_front();
-            }
-            st.alerts.push_back(alert);
+        let mut st = crate::lock_guard::lock_mutex(
+            &CONFIDENTIALITY_STATE,
+            "audit_confidentiality::verify_usb_storage_compliance_record",
+        );
+        if st.alerts.len() >= MAX_CONFIDENTIALITY_ALERTS {
+            st.alerts.pop_front();
         }
+        st.alerts.push_back(alert);
     }
 }
 
@@ -501,13 +513,19 @@ pub fn scan_static_text(content: &str) -> ConfidentialityScanReport {
 }
 
 pub fn get_confidentiality_alerts(limit: Option<usize>) -> Vec<ConfidentialityAlert> {
-    let state = CONFIDENTIALITY_STATE.lock().unwrap();
+    let state = crate::lock_guard::lock_mutex(
+        &CONFIDENTIALITY_STATE,
+        "audit_confidentiality::get_confidentiality_alerts",
+    );
     let lim = limit.unwrap_or(100);
     state.alerts.iter().rev().take(lim).cloned().collect()
 }
 
 pub fn clear_confidentiality_alerts() {
-    let mut state = CONFIDENTIALITY_STATE.lock().unwrap();
+    let mut state = crate::lock_guard::lock_mutex(
+        &CONFIDENTIALITY_STATE,
+        "audit_confidentiality::clear_confidentiality_alerts",
+    );
     state.alerts.clear();
 }
 

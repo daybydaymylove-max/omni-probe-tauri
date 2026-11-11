@@ -2723,7 +2723,7 @@ dependencies = [
 
 [[package]]
 name = "omni-probe-tauri"
-version = "0.2.4"
+version = "0.3.1"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -2735,6 +2735,7 @@ dependencies = [
  "hex",
  "hkdf",
  "hmac",
+ "libc",
  "notify",
  "once_cell",
  "pcap",

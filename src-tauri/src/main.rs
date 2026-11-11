@@ -1,11 +1,11 @@
-#![windows_subsystem = "windows"]
+#![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 
 #[cfg(windows)]
 fn init_windows_gui_stdio() {
     use std::fs::OpenOptions;
     use std::os::windows::io::IntoRawHandle;
 
-    extern "system" {
+    unsafe extern "system" {
         fn GetStdHandle(n_std_handle: u32) -> isize;
         fn SetStdHandle(n_std_handle: u32, h_handle: isize) -> i32;
     }

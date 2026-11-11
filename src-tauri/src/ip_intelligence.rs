@@ -10,13 +10,18 @@
 // 5. 前缀掩码位运算 + 矢量索引二分查找，单次查询小于 5 微秒。
 // ============================================================
 
+use std::borrow::Cow;
 use std::fs::File;
 use std::io::Read;
 use std::net::Ipv4Addr;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
+
+/// 编译期静态内嵌基准离线 IP 数据库（相对于本源码目录，无任何运行时绝对/CWD硬编码路径）
+/// 支持单文件零外部文件便携运行，并允许运行期由 OS 应用数据区外挂库热更新覆盖
+const EMBEDDED_XDB_BYTES: &[u8] = include_bytes!("../data/ip2region.xdb");
 
 /// 归属地与网络运营商详细信息
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -163,7 +168,7 @@ const VECTOR_INDEX_SIZE: usize = 8;
 const SEGMENT_INDEX_SIZE: usize = 14;
 
 pub struct XdbSearcher {
-    content: Vec<u8>,
+    content: Cow<'static, [u8]>,
     header_version: u16,
     header_created_at: u32,
     file_path: String,
@@ -181,8 +186,17 @@ impl XdbSearcher {
         Self::load_from_bytes(content, path_str)
     }
 
-    /// 从字节数组初始化内存解析器
+    /// 从堆内存字节数组初始化解析器
     pub fn load_from_bytes(content: Vec<u8>, file_path: String) -> Result<Self, String> {
+        Self::load_from_cow(Cow::Owned(content), file_path)
+    }
+
+    /// 从编译期只读静态切片初始化解析器 (零堆分配、零磁盘 IO 拷贝)
+    pub fn load_from_static_bytes(content: &'static [u8], label: String) -> Result<Self, String> {
+        Self::load_from_cow(Cow::Borrowed(content), label)
+    }
+
+    fn load_from_cow(content: Cow<'static, [u8]>, file_path: String) -> Result<Self, String> {
         // xdb 格式必须至少包含 256B Header + 512KB VectorIndex + 至少 1 条 14B 索引段
         let min_len = HEADER_INFO_LENGTH + (256 * VECTOR_INDEX_COLS * VECTOR_INDEX_SIZE) + SEGMENT_INDEX_SIZE;
         if content.len() < min_len {
@@ -351,22 +365,15 @@ impl IpIntelligenceEngine {
             }
         }
 
-        // 尝试从多级候选路径自动探测并加载 xdb 离线库
+        // 1. 优先尝试加载操作系统标准数据目录下的热更新扩展 XDB 库 (用户后续升级版优先覆盖内置库)
         let mut candidate_paths = vec![
-            PathBuf::from("data/ip2region.xdb"),
-            PathBuf::from("src-tauri/data/ip2region.xdb"),
-            PathBuf::from("ip2region.xdb"),
-            PathBuf::from("../data/ip2region.xdb"),
-            PathBuf::from("../../data/ip2region.xdb"),
+            crate::forensics::data_path("ip2region.xdb"),
         ];
 
         if let Ok(exe_path) = std::env::current_exe() {
             if let Some(exe_dir) = exe_path.parent() {
                 candidate_paths.push(exe_dir.join("data/ip2region.xdb"));
                 candidate_paths.push(exe_dir.join("ip2region.xdb"));
-                candidate_paths.push(exe_dir.join("../data/ip2region.xdb"));
-                candidate_paths.push(exe_dir.join("../../data/ip2region.xdb"));
-                candidate_paths.push(exe_dir.join("../../../data/ip2region.xdb"));
             }
         }
 
@@ -380,6 +387,16 @@ impl IpIntelligenceEngine {
                         }
                     }
                 }
+            }
+        }
+
+        // 2. 若外部无覆盖库，零拷贝挂载编译期静态内嵌千万级 XDB 基准库 (实现单文件绝对离线便携)
+        if engine.xdb_searcher.is_none() {
+            if let Ok(searcher) = XdbSearcher::load_from_static_bytes(
+                EMBEDDED_XDB_BYTES,
+                "内置基准库 (Built-in XDB)".to_string(),
+            ) {
+                engine.xdb_searcher = Some(searcher);
             }
         }
 
@@ -645,33 +662,30 @@ mod tests {
         assert_eq!(res_private_c.zone_name, "局域网通信网段 (Class C)");
     }
 
-    /// 真实本地 XDB 数据库加载与微秒级离线解析验证
+    /// 真实本地 XDB 数据库加载与微秒级离线解析验证 (含零外部路径内嵌轨验证)
     #[test]
     fn test_xdb_lookup_real_database() {
-        let mut engine = IpIntelligenceEngine::new();
-        // 尝试加载本地下载的真实 xdb 文件
-        let loaded = engine.load_xdb("data/ip2region.xdb").is_ok()
-            || engine.load_xdb("../data/ip2region.xdb").is_ok();
-        if loaded {
-            let res_china = engine.classify("114.114.114.114");
-            assert!(res_china.country.is_some());
-            println!("114.114.114.114 Geo: {:?}", res_china.geo_summary);
+        let engine = IpIntelligenceEngine::new();
+        assert!(engine.is_xdb_loaded());
+        let status = engine.get_xdb_status();
+        assert_eq!(status["loaded"], true);
+        assert!(status["file_size"].as_u64().unwrap_or(0) > 10_000_000);
 
-            let res_ali = engine.classify("223.5.5.5");
-            assert!(res_ali.country.is_some());
-            println!("223.5.5.5 Geo: {:?}", res_ali.geo_summary);
+        let res_china = engine.classify("114.114.114.114");
+        assert!(res_china.country.is_some());
+        println!("114.114.114.114 Geo: {:?}", res_china.geo_summary);
 
-            let res_google = engine.classify("8.8.8.8");
-            println!("8.8.8.8 Geo: {:?}", res_google.geo_summary);
+        let res_ali = engine.classify("223.5.5.5");
+        assert!(res_ali.country.is_some());
+        println!("223.5.5.5 Geo: {:?}", res_ali.geo_summary);
 
-            let res_google_142 = engine.classify("142.250.137.132");
-            println!("142.250.137.132 Geo: {:?}", res_google_142.geo_summary);
-            println!("142.250.137.132 Country: {:?}, Province: {:?}, City: {:?}, Isp: {:?}", 
-                res_google_142.country, res_google_142.province, res_google_142.city, res_google_142.isp);
-            assert!(res_google_142.country.is_some() || res_google_142.isp.is_some());
-        } else {
-            panic!("Notice: data/ip2region.xdb not found in search paths during test run");
-        }
+        let res_google = engine.classify("8.8.8.8");
+        assert!(res_google.country.is_some());
+        println!("8.8.8.8 Geo: {:?}", res_google.geo_summary);
+
+        let res_google_142 = engine.classify("142.250.137.132");
+        println!("142.250.137.132 Geo: {:?}", res_google_142.geo_summary);
+        assert!(res_google_142.country.is_some() || res_google_142.isp.is_some());
     }
 }
 

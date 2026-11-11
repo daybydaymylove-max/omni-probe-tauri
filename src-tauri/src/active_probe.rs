@@ -30,16 +30,14 @@ pub static CONTINUOUS_PROBE_RUNNING: Lazy<Arc<Mutex<bool>>> =
 
 /// 停止 ACTIVE_PULL 拉流模式
 pub fn stop_stream_pull() {
-    if let Ok(mut r) = ACTIVE_PULL_RUNNING.lock() {
-        *r = false;
-    }
+    let mut r = crate::lock_guard::lock_mutex(&ACTIVE_PULL_RUNNING, "active_probe::stop_stream_pull");
+    *r = false;
 }
 
 /// 停止周期心跳探针
 pub fn stop_continuous_probe() {
-    if let Ok(mut r) = CONTINUOUS_PROBE_RUNNING.lock() {
-        *r = false;
-    }
+    let mut r = crate::lock_guard::lock_mutex(&CONTINUOUS_PROBE_RUNNING, "active_probe::stop_continuous_probe");
+    *r = false;
 }
 
 /// 单次探测结果
@@ -169,7 +167,7 @@ pub fn start_continuous_probe(
     interval_secs: u64,
 ) {
     {
-        let mut running = CONTINUOUS_PROBE_RUNNING.lock().unwrap();
+        let mut running = crate::lock_guard::lock_mutex(&CONTINUOUS_PROBE_RUNNING, "active_probe::start_continuous_probe");
         if *running {
             let _ = app.emit(
                 "system-log",
@@ -194,7 +192,7 @@ pub fn start_continuous_probe(
             );
 
             loop {
-                if !*running.lock().unwrap() {
+                if !*crate::lock_guard::lock_mutex(&running, "active_probe::continuous_probe_loop") {
                     break;
                 }
 
@@ -717,7 +715,7 @@ pub fn start_stream_pull(
     reconnect_secs: u64,
 ) {
     {
-        let mut running = ACTIVE_PULL_RUNNING.lock().unwrap();
+        let mut running = crate::lock_guard::lock_mutex(&ACTIVE_PULL_RUNNING, "active_probe::start_stream_pull");
         if *running {
             let _ = app.emit("system-log", "[ACTIVE_PULL] 拉流引擎已在运行，无需重复启动");
             return;
@@ -744,7 +742,7 @@ pub fn start_stream_pull(
             let (local_ip, local_mac) = crate::sniffer::get_local_identity();
             let addr = format!("{}:{}", host, port);
 
-            while *running.lock().unwrap() {
+            while *crate::lock_guard::lock_mutex(&running, "active_probe::stream_pull_outer_loop") {
                 let conn_res =
                     tokio::time::timeout(Duration::from_secs(5), TcpStream::connect(&addr)).await;
 
@@ -762,7 +760,7 @@ pub fn start_stream_pull(
                         let mut last_rx = std::time::Instant::now();
 
                         loop {
-                            if !*running.lock().unwrap() {
+                            if !*crate::lock_guard::lock_mutex(&running, "active_probe::stream_pull_inner_loop") {
                                 break;
                             }
                             match tokio::time::timeout(
@@ -824,7 +822,7 @@ pub fn start_stream_pull(
 
                 // 重连退避：秒级粒度轮询停止指令，保证 stop_stream_pull 秒级响应
                 for _ in 0..reconnect_secs.max(1) {
-                    if !*running.lock().unwrap() {
+                    if !*crate::lock_guard::lock_mutex(&running, "active_probe::stream_pull_backoff_loop") {
                         break;
                     }
                     tokio::time::sleep(Duration::from_secs(1)).await;

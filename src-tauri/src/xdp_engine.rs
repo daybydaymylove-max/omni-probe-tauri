@@ -11,7 +11,7 @@
 // ============================================================================
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::RwLock;
 
@@ -483,6 +483,7 @@ pub struct FlowBypassEntry {
 /// 全局流分流直通映射表
 pub struct FlowSteeringTable {
     flows: RwLock<HashMap<TcpFiveTuple, FlowBypassEntry>>,
+    blocked_ips: RwLock<HashSet<[u8; 4]>>,
     pub default_bypass_threshold: u64,
     pub syn_flood_rate_limit_pps: u64,
     syn_counter: AtomicU64,
@@ -493,6 +494,7 @@ impl Default for FlowSteeringTable {
     fn default() -> Self {
         Self {
             flows: RwLock::new(HashMap::with_capacity(4096)),
+            blocked_ips: RwLock::new(HashSet::new()),
             default_bypass_threshold: 65536, // 64KB 安全审计门限
             syn_flood_rate_limit_pps: 50000, // 50K PPS SYN Flood 门限
             syn_counter: AtomicU64::new(0),
@@ -506,48 +508,65 @@ impl FlowSteeringTable {
         Self::default()
     }
 
-    /// 对数据包进行 XDP 内核级分流决策求值
-    /// 复杂度: O(1) 常数时间哈希检索与极速判定
-    pub fn evaluate_packet(&self, packet: &[u8], now_ms: u64) -> (XdpAction, Option<TcpFiveTuple>) {
-        // 1. 最低以太网 + IPv4 + TCP 首部长度边界检查 (14 + 20 + 20 = 54 字节)
-        if packet.len() < 54 {
+    pub fn block_ip(&self, ip: [u8; 4]) {
+        let mut set = crate::lock_guard::write_rwlock(&self.blocked_ips, "xdp_engine::block_ip");
+        set.insert(ip);
+    }
+
+    pub fn unblock_ip(&self, ip: [u8; 4]) -> bool {
+        let mut set = crate::lock_guard::write_rwlock(&self.blocked_ips, "xdp_engine::unblock_ip");
+        set.remove(&ip)
+    }
+
+    pub fn blocked_ip_count(&self) -> usize {
+        crate::lock_guard::read_rwlock(&self.blocked_ips, "xdp_engine::blocked_ip_count").len()
+    }
+
+    /// 核心共享 IPv4 L3 切片求值（同时支持 L2 剥离后路径与 Windows RIO / Raw Socket 直通路径）
+    /// 复杂度: O(1) 常数时间哈希检索
+    pub fn evaluate_ip_slice(&self, ip_pkt: &[u8], now_ms: u64) -> (XdpAction, Option<TcpFiveTuple>) {
+        if ip_pkt.len() < 20 {
+            return (XdpAction::Pass, None);
+        }
+        let version = ip_pkt[0] >> 4;
+        if version != 4 {
+            return (XdpAction::Pass, None);
+        }
+        let ip_hdr_len = ((ip_pkt[0] & 0x0f) * 4) as usize;
+        if ip_hdr_len < 20 || ip_pkt.len() < ip_hdr_len {
             return (XdpAction::Pass, None);
         }
 
-        // 2. 检查以太网类型 (IPv4 = 0x0800)
-        let eth_type = ((packet[12] as u16) << 8) | (packet[13] as u16);
-        if eth_type != 0x0800 {
+        let src_ip = [ip_pkt[12], ip_pkt[13], ip_pkt[14], ip_pkt[15]];
+        let dst_ip = [ip_pkt[16], ip_pkt[17], ip_pkt[18], ip_pkt[19]];
+
+        // 0. 线速黑名单 IP 阻断校验（覆盖 TCP/UDP/ICMP 任意上层协议）
+        {
+            let blocked = crate::lock_guard::read_rwlock(&self.blocked_ips, "xdp_engine::check_blocked");
+            if blocked.contains(&src_ip) || blocked.contains(&dst_ip) {
+                return (XdpAction::Drop, None);
+            }
+        }
+
+        // 检查传输层协议号 (6 = TCP)
+        let ip_proto = ip_pkt[9];
+        if ip_proto != 6 || ip_pkt.len() < ip_hdr_len + 20 {
             return (XdpAction::Pass, None);
         }
 
-        // 3. 检查 IPv4 协议与首部
-        let ip_proto = packet[23];
-        if ip_proto != 6 {
-            // 非 TCP 流量直接 Pass
-            return (XdpAction::Pass, None);
-        }
-
-        let ip_hdr_len = ((packet[14] & 0x0f) * 4) as usize;
-        if packet.len() < 14 + ip_hdr_len + 20 {
-            return (XdpAction::Pass, None);
-        }
-
-        let src_ip = [packet[26], packet[27], packet[28], packet[29]];
-        let dst_ip = [packet[30], packet[31], packet[32], packet[33]];
-
-        let tcp_offset = 14 + ip_hdr_len;
-        let src_port = ((packet[tcp_offset] as u16) << 8) | (packet[tcp_offset + 1] as u16);
-        let dst_port = ((packet[tcp_offset + 2] as u16) << 8) | (packet[tcp_offset + 3] as u16);
-        let tcp_flags = packet[tcp_offset + 13];
+        let tcp_offset = ip_hdr_len;
+        let src_port = ((ip_pkt[tcp_offset] as u16) << 8) | (ip_pkt[tcp_offset + 1] as u16);
+        let dst_port = ((ip_pkt[tcp_offset + 2] as u16) << 8) | (ip_pkt[tcp_offset + 3] as u16);
+        let tcp_flags = ip_pkt[tcp_offset + 13];
 
         let tuple = TcpFiveTuple::new(src_ip, dst_ip, src_port, dst_port);
         let canonical_tuple = tuple.canonical();
 
         let is_syn = (tcp_flags & 0x02) != 0 && (tcp_flags & 0x10) == 0;
         let is_fin_rst = (tcp_flags & 0x01) != 0 || (tcp_flags & 0x04) != 0;
-        let payload_len = packet.len() as u64;
+        let payload_len = ip_pkt.len() as u64;
 
-        // 4. 驱动层抗 SYN Flood 线速防御拦截
+        // 1. 驱动层抗 SYN Flood 线速防御拦截
         if is_syn {
             let last_check = self.last_syn_check_ts.load(Ordering::Relaxed);
             if now_ms.saturating_sub(last_check) >= 1000 {
@@ -556,25 +575,23 @@ impl FlowSteeringTable {
             } else {
                 let current_syns = self.syn_counter.fetch_add(1, Ordering::Relaxed);
                 if current_syns >= self.syn_flood_rate_limit_pps {
-                    // 达到或超过线速洪峰限制，直接在驱动层丢弃
                     return (XdpAction::Drop, Some(canonical_tuple));
                 }
             }
         }
 
-        // 5. 快速查询活跃会话流表 (以读锁检索)
+        // 2. 快速查询活跃会话流表 (读锁)
         {
-            let table = self.flows.read().unwrap();
+            let table = crate::lock_guard::read_rwlock(&self.flows, "xdp_engine::evaluate_packet_read");
             if let Some(entry) = table.get(&canonical_tuple) {
                 if entry.state == FlowBypassState::DirectBypassed && !is_fin_rst {
-                    // 已处于旁路直通态且非关闭帧，直接由 XDP 旁路分流！
                     return (XdpAction::Bypass, Some(canonical_tuple));
                 }
             }
         }
 
-        // 6. 会话生命周期状态演进 (以写锁更新或创建)
-        let mut table = self.flows.write().unwrap();
+        // 3. 会话生命周期状态演进 (写锁)
+        let mut table = crate::lock_guard::write_rwlock(&self.flows, "xdp_engine::evaluate_packet_write");
         let entry = table.entry(canonical_tuple).or_insert_with(|| FlowBypassEntry {
             tuple: canonical_tuple,
             state: FlowBypassState::HandshakeInspection,
@@ -585,8 +602,12 @@ impl FlowSteeringTable {
             created_ts_ms: now_ms,
             last_seen_ts_ms: now_ms,
             bypass_threshold_bytes: self.default_bypass_threshold,
-            // 默认信任工控白名单已知服务端口 (如 Modbus 502 / S7 102 / HTTP 80)
-            is_whitelisted_service: src_port == 502 || dst_port == 502 || src_port == 102 || dst_port == 102 || src_port == 80 || dst_port == 80,
+            is_whitelisted_service: src_port == 502
+                || dst_port == 502
+                || src_port == 102
+                || dst_port == 102
+                || src_port == 80
+                || dst_port == 80,
         });
 
         entry.total_packets += 1;
@@ -601,14 +622,12 @@ impl FlowSteeringTable {
         match entry.state {
             FlowBypassState::HandshakeInspection => {
                 if !is_syn && entry.total_packets >= 3 {
-                    // 已过三次握手阶段，转入良性载荷审计
                     entry.state = FlowBypassState::InspectedBenign;
                 }
                 (XdpAction::Pass, Some(canonical_tuple))
             }
             FlowBypassState::InspectedBenign => {
                 if entry.is_whitelisted_service && entry.total_bytes >= entry.bypass_threshold_bytes {
-                    // 满足白名单条件且累计传输达到大象流门限，正式激活 XDP 旁路直通！
                     entry.state = FlowBypassState::DirectBypassed;
                     entry.bypassed_packets += 1;
                     entry.bypassed_bytes += payload_len;
@@ -626,10 +645,27 @@ impl FlowSteeringTable {
         }
     }
 
+    /// 对 L2 以太网报文进行 XDP 内核级分流决策求值（支持标准以太网与 802.1Q VLAN 标签）
+    pub fn evaluate_packet(&self, packet: &[u8], now_ms: u64) -> (XdpAction, Option<TcpFiveTuple>) {
+        if packet.len() < 34 {
+            return (XdpAction::Pass, None);
+        }
+        let mut eth_type = ((packet[12] as u16) << 8) | (packet[13] as u16);
+        let mut ip_offset = 14usize;
+        if eth_type == 0x8100 && packet.len() >= 38 {
+            eth_type = ((packet[16] as u16) << 8) | (packet[17] as u16);
+            ip_offset = 18;
+        }
+        if eth_type != 0x0800 || packet.len() <= ip_offset {
+            return (XdpAction::Pass, None);
+        }
+        self.evaluate_ip_slice(&packet[ip_offset..], now_ms)
+    }
+
     /// 手动下发白名单与旁路直通指令
     pub fn mark_flow_bypassed(&self, tuple: TcpFiveTuple, bypass: bool) -> bool {
         let canonical = tuple.canonical();
-        let mut table = self.flows.write().unwrap();
+        let mut table = crate::lock_guard::write_rwlock(&self.flows, "xdp_engine::mark_flow_bypassed");
         if let Some(entry) = table.get_mut(&canonical) {
             entry.state = if bypass {
                 FlowBypassState::DirectBypassed
@@ -644,7 +680,7 @@ impl FlowSteeringTable {
 
     /// 获取活跃流总数与直通流计数
     pub fn get_flow_counts(&self) -> (usize, usize) {
-        let table = self.flows.read().unwrap();
+        let table = crate::lock_guard::read_rwlock(&self.flows, "xdp_engine::get_flow_counts");
         let total = table.len();
         let bypassed = table
             .values()
@@ -732,12 +768,17 @@ pub struct XdpBypassMetrics {
     pub bypass_ratio_percentage: f64,
     pub active_tcp_flows: usize,
     pub direct_bypassed_flows: usize,
+    pub blocked_ips_count: usize,
+    pub ebpf_instructions_count: usize,
+    pub active_policy_name: String,
 }
 
 /// 统合引擎本体
 pub struct XdpBypassEngine {
     pub vm: RwLock<EbpfVirtualMachine>,
     pub bytecode: RwLock<Vec<EbpfInstruction>>,
+    pub l3_bytecode: RwLock<Vec<EbpfInstruction>>,
+    pub active_policy_name: RwLock<String>,
     pub steering_table: FlowSteeringTable,
     pub xsk_ring: RwLock<AfXdpUmemRing>,
     // 遥测计数器
@@ -754,6 +795,8 @@ impl Default for XdpBypassEngine {
         Self {
             vm: RwLock::new(EbpfVirtualMachine::new()),
             bytecode: RwLock::new(Vec::new()),
+            l3_bytecode: RwLock::new(Vec::new()),
+            active_policy_name: RwLock::new("default_inspection (五元组智能直通 + 黑名单联动)".to_string()),
             steering_table: FlowSteeringTable::new(),
             xsk_ring: RwLock::new(AfXdpUmemRing::new(1024)),
             total_processed: AtomicU64::new(0),
@@ -771,66 +814,140 @@ impl XdpBypassEngine {
         Self::default()
     }
 
-    /// 热加载并安全验证新的 eBPF 字节码程序
+    /// 热加载并安全验证新的 eBPF 字节码程序 (L2 帧入口)
     pub fn load_ebpf_program(&self, instructions: Vec<EbpfInstruction>) -> Result<(), VerifierError> {
         EbpfVerifier::verify(&instructions)?;
-        let mut bc = self.bytecode.write().unwrap();
+        let mut bc = crate::lock_guard::write_rwlock(&self.bytecode, "xdp_engine::load_ebpf_program");
         *bc = instructions;
         Ok(())
     }
 
-    /// 处理到达网卡的一帧原生报文，执行线速 XDP 动作判定
-    pub fn process_wire_packet(&self, packet: &[u8], now_ms: u64) -> XdpAction {
-        self.total_processed.fetch_add(1, Ordering::Relaxed);
-
-        // 1. 若配置了自定义 eBPF 字节码，优先通过 eBPF VM 运算决策
-        {
-            let bc = self.bytecode.read().unwrap();
-            if !bc.is_empty() {
-                let mut vm = self.vm.write().unwrap();
-                let action = vm.execute(&bc, packet);
-                match action {
-                    XdpAction::Drop => {
-                        self.dropped_count.fetch_add(1, Ordering::Relaxed);
-                        return XdpAction::Drop;
-                    }
-                    XdpAction::Redirect => {
-                        self.redirected_count.fetch_add(1, Ordering::Relaxed);
-                        let mut ring = self.xsk_ring.write().unwrap();
-                        let _ = ring.enqueue_rx(packet.len() as u32);
-                        return XdpAction::Redirect;
-                    }
-                    XdpAction::Bypass => {
-                        self.bypassed_count.fetch_add(1, Ordering::Relaxed);
-                        self.bypassed_bytes.fetch_add(packet.len() as u64, Ordering::Relaxed);
-                        return XdpAction::Bypass;
-                    }
-                    _ => {}
-                }
+    /// 装载经过静态安全验证的预设 eBPF/XDP 防护策略
+    pub fn apply_policy_preset(&self, preset: &str) -> Result<String, String> {
+        match preset.trim() {
+            "default_inspection" => {
+                *crate::lock_guard::write_rwlock(&self.bytecode, "xdp::preset_l2") = Vec::new();
+                *crate::lock_guard::write_rwlock(&self.l3_bytecode, "xdp::preset_l3") = Vec::new();
+                *crate::lock_guard::write_rwlock(&self.active_policy_name, "xdp::preset_name") =
+                    "default_inspection (五元组智能直通 + 黑名单联动)".to_string();
+                Ok("已恢复默认五元组分流旁路策略".to_string())
             }
+            "drop_icmp_probe" => {
+                // L2 校验 (EthType==0x0800[12..14], IP Proto[23] == 1 ICMP => Drop)
+                let l2 = vec![
+                    EbpfInstruction::ldx_b(3, 1, 23),
+                    EbpfInstruction::jeq_imm(3, 1, 2),
+                    EbpfInstruction::mov_imm(0, 0),
+                    EbpfInstruction::exit(),
+                    EbpfInstruction::mov_imm(0, 1),
+                    EbpfInstruction::exit(),
+                ];
+                // L3 校验 (IP Proto[9] == 1 ICMP => Drop)
+                let l3 = vec![
+                    EbpfInstruction::ldx_b(3, 1, 9),
+                    EbpfInstruction::jeq_imm(3, 1, 2),
+                    EbpfInstruction::mov_imm(0, 0),
+                    EbpfInstruction::exit(),
+                    EbpfInstruction::mov_imm(0, 1),
+                    EbpfInstruction::exit(),
+                ];
+                EbpfVerifier::verify(&l2).map_err(|e| format!("L2 eBPF 校验拒绝: {:?}", e))?;
+                EbpfVerifier::verify(&l3).map_err(|e| format!("L3 eBPF 校验拒绝: {:?}", e))?;
+                *crate::lock_guard::write_rwlock(&self.bytecode, "xdp::icmp_l2") = l2;
+                *crate::lock_guard::write_rwlock(&self.l3_bytecode, "xdp::icmp_l3") = l3;
+                *crate::lock_guard::write_rwlock(&self.active_policy_name, "xdp::icmp_name") =
+                    "drop_icmp_probe (eBPF 丢弃 ICMP 扫描探测)".to_string();
+                Ok("已通过 EbpfVerifier 校验并下发 ICMP 探针线速拦截字节码".to_string())
+            }
+            "redirect_tcp_xsk" => {
+                // 将高优先级 TCP 包重定向至 AF_XDP 双环 (Proto == 6 => Redirect = 3)
+                let l2 = vec![
+                    EbpfInstruction::ldx_b(3, 1, 23),
+                    EbpfInstruction::jeq_imm(3, 6, 2),
+                    EbpfInstruction::mov_imm(0, 0),
+                    EbpfInstruction::exit(),
+                    EbpfInstruction::mov_imm(0, 3),
+                    EbpfInstruction::exit(),
+                ];
+                let l3 = vec![
+                    EbpfInstruction::ldx_b(3, 1, 9),
+                    EbpfInstruction::jeq_imm(3, 6, 2),
+                    EbpfInstruction::mov_imm(0, 0),
+                    EbpfInstruction::exit(),
+                    EbpfInstruction::mov_imm(0, 3),
+                    EbpfInstruction::exit(),
+                ];
+                EbpfVerifier::verify(&l2).map_err(|e| format!("L2 eBPF 校验拒绝: {:?}", e))?;
+                EbpfVerifier::verify(&l3).map_err(|e| format!("L3 eBPF 校验拒绝: {:?}", e))?;
+                *crate::lock_guard::write_rwlock(&self.bytecode, "xdp::xsk_l2") = l2;
+                *crate::lock_guard::write_rwlock(&self.l3_bytecode, "xdp::xsk_l3") = l3;
+                *crate::lock_guard::write_rwlock(&self.active_policy_name, "xdp::xsk_name") =
+                    "redirect_tcp_xsk (TCP 流量 XSK 双环高优先分流)".to_string();
+                Ok("已通过 EbpfVerifier 校验并激活 TCP XSK 重定向双环分流策略".to_string())
+            }
+            other => Err(format!("不支持的 eBPF 预设策略名称: {}", other)),
         }
+    }
 
-        // 2. 走内核级五元组流分流直通映射
-        let (action, _tuple) = self.steering_table.evaluate_packet(packet, now_ms);
+    fn record_action_metrics(&self, action: XdpAction, packet_len: usize) {
         match action {
             XdpAction::Drop => {
                 self.dropped_count.fetch_add(1, Ordering::Relaxed);
             }
             XdpAction::Bypass => {
                 self.bypassed_count.fetch_add(1, Ordering::Relaxed);
-                self.bypassed_bytes.fetch_add(packet.len() as u64, Ordering::Relaxed);
+                self.bypassed_bytes.fetch_add(packet_len as u64, Ordering::Relaxed);
             }
             XdpAction::Redirect => {
                 self.redirected_count.fetch_add(1, Ordering::Relaxed);
-                let mut ring = self.xsk_ring.write().unwrap();
-                let _ = ring.enqueue_rx(packet.len() as u32);
+                let mut ring = crate::lock_guard::write_rwlock(&self.xsk_ring, "xdp_engine::steering_redirect");
+                let _ = ring.enqueue_rx(packet_len as u32);
             }
             XdpAction::Pass | XdpAction::Tx => {
                 self.passed_count.fetch_add(1, Ordering::Relaxed);
             }
         }
+    }
 
+    /// 通用 XDP 动作判定共享路径（兼容 L2 以太网与裸 L3 IPv4）
+    fn run_pipeline(&self, slice: &[u8], now_ms: u64, is_l3_ipv4: bool) -> XdpAction {
+        self.total_processed.fetch_add(1, Ordering::Relaxed);
+
+        let bc_guard = if is_l3_ipv4 {
+            crate::lock_guard::read_rwlock(&self.l3_bytecode, "xdp_engine::run_l3_bc")
+        } else {
+            crate::lock_guard::read_rwlock(&self.bytecode, "xdp_engine::run_l2_bc")
+        };
+
+        if !bc_guard.is_empty() {
+            let mut vm = crate::lock_guard::write_rwlock(&self.vm, "xdp_engine::run_vm");
+            let vm_action = vm.execute(&bc_guard, slice);
+            if vm_action != XdpAction::Pass && vm_action != XdpAction::Tx {
+                drop(vm);
+                drop(bc_guard);
+                self.record_action_metrics(vm_action, slice.len());
+                return vm_action;
+            }
+        }
+        drop(bc_guard);
+
+        let (action, _tuple) = if is_l3_ipv4 {
+            self.steering_table.evaluate_ip_slice(slice, now_ms)
+        } else {
+            self.steering_table.evaluate_packet(slice, now_ms)
+        };
+        self.record_action_metrics(action, slice.len());
         action
+    }
+
+    /// 处理到达 L2 网卡的一帧原生以太网报文，执行线速 XDP 动作判定
+    pub fn process_wire_packet(&self, packet: &[u8], now_ms: u64) -> XdpAction {
+        self.run_pipeline(packet, now_ms, false)
+    }
+
+    /// 处理 Windows RIO / Raw Socket 收到的 L3 纯 IPv4 报文，零拷贝开销直行 XDP 动作判定
+    pub fn process_ipv4_packet(&self, ip_packet: &[u8], now_ms: u64) -> XdpAction {
+        self.run_pipeline(ip_packet, now_ms, true)
     }
 
     /// 提取全量可观测指标报告
@@ -849,6 +966,11 @@ impl XdpBypassEngine {
         };
 
         let (active_flows, bypassed_flows) = self.steering_table.get_flow_counts();
+        let blocked_cnt = self.steering_table.blocked_ip_count();
+        let insn_cnt = crate::lock_guard::read_rwlock(&self.bytecode, "xdp::metrics_bc")
+            .len()
+            .max(crate::lock_guard::read_rwlock(&self.l3_bytecode, "xdp::metrics_l3bc").len());
+        let policy_name = crate::lock_guard::read_rwlock(&self.active_policy_name, "xdp::metrics_name").clone();
 
         XdpBypassMetrics {
             total_processed_packets: total,
@@ -860,6 +982,9 @@ impl XdpBypassEngine {
             bypass_ratio_percentage: (ratio * 100.0).round() / 100.0,
             active_tcp_flows: active_flows,
             direct_bypassed_flows: bypassed_flows,
+            blocked_ips_count: blocked_cnt,
+            ebpf_instructions_count: insn_cnt,
+            active_policy_name: policy_name,
         }
     }
 }
@@ -904,6 +1029,22 @@ pub fn evaluate_xdp_packet_cmd(hex_payload: String) -> String {
         .as_millis() as u64;
     let action = GLOBAL_XDP_ENGINE.process_wire_packet(&bytes, now_ms);
     format!("{:?}", action)
+}
+
+#[tauri::command]
+pub fn apply_xdp_policy_preset_cmd(preset: String) -> Result<String, String> {
+    GLOBAL_XDP_ENGINE.apply_policy_preset(&preset)
+}
+
+pub fn sync_block_ip_to_xdp(ip_str: &str, blocked: bool) {
+    let clean = ip_str.split('/').next().unwrap_or(ip_str).trim();
+    if let Ok(ip) = clean.parse::<std::net::Ipv4Addr>() {
+        if blocked {
+            GLOBAL_XDP_ENGINE.steering_table.block_ip(ip.octets());
+        } else {
+            let _ = GLOBAL_XDP_ENGINE.steering_table.unblock_ip(ip.octets());
+        }
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -1137,5 +1278,32 @@ mod tests {
         udp_pkt[14] = 0x45;
         udp_pkt[23] = 17; // UDP
         assert_eq!(engine.process_wire_packet(&udp_pkt, 9999), XdpAction::Pass);
+    }
+
+    #[test]
+    fn test_l3_ipv4_direct_and_blocked_ip_drop_and_presets() {
+        let engine = XdpBypassEngine::new();
+        // 1. 测试黑名单 IP 联动秒级 Drop (L3 纯 IPv4 报文直入)
+        let blocked_ip = [203, 0, 113, 9];
+        engine.steering_table.block_ip(blocked_ip);
+        assert_eq!(engine.steering_table.blocked_ip_count(), 1);
+
+        let full_pkt = construct_mock_tcp_packet(blocked_ip, [10, 0, 0, 5], 12345, 502, 0x18, 32);
+        let l3_slice = &full_pkt[14..];
+        assert_eq!(engine.process_ipv4_packet(l3_slice, 1000), XdpAction::Drop);
+
+        // 解封后应恢复正常 Pass
+        assert!(engine.steering_table.unblock_ip(blocked_ip));
+        assert_eq!(engine.process_ipv4_packet(l3_slice, 1001), XdpAction::Pass);
+
+        // 2. 测试 eBPF 策略预设下发 (ICMP 丢弃)
+        engine
+            .apply_policy_preset("drop_icmp_probe")
+            .expect("drop_icmp_probe 策略应通过 EbpfVerifier");
+        let mut icmp_l3 = vec![0u8; 28];
+        icmp_l3[0] = 0x45;
+        icmp_l3[9] = 1; // ICMP
+        assert_eq!(engine.process_ipv4_packet(&icmp_l3, 1002), XdpAction::Drop);
+        assert_eq!(engine.process_ipv4_packet(l3_slice, 1002), XdpAction::Pass);
     }
 }

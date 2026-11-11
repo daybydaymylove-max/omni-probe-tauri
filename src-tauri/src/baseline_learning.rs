@@ -364,10 +364,7 @@ pub fn process_packet_for_baseline_temporal(
     let rule_key = format!("{}->{}:{}/{}", src_ip, dst_ip, dst_port, protocol);
     let now_ts = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
-    let mut engine = match BASELINE_ENGINE.lock() {
-        Ok(e) => e,
-        Err(_) => return,
-    };
+    let mut engine = crate::lock_guard::lock_mutex(&BASELINE_ENGINE, "baseline_learning::evaluate_or_learn_flow");
 
     if engine.mode == "DISABLED" {
         return;
@@ -502,7 +499,7 @@ pub fn process_packet_for_baseline_temporal(
 // ---- Tauri 暴露命令 ----
 
 pub fn get_baseline_status() -> BaselineStatus {
-    let engine = BASELINE_ENGINE.lock().unwrap();
+    let engine = crate::lock_guard::lock_mutex(&BASELINE_ENGINE, "baseline_learning::get_baseline_status");
     BaselineStatus {
         mode: engine.mode.clone(),
         total_rules: engine.rules.len(),
@@ -512,7 +509,7 @@ pub fn get_baseline_status() -> BaselineStatus {
 }
 
 pub fn set_baseline_mode(new_mode: &str) -> Result<bool, String> {
-    let mut engine = BASELINE_ENGINE.lock().map_err(|e| e.to_string())?;
+    let mut engine = crate::lock_guard::lock_mutex(&BASELINE_ENGINE, "baseline_learning::set_baseline_mode");
     match new_mode {
         "LEARNING" | "ENFORCING" | "DISABLED" => {
             engine.mode = new_mode.to_string();
@@ -524,21 +521,21 @@ pub fn set_baseline_mode(new_mode: &str) -> Result<bool, String> {
 }
 
 pub fn get_baseline_rules() -> Vec<BaselineRule> {
-    let engine = BASELINE_ENGINE.lock().unwrap();
+    let engine = crate::lock_guard::lock_mutex(&BASELINE_ENGINE, "baseline_learning::get_baseline_rules");
     let mut list: Vec<BaselineRule> = engine.rules.values().cloned().collect();
     list.sort_by(|a, b| b.hit_count.cmp(&a.hit_count));
     list
 }
 
 pub fn persist_baseline_rules() -> Result<usize, String> {
-    let engine = BASELINE_ENGINE.lock().map_err(|e| e.to_string())?;
+    let engine = crate::lock_guard::lock_mutex(&BASELINE_ENGINE, "baseline_learning::persist_baseline_rules");
     let count = engine.persist_to_disk()?;
     crate::rbac::record_admin_audit("PERSIST_BASELINE", &format!("已成功固化 {} 条通信基线规则至磁盘", count), "SUCCESS");
     Ok(count)
 }
 
 pub fn clear_baseline_rules() -> Result<bool, String> {
-    let mut engine = BASELINE_ENGINE.lock().map_err(|e| e.to_string())?;
+    let mut engine = crate::lock_guard::lock_mutex(&BASELINE_ENGINE, "baseline_learning::clear_baseline_rules");
     engine.rules.clear();
     engine.temporal_profiles.clear();
     engine.drift_events.clear();
@@ -552,7 +549,7 @@ pub fn clear_baseline_rules() -> Result<bool, String> {
 }
 
 pub fn get_baseline_drift_events() -> Vec<BaselineDriftEvent> {
-    let engine = BASELINE_ENGINE.lock().unwrap();
+    let engine = crate::lock_guard::lock_mutex(&BASELINE_ENGINE, "baseline_learning::get_baseline_drift_events");
     engine.drift_events.clone()
 }
 
@@ -561,7 +558,7 @@ pub fn get_macro_calendar_baseline_status_cmd() -> Result<DayRegimeInferenceResu
     use chrono::Datelike;
     let now = chrono::Local::now();
     let weekday = now.weekday().number_from_monday(); // 1=Mon .. 7=Sun
-    let engine = GLOBAL_MACRO_BASELINE_ENGINE.lock().map_err(|e| e.to_string())?;
+    let engine = crate::lock_guard::lock_mutex(&GLOBAL_MACRO_BASELINE_ENGINE, "baseline_learning::get_macro_calendar_baseline_status_cmd");
     let features = engine.classifier.workday_mean;
     Ok(engine.classifier.infer_regime(&features, weekday))
 }
@@ -571,13 +568,13 @@ pub fn infer_unsupervised_day_regime_cmd(features: [f64; 3], weekday: Option<u32
     use chrono::Datelike;
     let now = chrono::Local::now();
     let wk = weekday.unwrap_or_else(|| now.weekday().number_from_monday());
-    let engine = GLOBAL_MACRO_BASELINE_ENGINE.lock().map_err(|e| e.to_string())?;
+    let engine = crate::lock_guard::lock_mutex(&GLOBAL_MACRO_BASELINE_ENGINE, "baseline_learning::infer_unsupervised_day_regime_cmd");
     Ok(engine.classifier.infer_regime(&features, wk))
 }
 
 #[tauri::command]
 pub fn import_statutory_calendar_date_cmd(date_str: String, regime_type: String) -> Result<bool, String> {
-    let mut engine = GLOBAL_MACRO_BASELINE_ENGINE.lock().map_err(|e| e.to_string())?;
+    let mut engine = crate::lock_guard::lock_mutex(&GLOBAL_MACRO_BASELINE_ENGINE, "baseline_learning::import_statutory_calendar_date_cmd");
     let regime = match regime_type.as_str() {
         "WORKDAY" | "StandardWorkday" => DayRegime::StandardWorkday,
         "WEEKEND" | "StandardWeekend" => DayRegime::StandardWeekend,

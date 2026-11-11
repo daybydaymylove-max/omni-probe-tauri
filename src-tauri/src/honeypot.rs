@@ -43,7 +43,7 @@ pub static HONEYPOT_RUNNING: once_cell::sync::Lazy<Arc<Mutex<bool>>> =
 /// 此函数在独立 std::thread 中启动一个 tokio runtime，不阻塞 Tauri 主线程
 pub fn start_honeypot(app: tauri::AppHandle, ports: Vec<(u16, String)>) {
     {
-        let mut running = HONEYPOT_RUNNING.lock().unwrap();
+        let mut running = crate::lock_guard::lock_mutex(&HONEYPOT_RUNNING, "honeypot::start_honeypot");
         if *running {
             let _ = app.emit("system-log", "[HONEYPOT] 蜜罐引擎已在运行，无需重复启动");
             return;
@@ -91,9 +91,8 @@ pub fn start_honeypot(app: tauri::AppHandle, ports: Vec<(u16, String)>) {
 
 /// 停止蜜罐引擎
 pub fn stop_honeypot() {
-    if let Ok(mut running) = HONEYPOT_RUNNING.lock() {
-        *running = false;
-    }
+    let mut running = crate::lock_guard::lock_mutex(&HONEYPOT_RUNNING, "honeypot::stop_honeypot");
+    *running = false;
 }
 
 /// 单个 TCP 蜜罐侦听协程
@@ -111,7 +110,7 @@ async fn run_tcp_honeypot(app: tauri::AppHandle, port: u16, running: Arc<Mutex<b
     };
 
     loop {
-        if !*running.lock().unwrap() {
+        if !*crate::lock_guard::lock_mutex(&running, "honeypot::run_tcp_honeypot_loop") {
             break;
         }
 
@@ -236,7 +235,7 @@ async fn run_udp_honeypot(app: tauri::AppHandle, port: u16, running: Arc<Mutex<b
 
     let mut buf = vec![0u8; 65535];
     loop {
-        if !*running.lock().unwrap() {
+        if !*crate::lock_guard::lock_mutex(&running, "honeypot::run_udp_honeypot_loop") {
             break;
         }
 

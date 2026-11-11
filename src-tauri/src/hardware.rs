@@ -45,7 +45,7 @@ pub fn run_hardware_monitor(app: tauri::AppHandle) {
     loop {
         thread::sleep(Duration::from_secs(3));
 
-        if !*crate::PROBE_RUNNING.lock().unwrap() {
+        if !*crate::lock_guard::lock_mutex(&crate::PROBE_RUNNING, "hardware::hotplug_loop") {
             break;
         }
 

@@ -351,8 +351,11 @@ pub fn inspect_data_security_payload(
 
     // 写入内存并落盘
     if !detected_findings.is_empty() {
-        if let Ok(mut state) = DATA_SECURITY_STATE.lock() {
-            state.summary.total_scanned_flows += 1;
+        let mut state = crate::lock_guard::lock_mutex(
+            &DATA_SECURITY_STATE,
+            "audit_data_security::inspect_data_security",
+        );
+        state.summary.total_scanned_flows += 1;
             for (rule_id, rule_name, cat, sev, masked, desc) in detected_findings {
                 state.summary.total_sensitive_hits += 1;
                 match cat {
@@ -394,7 +397,6 @@ pub fn inspect_data_security_payload(
                 }
                 state.findings.push_back(finding);
             }
-        }
     }
 }
 
@@ -527,7 +529,11 @@ pub fn inspect_and_reconstruct_file(
         is_truncated,
     };
 
-    if let Ok(mut state) = DATA_SECURITY_STATE.lock() {
+    {
+        let mut state = crate::lock_guard::lock_mutex(
+            &DATA_SECURITY_STATE,
+            "audit_data_security::inspect_and_reconstruct_file",
+        );
         if state.files.len() >= MAX_RECONSTRUCTED_FILES {
             state.files.pop_front();
         }
@@ -537,23 +543,35 @@ pub fn inspect_and_reconstruct_file(
 }
 
 pub fn get_sensitive_findings(limit: Option<usize>) -> Vec<SensitiveDataFinding> {
-    let state = DATA_SECURITY_STATE.lock().unwrap();
+    let state = crate::lock_guard::lock_mutex(
+        &DATA_SECURITY_STATE,
+        "audit_data_security::get_sensitive_findings",
+    );
     let lim = limit.unwrap_or(100);
     state.findings.iter().rev().take(lim).cloned().collect()
 }
 
 pub fn get_reconstructed_files() -> Vec<ReconstructedFileItem> {
-    let state = DATA_SECURITY_STATE.lock().unwrap();
+    let state = crate::lock_guard::lock_mutex(
+        &DATA_SECURITY_STATE,
+        "audit_data_security::get_reconstructed_files",
+    );
     state.files.iter().rev().cloned().collect()
 }
 
 pub fn get_data_security_summary() -> DataSecuritySummary {
-    let state = DATA_SECURITY_STATE.lock().unwrap();
+    let state = crate::lock_guard::lock_mutex(
+        &DATA_SECURITY_STATE,
+        "audit_data_security::get_data_security_summary",
+    );
     state.summary.clone()
 }
 
 pub fn clear_data_security_records() {
-    let mut state = DATA_SECURITY_STATE.lock().unwrap();
+    let mut state = crate::lock_guard::lock_mutex(
+        &DATA_SECURITY_STATE,
+        "audit_data_security::clear_data_security_records",
+    );
     state.findings.clear();
     state.files.clear();
     state.summary = DataSecuritySummary::default();

@@ -47,4 +47,5 @@ window.addEventListener('dragstart', (e: DragEvent) => {
   }
 });
 
+// 4. 主题交由 App.vue 依据系统偏好与用户设置动态协同 (不再强锁死暗黑根类)
 createApp(App).mount('#app');
