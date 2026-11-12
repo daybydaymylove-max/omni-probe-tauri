@@ -78,6 +78,29 @@ pub struct WifiAccessPointAsset {
     pub security_alerts: Vec<String>,
 }
 
+/// Wi-Fi RSSI 实时变化历史采样点 (用于信号时序折线图)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WifiRssiSample {
+    pub timestamp: String,
+    pub bssid: String,
+    pub ssid: String,
+    pub channel: u8,
+    pub rssi_dbm: i8,
+}
+
+/// OS 原生 WLAN 扫描结果（诚实报告宿主机硬件/服务是否可用）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NativeWifiScanResult {
+    pub native_scan_available: bool,
+    pub platform: String,
+    pub reason_code: String,
+    pub status_message: String,
+    pub scanned_ap_count: usize,
+    pub interface_name: String,
+    pub aps: Vec<WifiAccessPointAsset>,
+    pub summary: WifiTelemetrySummary,
+}
+
 /// Wi-Fi 全局遥测汇总
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct WifiTelemetrySummary {
@@ -89,6 +112,7 @@ pub struct WifiTelemetrySummary {
     pub rogue_ap_alerts: u64,
     pub channel_distribution: HashMap<u8, u64>,
     pub ap_assets: Vec<WifiAccessPointAsset>,
+    pub rssi_history: Vec<WifiRssiSample>,
 }
 
 /// 频率换算 Wi-Fi 信道编号与频段
@@ -366,6 +390,7 @@ pub struct WifiMonitorInner {
     rogue_ap_alerts: u64,
     channel_counts: HashMap<u8, u64>,
     ap_map: HashMap<String, WifiAccessPointAsset>,
+    rssi_history: Vec<WifiRssiSample>,
 }
 
 /// 全局单例 Wi-Fi 专业监测引擎
@@ -379,6 +404,7 @@ pub static GLOBAL_WIFI_MONITOR: Lazy<Arc<RwLock<WifiMonitorInner>>> = Lazy::new(
         rogue_ap_alerts: 0,
         channel_counts: HashMap::new(),
         ap_map: HashMap::new(),
+        rssi_history: Vec::with_capacity(240),
     }))
 });
 
@@ -444,6 +470,27 @@ pub fn record_wifi_frame(info: &Dot11DissectionInfo, timestamp: &str) {
         if info.is_deauth_threat && !ap.security_alerts.contains(&"DEAUTH_FLOOD_TARGET".to_string()) {
             ap.security_alerts.push("DEAUTH_FLOOD_TARGET".to_string());
         }
+        if info.encryption_type.contains("Open (None)") && !ap.security_alerts.contains(&"OPEN_UNENCRYPTED_WLAN".to_string()) {
+            ap.security_alerts.push("OPEN_UNENCRYPTED_WLAN".to_string());
+        }
+        if (info.encryption_type.contains("WEP") || info.encryption_type.contains("TKIP")) && !ap.security_alerts.contains(&"WEAK_CIPHER_TKIP_WEP".to_string()) {
+            ap.security_alerts.push("WEAK_CIPHER_TKIP_WEP".to_string());
+        }
+        if info.encryption_type.contains("No-PMF") && !ap.security_alerts.contains(&"NO_PMF_80211W".to_string()) {
+            ap.security_alerts.push("NO_PMF_80211W".to_string());
+        }
+        let resolved_ssid = ap.ssid.clone();
+        lock.rssi_history.push(WifiRssiSample {
+            timestamp: timestamp.to_string(),
+            bssid: info.bssid.clone(),
+            ssid: resolved_ssid,
+            channel: ch,
+            rssi_dbm: rssi,
+        });
+        if lock.rssi_history.len() > 240 {
+            let excess = lock.rssi_history.len() - 240;
+            lock.rssi_history.drain(..excess);
+        }
     }
 }
 
@@ -467,6 +514,7 @@ pub fn get_wifi_telemetry_summary() -> WifiTelemetrySummary {
         rogue_ap_alerts: lock.rogue_ap_alerts,
         channel_distribution: lock.channel_counts.clone(),
         ap_assets,
+        rssi_history: lock.rssi_history.clone(),
     }
 }
 
@@ -484,6 +532,743 @@ pub fn reset_wifi_telemetry() {
     lock.rogue_ap_alerts = 0;
     lock.channel_counts.clear();
     lock.ap_map.clear();
+    lock.rssi_history.clear();
+}
+
+/// 解析 Windows `netsh wlan show networks mode=bssid` 输出为真实 AP 集合
+pub fn parse_netsh_wlan_output(output: &str) -> (String, Vec<Dot11DissectionInfo>) {
+    let mut iface_name = String::new();
+    let mut results = Vec::new();
+    let mut cur_ssid = String::new();
+    let mut cur_auth = "Open".to_string();
+    let mut cur_bssid = String::new();
+    let mut cur_signal_pct: Option<i32> = None;
+    let mut cur_channel: Option<u8> = None;
+
+    let flush_bssid = |results: &mut Vec<Dot11DissectionInfo>, ssid: &str, auth: &str, bssid: &str, sig: Option<i32>, ch: Option<u8>| {
+        if bssid.is_empty() {
+            return;
+        }
+        let rssi_dbm = sig.map(|p| ((p.clamp(0, 100) / 2) - 100) as i8).unwrap_or(-75);
+        let band = ch.map(|c| if c <= 14 { "2.4 GHz" } else { "5 GHz" }).unwrap_or("2.4 GHz");
+        let freq = ch.map(|c| if c <= 14 { 2407 + (c as u16) * 5 } else { 5000 + (c as u16) * 5 });
+        results.push(Dot11DissectionInfo {
+            frame_type: Dot11FrameType::Management,
+            subtype_name: "WLAN Scan Beacon".to_string(),
+            bssid: bssid.to_uppercase(),
+            src_mac: bssid.to_uppercase(),
+            dst_mac: "FF:FF:FF:FF:FF:FF".to_string(),
+            ssid: if ssid.is_empty() { None } else { Some(ssid.to_string()) },
+            channel: ch,
+            encryption_type: auth.to_string(),
+            is_deauth_threat: false,
+            deauth_reason_code: None,
+            is_eapol_handshake: false,
+            radiotap: RadiotapMetrics {
+                channel_freq_mhz: freq,
+                channel_number: ch,
+                band_desc: band.to_string(),
+                rssi_dbm: Some(rssi_dbm),
+                noise_dbm: None,
+                snr_db: None,
+                rate_mbps: None,
+            },
+        });
+    };
+
+    for raw_line in output.lines() {
+        let line = raw_line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let lower = line.to_lowercase();
+        if (lower.starts_with("interface name") || line.starts_with("接口名称")) && line.contains(':') {
+            if let Some((_, val)) = line.split_once(':') {
+                iface_name = val.trim().to_string();
+            }
+        } else if (lower.starts_with("ssid ") || line.starts_with("SSID ")) && !lower.starts_with("bssid") {
+            flush_bssid(&mut results, &cur_ssid, &cur_auth, &cur_bssid, cur_signal_pct, cur_channel);
+            cur_bssid.clear();
+            cur_signal_pct = None;
+            cur_channel = None;
+            cur_ssid = line.split_once(':').map(|(_, v)| v.trim().to_string()).unwrap_or_default();
+        } else if (lower.starts_with("authentication") || line.starts_with("身份验证") || line.starts_with("认证")) && line.contains(':') {
+            cur_auth = line.split_once(':').map(|(_, v)| v.trim().to_string()).unwrap_or_else(|| "Open".into());
+        } else if lower.starts_with("bssid ") && line.contains(':') {
+            flush_bssid(&mut results, &cur_ssid, &cur_auth, &cur_bssid, cur_signal_pct, cur_channel);
+            cur_signal_pct = None;
+            cur_channel = None;
+            cur_bssid = line.split_once(':').map(|(_, v)| v.trim().to_string()).unwrap_or_default();
+        } else if (lower.starts_with("signal") || line.starts_with("信号")) && line.contains(':') {
+            if let Some((_, val)) = line.split_once(':') {
+                let digits: String = val.trim().chars().take_while(|c| c.is_ascii_digit()).collect();
+                cur_signal_pct = digits.parse::<i32>().ok();
+            }
+        } else if (lower.starts_with("channel") || line.starts_with("频道") || line.starts_with("信道")) && line.contains(':') {
+            if let Some((_, val)) = line.split_once(':') {
+                let digits: String = val.trim().chars().take_while(|c| c.is_ascii_digit()).collect();
+                cur_channel = digits.parse::<u8>().ok();
+            }
+        }
+    }
+    flush_bssid(&mut results, &cur_ssid, &cur_auth, &cur_bssid, cur_signal_pct, cur_channel);
+    (iface_name, results)
+}
+
+/// 跨平台调用操作系统原生 WLAN 扫描周边物理 AP，绝对遵循硬件诚实原则（无无线网卡或服务未启动时明确反馈）
+/// IEEE 802.11 Information Element (IE) 物理与安全深度解析结果
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Dot11IeDeepResult {
+    pub summary_encryption: String,
+    pub wifi_generation: Option<String>,
+    pub pmf_status: String,
+    pub pairwise_ciphers: Vec<String>,
+    pub akm_suites: Vec<String>,
+    pub qbss_station_count: Option<u16>,
+    pub qbss_channel_util_pct: Option<f32>,
+    pub security_alerts: Vec<String>,
+}
+
+#[inline]
+fn decode_rsn_cipher_suite(suite: &[u8]) -> String {
+    if suite.len() != 4 {
+        return "Unknown".into();
+    }
+    if suite[0..3] == [0x00, 0x0F, 0xAC] || suite[0..3] == [0x00, 0x50, 0xF2] {
+        match suite[3] {
+            1 => "WEP-40".into(),
+            2 => "TKIP".into(),
+            4 => "CCMP-128".into(),
+            5 => "WEP-104".into(),
+            6 => "BIP-CMAC-128".into(),
+            8 => "GCMP-128".into(),
+            9 => "GCMP-256".into(),
+            10 => "CCMP-256".into(),
+            code => format!("Cipher-{}", code),
+        }
+    } else {
+        format!("{:02X}:{:02X}:{:02X}:{}", suite[0], suite[1], suite[2], suite[3])
+    }
+}
+
+#[inline]
+fn decode_rsn_akm_suite(suite: &[u8]) -> String {
+    if suite.len() != 4 {
+        return "Unknown".into();
+    }
+    if suite[0..3] == [0x00, 0x0F, 0xAC] || suite[0..3] == [0x00, 0x50, 0xF2] {
+        match suite[3] {
+            1 => "802.1X".into(),
+            2 => "PSK".into(),
+            3 => "FT-802.1X".into(),
+            4 => "FT-PSK".into(),
+            5 => "802.1X-SHA256".into(),
+            6 => "PSK-SHA256".into(),
+            8 => "WPA3-SAE".into(),
+            9 => "FT-SAE".into(),
+            11 => "SuiteB-192".into(),
+            12 => "SuiteB-256".into(),
+            18 => "OWE".into(),
+            code => format!("AKM-{}", code),
+        }
+    } else {
+        format!("VendorAKM-{}", suite[3])
+    }
+}
+
+/// 完整解析 IEEE 802.11 Beacon / ProbeRsp 二进制 IE TLV 流 (Tag-Length-Value)
+/// 覆盖: RSN (Tag 48: Pairwise/AKM/PMF 802.11w)、WPA1 (Tag 221)、HT/VHT/HE/EHT (Wi-Fi 4/5/6/7)、QBSS Load (Tag 11)
+/// 时间复杂度: O(N) 单遍扫描 (N 为 IE 字节长度); 空间复杂度: O(K) 少量协议标签列表
+pub fn parse_dot11_ie_tlv_deep(ies: &[u8], cap_info: u16) -> Dot11IeDeepResult {
+    let has_privacy = (cap_info & (1 << 4)) != 0;
+    let mut res = Dot11IeDeepResult {
+        pmf_status: "No-PMF".into(),
+        ..Default::default()
+    };
+    let mut has_rsn = false;
+    let mut has_wpa1 = false;
+    let mut has_ht = false;
+    let mut has_vht = false;
+    let mut has_he = false;
+    let mut has_eht = false;
+
+    let mut offset = 0usize;
+    while offset + 2 <= ies.len() {
+        let tag = ies[offset];
+        let len = ies[offset + 1] as usize;
+        offset += 2;
+        if offset + len > ies.len() {
+            break;
+        }
+        let body = &ies[offset..offset + len];
+
+        match tag {
+            11 if body.len() >= 5 => {
+                // QBSS Load (802.11-2020 §9.4.2.27): StationCount (2B LE) + ChannelUtil (1B 0..255)
+                let sta = u16::from_le_bytes([body[0], body[1]]);
+                let util = (body[2] as f32 / 255.0) * 100.0;
+                res.qbss_station_count = Some(sta);
+                res.qbss_channel_util_pct = Some((util * 10.0).round() / 10.0);
+            }
+            45 => has_ht = true,
+            191 => has_vht = true,
+            255 if !body.is_empty() => {
+                // Extension Element Tag 255: Ext=35 为 HE (Wi-Fi 6), Ext=106 为 EHT (Wi-Fi 7)
+                if body[0] == 35 {
+                    has_he = true;
+                } else if body[0] == 106 {
+                    has_eht = true;
+                }
+            }
+            48 if body.len() >= 8 => {
+                has_rsn = true;
+                // [0..2]=Version(1), [2..6]=GroupCipher, [6..8]=PairwiseCount
+                let pw_cnt = u16::from_le_bytes([body[6], body[7]]) as usize;
+                let mut p = 8usize;
+                for _ in 0..pw_cnt.min(8) {
+                    if p + 4 > body.len() {
+                        break;
+                    }
+                    let c = decode_rsn_cipher_suite(&body[p..p + 4]);
+                    if !res.pairwise_ciphers.contains(&c) {
+                        res.pairwise_ciphers.push(c);
+                    }
+                    p += 4;
+                }
+                // 若 pairwise count 超过 8 也跳过剩余套件维持偏移准确
+                p = 8 + pw_cnt.saturating_mul(4);
+                if p + 2 <= body.len() {
+                    let akm_cnt = u16::from_le_bytes([body[p], body[p + 1]]) as usize;
+                    p += 2;
+                    for idx in 0..akm_cnt.min(8) {
+                        let s_off = p + idx * 4;
+                        if s_off + 4 > body.len() {
+                            break;
+                        }
+                        let a = decode_rsn_akm_suite(&body[s_off..s_off + 4]);
+                        if !res.akm_suites.contains(&a) {
+                            res.akm_suites.push(a);
+                        }
+                    }
+                    p += akm_cnt.saturating_mul(4);
+                }
+                if p + 2 <= body.len() {
+                    // RSN Capabilities (2B LE): Bit6=MFPR (Required), Bit7=MFPC (Capable)
+                    let rsn_caps = u16::from_le_bytes([body[p], body[p + 1]]);
+                    let mfpr = (rsn_caps & (1 << 6)) != 0;
+                    let mfpc = (rsn_caps & (1 << 7)) != 0;
+                    res.pmf_status = if mfpr {
+                        "PMF-Req".into()
+                    } else if mfpc {
+                        "PMF-Cap".into()
+                    } else {
+                        "No-PMF".into()
+                    };
+                }
+            }
+            221 if body.len() >= 4 && body[0..4] == [0x00, 0x50, 0xF2, 0x01] => {
+                has_wpa1 = true;
+            }
+            _ => {}
+        }
+
+        offset += len;
+    }
+
+    res.wifi_generation = if has_eht {
+        Some("Wi-Fi 7 (802.11be)".into())
+    } else if has_he {
+        Some("Wi-Fi 6 (802.11ax)".into())
+    } else if has_vht {
+        Some("Wi-Fi 5 (802.11ac)".into())
+    } else if has_ht {
+        Some("Wi-Fi 4 (802.11n)".into())
+    } else {
+        None
+    };
+
+    let base_enc = if has_rsn {
+        let akm = if res.akm_suites.is_empty() {
+            "WPA2-PSK".to_string()
+        } else {
+            res.akm_suites.join("/")
+        };
+        let cipher = if res.pairwise_ciphers.is_empty() {
+            "CCMP".to_string()
+        } else {
+            res.pairwise_ciphers.join("+")
+        };
+        format!("{} ({}) · {}", akm, cipher, res.pmf_status)
+    } else if has_wpa1 {
+        "WPA1 (Legacy TKIP/PSK)".into()
+    } else if has_privacy {
+        "WEP / Legacy Encrypted".into()
+    } else {
+        "Open (None)".into()
+    };
+
+    let mut extras = vec![base_enc];
+    if let Some(ref wifi_gen) = res.wifi_generation {
+        extras.push(wifi_gen.clone());
+    }
+    if let (Some(sta), Some(util)) = (res.qbss_station_count, res.qbss_channel_util_pct) {
+        extras.push(format!("空口{:.0}%/{}终端", util, sta));
+    }
+    res.summary_encryption = extras.join(" · ");
+
+    // 生成客观物理层安全脆弱性标记
+    if !has_rsn && !has_wpa1 && !has_privacy {
+        res.security_alerts.push("OPEN_UNENCRYPTED_WLAN".into());
+    } else if !has_rsn && (has_wpa1 || has_privacy) {
+        res.security_alerts.push("LEGACY_WPA1_OR_WEP".into());
+    }
+    if res.pairwise_ciphers.iter().any(|c| c.contains("TKIP") || c.contains("WEP")) {
+        res.security_alerts.push("WEAK_CIPHER_TKIP_WEP".into());
+    }
+    if has_rsn && res.pmf_status == "No-PMF" {
+        res.security_alerts.push("NO_PMF_80211W".into());
+    }
+
+    res
+}
+
+#[cfg(windows)]
+mod win_wlan {
+    use super::{freq_to_channel_and_band, Dot11DissectionInfo, Dot11FrameType, RadiotapMetrics};
+    use std::ffi::c_void;
+    use std::os::windows::process::CommandExt;
+
+    pub type Handle = *mut c_void;
+
+    #[repr(C)]
+    pub struct WlanInterfaceInfo {
+        pub interface_guid: [u8; 16],
+        pub str_interface_description: [u16; 256],
+        pub is_state: u32,
+    }
+
+    #[repr(C)]
+    pub struct WlanInterfaceInfoList {
+        pub dw_number_of_items: u32,
+        pub dw_index: u32,
+        pub interface_info: [WlanInterfaceInfo; 1],
+    }
+
+    #[repr(C)]
+    pub struct Dot11Ssid {
+        pub u_ssid_length: u32,
+        pub uc_ssid: [u8; 32],
+    }
+
+    #[repr(C)]
+    pub struct WlanRateSet {
+        pub u_rate_set_length: u32,
+        pub us_rate_set: [u16; 126],
+    }
+
+    #[repr(C)]
+    pub struct WlanBssEntry {
+        pub dot11_ssid: Dot11Ssid,
+        pub u_phy_id: u32,
+        pub dot11_bssid: [u8; 6],
+        pub dot11_bss_type: u32,
+        pub dot11_bss_phy_type: u32,
+        pub l_rssi: i32,
+        pub u_link_quality: u32,
+        pub b_in_reg_domain: i32,
+        pub us_beacon_period: u16,
+        pub ull_timestamp: u64,
+        pub ull_host_timestamp: u64,
+        pub us_capability_information: u16,
+        pub ul_ch_center_frequency: u32,
+        pub wlan_rate_set: WlanRateSet,
+        pub ul_ie_offset: u32,
+        pub ul_ie_size: u32,
+    }
+
+    #[repr(C)]
+    pub struct WlanBssList {
+        pub dw_total_size: u32,
+        pub dw_number_of_items: u32,
+        pub wlan_bss_entries: [WlanBssEntry; 1],
+    }
+
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn LoadLibraryA(lp_lib_file_name: *const i8) -> usize;
+        fn GetProcAddress(h_module: usize, lp_proc_name: *const u8) -> *const c_void;
+        fn FreeLibrary(h_lib_module: usize) -> i32;
+        fn MultiByteToWideChar(
+            code_page: u32,
+            dw_flags: u32,
+            lp_multi_byte_str: *const u8,
+            cb_multi_byte: i32,
+            lp_wide_char_str: *mut u16,
+            cch_wide_char: i32,
+        ) -> i32;
+    }
+
+    type FnWlanOpenHandle = unsafe extern "system" fn(u32, *mut c_void, *mut u32, *mut Handle) -> u32;
+    type FnWlanCloseHandle = unsafe extern "system" fn(Handle, *mut c_void) -> u32;
+    type FnWlanEnumInterfaces = unsafe extern "system" fn(Handle, *mut c_void, *mut *mut WlanInterfaceInfoList) -> u32;
+    type FnWlanScan = unsafe extern "system" fn(Handle, *const [u8; 16], *const Dot11Ssid, *const c_void, *mut c_void) -> u32;
+    type FnWlanGetNetworkBssList = unsafe extern "system" fn(Handle, *const [u8; 16], *const Dot11Ssid, u32, i32, *mut c_void, *mut *mut WlanBssList) -> u32;
+    type FnWlanFreeMemory = unsafe extern "system" fn(*mut c_void);
+
+    /// 使用 Windows CP_ACP 将系统 ANSI/GBK(936) 命令行输出无损解码为 UTF-8
+    pub fn decode_acp(bytes: &[u8]) -> String {
+        if bytes.is_empty() {
+            return String::new();
+        }
+        unsafe {
+            let needed = MultiByteToWideChar(0, 0, bytes.as_ptr(), bytes.len() as i32, std::ptr::null_mut(), 0);
+            if needed <= 0 {
+                return String::from_utf8_lossy(bytes).to_string();
+            }
+            let mut wide = vec![0u16; needed as usize];
+            let written = MultiByteToWideChar(0, 0, bytes.as_ptr(), bytes.len() as i32, wide.as_mut_ptr(), needed);
+            if written <= 0 {
+                return String::from_utf8_lossy(bytes).to_string();
+            }
+            String::from_utf16_lossy(&wide[..written as usize])
+        }
+    }
+
+    /// 探知本机物理网卡中是否真正存在 802.11 无线设备，用于区分 NO_HARDWARE 与 SERVICE_STOPPED
+    pub fn has_physical_wifi_hardware() -> bool {
+        let out = std::process::Command::new("powershell")
+            .args(&[
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "if (Get-NetAdapter -IncludeHidden -ErrorAction SilentlyContinue | Where-Object { $_.PhysicalMediaType -match '802\\.11|Wireless' -or $_.NdisPhysicalMedium -eq 9 -or $_.InterfaceDescription -match 'Wi-Fi|Wireless|WLAN|802\\.11' }) { 'HAS_WIFI' } else { 'NO_WIFI' }"
+            ])
+            .creation_flags(0x08000000)
+            .output();
+        match out {
+            Ok(o) => String::from_utf8_lossy(&o.stdout).contains("HAS_WIFI"),
+            Err(_) => false,
+        }
+    }
+
+    fn parse_rsn_encryption(ies: &[u8], cap_info: u16) -> super::Dot11IeDeepResult {
+        super::parse_dot11_ie_tlv_deep(ies, cap_info)
+    }
+
+    pub fn scan_via_wlanapi() -> Result<(String, Vec<Dot11DissectionInfo>), (String, String)> {
+        unsafe {
+            let hmod = LoadLibraryA(b"wlanapi.dll\0".as_ptr() as *const i8);
+            if hmod == 0 {
+                return Err(("NO_HARDWARE".into(), "系统未包含 wlanapi.dll（未安装无线 LAN 服务或硬件驱动）".into()));
+            }
+
+            macro_rules! load_sym {
+                ($name:expr, $ty:ty) => {{
+                    let ptr = GetProcAddress(hmod, $name.as_ptr());
+                    if ptr.is_null() {
+                        FreeLibrary(hmod);
+                        return Err(("UNSUPPORTED_OS".into(), "wlanapi.dll 缺少导出符号".into()));
+                    }
+                    std::mem::transmute::<*const c_void, $ty>(ptr)
+                }};
+            }
+
+            let fn_open = load_sym!(b"WlanOpenHandle\0", FnWlanOpenHandle);
+            let fn_close = load_sym!(b"WlanCloseHandle\0", FnWlanCloseHandle);
+            let fn_enum = load_sym!(b"WlanEnumInterfaces\0", FnWlanEnumInterfaces);
+            let fn_scan = load_sym!(b"WlanScan\0", FnWlanScan);
+            let fn_bss = load_sym!(b"WlanGetNetworkBssList\0", FnWlanGetNetworkBssList);
+            let fn_free = load_sym!(b"WlanFreeMemory\0", FnWlanFreeMemory);
+
+            let mut neg_ver: u32 = 0;
+            let mut h_client: Handle = std::ptr::null_mut();
+            let rc = fn_open(2, std::ptr::null_mut(), &mut neg_ver, &mut h_client);
+            if rc != 0 {
+                FreeLibrary(hmod);
+                if rc == 1062 {
+                    if has_physical_wifi_hardware() {
+                        return Err((
+                            "SERVICE_STOPPED".into(),
+                            "检测到物理无线网卡，但 Windows WLAN AutoConfig (wlansvc) 服务处于停止状态；请以管理员执行 net start wlansvc 后重扫。".into(),
+                        ));
+                    }
+                    return Err((
+                        "NO_HARDWARE".into(),
+                        "宿主主机未安装物理 Wi-Fi (802.11) 无线网卡，且系统 wlansvc 服务未运行；当前仅存在有线/蓝牙/虚拟网卡。".into(),
+                    ));
+                }
+                return Err((
+                    "SERVICE_STOPPED".into(),
+                    format!("WlanOpenHandle 返回系统状态码 {}（请确认无线网卡已启用且 wlansvc 正常运行）", rc),
+                ));
+            }
+
+            let mut p_iface_list: *mut WlanInterfaceInfoList = std::ptr::null_mut();
+            let rc_enum = fn_enum(h_client, std::ptr::null_mut(), &mut p_iface_list);
+            if rc_enum != 0 || p_iface_list.is_null() {
+                fn_close(h_client, std::ptr::null_mut());
+                FreeLibrary(hmod);
+                return Err(("NO_HARDWARE".into(), "未枚举到可用 Wi-Fi 物理适配器。".into()));
+            }
+
+            let iface_count = (*p_iface_list).dw_number_of_items as usize;
+            if iface_count == 0 {
+                fn_free(p_iface_list as *mut c_void);
+                fn_close(h_client, std::ptr::null_mut());
+                FreeLibrary(hmod);
+                return Err((
+                    "NO_HARDWARE".into(),
+                    "WLAN 服务已运行，但未检测到已启用或已连接的物理 802.11 无线网卡。".into(),
+                ));
+            }
+
+            let ifaces_ptr = (*p_iface_list).interface_info.as_ptr();
+            let mut all_items = Vec::new();
+            let mut primary_iface_name = String::new();
+
+            for i in 0..iface_count.min(8) {
+                let iface = &*ifaces_ptr.add(i);
+                let len = iface.str_interface_description.iter().position(|&c| c == 0).unwrap_or(256);
+                let desc = String::from_utf16_lossy(&iface.str_interface_description[..len]).trim().to_string();
+                if primary_iface_name.is_empty() && !desc.is_empty() {
+                    primary_iface_name = desc;
+                }
+
+                // 主动触发硬件实时扫描一次，并短暂等待驱动汇总邻近 BSSID 缓存
+                let _ = fn_scan(h_client, &iface.interface_guid, std::ptr::null(), std::ptr::null(), std::ptr::null_mut());
+                std::thread::sleep(std::time::Duration::from_millis(280));
+
+                let mut p_bss_list: *mut WlanBssList = std::ptr::null_mut();
+                if fn_bss(
+                    h_client,
+                    &iface.interface_guid,
+                    std::ptr::null(),
+                    3, // dot11_BSS_type_any
+                    0,
+                    std::ptr::null_mut(),
+                    &mut p_bss_list,
+                ) == 0 && !p_bss_list.is_null()
+                {
+                    let bss_count = (*p_bss_list).dw_number_of_items as usize;
+                    let bss_base = (*p_bss_list).wlan_bss_entries.as_ptr();
+                    for j in 0..bss_count.min(256) {
+                        let entry = &*bss_base.add(j);
+                        let ssid_len = (entry.dot11_ssid.u_ssid_length as usize).min(32);
+                        let ssid_str = String::from_utf8_lossy(&entry.dot11_ssid.uc_ssid[..ssid_len]).to_string();
+                        let bssid = format!(
+                            "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
+                            entry.dot11_bssid[0], entry.dot11_bssid[1], entry.dot11_bssid[2],
+                            entry.dot11_bssid[3], entry.dot11_bssid[4], entry.dot11_bssid[5]
+                        );
+                        let freq_mhz = (entry.ul_ch_center_frequency / 1000) as u16;
+                        let (ch, band) = freq_to_channel_and_band(freq_mhz);
+                        let rssi = entry.l_rssi.clamp(-120, -10) as i8;
+
+                        let ies = if entry.ul_ie_size > 0 && entry.ul_ie_size < 4096 {
+                            let base_ptr = (entry as *const WlanBssEntry as *const u8).add(entry.ul_ie_offset as usize);
+                            std::slice::from_raw_parts(base_ptr, entry.ul_ie_size as usize)
+                        } else {
+                            &[]
+                        };
+                        let ie_deep = parse_rsn_encryption(ies, entry.us_capability_information);
+
+                        // 从 WlanRateSet 提取该 AP 物理支持最大基速率 (0.5 Mbps 步进)
+                        let rate_count = (entry.wlan_rate_set.u_rate_set_length as usize).min(126);
+                        let max_rate_mbps = entry.wlan_rate_set.us_rate_set[..rate_count]
+                            .iter()
+                            .map(|&r| ((r & 0x7FFF) as f32) * 0.5)
+                            .fold(0.0f32, f32::max);
+                        let band_display = if let Some(ref wifi_gen) = ie_deep.wifi_generation {
+                            format!("{} ({})", band, wifi_gen)
+                        } else {
+                            band.into()
+                        };
+
+                        all_items.push(Dot11DissectionInfo {
+                            frame_type: Dot11FrameType::Management,
+                            subtype_name: "Win32 WLAN BSS Scan".into(),
+                            bssid: bssid.clone(),
+                            src_mac: bssid,
+                            dst_mac: "FF:FF:FF:FF:FF:FF".into(),
+                            ssid: if ssid_str.is_empty() { Some("<Hidden SSID>".into()) } else { Some(ssid_str) },
+                            channel: ch,
+                            encryption_type: ie_deep.summary_encryption,
+                            is_deauth_threat: false,
+                            deauth_reason_code: None,
+                            is_eapol_handshake: false,
+                            radiotap: RadiotapMetrics {
+                                channel_freq_mhz: if freq_mhz > 0 { Some(freq_mhz) } else { None },
+                                channel_number: ch,
+                                band_desc: band_display,
+                                rssi_dbm: Some(rssi),
+                                noise_dbm: None,
+                                snr_db: None,
+                                rate_mbps: if max_rate_mbps > 0.0 { Some(max_rate_mbps) } else { None },
+                            },
+                        });
+                    }
+                    fn_free(p_bss_list as *mut c_void);
+                }
+            }
+
+            fn_free(p_iface_list as *mut c_void);
+            fn_close(h_client, std::ptr::null_mut());
+            FreeLibrary(hmod);
+            Ok((primary_iface_name, all_items))
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn scan_os_wifi_networks_cmd() -> Result<NativeWifiScanResult, String> {
+    tokio::task::spawn_blocking(scan_os_wifi_networks_sync)
+        .await
+        .map_err(|e| format!("WLAN 原生扫描线程异常: {}", e))?
+}
+
+pub fn scan_os_wifi_networks_sync() -> Result<NativeWifiScanResult, String> {
+    let ts_str = chrono::Local::now().format("%H:%M:%S.%3f").to_string();
+
+    #[cfg(windows)]
+    {
+        match win_wlan::scan_via_wlanapi() {
+            Ok((iface_name, mut items)) => {
+                if items.is_empty() {
+                    if let Ok(out) = {
+                        use std::os::windows::process::CommandExt;
+                        std::process::Command::new("netsh")
+                            .args(&["wlan", "show", "networks", "mode=bssid"])
+                            .creation_flags(0x08000000)
+                            .output()
+                    } {
+                        if out.status.success() {
+                            let stdout = win_wlan::decode_acp(&out.stdout);
+                            let (_, fallback_items) = parse_netsh_wlan_output(&stdout);
+                            items = fallback_items;
+                        }
+                    }
+                }
+                let cnt = items.len();
+                for item in &items {
+                    record_wifi_frame(item, &ts_str);
+                }
+                let summary = get_wifi_telemetry_summary();
+                return Ok(NativeWifiScanResult {
+                    native_scan_available: true,
+                    platform: "windows-wlanapi".into(),
+                    reason_code: if cnt > 0 { "OK".into() } else { "NO_AP_IN_RANGE".into() },
+                    status_message: if cnt > 0 {
+                        format!("WLAN 原生扫描完成（适配器: {}），实测捕获周边 {} 个 BSSID 节点。", if iface_name.is_empty() { "WLAN" } else { &iface_name }, cnt)
+                    } else {
+                        format!("无线网卡 {} 已就绪，但当前空口扫描范围内暂无可见接入点或需授予位置权限。", if iface_name.is_empty() { "WLAN" } else { &iface_name })
+                    },
+                    scanned_ap_count: cnt,
+                    interface_name: iface_name,
+                    aps: summary.ap_assets.clone(),
+                    summary,
+                });
+            }
+            Err((reason_code, status_message)) => {
+                let summary = get_wifi_telemetry_summary();
+                return Ok(NativeWifiScanResult {
+                    native_scan_available: false,
+                    platform: "windows-wlanapi".into(),
+                    reason_code,
+                    status_message,
+                    scanned_ap_count: 0,
+                    interface_name: String::new(),
+                    aps: summary.ap_assets.clone(),
+                    summary,
+                });
+            }
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        if let Ok(out) = std::process::Command::new("nmcli")
+            .args(&["-t", "-f", "SSID,BSSID,CHAN,SIGNAL,SECURITY", "dev", "wifi", "list"])
+            .output()
+        {
+            if out.status.success() {
+                let text = String::from_utf8_lossy(&out.stdout);
+                let mut cnt = 0usize;
+                for line in text.lines() {
+                    let parts: Vec<&str> = line.split(':').collect();
+                    if parts.len() >= 5 {
+                        let ssid = parts[0].trim().to_string();
+                        let bssid = parts[1].replace("\\:", ":").trim().to_string();
+                        let ch = parts[2].trim().parse::<u8>().ok();
+                        let sig = parts[3].trim().parse::<i32>().unwrap_or(50);
+                        let rssi = ((sig.clamp(0, 100) / 2) - 100) as i8;
+                        let sec = parts[4].trim().to_string();
+                        let info = Dot11DissectionInfo {
+                            frame_type: Dot11FrameType::Management,
+                            subtype_name: "nmcli WLAN Scan".into(),
+                            bssid: bssid.clone(),
+                            src_mac: bssid,
+                            dst_mac: "FF:FF:FF:FF:FF:FF".into(),
+                            ssid: if ssid.is_empty() { None } else { Some(ssid) },
+                            channel: ch,
+                            encryption_type: if sec.is_empty() { "Open".into() } else { sec },
+                            is_deauth_threat: false,
+                            deauth_reason_code: None,
+                            is_eapol_handshake: false,
+                            radiotap: RadiotapMetrics {
+                                channel_freq_mhz: ch.map(|c| if c <= 14 { 2407 + (c as u16) * 5 } else { 5000 + (c as u16) * 5 }),
+                                channel_number: ch,
+                                band_desc: if ch.unwrap_or(6) <= 14 { "2.4 GHz".into() } else { "5 GHz".into() },
+                                rssi_dbm: Some(rssi),
+                                noise_dbm: None,
+                                snr_db: None,
+                                rate_mbps: None,
+                            },
+                        };
+                        record_wifi_frame(&info, &ts_str);
+                        cnt += 1;
+                    }
+                }
+                let summary = get_wifi_telemetry_summary();
+                return Ok(NativeWifiScanResult {
+                    native_scan_available: true,
+                    platform: "linux-nmcli".into(),
+                    reason_code: if cnt > 0 { "OK".into() } else { "NO_AP_IN_RANGE".into() },
+                    status_message: format!("nmcli 无线扫描完成，发现 {} 个周边接入点", cnt),
+                    scanned_ap_count: cnt,
+                    interface_name: "nmcli-wlan".into(),
+                    aps: summary.ap_assets.clone(),
+                    summary,
+                });
+            }
+        }
+        let summary = get_wifi_telemetry_summary();
+        return Ok(NativeWifiScanResult {
+            native_scan_available: false,
+            platform: "linux-nmcli".into(),
+            reason_code: "NO_HARDWARE".into(),
+            status_message: "当前 Linux 环境未发现活跃无线网卡或 nmcli 不可用".into(),
+            scanned_ap_count: 0,
+            interface_name: String::new(),
+            aps: summary.ap_assets.clone(),
+            summary,
+        });
+    }
+
+    #[cfg(not(any(windows, target_os = "linux")))]
+    {
+        let _ = ts_str;
+        let summary = get_wifi_telemetry_summary();
+        Ok(NativeWifiScanResult {
+            native_scan_available: false,
+            platform: std::env::consts::OS.to_string(),
+            reason_code: "UNSUPPORTED_OS".into(),
+            status_message: "当前平台请通过 Npcap Monitor Mode 捕获 802.11 帧".into(),
+            scanned_ap_count: 0,
+            interface_name: String::new(),
+            aps: summary.ap_assets.clone(),
+            summary,
+        })
+    }
 }
 
 #[tauri::command]
@@ -579,5 +1364,100 @@ mod tests {
         assert!(info.subtype_name.contains("Deauthentication"));
         assert!(info.is_deauth_threat);
         assert_eq!(info.deauth_reason_code, Some(7));
+    }
+
+    #[test]
+    fn test_parse_netsh_wlan_output_and_empty_boundary() {
+        let sample = r#"
+Interface name : WLAN
+SSID 1 : Factory-OT-5G
+    Network type            : Infrastructure
+    Authentication          : WPA2-Personal
+    Encryption              : CCMP
+    BSSID 1                 : 00:1a:2b:3c:4d:5e
+         Signal             : 82%
+         Radio type         : 802.11ax
+         Channel            : 36
+"#;
+        let (iface, aps) = parse_netsh_wlan_output(sample);
+        assert_eq!(iface, "WLAN");
+        assert_eq!(aps.len(), 1);
+        assert_eq!(aps[0].ssid.as_deref(), Some("Factory-OT-5G"));
+        assert_eq!(aps[0].channel, Some(36));
+        assert_eq!(aps[0].radiotap.band_desc, "5 GHz");
+        assert_eq!(aps[0].radiotap.rssi_dbm, Some(-59));
+
+        // 边界防御: 空串与报错文本不会幻觉产出 AP
+        let (_, empty_aps) = parse_netsh_wlan_output("The Wireless AutoConfig Service (wlansvc) is not running.");
+        assert!(empty_aps.is_empty());
+
+        #[cfg(windows)]
+        {
+            assert_eq!(std::mem::size_of::<win_wlan::WlanInterfaceInfo>(), 532);
+            assert_eq!(std::mem::size_of::<win_wlan::WlanInterfaceInfoList>(), 540);
+            assert_eq!(std::mem::size_of::<win_wlan::WlanBssEntry>(), 360);
+            assert_eq!(std::mem::size_of::<win_wlan::WlanBssList>(), 368);
+
+            // ANSI GBK(936) 解码验证: "接口" -> 0xBD, 0xD3, 0xBF, 0xDA
+            let gbk_bytes = [0xBDu8, 0xD3, 0xBF, 0xDA];
+            assert_eq!(win_wlan::decode_acp(&gbk_bytes), "接口");
+        }
+
+        let scan_res = scan_os_wifi_networks_sync().unwrap();
+        assert!(!scan_res.status_message.is_empty());
+        assert!(!scan_res.reason_code.is_empty());
+    }
+
+    #[test]
+    fn test_dot11_ie_tlv_deep_parsing_wpa3_wifi6_qbss_and_malformed() {
+        // 1. 构造 WPA3-SAE (00:0F:AC:08) + CCMP-128 + PMF Mandatory (MFPR=1,MFPC=1 => 0x00C0)
+        //    + QBSS Load (Tag 11: 12 STAs, Util=128/255 ≈ 50.2%)
+        //    + HE Capabilities (Tag 255, Ext=35 -> Wi-Fi 6)
+        let mut ies = Vec::new();
+        // Tag 11 (QBSS Load): len 5
+        ies.extend_from_slice(&[11, 5, 12, 0, 128, 0x10, 0x00]);
+        // Tag 48 (RSN IE): len 20
+        ies.extend_from_slice(&[
+            48, 20,
+            0x01, 0x00,             // Version 1
+            0x00, 0x0F, 0xAC, 0x04, // Group Cipher: CCMP-128
+            0x01, 0x00,             // Pairwise Count: 1
+            0x00, 0x0F, 0xAC, 0x04, // Pairwise: CCMP-128
+            0x01, 0x00,             // AKM Count: 1
+            0x00, 0x0F, 0xAC, 0x08, // AKM: WPA3-SAE
+            0xC0, 0x00,             // RSN Caps: MFPR (bit6) + MFPC (bit7) = 0x00C0
+        ]);
+        // Tag 255 Ext=35 (HE Capabilities)
+        ies.extend_from_slice(&[255, 4, 35, 0x01, 0x02, 0x03]);
+
+        let deep = parse_dot11_ie_tlv_deep(&ies, 0x0011);
+        assert_eq!(deep.pmf_status, "PMF-Req");
+        assert_eq!(deep.wifi_generation.as_deref(), Some("Wi-Fi 6 (802.11ax)"));
+        assert_eq!(deep.qbss_station_count, Some(12));
+        assert!(deep.qbss_channel_util_pct.unwrap() > 49.0 && deep.qbss_channel_util_pct.unwrap() < 51.0);
+        assert!(deep.akm_suites.contains(&"WPA3-SAE".to_string()));
+        assert!(deep.pairwise_ciphers.contains(&"CCMP-128".to_string()));
+        assert!(deep.security_alerts.is_empty(), "WPA3 + PMF-Req + CCMP 不应有降级风险告警");
+
+        // 2. 弱安全组合: WPA2-PSK + TKIP 混合加密 + 无 PMF (RSN Caps = 0x0000)
+        let weak_ies = [
+            48, 20,
+            0x01, 0x00,
+            0x00, 0x0F, 0xAC, 0x02, // TKIP
+            0x01, 0x00,
+            0x00, 0x0F, 0xAC, 0x02, // Pairwise TKIP
+            0x01, 0x00,
+            0x00, 0x0F, 0xAC, 0x02, // AKM PSK
+            0x00, 0x00,             // No PMF
+        ];
+        let weak_deep = parse_dot11_ie_tlv_deep(&weak_ies, 0x0011);
+        assert_eq!(weak_deep.pmf_status, "No-PMF");
+        assert!(weak_deep.security_alerts.contains(&"WEAK_CIPHER_TKIP_WEP".to_string()));
+        assert!(weak_deep.security_alerts.contains(&"NO_PMF_80211W".to_string()));
+
+        // 3. 边界截断防御: 越界 Length 声明不会导致 panic 或越界读取
+        let truncated = [48u8, 250, 0x01, 0x00, 0x00];
+        let trunc_res = parse_dot11_ie_tlv_deep(&truncated, 0x0000);
+        assert!(trunc_res.security_alerts.contains(&"OPEN_UNENCRYPTED_WLAN".to_string()));
     }
 }

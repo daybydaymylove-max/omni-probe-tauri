@@ -18,10 +18,21 @@
 
         <div class="h-4 w-px shrink-0" style="background: var(--border-strong);"></div>
 
-        <!-- USB 总线嗅探启停控制 -->
+        <!-- USB 总线嗅探启停控制 (支持精确选择 USBPcap Root Hub) -->
         <div class="flex items-center gap-1.5 text-xs whitespace-nowrap shrink-0">
           <span class="text-[11px] font-medium" style="color: var(--text-muted);">USB:</span>
-          <button v-if="!isUsbRunning" @click="$emit('startUsbCapture')" class="ui-btn-primary px-2.5 py-1 text-[11px]">
+          <select
+            v-if="usbPcapHubs.length > 0"
+            v-model="selectedUsbHub"
+            class="ui-input w-auto max-w-[140px] px-2 py-0.5 text-[11px] font-mono cursor-pointer"
+            title="选择目标 USBPcap 根集线器控制器"
+          >
+            <option value="">自动探测 Hub</option>
+            <option v-for="h in usbPcapHubs" :key="h.device_path" :value="h.device_path">
+              {{ h.friendly_name }} ({{ h.attached_device_count }})
+            </option>
+          </select>
+          <button v-if="!isUsbRunning" @click="$emit('startUsbCapture', selectedUsbHub || undefined)" class="ui-btn-primary px-2.5 py-1 text-[11px]">
             <AppIcon name="play" :size="11" />
             <span>挂钩 USB</span>
           </button>
@@ -56,6 +67,11 @@
             <option :value="38400">38400</option>
             <option :value="57600">57600</option>
             <option :value="115200">115200</option>
+            <option :value="230400">230400</option>
+            <option :value="460800">460800</option>
+            <option :value="921600">921600</option>
+            <option :value="1500000">1500000</option>
+            <option :value="2000000">2000000</option>
           </select>
           <button
             v-if="!isPortActive(localSerial)"
@@ -102,6 +118,26 @@
         <button @click="isSerialConfigOpen = true" class="ui-btn-secondary px-2.5 py-1 text-[11px] whitespace-nowrap shrink-0">
           <AppIcon name="sliders" :size="12" />
           <span>串口参数</span>
+        </button>
+
+        <button
+          @click="showOscilloscope = !showOscilloscope"
+          :class="['text-[11px] px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1 cursor-pointer border whitespace-nowrap shrink-0',
+            showOscilloscope ? 'bg-sky-500 text-white border-transparent shadow-xs' : 'ui-btn-secondary']"
+          title="显示或隐藏物理总线实时/历史波形图与 VCD 逻辑分析仪工作台"
+        >
+          <AppIcon name="activity" :size="12" />
+          <span>波形分析</span>
+        </button>
+
+        <button
+          @click="showDevAnalyticsPanel = !showDevAnalyticsPanel"
+          :class="['text-[11px] px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1 cursor-pointer border whitespace-nowrap shrink-0',
+            showDevAnalyticsPanel ? 'bg-indigo-600 text-white border-transparent shadow-xs' : 'ui-btn-secondary']"
+          title="打开 COM 校验/定时发送/自动应答/Modbus 矩阵、USB 端点逆向与巡检报告工作台"
+        >
+          <AppIcon name="layers" :size="12" />
+          <span>辅助开发与报告</span>
         </button>
 
         <button
@@ -280,6 +316,102 @@
           <span>正/负均宽: <b>{{ signalSnapshot.mean_high_pulse_width_ns.toFixed(1) }} / {{ signalSnapshot.mean_low_pulse_width_ns.toFixed(1) }} ns</b></span>
         </div>
       </div>
+
+      <!-- 1.6.2 SUMP / OpenBench Logic Sniffer 串口物理探头直连协议区 -->
+      <div class="border-t pt-2.5 flex flex-col gap-2" style="border-color: var(--border-subtle);">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-[11px] font-semibold text-sky-600 dark:text-sky-300">SUMP / OLS 物理探头直连:</span>
+          <select v-model="sumpPort" class="ui-input w-28 px-2 py-1 text-xs font-mono">
+            <option value="">选择 COM</option>
+            <option v-for="sp in serialPorts" :key="sp" :value="sp">{{ sp }}</option>
+          </select>
+          <input v-model="sumpPort" placeholder="或手输 COM 口 (如 COM4)" class="ui-input w-36 px-2 py-1 text-xs font-mono" />
+          <label class="text-[11px]" style="color: var(--text-muted);">采样率(Hz):</label>
+          <input v-model.number="sumpSampleRateHz" type="number" min="1000" step="100000" class="ui-input w-28 px-2 py-1 text-xs ui-num" />
+          <label class="text-[11px]" style="color: var(--text-muted);">采深(点数):</label>
+          <input v-model.number="sumpSampleCount" type="number" min="64" max="32768" step="64" class="ui-input w-20 px-2 py-1 text-xs ui-num" />
+          <button @click="runProbeSumpHardware" :disabled="sumpBusy || !sumpPort.trim()" class="ui-btn-secondary px-2.5 py-1 text-xs">
+            {{ sumpBusy ? '探测中...' : '探测 SUMP 探头' }}
+          </button>
+          <button @click="runCaptureSumpSamples" :disabled="sumpBusy || !sumpPort.trim()" class="ui-btn-primary px-2.5 py-1 text-xs">
+            硬件采样并转 VCD
+          </button>
+        </div>
+        <div v-if="sumpProbeInfo" class="ui-sub-card px-2.5 py-1.5 text-[11px] flex flex-wrap gap-x-4 gap-y-1 ui-num" style="color: var(--text-secondary);">
+          <span :class="sumpProbeInfo.detected ? 'text-emerald-600 dark:text-emerald-300 font-semibold' : 'text-amber-600 dark:text-amber-300'">
+            {{ sumpProbeInfo.diagnostic_message }}
+          </span>
+          <span v-if="sumpProbeInfo.detected">设备: <b>{{ sumpProbeInfo.device_name }}</b> · 通道数: <b>{{ sumpProbeInfo.channel_count }}</b> · 最大时钟: <b>{{ (sumpProbeInfo.max_sample_rate_hz / 1e6).toFixed(1) }} MHz</b></span>
+        </div>
+      </div>
+
+      <!-- 1.6.3 四总线 (UART / I2C / SPI / CAN) VCD 多通道电平统一解调工作区 -->
+      <div class="border-t pt-2.5 flex flex-col gap-2" style="border-color: var(--border-subtle);">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-[11px] font-semibold text-indigo-600 dark:text-indigo-300">多总线 VCD 解码:</span>
+          <select v-model="vcdMultiBusType" class="ui-input w-24 px-2 py-1 text-xs font-semibold">
+            <option value="UART">UART</option>
+            <option value="I2C">I2C</option>
+            <option value="SPI">SPI</option>
+            <option value="CAN">CAN</option>
+          </select>
+          <input v-model="vcdMultiCh0" :placeholder="vcdMultiBusType === 'I2C' ? 'SCL 通道名' : vcdMultiBusType === 'SPI' ? 'CS 通道名' : vcdMultiBusType === 'CAN' ? 'CAN_RX 通道名' : 'TX 通道名'" class="ui-input w-28 px-2 py-1 text-xs font-mono" />
+          <input v-if="vcdMultiBusType === 'I2C' || vcdMultiBusType === 'SPI'" v-model="vcdMultiCh1" :placeholder="vcdMultiBusType === 'I2C' ? 'SDA 通道名' : 'SCK 通道名'" class="ui-input w-28 px-2 py-1 text-xs font-mono" />
+          <input v-if="vcdMultiBusType === 'SPI'" v-model="vcdMultiCh2" placeholder="MOSI/MISO 通道" class="ui-input w-28 px-2 py-1 text-xs font-mono" />
+          <select v-if="vcdMultiBusType === 'SPI'" v-model.number="vcdMultiSpiMode" class="ui-input w-24 px-1.5 py-1 text-xs">
+            <option :value="0">Mode 0</option>
+            <option :value="1">Mode 1</option>
+            <option :value="2">Mode 2</option>
+            <option :value="3">Mode 3</option>
+          </select>
+          <label class="ui-btn-secondary px-2.5 py-1 text-xs cursor-pointer">
+            <span>载入 .vcd</span>
+            <input type="file" accept=".vcd,.txt" class="hidden" @change="onUploadMultiBusVcdFile" />
+          </label>
+          <button @click="runDecodeMultiBusVcd" :disabled="!vcdMultiContent.trim()" class="ui-btn-primary bg-indigo-600 hover:bg-indigo-500 px-3 py-1 text-xs">
+            执行 {{ vcdMultiBusType }} 物理解码
+          </button>
+          <span v-if="vcdMultiResult" class="text-[11px] ui-num" style="color: var(--text-muted);">
+            可用通道: [{{ vcdMultiResult.available_signals.join(', ') }}]
+          </span>
+        </div>
+
+        <div v-if="vcdMultiResult" class="ui-sub-card p-2.5 flex flex-col gap-1.5 text-[11px] ui-num">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <span class="font-semibold text-indigo-700 dark:text-indigo-300">{{ vcdMultiResult.summary_text }}</span>
+            <span style="color: var(--text-muted);">精度 {{ vcdMultiResult.detected_timescale }} · 总时长 {{ vcdMultiResult.total_duration_us.toFixed(1) }} us · 滤除毛刺 {{ vcdMultiResult.glitches_filtered }} 次</span>
+          </div>
+          <!-- I2C 事件序列展示 -->
+          <div v-if="vcdMultiResult.bus_type === 'I2C' && vcdMultiResult.i2c_events.length > 0" class="flex flex-wrap gap-1.5 font-mono max-h-24 overflow-y-auto">
+            <template v-for="(ev, idx) in vcdMultiResult.i2c_events" :key="idx">
+              <span v-if="'Start' in ev" class="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-600 dark:text-sky-300 border border-sky-500/30">START</span>
+              <span v-else-if="'Stop' in ev" class="px-1.5 py-0.5 rounded bg-slate-500/15 text-slate-600 dark:text-slate-300 border border-slate-500/30">STOP</span>
+              <span v-else-if="'ByteTransfer' in ev" class="px-1.5 py-0.5 rounded border" :class="ev.ByteTransfer.ack ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300' : 'bg-rose-500/15 border-rose-500/30 text-rose-700 dark:text-rose-300'">
+                0x{{ ev.ByteTransfer.byte_value.toString(16).padStart(2, '0').toUpperCase() }} {{ ev.ByteTransfer.is_read ? 'R' : 'W' }} {{ ev.ByteTransfer.ack ? 'ACK' : 'NACK' }}
+              </span>
+            </template>
+          </div>
+          <!-- SPI 字节展示 -->
+          <div v-if="vcdMultiResult.bus_type === 'SPI' && vcdMultiResult.spi_bytes.length > 0" class="flex flex-wrap gap-1.5 font-mono max-h-24 overflow-y-auto">
+            <span v-for="(sb, idx) in vcdMultiResult.spi_bytes" :key="idx" class="px-1.5 py-0.5 rounded bg-indigo-500/12 border border-indigo-500/30 text-indigo-700 dark:text-indigo-300">
+              0x{{ sb.byte_value.toString(16).padStart(2, '0').toUpperCase() }} (@{{ (sb.timestamp_ns / 1000).toFixed(2) }}us)
+            </span>
+          </div>
+          <!-- CAN Destuffing 展示 -->
+          <div v-if="vcdMultiResult.bus_type === 'CAN'" class="font-mono">
+            <span v-if="vcdMultiResult.can_stuff_error" class="text-rose-600 dark:text-rose-400 font-semibold">{{ vcdMultiResult.can_stuff_error }}</span>
+            <span v-else class="text-emerald-600 dark:text-emerald-300">
+              CAN Bit-Destuffing 校验通过 ({{ vcdMultiResult.can_destuffed_bits_count }} bits): {{ vcdMultiResult.can_bytes_preview.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ') }}
+            </span>
+          </div>
+          <!-- UART 多总线通道结果展示 -->
+          <div v-if="vcdMultiResult.bus_type === 'UART' && vcdMultiResult.uart_bytes.length > 0" class="flex flex-wrap gap-1.5 font-mono max-h-24 overflow-y-auto">
+            <span v-for="(ub, idx) in vcdMultiResult.uart_bytes" :key="idx" class="px-1.5 py-0.5 rounded border bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
+              0x{{ ub.byte_value.toString(16).padStart(2, '0').toUpperCase() }}<template v-if="ub.char_representation"> ('{{ ub.char_representation }}')</template>
+            </span>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- 2. 物理外设基线白名单工作台 -->
@@ -413,6 +545,24 @@
         尚未执行硬件合规比对。请点击【固化当前在线外设为基线】建立受信任基准，或点击【执行合规差分比对】。
       </div>
     </section>
+
+    <PhysicalBusOscilloscope
+      v-if="showOscilloscope"
+      :packets="packets"
+      :selectedSerialPort="localSerial"
+      @waveCompared="latestWaveComparison = $event"
+    />
+
+    <BusDevAnalyticsPanel
+      v-if="showDevAnalyticsPanel"
+      :serialPorts="serialPorts"
+      :selectedSerialPort="localSerial"
+      :selectedBaudRate="localBaudRate"
+      :packets="packets"
+      :latestWaveComparison="latestWaveComparison"
+      @fillSerialPayload="handleFillSerialPayload"
+      @close="showDevAnalyticsPanel = false"
+    />
 
     <SerialModemPinsPanel v-if="showModemPins" :serialPorts="serialPorts" :defaultPort="localSerial" />
 
@@ -709,7 +859,40 @@
                   <option :value="38400">38400 bps</option>
                   <option :value="57600">57600 bps</option>
                   <option :value="115200">115200 bps</option>
+                  <option :value="230400">230400 bps</option>
+                  <option :value="460800">460800 bps</option>
+                  <option :value="921600">921600 bps</option>
+                  <option :value="1500000">1500000 bps</option>
+                  <option :value="2000000">2000000 bps</option>
                 </select>
+              </div>
+            </div>
+
+            <!-- 单片机调试快捷指令宏槽位 -->
+            <div class="space-y-1">
+              <div class="flex items-center justify-between text-[10px]" style="color: var(--text-muted);">
+                <span>快捷指令宏 (点击一键填入或发包):</span>
+                <button @click="addSerialMacro" class="text-sky-600 dark:text-sky-400 hover:underline cursor-pointer">+ 存当前框为快捷宏</button>
+              </div>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <div v-for="(macro, mIdx) in serialMacros" :key="macro.label + mIdx" class="inline-flex items-center rounded-md border overflow-hidden text-[10px]" style="border-color: var(--border-subtle);">
+                  <button
+                    @click="applySerialMacro(macro)"
+                    class="px-2 py-0.5 bg-[var(--surface-glass-pill)] hover:bg-sky-500/15 font-medium cursor-pointer"
+                    style="color: var(--text-primary);"
+                    :title="macro.payload"
+                  >
+                    {{ macro.label }}
+                  </button>
+                  <button
+                    v-if="mIdx >= 3"
+                    @click="removeSerialMacro(mIdx)"
+                    class="px-1 py-0.5 text-rose-500 hover:bg-rose-500/15 cursor-pointer"
+                    title="移除自定义快捷宏"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -815,8 +998,73 @@ import SerialBridgeModal from '../components/SerialBridgeModal.vue';
 import UsbDescriptorTreeModal from '../components/UsbDescriptorTreeModal.vue';
 import CrossBusCausalityModal from '../components/CrossBusCausalityModal.vue';
 import MultiSerialCompareModal from '../components/MultiSerialCompareModal.vue';
+import PhysicalBusOscilloscope, { type SmartWaveformComparisonResult } from '../components/PhysicalBusOscilloscope.vue';
+import BusDevAnalyticsPanel from '../components/BusDevAnalyticsPanel.vue';
 
 const isMultiSerialCompareOpen = ref(false);
+const showOscilloscope = ref(true);
+const showDevAnalyticsPanel = ref(false);
+const latestWaveComparison = ref<SmartWaveformComparisonResult | null>(null);
+
+function handleFillSerialPayload(payloadHex: string, isHex: boolean) {
+  portOpChannel.value = 'serial';
+  portOpSerialIsHex.value = isHex;
+  portOpSerialPayload.value = payloadHex;
+}
+
+interface SerialMacroItem {
+  label: string;
+  payload: string;
+  isHex: boolean;
+}
+
+const DEFAULT_SERIAL_MACROS: SerialMacroItem[] = [
+  { label: 'Modbus 读保持', payload: '01 03 00 00 00 02 C4 0B', isHex: true },
+  { label: 'AT 探活\\r\\n', payload: 'AT\r\n', isHex: false },
+  { label: 'AT+RST 复位', payload: 'AT+RST\r\n', isHex: false },
+];
+
+const serialMacros = ref<SerialMacroItem[]>((() => {
+  try {
+    const raw = localStorage.getItem('omni_serial_macros_v1');
+    if (raw) {
+      const parsed = JSON.parse(raw) as SerialMacroItem[];
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch { /* 容错回退 */ }
+  return [...DEFAULT_SERIAL_MACROS];
+})());
+
+function applySerialMacro(m: SerialMacroItem) {
+  portOpChannel.value = 'serial';
+  portOpSerialIsHex.value = m.isHex;
+  portOpSerialPayload.value = m.payload;
+}
+
+function addSerialMacro() {
+  const txt = portOpSerialPayload.value.trim();
+  if (!txt) return;
+  const label = txt.slice(0, 14);
+  serialMacros.value.push({ label, payload: portOpSerialPayload.value, isHex: portOpSerialIsHex.value });
+  try {
+    localStorage.setItem('omni_serial_macros_v1', JSON.stringify(serialMacros.value.slice(0, 24)));
+  } catch { /* ignore */ }
+}
+
+function removeSerialMacro(idx: number) {
+  serialMacros.value.splice(idx, 1);
+  try {
+    localStorage.setItem('omni_serial_macros_v1', JSON.stringify(serialMacros.value));
+  } catch { /* ignore */ }
+}
+
+interface UsbPcapHubInfo {
+  device_path: string;
+  friendly_name: string;
+  attached_device_count: number;
+}
+const usbPcapHubs = ref<UsbPcapHubInfo[]>([]);
+const selectedUsbHub = ref('');
 
 export interface HardwareWhitelistItem {
   category: string;
@@ -979,6 +1227,61 @@ interface SignalIntegritySnapshot {
   glitches_detected: number;
   integrity_grade: string;
 }
+interface SumpProbeInfo {
+  port_name: string;
+  detected: boolean;
+  device_id: string;
+  device_name: string;
+  firmware_version: string;
+  protocol_version: string;
+  channel_count: number;
+  max_sample_rate_hz: number;
+  max_memory_bytes: number;
+  raw_id_hex: string;
+  diagnostic_message: string;
+}
+interface SumpCaptureResult {
+  port_name: string;
+  device_name: string;
+  actual_sample_rate_hz: number;
+  captured_samples: number;
+  channel_names: string[];
+  vcd_content: string;
+  raw_hex_preview: string;
+  diagnostic_message: string;
+}
+interface DecodedSpiByte {
+  byte_value: number;
+  timestamp_ns: number;
+}
+type I2cEventItem =
+  | { Start: { sample_index: number; timestamp_ns: number } }
+  | { Stop: { sample_index: number; timestamp_ns: number } }
+  | {
+      ByteTransfer: {
+        byte_value: number;
+        is_read: boolean;
+        ack: boolean;
+        sample_index: number;
+        timestamp_ns: number;
+      };
+    };
+interface VcdMultiBusDecodedResult {
+  bus_type: string;
+  detected_timescale: string;
+  sample_interval_ns: number;
+  total_duration_us: number;
+  available_signals: string[];
+  glitches_filtered: number;
+  integrity_snapshot: SignalIntegritySnapshot | null;
+  uart_bytes: DemodulatedUartByte[];
+  i2c_events: I2cEventItem[];
+  spi_bytes: DecodedSpiByte[];
+  can_destuffed_bits_count: number;
+  can_stuff_error: string | null;
+  can_bytes_preview: number[];
+  summary_text: string;
+}
 
 const showCanDiagnosticDrawer = ref(false);
 const canHealth = ref<CanBusHealthSnapshot | null>(null);
@@ -995,6 +1298,21 @@ const uartBaudRate = ref(115200);
 const uartMinGlitchNs = ref(500);
 const uartBytes = ref<DemodulatedUartByte[]>([]);
 const signalSnapshot = ref<SignalIntegritySnapshot | null>(null);
+
+const sumpPort = ref('');
+const sumpSampleRateHz = ref(1_000_000);
+const sumpSampleCount = ref(4096);
+const sumpProbeInfo = ref<SumpProbeInfo | null>(null);
+const sumpCaptureResult = ref<SumpCaptureResult | null>(null);
+const sumpBusy = ref(false);
+
+const vcdMultiBusType = ref<'UART' | 'I2C' | 'SPI' | 'CAN'>('UART');
+const vcdMultiCh0 = ref('');
+const vcdMultiCh1 = ref('');
+const vcdMultiCh2 = ref('');
+const vcdMultiSpiMode = ref(0);
+const vcdMultiContent = ref('');
+const vcdMultiResult = ref<VcdMultiBusDecodedResult | null>(null);
 
 async function fetchCanDiagnostics() {
   try {
@@ -1061,6 +1379,85 @@ async function runSignalIntegrity() {
     });
   } catch (e) {
     notifyError('信号完整性评估失败', e);
+  }
+}
+
+async function runProbeSumpHardware() {
+  const port = sumpPort.value.trim();
+  if (!port) return;
+  sumpBusy.value = true;
+  try {
+    sumpProbeInfo.value = await invoke<SumpProbeInfo>('probe_sump_logic_analyzer_cmd', {
+      portName: port,
+      baudRate: uartBaudRate.value || 115200,
+    });
+    if (sumpProbeInfo.value.detected) {
+      notifySuccess('SUMP 物理探头连接成功', sumpProbeInfo.value.device_name);
+    } else {
+      notifyWarning('未检测到 SUMP 探头', sumpProbeInfo.value.diagnostic_message);
+    }
+  } catch (e) {
+    notifyError('探测 SUMP 硬件探头失败', e);
+  } finally {
+    sumpBusy.value = false;
+  }
+}
+
+async function runCaptureSumpSamples() {
+  const port = sumpPort.value.trim();
+  if (!port) return;
+  sumpBusy.value = true;
+  try {
+    const res = await invoke<SumpCaptureResult>('capture_sump_logic_samples_cmd', {
+      portName: port,
+      baudRate: uartBaudRate.value || 115200,
+      sampleRateHz: sumpSampleRateHz.value || 1_000_000,
+      sampleCount: sumpSampleCount.value || 4096,
+      channelLabels: null,
+    });
+    sumpCaptureResult.value = res;
+    vcdMultiContent.value = res.vcd_content;
+    notifySuccess('物理采样已转码为 VCD', res.diagnostic_message);
+    await runDecodeMultiBusVcd();
+  } catch (e) {
+    notifyError('SUMP 逻辑分析仪采集失败', e);
+  } finally {
+    sumpBusy.value = false;
+  }
+}
+
+async function onUploadMultiBusVcdFile(evt: Event) {
+  const input = evt.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+  try {
+    vcdMultiContent.value = await file.text();
+    await runDecodeMultiBusVcd();
+  } catch (e) {
+    notifyError('读取 .vcd 文件失败', e);
+  } finally {
+    input.value = '';
+  }
+}
+
+async function runDecodeMultiBusVcd() {
+  if (!vcdMultiContent.value.trim()) return;
+  try {
+    vcdMultiResult.value = await invoke<VcdMultiBusDecodedResult>('decode_multibus_vcd_cmd', {
+      vcdContent: vcdMultiContent.value,
+      busType: vcdMultiBusType.value,
+      ch0Name: vcdMultiCh0.value.trim() || null,
+      ch1Name: vcdMultiCh1.value.trim() || null,
+      ch2Name: vcdMultiCh2.value.trim() || null,
+      baudRate: uartBaudRate.value || 115200,
+      minGlitchNs: uartMinGlitchNs.value || 0,
+      spiMode: vcdMultiSpiMode.value,
+    });
+    if (vcdMultiResult.value.integrity_snapshot) {
+      signalSnapshot.value = vcdMultiResult.value.integrity_snapshot;
+    }
+  } catch (e) {
+    notifyError(`${vcdMultiBusType.value} VCD 物理解码失败`, e);
   }
 }
 const whitelistConfig = ref<HardwareWhitelistConfig | null>(null);
@@ -1165,9 +1562,18 @@ const filteredComplianceItems = computed(() => {
   return list;
 });
 
+async function refreshUsbHubs() {
+  try {
+    usbPcapHubs.value = await invoke<UsbPcapHubInfo[]>('list_usbpcap_hubs_cmd');
+  } catch (e) {
+    console.warn('枚举 USBPcap Root Hubs 失败:', e);
+  }
+}
+
 onMounted(() => {
   loadWhitelist();
   doVerifyCompliance();
+  refreshUsbHubs();
 });
 
 // 工业级专业模块状态
@@ -1178,17 +1584,22 @@ const isUsbDescriptorTreeOpen = ref(false);
 const isCrossBusCausalityOpen = ref(false);
 const usbDescriptorHex = ref('');
 
-function openUsbDescriptorTree(dev?: UsbDeviceInfo) {
+async function openUsbDescriptorTree(dev?: UsbDeviceInfo) {
   if (dev) {
-    if (dev.class_desc.includes('HID') || dev.class_desc.includes('人机交互') || dev.class_desc.includes('鼠标') || dev.class_desc.includes('键盘')) {
-      usbDescriptorHex.value = '12 01 00 02 00 00 00 40 86 80 20 08 00 01 01 02 00 01 09 02 22 00 01 01 00 A0 32 09 04 00 00 01 03 01 02 00 07 05 81 03 08 00 0A';
-    } else if (dev.class_desc.includes('存储') || dev.class_desc.includes('U盘')) {
-      usbDescriptorHex.value = '12 01 10 02 00 00 00 40 51 09 63 16 00 01 01 02 03 01 09 02 20 00 01 01 00 C0 32 09 04 00 00 02 08 06 50 00 07 05 81 02 40 00 00 07 05 02 02 40 00 00';
-    } else if (dev.class_desc.includes('串口') || dev.class_desc.includes('CDC')) {
-      usbDescriptorHex.value = '12 01 00 02 02 00 00 40 86 1A 23 75 00 02 01 02 03 01 09 02 43 00 02 01 00 80 32 09 04 00 00 01 02 02 01 00 07 05 82 03 0A 00 01 09 04 01 00 02 0A 00 00 00 07 05 02 02 40 00 00 07 05 82 02 40 00 00';
-    } else {
-      usbDescriptorHex.value = '12 01 00 02 00 00 00 40 86 80 20 08 00 01 01 02 00 01 09 02 22 00 01 01 00 A0 32 09 04 00 00 01 03 01 02 00 07 05 81 03 08 00 0A';
+    try {
+      const capturedHex = await invoke<string>('get_captured_usb_descriptor_cmd', {
+        vid: dev.vid,
+        pid: dev.pid,
+      });
+      usbDescriptorHex.value = capturedHex;
+      emit('appendLog', `[USB] 已载入设备 ${dev.vid}:${dev.pid} 在真实 URB 流中捕获的描述符 (${capturedHex.split(' ').length} B)`);
+    } catch (e) {
+      usbDescriptorHex.value = '';
+      emit('appendLog', `[INFO] ${e}（绝不使用预置假描述符替代，请在弹窗粘贴真实十六进制描述符或挂钩 USBPcap 后触发热插拔捕获）`);
+      notifyWarning('暂无实时捕获的设备描述符', String(e));
     }
+  } else {
+    usbDescriptorHex.value = '';
   }
   isUsbDescriptorTreeOpen.value = true;
 }
@@ -1557,29 +1968,54 @@ async function executePortTransceive() {
       });
     } else if (portOpChannel.value === 'serial') {
       const start = performance.now();
+      const targetPort = localSerial.value;
+      const seenBeforeIds = new Set(props.packets.map((p: any) => p.id));
       const bytesSent = await invoke<number>('send_serial_data_cmd', {
-        port: localSerial.value,
+        port: targetPort,
         baudRate: localBaudRate.value,
         payload: portOpSerialPayload.value.trim(),
         isHex: portOpSerialIsHex.value
       });
+
+      // 异步匹配同串口下位机真实回包 (最多等待 1200ms，每 60ms 检视一次数据包流水线)
+      let matchedRxFrames: any[] = [];
+      for (let attempt = 0; attempt < 20; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 60));
+        const candidates = props.packets.filter((p: any) => {
+          if (seenBeforeIds.has(p.id)) return false;
+          const protoUpper = String(p.protocol || '').toUpperCase();
+          const dirUpper = String(p.direction || '').toUpperCase();
+          const samePort = String(p.src_ip || '').toUpperCase().includes(targetPort.toUpperCase());
+          const isRx = dirUpper === 'SERIAL_RX' || (String(p.transport || '').toUpperCase() === 'SERIAL' && !protoUpper.includes('TX') && dirUpper !== 'OUT');
+          return samePort && isRx;
+        });
+        if (candidates.length > 0) {
+          matchedRxFrames = candidates;
+          break;
+        }
+      }
+
       const latencyMs = performance.now() - start;
+      const rxPayload = matchedRxFrames.map((f: any) => f.payload_hex || '').filter(Boolean).join(' ');
+      const rxText = matchedRxFrames.map((f: any) => f.raw_text || '').filter(Boolean).join('\n');
+      const bytesReceived = matchedRxFrames.reduce((acc: number, f: any) => acc + (Number(f.length) || 0), 0);
+      const detectedProto = matchedRxFrames[0]?.protocol || (bytesReceived > 0 ? 'SERIAL_RX' : '无回包响应 (TX Only)');
 
       transceiveHistory.value.unshift({
         id: Date.now(),
         time: ts,
         channel: '物理串口',
-        target: `${localSerial.value} @ ${localBaudRate.value} bps`,
+        target: `${targetPort} @ ${localBaudRate.value} bps`,
         transport: 'SERIAL',
-        status: 'SUCCESS',
+        status: bytesReceived > 0 ? 'SUCCESS' : 'TIMEOUT',
         bytesSent,
-        bytesReceived: 0,
+        bytesReceived,
         latencyMs,
         txPayload: portOpSerialPayload.value.trim(),
-        rxPayload: '',
-        rxText: '',
-        detectedProto: 'SERIAL_TX',
-        error: undefined
+        rxPayload,
+        rxText,
+        detectedProto,
+        error: bytesReceived === 0 ? '1200ms 窗口内未捕获到同端口 RX 回包（请确认串口已启动监听且下位机正常应答）' : undefined
       });
     }
   } catch (err: any) {

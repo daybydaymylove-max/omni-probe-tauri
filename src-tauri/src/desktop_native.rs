@@ -298,6 +298,28 @@ pub fn save_text_with_native_dialog(
     write_bytes_atomically(&target_path, content.as_bytes())
 }
 
+/// 弹出原生另存为对话框并将任意原始二进制字节原子安全落盘
+pub fn save_bytes_with_native_dialog(
+    default_filename: &str,
+    title: &str,
+    filter_name: &str,
+    filter_patterns: &str,
+    bytes: &[u8],
+) -> Result<NativeSaveOutcome, String> {
+    let target_opt = pick_save_path_internal(default_filename, title, filter_name, filter_patterns)?;
+    let Some(target_path) = target_opt else {
+        return Ok(NativeSaveOutcome {
+            saved: false,
+            cancelled: true,
+            path: None,
+            bytes_written: 0,
+            message: "用户已取消保存".into(),
+        });
+    };
+
+    write_bytes_atomically(&target_path, bytes)
+}
+
 fn pick_save_path_internal(
     default_filename: &str,
     title: &str,

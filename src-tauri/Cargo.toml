@@ -1,6 +1,6 @@
 [package]
 name = "omni-probe-tauri"
-version = "0.3.1"
+version = "0.3.2"
 description = "Omni-Probe: 工业级多总线协议审计、跨介质流式差分比对与原生桌面网络探针系统"
 authors = [
     "Omni Engineering Team",
@@ -69,7 +69,9 @@ windows-sys = { version = "0.59", features = [
     "Win32_UI_Controls_Dialogs",
     "Win32_UI_Shell",
     "Win32_UI_Shell_Common",
-    "Win32_System_Com"
+    "Win32_System_Com",
+    "Win32_System_Diagnostics_Etw",
+    "Win32_System_Time"
 ] }
 
 [build-dependencies]

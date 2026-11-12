@@ -79,7 +79,10 @@
                 <option :value="115200">115200 bps</option>
                 <option :value="230400">230400 bps</option>
                 <option :value="460800">460800 bps</option>
-                <option :value="921600">921600 bps</option>
+                <option :value="921600">921600 bps (高速调试)</option>
+                <option :value="1000000">1000000 bps (1M)</option>
+                <option :value="1500000">1500000 bps (1.5M)</option>
+                <option :value="2000000">2000000 bps (2M)</option>
               </select>
             </div>
 

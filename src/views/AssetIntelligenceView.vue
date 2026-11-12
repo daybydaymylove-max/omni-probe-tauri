@@ -83,6 +83,11 @@
           <span>探活</span>
         </button>
 
+        <button @click="openTargetBannerScan('')" class="ui-btn-secondary px-2.5 py-1 text-xs" title="打开 CIDR 网段与全连接 Banner 并发扫描工作台">
+          <AppIcon name="radar" :size="13" class="text-sky-500" />
+          <span>CIDR/Banner 扫描</span>
+        </button>
+
         <button
           @click="showDiffWorkbench = !showDiffWorkbench"
           :class="[
@@ -595,9 +600,17 @@
                       @click="$emit('probeSinglePort', asset.ip)"
                       class="p-1.5 rounded-lg glass-pill hover:text-amber-500 transition-all cursor-pointer"
                       style="color: var(--text-secondary);"
-                      title="端口探活"
+                      title="端口快速探活"
                     >
                       <AppIcon name="zap" :size="13" />
+                    </button>
+                    <button
+                      @click="openTargetBannerScan(asset.ip)"
+                      class="p-1.5 rounded-lg glass-pill hover:text-sky-500 transition-all cursor-pointer"
+                      style="color: var(--text-secondary);"
+                      title="并发端口区间与 Banner 深度扫描"
+                    >
+                      <AppIcon name="radar" :size="13" />
                     </button>
                     <button
                       @click="$emit('filterTraffic', asset.ip)"
@@ -693,13 +706,21 @@
       :initialTarget="tracerouteTarget"
       @close="isTracerouteOpen = false"
     />
+
+    <!-- 主动网段与端口 Banner 扫描模态框 -->
+    <TargetProbeModal
+      :isOpen="targetProbeOpen"
+      :defaultIp="targetProbeIp"
+      defaultPort="top25"
+      @close="closeTargetBannerScan"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { notifySuccess, notifyInfo, notifyError } from '../composables/useNotification';
 import { uiConfirm } from '../composables/useConfirmDialog';
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, defineAsyncComponent } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import TopologyMap from '../components/TopologyMap.vue';
 import IpDossierModal from '../components/IpDossierModal.vue';
@@ -707,6 +728,8 @@ import GeodesicTracerouteModal from '../components/GeodesicTracerouteModal.vue';
 import AppIcon from '../components/AppIcon.vue';
 import EmptyState from '../components/EmptyState.vue';
 import { useUniversalDiff } from '../composables/useUniversalDiff';
+
+const TargetProbeModal = defineAsyncComponent(() => import('../components/TargetProbeModal.vue'));
 
 const diffBus = useUniversalDiff();
 
@@ -808,6 +831,19 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(['refreshAssets', 'scanAssets', 'probeAllPorts', 'probeSinglePort', 'clearAssets', 'filterTraffic', 'appendLog']);
+
+const targetProbeOpen = ref(false);
+const targetProbeIp = ref('');
+
+function openTargetBannerScan(ip: string) {
+  targetProbeIp.value = ip;
+  targetProbeOpen.value = true;
+}
+
+function closeTargetBannerScan() {
+  targetProbeOpen.value = false;
+  emit('refreshAssets');
+}
 
 // 视口布局控制与角色分类
 const viewLayout = ref<'split' | 'topology' | 'table' | 'hierarchy'>('split');

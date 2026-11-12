@@ -13,7 +13,7 @@
             <h3 class="text-sm font-bold flex items-center gap-2" style="color: var(--text-primary)">
               <span>系统偏好设置中心</span>
               <span class="text-[11px] ui-num px-2 py-0.5 rounded-full bg-sky-500/12 text-sky-700 dark:text-sky-300 border border-sky-500/25 font-bold">
-                v0.3.1
+                v0.3.2
               </span>
             </h3>
             <div class="text-[11px] ui-num mt-0.5" style="color: var(--text-muted)">
@@ -53,25 +53,27 @@
 
             <div class="p-3.5 ui-sub-card flex items-center justify-between gap-4">
               <div>
-                <div class="text-xs font-bold" style="color: var(--text-primary)">启动时显示环境自检面板</div>
-                <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">当检测到外部驱动未就绪时在启动后弹出诊断引导；关闭后系统保持静默自愈。</div>
+                <div class="text-xs font-bold" style="color: var(--text-primary)">启动缺项时在角落轻提醒</div>
+                <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">当检测到外置可选组件未安装时给出无阻塞气泡通知；关闭后仅在顶栏状态胶囊指示。</div>
               </div>
               <label class="relative inline-flex items-center cursor-pointer shrink-0">
-                <input type="checkbox" :checked="!skipStartupEnvModal" @change="toggleStartupEnvModal" class="sr-only peer">
+                <input type="checkbox" :checked="notifyOnDegradedStartup" @change="toggleStartupEnvReminder" class="sr-only peer">
                 <div class="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500"></div>
               </label>
             </div>
 
             <div class="p-4 ui-sub-card bg-sky-500/8 border-sky-500/25 flex items-center justify-between gap-3 flex-wrap">
               <div>
-                <div class="text-xs font-bold text-sky-700 dark:text-sky-300">当前多轨自愈系统状态</div>
+                <div class="text-xs font-bold text-sky-700 dark:text-sky-300">
+                  当前底层环境状态 ({{ envScore ?? '--' }}%)
+                </div>
                 <div class="text-[11px] mt-1 ui-num" style="color: var(--text-secondary)">
-                  Npcap / USBPcap / TShark / ip2region 均已具备独立内置自愈保障。
+                  {{ missingCount === 0 ? '全量扩展驱动与离线库均已完整就绪。' : `检测到 ${missingCount} 项外置驱动未装，内置多轨兜底运行正常。` }}
                 </div>
               </div>
-              <button @click="$emit('openDiagnostic')" class="ui-btn-primary px-3.5 py-1.5 rounded-xl font-bold text-xs shrink-0">
+              <button @click.stop="$emit('openDiagnostic')" class="ui-btn-primary px-3.5 py-1.5 rounded-xl font-bold text-xs shrink-0">
                 <AppIcon name="shield" :size="13" />
-                <span>打开环境诊断中心</span>
+                <span>打开环境检查器</span>
               </button>
             </div>
           </div>
@@ -87,7 +89,7 @@
               <div>
                 <div class="flex items-center gap-2">
                   <span class="text-xs font-bold" style="color: var(--text-primary)">当前安装版本:</span>
-                  <span class="text-xs ui-num font-bold" style="color: var(--accent-primary-text)">v0.3.1</span>
+                  <span class="text-xs ui-num font-bold" style="color: var(--accent-primary-text)">v0.3.2</span>
                   <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-500/25">原生桌面多平台架构</span>
                 </div>
                 <div class="text-[11px] mt-1" style="color: var(--text-muted)">官方仓库: github.com/daybydaymylove-max/omni-probe-tauri</div>
@@ -252,12 +254,17 @@ const preferenceTabs: PreferenceTab[] = [
 
 const activeTab = ref<TabId>('environment');
 
-// 1. 运行环境设置项
-const skipStartupEnvModal = ref(localStorage.getItem('omni_probe_skip_startup_env_modal') === 'true');
-function toggleStartupEnvModal() {
-  skipStartupEnvModal.value = !skipStartupEnvModal.value;
-  localStorage.setItem('omni_probe_skip_startup_env_modal', skipStartupEnvModal.value ? 'true' : 'false');
-  notifySuccess('偏好设置已更新', skipStartupEnvModal.value ? '下次启动将跳过环境弹窗，保持后台多轨自愈' : '下次启动将展示全景环境自检面板');
+import { useEnvironmentInspector } from '../composables/useEnvironmentInspector';
+
+const {
+  envScore,
+  missingCount,
+  notifyOnDegradedStartup,
+  setStartupReminderEnabled,
+} = useEnvironmentInspector();
+
+function toggleStartupEnvReminder() {
+  setStartupReminderEnabled(!notifyOnDegradedStartup.value);
 }
 
 // 2. 版本更新设置项

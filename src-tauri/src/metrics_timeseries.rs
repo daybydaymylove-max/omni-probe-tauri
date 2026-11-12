@@ -26,6 +26,7 @@ use once_cell::sync::Lazy;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TimeResolution {
     Second,
+    TenSeconds,
     Minute,
     Hour,
 }
@@ -34,6 +35,7 @@ impl TimeResolution {
     pub fn interval_secs(&self) -> u64 {
         match self {
             Self::Second => 1,
+            Self::TenSeconds => 10,
             Self::Minute => 60,
             Self::Hour => 3600,
         }
@@ -42,6 +44,7 @@ impl TimeResolution {
     pub fn capacity(&self) -> usize {
         match self {
             Self::Second => 60,
+            Self::TenSeconds => 60,
             Self::Minute => 60,
             Self::Hour => 24,
         }
@@ -49,8 +52,9 @@ impl TimeResolution {
 
     pub fn from_str_name(s: &str) -> Self {
         match s.trim().to_lowercase().as_str() {
-            "minute" | "1m" | "min" => Self::Minute,
-            "hour" | "1h" | "hr" => Self::Hour,
+            "10s" | "ten" | "tenseconds" | "10sec" => Self::TenSeconds,
+            "60s" | "minute" | "1m" | "min" => Self::Minute,
+            "3600s" | "hour" | "1h" | "hr" => Self::Hour,
             _ => Self::Second,
         }
     }
@@ -162,6 +166,7 @@ impl RingBufferResolution {
 /// 多分辨率滑动窗口时序聚合池实体
 pub struct MultiResolutionTimeSeriesPool {
     second_ring: RwLock<RingBufferResolution>,
+    ten_sec_ring: RwLock<RingBufferResolution>,
     minute_ring: RwLock<RingBufferResolution>,
     hour_ring: RwLock<RingBufferResolution>,
     total_packets_processed: AtomicU64,
@@ -172,6 +177,7 @@ impl MultiResolutionTimeSeriesPool {
     pub fn new() -> Self {
         Self {
             second_ring: RwLock::new(RingBufferResolution::new(TimeResolution::Second)),
+            ten_sec_ring: RwLock::new(RingBufferResolution::new(TimeResolution::TenSeconds)),
             minute_ring: RwLock::new(RingBufferResolution::new(TimeResolution::Minute)),
             hour_ring: RwLock::new(RingBufferResolution::new(TimeResolution::Hour)),
             total_packets_processed: AtomicU64::new(0),
@@ -179,7 +185,7 @@ impl MultiResolutionTimeSeriesPool {
         }
     }
 
-    /// 单包指标注入 (三级时间分辨率并行写入，耗时 < 100ns)
+    /// 单包指标注入 (四级时间分辨率并行写入，耗时 < 150ns)
     pub fn record_packet(
         &self,
         timestamp_s: u64,
@@ -194,6 +200,10 @@ impl MultiResolutionTimeSeriesPool {
         {
             let mut sec = crate::lock_guard::write_rwlock(&self.second_ring, "metrics_timeseries::record_sec");
             sec.record(timestamp_s, bytes, is_industrial, is_write, is_threat_or_error);
+        }
+        {
+            let mut ten = crate::lock_guard::write_rwlock(&self.ten_sec_ring, "metrics_timeseries::record_10s");
+            ten.record(timestamp_s, bytes, is_industrial, is_write, is_threat_or_error);
         }
         {
             let mut min = crate::lock_guard::write_rwlock(&self.minute_ring, "metrics_timeseries::record_min");
@@ -211,6 +221,10 @@ impl MultiResolutionTimeSeriesPool {
             TimeResolution::Second => {
                 let sec = crate::lock_guard::read_rwlock(&self.second_ring, "metrics_timeseries::get_series_sec");
                 sec.get_aligned_series(current_time_s)
+            }
+            TimeResolution::TenSeconds => {
+                let ten = crate::lock_guard::read_rwlock(&self.ten_sec_ring, "metrics_timeseries::get_series_10s");
+                ten.get_aligned_series(current_time_s)
             }
             TimeResolution::Minute => {
                 let min = crate::lock_guard::read_rwlock(&self.minute_ring, "metrics_timeseries::get_series_min");
@@ -430,5 +444,22 @@ mod tests {
 
         // 验证常驻节点对受到硬上限保护，绝不超出 MAX_TOPOLOGY_CELLS (2,000)
         assert!(heatmap.total_pairs() <= MAX_TOPOLOGY_CELLS);
+    }
+
+    #[test]
+    fn test_ten_seconds_and_60s_resolution_mapping() {
+        assert_eq!(TimeResolution::from_str_name("10s"), TimeResolution::TenSeconds);
+        assert_eq!(TimeResolution::from_str_name("60s"), TimeResolution::Minute);
+        assert_eq!(TimeResolution::from_str_name("1h"), TimeResolution::Hour);
+        assert_eq!(TimeResolution::from_str_name("unknown"), TimeResolution::Second);
+
+        let pool = MultiResolutionTimeSeriesPool::new();
+        pool.record_packet(1002, 128, true, false, false);
+        pool.record_packet(1009, 256, false, true, false);
+        let series_10s = pool.get_series(TimeResolution::TenSeconds, 1009);
+        assert_eq!(series_10s.len(), 60);
+        assert_eq!(series_10s[59].slot_timestamp_s, 1000);
+        assert_eq!(series_10s[59].packet_count, 2);
+        assert_eq!(series_10s[59].byte_count, 384);
     }
 }

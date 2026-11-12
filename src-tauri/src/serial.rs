@@ -885,13 +885,19 @@ pub fn start_serial_probe_with_config(
                         }
                     }
 
-                    // 帧尾分隔符即时触发
+                    // 帧尾分隔符即时触发 (循环切分粘包多行帧，防止滞留造成波形延迟)
                     if let Some(ref delim) = delimiter_bytes {
-                        if !delim.is_empty() && frame_buf.len() >= delim.len() {
-                            if let Some(pos) = frame_buf.windows(delim.len()).position(|w| w == delim.as_slice()) {
-                                let end_idx = pos + delim.len();
-                                let payload: Vec<u8> = frame_buf.drain(..end_idx).collect();
-                                emit_serial_rx_packet(&app_clone, &port_thread_name, &config_clone, payload);
+                        if !delim.is_empty() {
+                            let mut drained = 0usize;
+                            while frame_buf.len() >= delim.len() && drained < 64 {
+                                if let Some(pos) = frame_buf.windows(delim.len()).position(|w| w == delim.as_slice()) {
+                                    let end_idx = pos + delim.len();
+                                    let payload: Vec<u8> = frame_buf.drain(..end_idx).collect();
+                                    emit_serial_rx_packet(&app_clone, &port_thread_name, &config_clone, payload);
+                                    drained += 1;
+                                } else {
+                                    break;
+                                }
                             }
                         }
                     }
@@ -957,6 +963,7 @@ fn emit_serial_rx_packet(
 
     // 工业规约自动嗅探
     let mut modbus_info = None;
+    let mut modbus_crc_err = false;
     let mut dlt645_info = None;
     let mut nmea_info = None;
 
@@ -983,6 +990,7 @@ fn emit_serial_rx_packet(
                 );
             }
         } else {
+            modbus_crc_err = true;
             crate::cross_bus_diagnostic::GLOBAL_CASCADE_DIAGNOSTIC_ENGINE.report_physical_crc_error(
                 crate::cross_bus_diagnostic::BusType::Serial,
                 ts_ns,
@@ -1085,6 +1093,29 @@ fn emit_serial_rx_packet(
         false,
         record.timestamp_ns,
     );
+
+    crate::analyzer::record_packet_io_with_bus("SERIAL", record.length, None, false);
+    crate::analyzer::process_wave_sample(app, port_name, &payload);
+
+    let responder_actions = crate::bus_intelligence::record_serial_frame_and_match_rules(
+        port_name,
+        &payload,
+        modbus_info.as_ref(),
+        modbus_crc_err,
+    );
+    if !responder_actions.is_empty() {
+        let app_rep = app.clone();
+        let port_rep = port_name.to_string();
+        let baud_rep = config.baud_rate;
+        std::thread::spawn(move || {
+            for (delay_ms, reply_bytes) in responder_actions {
+                if delay_ms > 0 {
+                    std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+                }
+                let _ = send_serial_data(app_rep.clone(), &port_rep, baud_rep, &reply_bytes);
+            }
+        });
+    }
 
     let _ = crate::cloud::emit_record(serde_json::to_value(&record).unwrap_or_default());
     let _ = app.emit("packet-received", &record);
@@ -1545,6 +1576,10 @@ pub fn send_serial_data(
     if let Ok(v) = serde_json::to_value(&record) {
         crate::forensics::write_jsonl_record(&v.to_string());
     }
+    crate::analyzer::record_packet_io_with_bus("SERIAL", record.length, None, false);
+    crate::analyzer::process_wave_sample(&app, clean_port, payload);
+    crate::bus_intelligence::record_serial_tx_context(clean_port, payload);
+
     let _ = crate::cloud::emit_record(serde_json::to_value(&record).unwrap_or_default());
     let _ = app.emit("packet-received", &record);
     let _ = app.emit(
@@ -1583,7 +1618,7 @@ pub fn send_serial_probe_frame(
 // ============================================================
 
 /// 逻辑分析仪采样点跳变事件
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VcdTransition {
     pub timestamp_us: u64,
     pub level: u8,
@@ -1594,80 +1629,272 @@ pub struct VcdTransition {
 pub struct VcdUartDecodedResult {
     pub decoded_bytes: Vec<u8>,
     pub decoded_text: String,
+    pub decoded_hex: String,
     pub total_sample_duration_us: u64,
     pub detected_baud_rate: u32,
+    pub detected_timescale: String,
+    pub matched_signal: String,
+    pub available_signals: Vec<String>,
     pub framing_errors: usize,
+    pub parity_errors: usize,
     pub glitch_count: usize,
+    pub transitions: Vec<VcdTransition>,
 }
 
-/// 解析 VCD 物理波形并按指定波特率执行 UART 采样恢复
-/// 时间复杂度: O(N) 顺序单遍扫描, 空间复杂度: O(N)
+/// 解析 IEEE 1364 VCD `$timescale ... $end` 指令，返回 1 tick 折合微秒 (us) 的缩放系数
+/// 兼容 "1 ns", "10ps", "100 us" 及跨行写法；缺省时按常规逻辑分析仪 1 us 处理
+pub(crate) fn parse_vcd_timescale_to_us(vcd_content: &str) -> (f64, String) {
+    let mut in_timescale = false;
+    let mut collected = Vec::new();
+    for tok in vcd_content.split_whitespace() {
+        if !in_timescale {
+            if tok == "$timescale" {
+                in_timescale = true;
+            }
+            continue;
+        }
+        if tok == "$end" {
+            break;
+        }
+        collected.push(tok);
+        if collected.len() >= 4 {
+            break;
+        }
+    }
+    if collected.is_empty() {
+        return (1.0, "1 us (default)".to_string());
+    }
+    let joined = collected.join("");
+    let num_end = joined.find(|c: char| !c.is_ascii_digit()).unwrap_or(joined.len());
+    let mag: f64 = joined[..num_end].parse::<f64>().unwrap_or(1.0).max(1.0);
+    let unit = joined[num_end..].trim().to_ascii_lowercase();
+    let unit_in_us = match unit.as_str() {
+        "s" => 1_000_000.0,
+        "ms" => 1_000.0,
+        "us" => 1.0,
+        "ns" => 1e-3,
+        "ps" => 1e-6,
+        "fs" => 1e-9,
+        _ => 1.0,
+    };
+    let desc = if unit.is_empty() {
+        format!("{} us", mag as u64)
+    } else {
+        format!("{} {}", mag as u64, unit)
+    };
+    (mag * unit_in_us, desc)
+}
+
+/// 扫描全部 IEEE 1364 VCD `$var ... $end` 声明，返回 `(id_symbol, reference_name)` 列表
+pub(crate) fn parse_vcd_var_declarations(vcd_content: &str) -> Vec<(String, String)> {
+    let mut vars = Vec::new();
+    let mut in_var = false;
+    let mut var_tokens: Vec<String> = Vec::new();
+    for tok in vcd_content.split_whitespace() {
+        if !in_var {
+            if tok == "$var" {
+                in_var = true;
+                var_tokens.clear();
+            } else if tok == "$enddefinitions" {
+                break;
+            }
+            continue;
+        }
+        if tok == "$end" {
+            in_var = false;
+            // 标准格式: $var <type> <size> <id_code> <reference> [bit_select] $end
+            if var_tokens.len() >= 4 {
+                let sym = var_tokens[2].clone();
+                let mut name = var_tokens[3].clone();
+                if let Some(pos) = name.find('[') {
+                    name.truncate(pos);
+                }
+                if !sym.is_empty() && !name.is_empty() {
+                    vars.push((sym, name));
+                }
+            }
+            continue;
+        }
+        var_tokens.push(tok.to_string());
+    }
+    vars
+}
+
+/// 从 VCD 数据段提取目标信号符号的单比特电平变更 (`0`/`1`)
+#[inline]
+fn match_vcd_scalar_change(tok: &str, sym: &str) -> Option<u8> {
+    if let Some(rest) = tok.strip_suffix(sym) {
+        if rest.len() == 1 {
+            return match rest.as_bytes()[0] {
+                b'0' | b'z' | b'Z' | b'x' | b'X' => Some(0),
+                b'1' => Some(1),
+                _ => None,
+            };
+        }
+    }
+    None
+}
+
+/// 兼容旧签名的 VCD UART 解析入口（默认无校验位 8-N-1）
 pub fn decode_vcd_uart_waveform(
     vcd_content: &str,
     target_signal: &str,
     baud_rate: u32,
 ) -> Result<VcdUartDecodedResult, String> {
-    let mut signal_sym = "!".to_string();
-    for line in vcd_content.lines() {
-        let t = line.trim();
-        if t.starts_with("$var") && t.contains(target_signal) {
-            let tokens: Vec<&str> = t.split_whitespace().collect();
-            if tokens.len() >= 5 {
-                signal_sym = tokens[3].to_string();
-                break;
+    decode_vcd_uart_waveform_with_options(vcd_content, target_signal, baud_rate, None)
+}
+
+/// 解析标准 IEEE 1364 VCD 物理波形并按指定波特率、奇偶校验与精准 `$timescale` 缩放执行 UART 采样恢复
+/// 时间复杂度: O(N + M log N)（N 为跳变点数，M 为采样点数）, 空间复杂度: O(N)
+pub fn decode_vcd_uart_waveform_with_options(
+    vcd_content: &str,
+    target_signal: &str,
+    baud_rate: u32,
+    parity: Option<&str>,
+) -> Result<VcdUartDecodedResult, String> {
+    if baud_rate == 0 {
+        return Err("波特率不能为 0".to_string());
+    }
+    if vcd_content.trim().is_empty() {
+        return Err("VCD 文件内容为空".to_string());
+    }
+
+    let parity_mode = match parity.unwrap_or("NONE").trim().to_ascii_uppercase().as_str() {
+        "EVEN" | "E" => 1u8,
+        "ODD" | "O" => 2u8,
+        _ => 0u8,
+    };
+
+    let (tick_to_us, timescale_desc) = parse_vcd_timescale_to_us(vcd_content);
+    let vars = parse_vcd_var_declarations(vcd_content);
+    let available_signals: Vec<String> = vars.iter().map(|(_, n)| n.clone()).collect();
+
+    let clean_target = target_signal.trim();
+    let (signal_sym, matched_signal) = if vars.is_empty() {
+        if clean_target.is_empty() {
+            ("!".to_string(), "TX".to_string())
+        } else {
+            ("!".to_string(), clean_target.to_string())
+        }
+    } else if clean_target.is_empty() {
+        if vars.len() == 1 {
+            (vars[0].0.clone(), vars[0].1.clone())
+        } else if let Some(tx) = vars.iter().find(|(_, n)| n.eq_ignore_ascii_case("TX") || n.eq_ignore_ascii_case("UART_TX")) {
+            (tx.0.clone(), tx.1.clone())
+        } else {
+            (vars[0].0.clone(), vars[0].1.clone())
+        }
+    } else if let Some(exact) = vars.iter().find(|(_, n)| n == clean_target) {
+        (exact.0.clone(), exact.1.clone())
+    } else if let Some(ci) = vars.iter().find(|(_, n)| n.eq_ignore_ascii_case(clean_target)) {
+        (ci.0.clone(), ci.1.clone())
+    } else {
+        return Err(format!(
+            "VCD 文件中未找到通道「{}」，文件实际包含通道: [{}]",
+            clean_target,
+            available_signals.join(", ")
+        ));
+    };
+
+    // 单遍流式解析数据主体：支持 #timestamp 独立行或同行模式，支持标量 0!/1! 与向量 b0 !/b1 !
+    let mut transitions_f64: Vec<(f64, u8)> = Vec::new();
+    let mut cur_ticks: u64 = 0;
+    let mut in_defs = vcd_content.contains("$enddefinitions");
+    let mut past_defs = !in_defs;
+    let mut skip_directive = false;
+    let mut pending_vector_bit: Option<u8> = None;
+
+    for tok in vcd_content.split_whitespace() {
+        if !past_defs {
+            if tok == "$enddefinitions" {
+                in_defs = false;
+            } else if !in_defs && tok == "$end" {
+                past_defs = true;
+            }
+            continue;
+        }
+        if skip_directive {
+            if tok == "$end" {
+                skip_directive = false;
+            }
+            continue;
+        }
+        if tok == "$comment" || tok == "$scope" || tok == "$upscope" {
+            skip_directive = true;
+            continue;
+        }
+        if tok == "$dumpvars" || tok == "$dumpall" || tok == "$dumpoff" || tok == "$dumpon" || tok == "$end" {
+            pending_vector_bit = None;
+            continue;
+        }
+        if let Some(bit_val) = pending_vector_bit.take() {
+            if tok == signal_sym {
+                let t_us = (cur_ticks as f64) * tick_to_us;
+                if transitions_f64.last().map_or(true, |&(_, prev)| prev != bit_val) {
+                    transitions_f64.push((t_us, bit_val));
+                }
+            }
+            continue;
+        }
+        if let Some(rest) = tok.strip_prefix('#') {
+            if let Ok(ts) = rest.parse::<u64>() {
+                cur_ticks = ts;
+            }
+            continue;
+        }
+        if tok.starts_with('b') || tok.starts_with('B') {
+            if tok.len() >= 2 {
+                let last_bit = tok.as_bytes()[tok.len() - 1];
+                let lvl = if last_bit == b'1' { 1u8 } else { 0u8 };
+                pending_vector_bit = Some(lvl);
+            }
+            continue;
+        }
+        if let Some(lvl) = match_vcd_scalar_change(tok, &signal_sym) {
+            let t_us = (cur_ticks as f64) * tick_to_us;
+            if transitions_f64.last().map_or(true, |&(_, prev)| prev != lvl) {
+                transitions_f64.push((t_us, lvl));
             }
         }
     }
 
-    let mut transitions = Vec::new();
-    let mut cur_time = 0u64;
-
-    for line in vcd_content.lines() {
-        let t = line.trim();
-        if t.starts_with('#') {
-            if let Ok(ts) = t[1..].parse::<u64>() {
-                cur_time = ts;
-            }
-        } else if t.ends_with(&signal_sym) && t.len() >= 2 {
-            let lvl_char = t.chars().next().unwrap();
-            let level = if lvl_char == '1' { 1 } else { 0 };
-            transitions.push(VcdTransition { timestamp_us: cur_time, level });
-        }
-    }
-
-    if transitions.is_empty() {
-        return Err("VCD 文件中未找到有效的电平跳变事件".to_string());
+    if transitions_f64.is_empty() {
+        return Err(format!("在通道「{}」中未发现任何电平跳变事件", matched_signal));
     }
 
     let bit_period_us = 1_000_000.0 / (baud_rate as f64);
+    let initial_level = transitions_f64[0].1;
+
+    // O(log N) 二分查找指定时刻的稳定电平
     let sample_level_at = |time_us: f64| -> u8 {
-        let mut last_lvl = 1u8;
-        for tr in &transitions {
-            if (tr.timestamp_us as f64) <= time_us {
-                last_lvl = tr.level;
-            } else {
-                break;
-            }
+        let pos = transitions_f64.partition_point(|&(t, _)| t <= time_us);
+        if pos == 0 {
+            initial_level
+        } else {
+            transitions_f64[pos - 1].1
         }
-        last_lvl
     };
 
-    let total_duration = transitions.last().map(|t| t.timestamp_us).unwrap_or(0);
+    let total_duration_f64 = transitions_f64.last().map(|t| t.0).unwrap_or(0.0);
+    let total_duration = total_duration_f64.round() as u64;
     let mut decoded_bytes = Vec::new();
-    let mut framing_errors = 0;
-    let mut glitch_count = 0;
+    let mut framing_errors = 0usize;
+    let mut parity_errors = 0usize;
+    let mut glitch_count = 0usize;
 
-    let mut idx = 1;
-    let mut next_allowed_search_time = 0.0;
+    let mut idx = 1usize;
+    let mut next_allowed_search_time = 0.0f64;
+    let stop_bit_offset = if parity_mode == 0 { 9.5 } else { 10.5 };
+    let frame_total_bits = if parity_mode == 0 { 10.0 } else { 11.0 };
 
-    while idx < transitions.len() {
-        let prev = &transitions[idx - 1];
-        let curr = &transitions[idx];
+    while idx < transitions_f64.len() {
+        let prev = transitions_f64[idx - 1];
+        let curr = transitions_f64[idx];
 
-        if (curr.timestamp_us as f64) >= next_allowed_search_time && prev.level == 1 && curr.level == 0 {
-            let t_start = curr.timestamp_us as f64;
+        if curr.0 >= next_allowed_search_time && prev.1 == 1 && curr.1 == 0 {
+            let t_start = curr.0;
 
-            if idx + 1 < transitions.len() && (transitions[idx + 1].timestamp_us as f64 - t_start) < (0.2 * bit_period_us) {
+            if idx + 1 < transitions_f64.len() && (transitions_f64[idx + 1].0 - t_start) < (0.2 * bit_period_us) {
                 glitch_count += 1;
                 idx += 1;
                 continue;
@@ -1676,37 +1903,77 @@ pub fn decode_vcd_uart_waveform(
             let mid_start = sample_level_at(t_start + 0.5 * bit_period_us);
             if mid_start == 0 {
                 let mut byte_val = 0u8;
+                let mut ones_count = 0u32;
                 for b in 0..8 {
                     let sample_t = t_start + (1.5 + b as f64) * bit_period_us;
                     let bit_val = sample_level_at(sample_t);
+                    if bit_val == 1 {
+                        ones_count += 1;
+                    }
                     byte_val |= bit_val << b;
                 }
 
-                let stop_sample_t = t_start + 9.5 * bit_period_us;
+                if parity_mode != 0 {
+                    let p_bit = sample_level_at(t_start + 9.5 * bit_period_us) as u32;
+                    let total_ones = ones_count + p_bit;
+                    let expected_even = parity_mode == 1;
+                    if (expected_even && total_ones % 2 != 0) || (!expected_even && total_ones % 2 == 0) {
+                        parity_errors += 1;
+                    }
+                }
+
+                let stop_sample_t = t_start + stop_bit_offset * bit_period_us;
                 let stop_val = sample_level_at(stop_sample_t);
                 if stop_val != 1 {
                     framing_errors += 1;
                 }
 
                 decoded_bytes.push(byte_val);
-                next_allowed_search_time = t_start + 10.0 * bit_period_us;
+                next_allowed_search_time = t_start + (frame_total_bits - 0.15) * bit_period_us;
             }
         }
         idx += 1;
     }
 
-    let text_repr: String = decoded_bytes
+    let decoded_hex = decoded_bytes
         .iter()
-        .map(|&b| if (32..=126).contains(&b) { b as char } else { '.' })
+        .map(|b| format!("{:02X}", b))
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    let text_repr: String = String::from_utf8_lossy(&decoded_bytes)
+        .chars()
+        .map(|ch| {
+            if ch == '\r' || ch == '\n' || ch == '\t' || !ch.is_control() {
+                ch
+            } else {
+                '.'
+            }
+        })
+        .collect();
+
+    let visible_transitions: Vec<VcdTransition> = transitions_f64
+        .iter()
+        .take(4000)
+        .map(|&(t_us, level)| VcdTransition {
+            timestamp_us: t_us.round() as u64,
+            level,
+        })
         .collect();
 
     Ok(VcdUartDecodedResult {
         decoded_bytes,
         decoded_text: text_repr,
+        decoded_hex,
         total_sample_duration_us: total_duration,
         detected_baud_rate: baud_rate,
+        detected_timescale: timescale_desc,
+        matched_signal,
+        available_signals,
         framing_errors,
+        parity_errors,
         glitch_count,
+        transitions: visible_transitions,
     })
 }
 
@@ -1832,6 +2099,78 @@ $enddefinitions $end
         assert_eq!(result.decoded_bytes[0], b'A');
         assert_eq!(result.decoded_text, "A");
         assert_eq!(result.framing_errors, 0);
+        assert_eq!(result.matched_signal, "rx");
+        assert_eq!(result.available_signals, vec!["rx".to_string()]);
+    }
+
+    #[test]
+    fn test_vcd_timescale_ns_inline_timestamps_and_parity_edges() {
+        // 1. 测试工业标准 $timescale 1 ns $end + 多通道声明 + 同行写法 (#ts lvl) + 115200 bps (位宽 8681 ns)
+        // 发送 "OK" (0x4F, 0x4B)
+        let bit_ns: u64 = 8681;
+        let mut t: u64 = 20_000;
+        let mut body = String::from("#0 1!\n#0 0\"\n");
+        for &ch in b"OK" {
+            body.push_str(&format!("#{} 0!\n", t)); // Start bit
+            t += bit_ns;
+            for b in 0..8 {
+                let bit = (ch >> b) & 1;
+                body.push_str(&format!("#{} {}!\n", t, bit));
+                t += bit_ns;
+            }
+            body.push_str(&format!("#{} 1!\n", t)); // Stop bit
+            t += bit_ns * 2;
+        }
+        let ns_vcd = format!(
+            "$date\n  Saleae\n$end\n$timescale 1 ns $end\n$scope module top $end\n$var wire 1 ! TX $end\n$var wire 1 \" CLK $end\n$upscope $end\n$enddefinitions $end\n$dumpvars\n1!\n0\"\n$end\n{}",
+            body
+        );
+
+        let res = decode_vcd_uart_waveform_with_options(&ns_vcd, "TX", 115200, Some("NONE")).expect("1ns VCD 解码失败");
+        assert_eq!(res.decoded_text, "OK");
+        assert_eq!(res.decoded_hex, "4F 4B");
+        assert_eq!(res.framing_errors, 0);
+        assert_eq!(res.parity_errors, 0);
+        assert_eq!(res.detected_timescale, "1 ns");
+        assert_eq!(res.available_signals, vec!["TX".to_string(), "CLK".to_string()]);
+
+        // 2. 指定不存在通道应精准拦截并告知可用通道列表，禁止盲抓默认通道误解调
+        let err = decode_vcd_uart_waveform_with_options(&ns_vcd, "NON_EXISTENT", 115200, None).unwrap_err();
+        assert!(err.contains("TX") && err.contains("CLK"));
+
+        // 3. 测试偶校验 8-E-1 发送 0x55 ('U', 含 4 个 1 -> 偶校验位应为 0)
+        let mut even_vcd = String::from("$timescale 10 us $end\n$var wire 1 ! UART_TX $end\n$enddefinitions $end\n#0 1!\n");
+        // 9600 bps -> 104.167 us -> ~10.4 ticks (用 1 us 更精准，此处验证 10 us 缩放)
+        // 为避免 10us 采样量化误差，改用 10 ns 缩放发送 0x55 @ 115200 bps
+        even_vcd.clear();
+        even_vcd.push_str("$timescale 10 ns $end\n$var wire 1 ! UART_TX $end\n$enddefinitions $end\n#0 1!\n");
+        let step_10ns = 868u64; // 8680 ns
+        let mut cur = 1000u64;
+        even_vcd.push_str(&format!("#{} 0!\n", cur)); // Start
+        cur += step_10ns;
+        let b_val = 0x55u8; // 0101_0101 -> 4 ones -> Even parity = 0
+        for b in 0..8 {
+            even_vcd.push_str(&format!("#{} {}!\n", cur, (b_val >> b) & 1));
+            cur += step_10ns;
+        }
+        even_vcd.push_str(&format!("#{} 0!\n", cur)); // Even parity bit = 0
+        cur += step_10ns;
+        even_vcd.push_str(&format!("#{} 1!\n", cur)); // Stop bit = 1
+        cur += step_10ns * 2;
+        even_vcd.push_str(&format!("#{} 1!\n", cur));
+
+        let ok_even = decode_vcd_uart_waveform_with_options(&even_vcd, "UART_TX", 115200, Some("EVEN")).unwrap();
+        assert_eq!(ok_even.decoded_text, "U");
+        assert_eq!(ok_even.parity_errors, 0);
+        assert_eq!(ok_even.framing_errors, 0);
+
+        // 若强行用 ODD 解 8-E-1 报文，应准确检出 1 次奇偶校验错误
+        let bad_odd = decode_vcd_uart_waveform_with_options(&even_vcd, "UART_TX", 115200, Some("ODD")).unwrap();
+        assert_eq!(bad_odd.parity_errors, 1);
+
+        // 4. 极限边界防御：空 VCD 与 0 波特率
+        assert!(decode_vcd_uart_waveform_with_options("", "TX", 9600, None).is_err());
+        assert!(decode_vcd_uart_waveform_with_options(&ns_vcd, "TX", 0, None).is_err());
     }
 
 }

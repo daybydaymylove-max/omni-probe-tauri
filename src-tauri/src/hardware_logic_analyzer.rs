@@ -752,7 +752,819 @@ pub fn evaluate_signal_integrity_cmd(
 }
 
 // ============================================================
-// 第七部分：单元测试与极限用例推演套件 (6 轮严苛工业验证)
+// 第六点五部分：SUMP / OpenBench Logic Sniffer 硬件串口探头驱动与多总线 VCD 全量解码引擎
+// ============================================================
+
+/// 硬件 SUMP/OLS 逻辑分析仪探头识别元数据
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SumpProbeInfo {
+    pub port_name: String,
+    pub detected: bool,
+    pub device_id: String,
+    pub device_name: String,
+    pub firmware_version: String,
+    pub protocol_version: String,
+    pub channel_count: u8,
+    pub max_sample_rate_hz: u64,
+    pub max_memory_bytes: u32,
+    pub raw_id_hex: String,
+    pub diagnostic_message: String,
+}
+
+/// 硬件 SUMP/OLS 物理采样执行结果 (自动编码为多通道 IEEE 1364 VCD)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SumpCaptureResult {
+    pub port_name: String,
+    pub device_name: String,
+    pub actual_sample_rate_hz: u64,
+    pub captured_samples: usize,
+    pub channel_names: Vec<String>,
+    pub vcd_content: String,
+    pub raw_hex_preview: String,
+    pub diagnostic_message: String,
+}
+
+/// SPI 解调字节记录
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DecodedSpiByte {
+    pub byte_value: u8,
+    pub timestamp_ns: u128,
+}
+
+/// 四总线 (UART / I2C / SPI / CAN) VCD 物理方波统一解调结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VcdMultiBusDecodedResult {
+    pub bus_type: String,
+    pub detected_timescale: String,
+    pub sample_interval_ns: f64,
+    pub total_duration_us: f64,
+    pub available_signals: Vec<String>,
+    pub glitches_filtered: u64,
+    pub integrity_snapshot: Option<SignalIntegritySnapshot>,
+    pub uart_bytes: Vec<DemodulatedUartByte>,
+    pub i2c_events: Vec<I2cEvent>,
+    pub spi_bytes: Vec<DecodedSpiByte>,
+    pub can_destuffed_bits_count: usize,
+    pub can_stuff_error: Option<String>,
+    pub can_bytes_preview: Vec<u8>,
+    pub summary_text: String,
+}
+
+/// 构造 SUMP 5 字节长指令 (1B opcode + 4B little-endian payload)
+/// 时间复杂度: O(1), 空间复杂度: O(1)
+#[inline]
+pub fn encode_sump_long_cmd(opcode: u8, payload_le: u32) -> [u8; 5] {
+    let b = payload_le.to_le_bytes();
+    [opcode, b[0], b[1], b[2], b[3]]
+}
+
+/// 解析 SUMP CMD_GET_METADATA (0x04) TLV 设备自述元数据流
+/// 协议规约:
+/// - Tag 0x00: End of metadata
+/// - Tag 0x01/0x02/0x03: UTF-8/ASCII 以 '\0' 结尾字符串 (名称/FPGA/协议)
+/// - Tag 0x20/0x21/0x22/0x23/0x24: 4B Big-Endian u32 (通道数/内存/动态内存/最大时钟Hz/协议版本号)
+/// - Tag 0x40/0x41: 1B u8 (老版本兼容通道数/协议版本号)
+/// 时间复杂度: O(N), 空间复杂度: O(N)
+pub fn parse_sump_metadata_tlv(tlv: &[u8]) -> (String, String, String, u8, u64, u32) {
+    let mut name = String::from("SUMP Logic Analyzer");
+    let mut fw = String::from("Unknown");
+    let mut proto = String::from("v2");
+    let mut channels: u8 = 8;
+    let mut max_rate_hz: u64 = 100_000_000;
+    let mut max_mem_bytes: u32 = 8192;
+
+    let mut i = 0usize;
+    while i < tlv.len() {
+        let tag = tlv[i];
+        i += 1;
+        match tag {
+            0x00 => break,
+            0x01 | 0x02 | 0x03 => {
+                let start = i;
+                while i < tlv.len() && tlv[i] != 0 {
+                    i += 1;
+                }
+                let text = String::from_utf8_lossy(&tlv[start..i]).trim().to_string();
+                if i < tlv.len() && tlv[i] == 0 {
+                    i += 1;
+                }
+                if !text.is_empty() {
+                    match tag {
+                        0x01 => name = text,
+                        0x02 => fw = text,
+                        0x03 => proto = text,
+                        _ => {}
+                    }
+                }
+            }
+            0x20..=0x24 => {
+                if i + 4 > tlv.len() {
+                    break;
+                }
+                let val = u32::from_be_bytes([tlv[i], tlv[i + 1], tlv[i + 2], tlv[i + 3]]);
+                i += 4;
+                match tag {
+                    0x20 => channels = val.clamp(1, 32) as u8,
+                    0x21 => max_mem_bytes = val.max(256),
+                    0x23 => max_rate_hz = (val as u64).max(1_000),
+                    0x24 => proto = format!("v{}", val),
+                    _ => {}
+                }
+            }
+            0x40 | 0x41 => {
+                if i >= tlv.len() {
+                    break;
+                }
+                let val = tlv[i];
+                i += 1;
+                if tag == 0x40 && val > 0 {
+                    channels = val.min(32);
+                } else if tag == 0x41 {
+                    proto = format!("v{}", val);
+                }
+            }
+            _ => break,
+        }
+    }
+
+    (name, fw, proto, channels, max_rate_hz, max_mem_bytes)
+}
+
+/// 将 SUMP 8 通道单字节采样流转码导出为多通道标准 IEEE 1364 VCD 文本
+/// 时间复杂度: O(N * C), 空间复杂度: O(N * C)
+pub fn decode_sump_8ch_stream_to_vcd(
+    raw_bytes: &[u8],
+    sample_rate_hz: u64,
+    channel_labels: &[String],
+) -> String {
+    let ch_count = channel_labels.len().clamp(1, 8);
+    let mut channels_data: Vec<Vec<LogicLevel>> = vec![Vec::with_capacity(raw_bytes.len()); ch_count];
+
+    for &b in raw_bytes {
+        for ch in 0..ch_count {
+            let lvl = LogicLevel::from_bit((b >> ch) & 1);
+            channels_data[ch].push(lvl);
+        }
+    }
+
+    let safe_rate = sample_rate_hz.max(1);
+    let timescale_ns = ((1_000_000_000.0 / safe_rate as f64).round() as u64).max(1);
+    let refs: Vec<(&str, &[LogicLevel])> = channel_labels
+        .iter()
+        .take(ch_count)
+        .enumerate()
+        .map(|(idx, lbl)| (lbl.as_str(), channels_data[idx].as_slice()))
+        .collect();
+
+    VcdStreamCodec::export_to_vcd(&refs, timescale_ns)
+}
+
+/// 通过真实物理串口探测 SUMP / OpenBench Logic Sniffer 兼容逻辑分析仪探头
+pub fn probe_sump_logic_analyzer_sync(port_name: &str, baud_rate: u32) -> SumpProbeInfo {
+    use std::io::{Read, Write};
+    use std::time::Duration;
+
+    let clean_port = port_name.trim();
+    if clean_port.is_empty() {
+        return SumpProbeInfo {
+            port_name: String::new(),
+            detected: false,
+            device_id: String::new(),
+            device_name: "未指定端口".into(),
+            firmware_version: String::new(),
+            protocol_version: String::new(),
+            channel_count: 0,
+            max_sample_rate_hz: 0,
+            max_memory_bytes: 0,
+            raw_id_hex: String::new(),
+            diagnostic_message: "请先选择存在或接有 SUMP 探头的物理/虚拟 COM 端口".into(),
+        };
+    }
+
+    let baud = if baud_rate == 0 { 115200 } else { baud_rate };
+    let mut port = match serialport::new(clean_port, baud)
+        .timeout(Duration::from_millis(350))
+        .open()
+    {
+        Ok(p) => p,
+        Err(e) => {
+            return SumpProbeInfo {
+                port_name: clean_port.to_string(),
+                detected: false,
+                device_id: String::new(),
+                device_name: "串口打开失败".into(),
+                firmware_version: String::new(),
+                protocol_version: String::new(),
+                channel_count: 0,
+                max_sample_rate_hz: 0,
+                max_memory_bytes: 0,
+                raw_id_hex: String::new(),
+                diagnostic_message: format!("无法打开端口 {}: {}（可能正被占用或物理探头未就绪）", clean_port, e),
+            };
+        }
+    };
+
+    // 1. 连续发送 5 次 CMD_RESET (0x00) 清除设备状态机，随后请求 CMD_ID (0x02)
+    let _ = port.write_all(&[0x00, 0x00, 0x00, 0x00, 0x00]);
+    let _ = port.flush();
+    std::thread::sleep(Duration::from_millis(20));
+    let mut drain = [0u8; 64];
+    let _ = port.read(&mut drain);
+
+    if let Err(e) = port.write_all(&[0x02]) {
+        return SumpProbeInfo {
+            port_name: clean_port.to_string(),
+            detected: false,
+            device_id: String::new(),
+            device_name: "发送探测指令失败".into(),
+            firmware_version: String::new(),
+            protocol_version: String::new(),
+            channel_count: 0,
+            max_sample_rate_hz: 0,
+            max_memory_bytes: 0,
+            raw_id_hex: String::new(),
+            diagnostic_message: format!("写入 SUMP CMD_ID (0x02) 失败: {}", e),
+        };
+    }
+    let _ = port.flush();
+
+    let mut id_buf = [0u8; 4];
+    let mut total_read = 0usize;
+    let deadline = std::time::Instant::now() + Duration::from_millis(450);
+    while total_read < 4 && std::time::Instant::now() < deadline {
+        match port.read(&mut id_buf[total_read..]) {
+            Ok(n) if n > 0 => total_read += n,
+            Ok(_) => break,
+            Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => break,
+            Err(_) => break,
+        }
+    }
+
+    let raw_id_hex = hex::encode_upper(&id_buf[..total_read]);
+    let id_str = String::from_utf8_lossy(&id_buf[..total_read]).to_string();
+    let is_valid_sump = total_read == 4 && (id_str == "1ALS" || id_str == "SLA1");
+
+    if !is_valid_sump {
+        return SumpProbeInfo {
+            port_name: clean_port.to_string(),
+            detected: false,
+            device_id: id_str.clone(),
+            device_name: "非 SUMP 逻辑探头".into(),
+            firmware_version: String::new(),
+            protocol_version: String::new(),
+            channel_count: 0,
+            max_sample_rate_hz: 0,
+            max_memory_bytes: 0,
+            raw_id_hex: raw_id_hex.clone(),
+            diagnostic_message: format!(
+                "端口 {} 未返回标准 SUMP ID ('1ALS'/'SLA1')，实际响应 {}B [{}]；常规串口通信或示波分析请使用主串口抓包或导入 .vcd 文件",
+                clean_port,
+                total_read,
+                if raw_id_hex.is_empty() { "超时无响应".to_string() } else { raw_id_hex }
+            ),
+        };
+    }
+
+    // 2. 查询标准 CMD_GET_METADATA (0x04)
+    let mut meta_buf = Vec::new();
+    if port.write_all(&[0x04]).is_ok() {
+        let _ = port.flush();
+        let mut chunk = [0u8; 128];
+        let meta_deadline = std::time::Instant::now() + Duration::from_millis(400);
+        while meta_buf.len() < 512 && std::time::Instant::now() < meta_deadline {
+            match port.read(&mut chunk) {
+                Ok(n) if n > 0 => {
+                    meta_buf.extend_from_slice(&chunk[..n]);
+                    if chunk[..n].contains(&0x00) && meta_buf.len() >= 6 {
+                        // 检查末尾或后续是否有 TLV 0x00 结束符，略等一小帧确保收全
+                        std::thread::sleep(Duration::from_millis(20));
+                    }
+                }
+                _ => break,
+            }
+        }
+    }
+
+    let (dev_name, fw, proto, ch, max_clk, max_mem) = if meta_buf.is_empty() {
+        ("SUMP Compatible Logic Probe".into(), "Standard".into(), "SUMP v1/v2".into(), 8, 24_000_000, 8192)
+    } else {
+        parse_sump_metadata_tlv(&meta_buf)
+    };
+
+    SumpProbeInfo {
+        port_name: clean_port.to_string(),
+        detected: true,
+        device_id: id_str.clone(),
+        device_name: dev_name.clone(),
+        firmware_version: fw,
+        protocol_version: proto,
+        channel_count: ch,
+        max_sample_rate_hz: max_clk,
+        max_memory_bytes: max_mem,
+        raw_id_hex,
+        diagnostic_message: format!("✅ 已通过 SUMP 协议握手识别硬件探头: {} (ID={}, {}Ch, Max {}MHz, {}B RAM)", dev_name, id_str, ch, max_clk / 1_000_000, max_mem),
+    }
+}
+
+/// 执行物理 SUMP 逻辑分析仪硬件一次完整采样并生成多通道标准 VCD 文件
+pub fn capture_sump_logic_samples_sync(
+    port_name: &str,
+    baud_rate: u32,
+    sample_rate_hz: u64,
+    sample_count: usize,
+    channel_labels: &[String],
+) -> Result<SumpCaptureResult, String> {
+    use std::io::{Read, Write};
+    use std::time::Duration;
+
+    let info = probe_sump_logic_analyzer_sync(port_name, baud_rate);
+    if !info.detected {
+        return Err(info.diagnostic_message);
+    }
+
+    let aligned_samples = sample_count.clamp(64, info.max_memory_bytes as usize).next_multiple_of(4);
+    let base_clk = info.max_sample_rate_hz.max(1_000_000);
+    let target_rate = sample_rate_hz.clamp(1_000, base_clk);
+    let divider = (base_clk / target_rate).saturating_sub(1) as u32;
+    let actual_rate = base_clk / (divider as u64 + 1);
+
+    let read_blocks = ((aligned_samples / 4).saturating_sub(1)).min(0xFFFF) as u32;
+    let read_delay_word = (read_blocks << 16) | read_blocks;
+
+    let baud = if baud_rate == 0 { 115200 } else { baud_rate };
+    let mut port = serialport::new(port_name.trim(), baud)
+        .timeout(Duration::from_millis(1200))
+        .open()
+        .map_err(|e| format!("二次打开 SUMP 探头失败: {}", e))?;
+
+    let _ = port.write_all(&[0x00, 0x00, 0x00, 0x00, 0x00]);
+    let _ = port.write_all(&encode_sump_long_cmd(0x80, divider));
+    let _ = port.write_all(&encode_sump_long_cmd(0x81, read_delay_word));
+    let _ = port.write_all(&encode_sump_long_cmd(0x82, 0x0000_0000)); // 开启第一组 8 通道非 RLE 原始采样
+    let _ = port.write_all(&[0x01]); // CMD_RUN 立即武装触发采集
+    port.flush().map_err(|e| format!("下发 SUMP 启动采样指令失败: {}", e))?;
+
+    let mut raw_samples = Vec::with_capacity(aligned_samples);
+    let mut buf = [0u8; 1024];
+    let deadline = std::time::Instant::now() + Duration::from_millis(2500);
+    while raw_samples.len() < aligned_samples && std::time::Instant::now() < deadline {
+        match port.read(&mut buf) {
+            Ok(n) if n > 0 => raw_samples.extend_from_slice(&buf[..n]),
+            Ok(_) => break,
+            Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => break,
+            Err(e) => return Err(format!("读取 SUMP 采集缓冲区失败: {}", e)),
+        }
+    }
+
+    if raw_samples.is_empty() {
+        return Err("SUMP 探头已响应启动命令但未返回采样样本 (请检查物理触发引脚状态或连线)".into());
+    }
+
+    let labels: Vec<String> = if channel_labels.is_empty() {
+        (0..8).map(|i| format!("CH{}", i)).collect()
+    } else {
+        channel_labels.iter().take(8).cloned().collect()
+    };
+
+    let vcd = decode_sump_8ch_stream_to_vcd(&raw_samples, actual_rate, &labels);
+    let preview_len = raw_samples.len().min(32);
+
+    Ok(SumpCaptureResult {
+        port_name: info.port_name,
+        device_name: info.device_name,
+        actual_sample_rate_hz: actual_rate,
+        captured_samples: raw_samples.len(),
+        channel_names: labels,
+        vcd_content: vcd,
+        raw_hex_preview: hex::encode_upper(&raw_samples[..preview_len]),
+        diagnostic_message: format!("✅ 硬件采样完成：{} 点 @ {} Hz，已生成 {} 通道 IEEE 1364 VCD 波形", raw_samples.len(), actual_rate, ch_len_msg(channel_labels)),
+    })
+}
+
+fn ch_len_msg(labels: &[String]) -> usize {
+    if labels.is_empty() { 8 } else { labels.len().min(8) }
+}
+
+/// 按通道符号从 VCD 主体抽取全部跳变序列 [(tick_us, level)]
+/// 时间复杂度: O(T_tokens), 空间复杂度: O(K_symbols + V_events)
+fn extract_vcd_channels_events(
+    vcd_content: &str,
+    target_syms: &[String],
+    tick_to_us: f64,
+) -> std::collections::HashMap<String, Vec<(f64, LogicLevel)>> {
+    use std::collections::{HashMap, HashSet};
+
+    let mut sym_map: HashMap<String, Vec<(f64, LogicLevel)>> = HashMap::new();
+    let wanted: HashSet<&str> = target_syms.iter().map(|s| s.as_str()).collect();
+    for s in target_syms {
+        sym_map.insert(s.clone(), Vec::new());
+    }
+
+    let mut cur_ticks: u64 = 0;
+    let mut in_defs = vcd_content.contains("$enddefinitions");
+    let mut past_defs = !in_defs;
+    let mut skip_directive = false;
+    let mut pending_vec_val: Option<LogicLevel> = None;
+
+    for tok in vcd_content.split_whitespace() {
+        if !past_defs {
+            if tok == "$enddefinitions" {
+                in_defs = false;
+            } else if !in_defs && tok == "$end" {
+                past_defs = true;
+            }
+            continue;
+        }
+        if skip_directive {
+            if tok == "$end" {
+                skip_directive = false;
+            }
+            continue;
+        }
+        if tok == "$comment" || tok == "$scope" || tok == "$upscope" {
+            skip_directive = true;
+            continue;
+        }
+        if tok == "$dumpvars" || tok == "$dumpall" || tok == "$dumpoff" || tok == "$dumpon" || tok == "$end" {
+            pending_vec_val = None;
+            continue;
+        }
+
+        if let Some(bit_val) = pending_vec_val.take() {
+            if wanted.contains(tok) {
+                if let Some(list) = sym_map.get_mut(tok) {
+                    list.push((cur_ticks as f64 * tick_to_us, bit_val));
+                }
+            }
+            continue;
+        }
+
+        if let Some(rest) = tok.strip_prefix('#') {
+            if let Ok(t) = rest.parse::<u64>() {
+                cur_ticks = t;
+            }
+            continue;
+        }
+
+        if let Some(bits) = tok.strip_prefix('b').or_else(|| tok.strip_prefix('B')) {
+            if let Some(last) = bits.as_bytes().last() {
+                pending_vec_val = Some(if *last == b'1' { LogicLevel::High } else { LogicLevel::Low });
+            }
+            continue;
+        }
+
+        // 标量格式: <level><symbol> (如 0! 或 1")
+        let bytes = tok.as_bytes();
+        if bytes.len() >= 2 {
+            let lvl = match bytes[0] {
+                b'1' => Some(LogicLevel::High),
+                b'0' | b'x' | b'X' | b'z' | b'Z' => Some(LogicLevel::Low),
+                _ => None,
+            };
+            if let Some(l) = lvl {
+                let sym = &tok[1..];
+                if wanted.contains(sym) {
+                    if let Some(list) = sym_map.get_mut(sym) {
+                        list.push((cur_ticks as f64 * tick_to_us, l));
+                    }
+                }
+            }
+        }
+    }
+
+    sym_map
+}
+
+/// 将不均匀稀疏的 VCD 跳变时间线重采样对齐至统一等间隔样本栅格
+/// 空间上限防护: 最多 MAX_GRID_SAMPLES (200_000) 点以防超大低频 VCD 导致内存溢出
+/// 时间复杂度: O(M + E) 线性双指针扫描, 空间复杂度: O(M)
+fn resample_events_to_grid(
+    events: &[(f64, LogicLevel)],
+    total_duration_us: f64,
+    sample_interval_us: f64,
+    max_samples: usize,
+) -> Vec<LogicLevel> {
+    if events.is_empty() || sample_interval_us <= 0.0 || max_samples == 0 {
+        return Vec::new();
+    }
+    let count = ((total_duration_us / sample_interval_us).ceil() as usize + 1).clamp(1, max_samples);
+    let mut out = Vec::with_capacity(count);
+    let mut ev_idx = 0usize;
+    let mut cur_lvl = events[0].1;
+
+    for step in 0..count {
+        let t = step as f64 * sample_interval_us;
+        while ev_idx < events.len() && events[ev_idx].0 <= t + 1e-9 {
+            cur_lvl = events[ev_idx].1;
+            ev_idx += 1;
+        }
+        out.push(cur_lvl);
+    }
+    out
+}
+
+fn find_vcd_symbol(vars: &[(String, String)], requested: Option<&str>, fallbacks: &[&str], pos: usize) -> Option<(String, String)> {
+    if let Some(req) = requested {
+        let clean = req.trim();
+        if !clean.is_empty() {
+            if let Some(found) = vars.iter().find(|(_, n)| n.eq_ignore_ascii_case(clean)) {
+                return Some(found.clone());
+            }
+        }
+    }
+    for fb in fallbacks {
+        if let Some(found) = vars.iter().find(|(_, n)| n.eq_ignore_ascii_case(fb)) {
+            return Some(found.clone());
+        }
+    }
+    vars.get(pos).cloned()
+}
+
+/// 统一执行 IEEE 1364 VCD 多总线 (UART / I2C / SPI / CAN) 物理层解码与信号完整性评测
+/// 显式时空复杂度: 时间复杂度 O(L + M) (L 为 VCD Token 数, M <= 200_000 为均匀化栅格点数); 空间复杂度 O(M)
+pub fn decode_multibus_vcd_sync(
+    vcd_content: &str,
+    bus_type: &str,
+    ch0_name: Option<&str>,
+    ch1_name: Option<&str>,
+    ch2_name: Option<&str>,
+    baud_rate: u32,
+    min_glitch_ns: f64,
+    spi_mode_idx: u8,
+) -> Result<VcdMultiBusDecodedResult, String> {
+    const MAX_GRID_SAMPLES: usize = 200_000;
+
+    if vcd_content.trim().is_empty() {
+        return Err("VCD 内容不能为空".into());
+    }
+    let vars = crate::serial::parse_vcd_var_declarations(vcd_content);
+    if vars.is_empty() {
+        return Err("VCD 文件未包含任何合法的 $var 信号声明".into());
+    }
+
+    let (tick_to_us, timescale_desc) = crate::serial::parse_vcd_timescale_to_us(vcd_content);
+    let bus_upper = bus_type.trim().to_ascii_uppercase();
+    let available_signals: Vec<String> = vars.iter().map(|(_, n)| n.clone()).collect();
+
+    let mut target_syms = Vec::new();
+    let sym0 = match bus_upper.as_str() {
+        "I2C" => find_vcd_symbol(&vars, ch0_name, &["SCL", "I2C_SCL", "CLK", "CH0"], 0),
+        "SPI" => find_vcd_symbol(&vars, ch0_name, &["CS", "SS", "NSS", "SPI_CS", "CH0"], 0),
+        "CAN" => find_vcd_symbol(&vars, ch0_name, &["CAN", "CAN_RX", "CANH", "RX", "CH0"], 0),
+        _ => find_vcd_symbol(&vars, ch0_name, &["TX", "UART_TX", "RX", "CH0"], 0),
+    }
+    .ok_or_else(|| "无法匹配主通道信号".to_string())?;
+    target_syms.push(sym0.0.clone());
+
+    let sym1 = if matches!(bus_upper.as_str(), "I2C" | "SPI") {
+        let fb = if bus_upper == "I2C" { &["SDA", "I2C_SDA", "DATA", "CH1"][..] } else { &["SCK", "SCLK", "CLK", "SPI_SCK", "CH1"][..] };
+        let s = find_vcd_symbol(&vars, ch1_name, fb, 1)
+            .ok_or_else(|| format!("{} 模式需要至少 2 条通道 (当前 VCD 仅含 {})", bus_upper, available_signals.join(", ")))?;
+        target_syms.push(s.0.clone());
+        Some(s)
+    } else {
+        None
+    };
+
+    let sym2 = if bus_upper == "SPI" {
+        let s = find_vcd_symbol(&vars, ch2_name, &["MOSI", "MISO", "SDO", "SDI", "DATA", "CH2"], 2)
+            .ok_or_else(|| format!("SPI 模式需要 CS/SCK/DATA 三条通道 (当前 VCD 仅含 {})", available_signals.join(", ")))?;
+        target_syms.push(s.0.clone());
+        Some(s)
+    } else {
+        None
+    };
+
+    let mut events_map = extract_vcd_channels_events(vcd_content, &target_syms, tick_to_us);
+    let max_t_us = events_map
+        .values()
+        .filter_map(|v| v.last().map(|(t, _)| *t))
+        .fold(0.0f64, f64::max);
+
+    if max_t_us <= 0.0 && events_map.values().all(|v| v.len() < 2) {
+        return Err("VCD 信号中未检测到有效时间演化与电平跳变".into());
+    }
+
+    // 确定科学均匀步长：波特率模式下保证 >=10x 过采样，否则取 timescale 精度并在 200k 点内自适应放大
+    let safe_baud = baud_rate.max(300) as f64;
+    let ideal_step_us = if matches!(bus_upper.as_str(), "UART" | "CAN") {
+        (1_000_000.0 / (safe_baud * 12.0)).max(tick_to_us)
+    } else {
+        tick_to_us.max(0.01)
+    };
+    let min_safe_step = (max_t_us.max(ideal_step_us) / (MAX_GRID_SAMPLES as f64 - 1.0)).max(ideal_step_us);
+    let sample_interval_us = min_safe_step;
+    let sample_interval_ns = sample_interval_us * 1_000.0;
+
+    let filter = DigitalGlitchFilter::new(min_glitch_ns.max(0.0));
+    let ev0 = events_map.remove(&sym0.0).unwrap_or_default();
+    let grid0_raw = resample_events_to_grid(&ev0, max_t_us, sample_interval_us, MAX_GRID_SAMPLES);
+    let grid0 = filter.filter_channel(&grid0_raw, sample_interval_ns);
+
+    let expected_bit_ns = if matches!(bus_upper.as_str(), "UART" | "CAN") {
+        1_000_000_000.0 / safe_baud
+    } else {
+        sample_interval_ns * 4.0
+    };
+    let snapshot = SignalIntegrityEstimator::evaluate(&grid0_raw, sample_interval_ns, expected_bit_ns);
+    let glitches_filtered = snapshot.glitches_detected;
+
+    let mut uart_bytes = Vec::new();
+    let mut i2c_events = Vec::new();
+    let mut spi_bytes = Vec::new();
+    let mut can_destuffed_bits_count = 0usize;
+    let mut can_stuff_error = None;
+    let mut can_bytes_preview = Vec::new();
+    let summary_text: String;
+
+    match bus_upper.as_str() {
+        "I2C" => {
+            let s1 = sym1.as_ref().unwrap();
+            let ev1 = events_map.remove(&s1.0).unwrap_or_default();
+            let grid1 = filter.filter_channel(
+                &resample_events_to_grid(&ev1, max_t_us, sample_interval_us, MAX_GRID_SAMPLES),
+                sample_interval_ns,
+            );
+            i2c_events = PhysicalI2cDemodulator::demodulate(&grid0, &grid1, sample_interval_ns);
+            let byte_cnt = i2c_events.iter().filter(|e| matches!(e, I2cEvent::ByteTransfer { .. })).count();
+            let nack_cnt = i2c_events.iter().filter(|e| matches!(e, I2cEvent::ByteTransfer { ack: false, .. })).count();
+            summary_text = format!(
+                "I2C 物理总线 ({}/{}) 解调完成：捕获 {} 个事件（{} 字节数据, {} 次 NACK）",
+                sym0.1, s1.1, i2c_events.len(), byte_cnt, nack_cnt
+            );
+        }
+        "SPI" => {
+            let s1 = sym1.as_ref().unwrap();
+            let s2 = sym2.as_ref().unwrap();
+            let ev1 = events_map.remove(&s1.0).unwrap_or_default();
+            let ev2 = events_map.remove(&s2.0).unwrap_or_default();
+            let grid1 = resample_events_to_grid(&ev1, max_t_us, sample_interval_us, MAX_GRID_SAMPLES);
+            let grid2 = resample_events_to_grid(&ev2, max_t_us, sample_interval_us, MAX_GRID_SAMPLES);
+            let mode = match spi_mode_idx {
+                1 => SpiMode::Mode1,
+                2 => SpiMode::Mode2,
+                3 => SpiMode::Mode3,
+                _ => SpiMode::Mode0,
+            };
+            let decoded = PhysicalSpiDemodulator::demodulate(&grid0, &grid1, &grid2, sample_interval_ns, mode);
+            spi_bytes = decoded
+                .into_iter()
+                .map(|(byte_value, timestamp_ns)| DecodedSpiByte { byte_value, timestamp_ns })
+                .collect();
+            summary_text = format!(
+                "SPI 物理总线 ({}/{}/{}, Mode{}) 解调完成：还原 {} 字节",
+                sym0.1, s1.1, s2.1, spi_mode_idx.min(3), spi_bytes.len()
+            );
+        }
+        "CAN" => {
+            // 按显性下降沿 (High -> Low) 触发 SOF 并在每个比特中心采样形成原始位流，再送入 ISO 11898-1 Destuffing 引擎
+            let samples_per_bit = ((1_000_000.0 / safe_baud) / sample_interval_us).max(1.0);
+            let mut raw_bits = Vec::new();
+            let mut idx = 1usize;
+            while idx < grid0.len() {
+                if grid0[idx - 1] == LogicLevel::High && grid0[idx] == LogicLevel::Low {
+                    let mut bit_idx = 0usize;
+                    let mut consecutive_recessive = 0usize;
+                    while (idx as f64 + (bit_idx as f64 + 0.5) * samples_per_bit).round() as usize + 1 <= grid0.len() {
+                        let p = (idx as f64 + (bit_idx as f64 + 0.5) * samples_per_bit).round() as usize;
+                        if p >= grid0.len() {
+                            break;
+                        }
+                        let lv = grid0[p];
+                        raw_bits.push(lv);
+                        if lv == LogicLevel::High {
+                            consecutive_recessive += 1;
+                            if consecutive_recessive >= 11 {
+                                // EOF + IFS 空闲隐性界定
+                                break;
+                            }
+                        } else {
+                            consecutive_recessive = 0;
+                        }
+                        bit_idx += 1;
+                        if bit_idx > 160 {
+                            break;
+                        }
+                    }
+                    idx += ((bit_idx.max(1) as f64) * samples_per_bit).round() as usize;
+                } else {
+                    idx += 1;
+                }
+            }
+
+            if raw_bits.is_empty() {
+                // 若全程无 SOF 跳变则退化按均匀单帧位抽取供 Destuffing 错误审查
+                let mut pos = 0usize;
+                while ((pos as f64 + 0.5) * samples_per_bit).round() as usize + 1 <= grid0.len() && raw_bits.len() < 128 {
+                    let p = ((pos as f64 + 0.5) * samples_per_bit).round() as usize;
+                    if p >= grid0.len() {
+                        break;
+                    }
+                    raw_bits.push(grid0[p]);
+                    pos += 1;
+                }
+            }
+
+            match PhysicalCanDemodulator::destuff_can_bitstream(&raw_bits) {
+                Ok(destuffed) => {
+                    can_destuffed_bits_count = destuffed.len();
+                    for chunk in destuffed.chunks(8) {
+                        let mut b = 0u8;
+                        for (bi, lv) in chunk.iter().enumerate() {
+                            b |= lv.to_u8() << (7 - bi);
+                        }
+                        can_bytes_preview.push(b);
+                    }
+                    summary_text = format!(
+                        "CAN 物理总线 ({}) 位填充剥离通过：原始 {} bits -> 净载荷 {} bits",
+                        sym0.1, raw_bits.len(), can_destuffed_bits_count
+                    );
+                }
+                Err(err_msg) => {
+                    can_stuff_error = Some(err_msg.clone());
+                    summary_text = format!("CAN 位填充物理异常: {}", err_msg);
+                }
+            }
+        }
+        _ => {
+            uart_bytes = PhysicalUartDemodulator::demodulate(&grid0, sample_interval_ns, baud_rate.max(300), 8, false);
+            let bad_cnt = uart_bytes.iter().filter(|u| u.framing_error || u.parity_error).count();
+            summary_text = format!(
+                "UART 物理通道 ({}, {}bps) 解调 {} 字节，成帧/校验异常 {} 次",
+                sym0.1, baud_rate.max(300), uart_bytes.len(), bad_cnt
+            );
+        }
+    }
+
+    Ok(VcdMultiBusDecodedResult {
+        bus_type: bus_upper,
+        detected_timescale: timescale_desc,
+        sample_interval_ns,
+        total_duration_us: max_t_us,
+        available_signals,
+        glitches_filtered,
+        integrity_snapshot: Some(snapshot),
+        uart_bytes,
+        i2c_events,
+        spi_bytes,
+        can_destuffed_bits_count,
+        can_stuff_error,
+        can_bytes_preview,
+        summary_text,
+    })
+}
+
+#[tauri::command]
+pub async fn probe_sump_logic_analyzer_cmd(
+    port_name: String,
+    baud_rate: Option<u32>,
+) -> Result<SumpProbeInfo, String> {
+    tokio::task::spawn_blocking(move || probe_sump_logic_analyzer_sync(&port_name, baud_rate.unwrap_or(115200)))
+        .await
+        .map_err(|e| format!("SUMP 硬件探测线程异常: {}", e))
+}
+
+#[tauri::command]
+pub async fn capture_sump_logic_samples_cmd(
+    port_name: String,
+    baud_rate: Option<u32>,
+    sample_rate_hz: u64,
+    sample_count: usize,
+    channel_labels: Option<Vec<String>>,
+) -> Result<SumpCaptureResult, String> {
+    let labels = channel_labels.unwrap_or_default();
+    tokio::task::spawn_blocking(move || {
+        capture_sump_logic_samples_sync(&port_name, baud_rate.unwrap_or(115200), sample_rate_hz, sample_count, &labels)
+    })
+    .await
+    .map_err(|e| format!("SUMP 采样执行线程异常: {}", e))?
+}
+
+#[tauri::command]
+pub fn decode_multibus_vcd_cmd(
+    vcd_content: String,
+    bus_type: String,
+    ch0_name: Option<String>,
+    ch1_name: Option<String>,
+    ch2_name: Option<String>,
+    baud_rate: Option<u32>,
+    min_glitch_ns: Option<f64>,
+    spi_mode: Option<u8>,
+) -> Result<VcdMultiBusDecodedResult, String> {
+    decode_multibus_vcd_sync(
+        &vcd_content,
+        &bus_type,
+        ch0_name.as_deref(),
+        ch1_name.as_deref(),
+        ch2_name.as_deref(),
+        baud_rate.unwrap_or(115200),
+        min_glitch_ns.unwrap_or(20.0),
+        spi_mode.unwrap_or(0),
+    )
+}
+
+// ============================================================
+// 第七部分：单元测试与极限用例推演套件 (6+ 轮严苛工业验证)
 // ============================================================
 
 #[cfg(test)]
@@ -960,5 +1772,120 @@ mod tests {
 
         let empty_uart = PhysicalUartDemodulator::demodulate(&[], 10.0, 115200, 8, false);
         assert!(empty_uart.is_empty());
+    }
+
+    /// 轮次 7：SUMP / OLS 硬件元数据 TLV 解析、长指令小端编码与 8 通道多总线 VCD 转码回环测试
+    #[test]
+    fn test_sump_protocol_tlv_and_8ch_vcd_roundtrip() {
+        // 构造真实 OLS/SUMP TLV 元数据响应:
+        // 0x01="PicoLA_SUMP\0", 0x02="v2.4\0", 0x20=16 ch, 0x21=32768 B, 0x23=24MHz, 0x24=2, 0x00=End
+        let mut tlv = Vec::new();
+        tlv.push(0x01);
+        tlv.extend_from_slice(b"PicoLA_SUMP\0");
+        tlv.push(0x02);
+        tlv.extend_from_slice(b"v2.4\0");
+        tlv.push(0x20);
+        tlv.extend_from_slice(&16u32.to_be_bytes());
+        tlv.push(0x21);
+        tlv.extend_from_slice(&32768u32.to_be_bytes());
+        tlv.push(0x23);
+        tlv.extend_from_slice(&24_000_000u32.to_be_bytes());
+        tlv.push(0x24);
+        tlv.extend_from_slice(&2u32.to_be_bytes());
+        tlv.push(0x00);
+
+        let (name, fw, proto, ch, rate, mem) = parse_sump_metadata_tlv(&tlv);
+        assert_eq!(name, "PicoLA_SUMP");
+        assert_eq!(fw, "v2.4");
+        assert_eq!(proto, "v2");
+        assert_eq!(ch, 16);
+        assert_eq!(rate, 24_000_000);
+        assert_eq!(mem, 32768);
+
+        let cmd = encode_sump_long_cmd(0x80, 0x1122_3344);
+        assert_eq!(cmd, [0x80, 0x44, 0x33, 0x22, 0x11]);
+
+        // 使用真实 I2C START -> 0xA5 + ACK -> STOP 物理脉冲映射到 bit0(SCL) 与 bit1(SDA) 形成 8ch 字节流
+        let mut raw_8ch = Vec::new();
+        let push_pin = |buf: &mut Vec<u8>, scl: u8, sda: u8, cnt: usize| {
+            let val = (scl & 1) | ((sda & 1) << 1);
+            buf.extend(std::iter::repeat(val).take(cnt));
+        };
+        push_pin(&mut raw_8ch, 1, 1, 6); // Idle
+        push_pin(&mut raw_8ch, 1, 0, 4); // START
+        for bit in [1u8, 0, 1, 0, 0, 1, 0, 1, 0] {
+            // 0xA5 + ACK(0)
+            push_pin(&mut raw_8ch, 0, bit, 4);
+            push_pin(&mut raw_8ch, 1, bit, 4);
+        }
+        push_pin(&mut raw_8ch, 1, 0, 2); // STOP
+        push_pin(&mut raw_8ch, 1, 1, 6);
+
+        let labels = vec!["SCL".into(), "SDA".into(), "CH2".into(), "CH3".into()];
+        let vcd = decode_sump_8ch_stream_to_vcd(&raw_8ch, 10_000_000, &labels);
+        assert!(vcd.contains("$timescale 100 ns $end"));
+        assert!(vcd.contains("$var wire 1 ! SCL $end"));
+
+        // 通过统一四总线解调函数验证 I2C 无损还原
+        let i2c_res = decode_multibus_vcd_sync(&vcd, "I2C", Some("SCL"), Some("SDA"), None, 100_000, 0.0, 0)
+            .expect("I2C 多总线 VCD 解调失败");
+        assert!(matches!(i2c_res.i2c_events.first(), Some(I2cEvent::Start { .. })));
+        let transfer = i2c_res.i2c_events.iter().find(|e| matches!(e, I2cEvent::ByteTransfer { .. }));
+        match transfer {
+            Some(I2cEvent::ByteTransfer { byte_value, ack, .. }) => {
+                assert_eq!(*byte_value, 0xA5);
+                assert!(*ack);
+            }
+            _ => panic!("必须解调出 0xA5 + ACK 传输事件"),
+        }
+    }
+
+    /// 轮次 8：四总线 VCD 解调器 SPI Mode0 + CAN 位填充检测 + 畸形边界测试
+    #[test]
+    fn test_multibus_spi_can_and_oom_defense() {
+        // 1. 导出 SPI CS/SCK/MOSI 物理脉冲并验证通过 decode_multibus_vcd_sync 解出 0x5A
+        let mut cs = vec![LogicLevel::High; 4];
+        let mut sck = vec![LogicLevel::Low; 4];
+        let mut mosi = vec![LogicLevel::Low; 4];
+        for b in [0, 1, 0, 1, 1, 0, 1, 0] {
+            // 0x5A = 0b0101_1010
+            cs.extend(vec![LogicLevel::Low; 4]);
+            sck.extend(vec![LogicLevel::Low; 4]);
+            mosi.extend(vec![LogicLevel::from_bit(b); 4]);
+            cs.extend(vec![LogicLevel::Low; 4]);
+            sck.extend(vec![LogicLevel::High; 4]);
+            mosi.extend(vec![LogicLevel::from_bit(b); 4]);
+        }
+        cs.extend(vec![LogicLevel::High; 4]);
+        sck.extend(vec![LogicLevel::Low; 4]);
+        mosi.extend(vec![LogicLevel::Low; 4]);
+        let vcd_spi = VcdStreamCodec::export_to_vcd(
+            &[("CS", &cs), ("SCK", &sck), ("MOSI", &mosi)],
+            50,
+        );
+        let spi_res = decode_multibus_vcd_sync(&vcd_spi, "SPI", None, None, None, 1_000_000, 0.0, 0)
+            .expect("SPI VCD 解调失败");
+        assert_eq!(spi_res.spi_bytes.len(), 1);
+        assert_eq!(spi_res.spi_bytes[0].byte_value, 0x5A);
+
+        // 2. CAN VCD 连续 6 个相同隐性/显性位填充异常捕获验证
+        let mut can_err = vec![LogicLevel::High; 4];
+        // SOF Low(2) + 连续6个Low(触发错误): 总计7个Low后回高
+        can_err.extend(vec![LogicLevel::Low; 7]);
+        can_err.extend(vec![LogicLevel::High; 6]);
+        let vcd_can = VcdStreamCodec::export_to_vcd(&[("CAN_RX", &can_err)], 1000);
+        let can_res = decode_multibus_vcd_sync(&vcd_can, "CAN", Some("CAN_RX"), None, None, 1_000_000, 0.0, 0)
+            .expect("CAN 执行不应崩溃");
+        assert!(can_res.can_stuff_error.is_some(), "连续超过 5 个相同电平必须捕获 CAN Bit Stuffing 错误");
+
+        // 3. 极限边界测试：空 VCD / 缺通道 I2C / 超长时间戳 OOM 阻断 (保证 200k 上限下不卡死)
+        assert!(decode_multibus_vcd_sync("", "UART", None, None, None, 115200, 0.0, 0).is_err());
+        let single_ch_vcd = "$timescale 1 us $end\n$var wire 1 ! TX $end\n$enddefinitions $end\n#0\n1!\n#100\n0!\n#200\n1!\n";
+        assert!(decode_multibus_vcd_sync(single_ch_vcd, "I2C", None, None, None, 100_000, 0.0, 0).is_err());
+
+        let huge_time_vcd = "$timescale 1 ns $end\n$var wire 1 ! TX $end\n$enddefinitions $end\n#0\n1!\n#500000000\n0!\n";
+        let huge_res = decode_multibus_vcd_sync(huge_time_vcd, "UART", Some("TX"), None, None, 115200, 0.0, 0)
+            .expect("超大时间戳下自适应栅格压缩应防止 OOM");
+        assert!(huge_res.sample_interval_ns > 1.0);
     }
 }

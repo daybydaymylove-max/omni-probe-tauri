@@ -95,7 +95,7 @@
             <!-- 快捷处置按钮 -->
             <div v-if="item.action" class="mt-2.5">
               <button
-                @click="handleAction(item)"
+                @click.stop="handleAction(item)"
                 class="px-2.5 py-1 text-[11px] font-medium rounded-lg transition-all duration-150 active:scale-95 cursor-pointer"
                 :class="actionButtonClasses(item.type)"
               >

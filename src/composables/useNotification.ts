@@ -57,7 +57,7 @@ export function formatFriendlyError(err: unknown, defaultTitle: string = '操作
   ) {
     return {
       title: '底层网络捕获驱动未就绪',
-      message: 'Windows 操作系统未检测到或无法加载 Npcap/WinPcap 驱动核心组件。请前往顶部菜单【环境诊断】一键下载并完成驱动热补丁安装。',
+      message: 'Windows 操作系统未检测到或无法加载 Npcap/WinPcap 驱动核心组件。请点击顶栏【环境状况胶囊】一键下载安装。',
     };
   }
 

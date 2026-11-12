@@ -123,20 +123,34 @@ pub struct WavePoint {
 
 pub fn configure_wave_tracker(ip: String, offset: usize, length: usize, signed: bool, little_endian: bool) {
     let mut cfg = crate::lock_guard::lock_mutex(&WAVE_CONFIG, "analyzer::configure_wave_tracker");
+    let trimmed = ip.trim().to_string();
+    if trimmed.is_empty() || length == 0 {
+        cfg.active = false;
+        cfg.target_ip = String::new();
+        return;
+    }
     cfg.active = true;
-    cfg.target_ip = ip;
+    cfg.target_ip = trimmed;
     cfg.byte_offset = offset;
-    cfg.byte_length = length;
+    cfg.byte_length = length.clamp(1, 8);
     cfg.signed = signed;
     cfg.little_endian = little_endian;
 }
 
-pub fn process_wave_sample(app: &tauri::AppHandle, src_ip: &str, payload: &[u8]) {
+pub fn process_wave_sample(app: &tauri::AppHandle, source_key: &str, payload: &[u8]) {
     let cfg = crate::lock_guard::lock_mutex(&WAVE_CONFIG, "analyzer::process_wave_sample");
-    if !cfg.active || cfg.target_ip != src_ip {
+    if !cfg.active {
         return;
     }
-    let end = cfg.byte_offset + cfg.byte_length;
+    let matched = cfg.target_ip == "*"
+        || cfg.target_ip.eq_ignore_ascii_case(source_key.trim());
+    if !matched {
+        return;
+    }
+    let end = match cfg.byte_offset.checked_add(cfg.byte_length) {
+        Some(v) => v,
+        None => return,
+    };
     if payload.len() < end {
         return;
     }
@@ -146,7 +160,7 @@ pub fn process_wave_sample(app: &tauri::AppHandle, src_ip: &str, payload: &[u8])
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis();
-    let _ = app.emit("wave-data", WavePoint { ip: src_ip.to_string(), value, ts_ms });
+    let _ = app.emit("wave-data", WavePoint { ip: source_key.to_string(), value, ts_ms });
 }
 
 /// 示波器字节解码核心算法（纯函数，零分配）
@@ -1877,10 +1891,57 @@ pub struct IoGraphSeries {
 static IO_GRAPH_BUFFER: Lazy<Arc<Mutex<VecDeque<IoGraphBucket>>>> =
     Lazy::new(|| Arc::new(Mutex::new(VecDeque::with_capacity(600))));
 
-/// 记录单包时序指标 (供网卡抓包、串口、USB 流式调用)
-/// 时间复杂度: O(1)
-/// 空间复杂度: O(1)
-pub fn record_packet_io(length: usize, rtt_ms: Option<f64>, is_retrans: bool) {
+static IO_GRAPH_BUS_BUFFERS: Lazy<Arc<Mutex<HashMap<String, VecDeque<IoGraphBucket>>>>> =
+    Lazy::new(|| Arc::new(Mutex::new(HashMap::new())));
+
+fn push_io_bucket(buf: &mut VecDeque<IoGraphBucket>, now_sec: u64, length: usize, rtt_ms: Option<f64>, is_retrans: bool) {
+    if let Some(last) = buf.back_mut() {
+        if last.timestamp_sec == now_sec {
+            last.packet_count = last.packet_count.saturating_add(1);
+            last.byte_count = last.byte_count.saturating_add(length as u64);
+            if is_retrans {
+                last.retrans_count = last.retrans_count.saturating_add(1);
+            }
+            if let Some(rtt) = rtt_ms {
+                let total_rtt = last.avg_rtt_ms * (last.rtt_samples as f64) + rtt;
+                last.rtt_samples = last.rtt_samples.saturating_add(1);
+                last.avg_rtt_ms = total_rtt / (last.rtt_samples as f64);
+            }
+            return;
+        }
+    }
+
+    let new_bucket = IoGraphBucket {
+        timestamp_sec: now_sec,
+        packet_count: 1,
+        byte_count: length as u64,
+        avg_rtt_ms: rtt_ms.unwrap_or(0.0),
+        rtt_samples: if rtt_ms.is_some() { 1 } else { 0 },
+        retrans_count: if is_retrans { 1 } else { 0 },
+    };
+    buf.push_back(new_bucket);
+
+    while buf.len() > 300 {
+        buf.pop_front();
+    }
+}
+
+/// 标准化总线分类名称 (ETHERNET | SERIAL | USB | WIRELESS)
+fn normalize_bus_key(bus: &str) -> String {
+    let up = bus.trim().to_uppercase();
+    if up.contains("SERIAL") || up.starts_with("COM") {
+        "SERIAL".to_string()
+    } else if up.contains("USB") {
+        "USB".to_string()
+    } else if up.contains("WIFI") || up.contains("WLAN") || up.contains("BLUETOOTH") || up.contains("WIRELESS") {
+        "WIRELESS".to_string()
+    } else {
+        "ETHERNET".to_string()
+    }
+}
+
+/// 记录单包时序指标并按物理总线分类入桶 (时间复杂度 O(1), 空间复杂度 O(1))
+pub fn record_packet_io_with_bus(bus: &str, length: usize, rtt_ms: Option<f64>, is_retrans: bool) {
     let now_sec = match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
         Ok(d) => d.as_secs(),
         Err(_) => 0,
@@ -1888,45 +1949,23 @@ pub fn record_packet_io(length: usize, rtt_ms: Option<f64>, is_retrans: bool) {
 
     {
         let mut buf = crate::lock_guard::lock_mutex(&IO_GRAPH_BUFFER, "analyzer::record_packet_io");
-        if let Some(last) = buf.back_mut() {
-            if last.timestamp_sec == now_sec {
-                last.packet_count += 1;
-                last.byte_count += length as u64;
-                if is_retrans {
-                    last.retrans_count += 1;
-                }
-                if let Some(rtt) = rtt_ms {
-                    let total_rtt = last.avg_rtt_ms * (last.rtt_samples as f64) + rtt;
-                    last.rtt_samples += 1;
-                    last.avg_rtt_ms = total_rtt / (last.rtt_samples as f64);
-                }
-                return;
-            }
-        }
+        push_io_bucket(&mut buf, now_sec, length, rtt_ms, is_retrans);
+    }
 
-        // 新秒时间桶
-        let new_bucket = IoGraphBucket {
-            timestamp_sec: now_sec,
-            packet_count: 1,
-            byte_count: length as u64,
-            avg_rtt_ms: rtt_ms.unwrap_or(0.0),
-            rtt_samples: if rtt_ms.is_some() { 1 } else { 0 },
-            retrans_count: if is_retrans { 1 } else { 0 },
-        };
-        buf.push_back(new_bucket);
-
-        // 维持最多 300 秒 (5分钟) 滑动窗口
-        while buf.len() > 300 {
-            buf.pop_front();
-        }
+    let bus_key = normalize_bus_key(bus);
+    {
+        let mut bus_map = crate::lock_guard::lock_mutex(&IO_GRAPH_BUS_BUFFERS, "analyzer::record_packet_io_bus");
+        let entry = bus_map.entry(bus_key).or_insert_with(|| VecDeque::with_capacity(320));
+        push_io_bucket(entry, now_sec, length, rtt_ms, is_retrans);
     }
 }
 
-/// 查询指定时间窗口的 IO Graphs 曲线数据
-pub fn get_io_graph_series(window_seconds: u32) -> IoGraphSeries {
-    let win = window_seconds.clamp(10, 300) as usize;
-    let buf = crate::lock_guard::lock_mutex(&IO_GRAPH_BUFFER, "analyzer::get_io_graph_series");
+/// 记录单包时序指标 (默认归属 ETHERNET 总线，向后兼容现有调用方)
+pub fn record_packet_io(length: usize, rtt_ms: Option<f64>, is_retrans: bool) {
+    record_packet_io_with_bus("ETHERNET", length, rtt_ms, is_retrans);
+}
 
+fn summarize_io_buckets(buf: &VecDeque<IoGraphBucket>, win: usize) -> IoGraphSeries {
     let count = buf.len();
     let start_idx = count.saturating_sub(win);
     let slice: Vec<IoGraphBucket> = buf.iter().skip(start_idx).cloned().collect();
@@ -1960,8 +1999,37 @@ pub fn get_io_graph_series(window_seconds: u32) -> IoGraphSeries {
         total_packets,
         total_bytes,
         global_avg_rtt_ms,
-        max_bandwidth_bps: max_bw * 8, // 转换为 bps
+        max_bandwidth_bps: max_bw * 8,
     }
+}
+
+/// 查询指定时间窗口及可选物理总线过滤条件的 IO Graphs 曲线数据
+pub fn get_io_graph_series_filtered(window_seconds: u32, bus_filter: Option<&str>) -> IoGraphSeries {
+    let win = window_seconds.clamp(10, 300) as usize;
+    if let Some(bus_raw) = bus_filter {
+        let trimmed = bus_raw.trim();
+        if !trimmed.is_empty() && !trimmed.eq_ignore_ascii_case("ALL") {
+            let bus_key = normalize_bus_key(trimmed);
+            let bus_map = crate::lock_guard::lock_mutex(&IO_GRAPH_BUS_BUFFERS, "analyzer::get_io_graph_series_filtered");
+            if let Some(buf) = bus_map.get(&bus_key) {
+                return summarize_io_buckets(buf, win);
+            }
+            return IoGraphSeries {
+                buckets: Vec::new(),
+                total_packets: 0,
+                total_bytes: 0,
+                global_avg_rtt_ms: 0.0,
+                max_bandwidth_bps: 0,
+            };
+        }
+    }
+    let buf = crate::lock_guard::lock_mutex(&IO_GRAPH_BUFFER, "analyzer::get_io_graph_series");
+    summarize_io_buckets(&buf, win)
+}
+
+/// 查询指定时间窗口的全局 IO Graphs 曲线数据
+pub fn get_io_graph_series(window_seconds: u32) -> IoGraphSeries {
+    get_io_graph_series_filtered(window_seconds, None)
 }
 
 // ============================================================

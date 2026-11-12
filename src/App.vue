@@ -148,21 +148,29 @@
         </template>
       </div>
 
-      <!-- 右段：紧凑运行指标微囊 + Apple 一体化玻璃图标组 -->
+      <!-- 右段：紧凑运行指标微囊 (锚定非阻塞 Popover 宿主) + Apple 一体化玻璃图标组 -->
       <div class="flex items-center gap-2 shrink-0">
-        <!-- 环形缓冲与环境合一玻璃微囊 -->
-        <button @click="isEnvDiagnosticOpen = true"
-          class="hidden md:flex items-center gap-2 liquid-panel rounded-full h-9 px-3 text-[11px] ui-num cursor-pointer hover:bg-[var(--surface-glass-pill-hover)] transition-colors whitespace-nowrap"
-          :title="`环形缓冲: ${ringBufferUsageText} | 运行环境就绪度: ${envScore ?? '--'}%，点击诊断`">
-          <span class="lens-edge-lip" aria-hidden="true"></span>
-          <span class="text-[var(--text-secondary)] hidden xl:inline">{{ ringBufferUsageText }}</span>
-          <span class="h-3 w-px bg-[var(--border-subtle)] hidden xl:inline-block"></span>
-          <span class="flex items-center gap-1.5 font-medium text-[var(--text-primary)]">
-            <span class="w-1.5 h-1.5 rounded-full"
-              :style="{ background: (envScore ?? 0) >= 90 ? 'var(--accent-green)' : (envScore ?? 0) >= 50 ? 'var(--accent-amber)' : 'var(--accent-muted, var(--text-muted))' }"></span>
-            <span>环境 {{ envScore ?? '--' }}%</span>
-          </span>
-        </button>
+        <!-- 环形缓冲与环境合一玻璃微囊 (点击展开锚定环境检查器) -->
+        <div ref="envPopoverRef" class="relative shrink-0">
+          <button
+            type="button"
+            @click.stop="toggleInspector"
+            :aria-expanded="inspectorOpen"
+            class="flex items-center gap-2 liquid-panel rounded-full h-9 px-2.5 md:px-3 text-[11px] ui-num cursor-pointer hover:bg-[var(--surface-glass-pill-hover)] transition-colors whitespace-nowrap"
+            :title="`环形缓冲: ${ringBufferUsageText} | 运行环境就绪度: ${envScore ?? '--'}%，点击展开环境检查器`">
+            <span class="lens-edge-lip" aria-hidden="true"></span>
+            <span class="text-[var(--text-secondary)] hidden xl:inline">{{ ringBufferUsageText }}</span>
+            <span class="h-3 w-px bg-[var(--border-subtle)] hidden xl:inline-block"></span>
+            <span class="flex items-center gap-1.5 font-medium text-[var(--text-primary)]">
+              <span class="w-1.5 h-1.5 rounded-full"
+                :class="hasActiveDownload ? 'animate-pulse' : ''"
+                :style="{ background: (envScore ?? 0) >= 90 ? 'var(--accent-green)' : (envScore ?? 0) >= 50 ? 'var(--accent-amber)' : 'var(--accent-muted, var(--text-muted))' }"></span>
+              <span class="hidden sm:inline">环境 {{ envScore ?? '--' }}%</span>
+            </span>
+          </button>
+
+          <EnvironmentDiagnosticModal />
+        </div>
 
         <!-- 一体化共享玻璃工具胶囊组 -->
         <div class="liquid-panel rounded-full h-9 px-1 flex items-center gap-0.5">
@@ -510,13 +518,6 @@
       @openDossier="handleOpenGlobalDossier"
     />
 
-    <!-- 全局底层抓包驱动与解剖工具链全景诊断模态框 -->
-    <EnvironmentDiagnosticModal
-      v-if="isEnvDiagnosticOpen"
-      :isOpen="isEnvDiagnosticOpen"
-      @close="isEnvDiagnosticOpen = false"
-    />
-
     <!-- 全局系统偏好设置中心模态框 -->
     <PreferencesModal
       v-if="isPreferencesOpen"
@@ -526,7 +527,7 @@
       @close="isPreferencesOpen = false"
       @toggleTheme="toggleAppleTheme"
       @toggleDock="toggleDockPinned"
-      @openDiagnostic="isEnvDiagnosticOpen = true; isPreferencesOpen = false"
+      @openDiagnostic="openInspector('deps'); isPreferencesOpen = false"
       @clearData="clearData"
     />
 
@@ -567,7 +568,7 @@
           <div class="space-y-1">
             <h2 class="text-[14px] font-semibold text-[var(--text-primary)] tracking-tight flex items-center justify-center gap-2">
               <span>OMNI-PROBE 网络探针系统</span>
-              <span class="badge-subtle ui-num">v0.3.1</span>
+              <span class="badge-subtle ui-num">v0.3.2</span>
             </h2>
             <p class="text-[12px] text-[var(--text-secondary)]">工业级多总线网络分析仪 · 正在执行引擎初始化校验</p>
           </div>
@@ -622,7 +623,7 @@
     <!-- 底部紧凑实用状态栏 -->
     <footer class="app-footer-bar ui-num">
       <div>物理接口: {{ selectedIface || '自动识别' }} · {{ isNpcapAvailable ? 'Npcap + Raw Socket 双轨引擎' : 'Raw Socket 原生捕获引擎' }} · 环形缓冲: {{ ringBufferUsageText }}</div>
-      <div>已捕获 {{ packets.length.toLocaleString() }} 帧 · Omni-Probe v0.3.1</div>
+      <div>已捕获 {{ packets.length.toLocaleString() }} 帧 · Omni-Probe v0.3.2</div>
     </footer>
   </div>
 </template>
@@ -636,17 +637,18 @@ import { getCurrentWebview } from '@tauri-apps/api/webview';
 
 import AppIcon from './components/AppIcon.vue';
 import GlobalSheetModal from './components/GlobalSheetModal.vue';
+import EnvironmentDiagnosticModal from './components/EnvironmentDiagnosticModal.vue';
 import { useUniversalDiff } from './composables/useUniversalDiff';
+import { useEnvironmentInspector } from './composables/useEnvironmentInspector';
 import GlobalNotificationToast from './components/GlobalNotificationToast.vue';
 import { notifySuccess, notifyInfo, notifyWarning, notifyError } from './composables/useNotification';
 
-// 首屏工作台同步直载以保障 0ms 启动瞬间响应；其余 9 个专业工作台与 7 个重型模态框采用按需异步拆包
+// 首屏工作台同步直载以保障 0ms 启动瞬间响应；其余 9 个专业工作台与重型模态框采用按需异步拆包
 import TrafficAnalyzerView from './views/TrafficAnalyzerView.vue';
 
 const PacketDeepModal = defineAsyncComponent(() => import('./components/PacketDeepModal.vue'));
 const HoneypotWorkbenchModal = defineAsyncComponent(() => import('./components/HoneypotWorkbenchModal.vue'));
 const IpDossierModal = defineAsyncComponent(() => import('./components/IpDossierModal.vue'));
-const EnvironmentDiagnosticModal = defineAsyncComponent(() => import('./components/EnvironmentDiagnosticModal.vue'));
 const PreferencesModal = defineAsyncComponent(() => import('./components/PreferencesModal.vue'));
 const WirelessVlanMonitorModal = defineAsyncComponent(() => import('./components/WirelessVlanMonitorModal.vue'));
 const PacketDiffModal = defineAsyncComponent(() => import('./components/PacketDiffModal.vue'));
@@ -696,6 +698,7 @@ const domainForensicsTabs: WorkbenchTab[] = [
 
 const isIfaceMenuOpen = ref(false);
 const ifacePopoverRef = ref<HTMLElement | null>(null);
+const envPopoverRef = ref<HTMLElement | null>(null);
 const bpfInputRef = ref<HTMLInputElement | null>(null);
 
 function selectInterface(iface: string) {
@@ -704,10 +707,12 @@ function selectInterface(iface: string) {
 }
 
 function handleDocumentClick(e: MouseEvent) {
-  if (!isIfaceMenuOpen.value) return;
   const target = e.target as Node | null;
-  if (ifacePopoverRef.value && target && !ifacePopoverRef.value.contains(target)) {
+  if (isIfaceMenuOpen.value && ifacePopoverRef.value && target && !ifacePopoverRef.value.contains(target)) {
     isIfaceMenuOpen.value = false;
+  }
+  if (inspectorOpen.value && envPopoverRef.value && target && !envPopoverRef.value.contains(target)) {
+    dismissInspectorOnOutsideClick();
   }
 }
 
@@ -798,7 +803,7 @@ function openUniversalDiffCenter() {
 function handleGlobalKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
     if (isIfaceMenuOpen.value) isIfaceMenuOpen.value = false;
-    else if (isEnvDiagnosticOpen.value) isEnvDiagnosticOpen.value = false;
+    else if (inspectorOpen.value) closeInspector();
     else if (isPreferencesOpen.value) isPreferencesOpen.value = false;
     else if (isWirelessVlanOpen.value) isWirelessVlanOpen.value = false;
     else if (isHoneypotOpen.value) isHoneypotOpen.value = false;
@@ -882,17 +887,27 @@ function openDeepModal(pkt: any) {
   isDeepModalOpen.value = true;
 }
 
+const {
+  inspectorOpen,
+  envScore,
+  hasActiveDownload,
+  isNpcapReady: isNpcapAvailable,
+  isUsbpcapReady: isUsbpcapAvailable,
+  isTsharkReady: isTsharkAvailable,
+  inspectEnvironment,
+  openInspector,
+  closeInspector,
+  dismissInspectorOnOutsideClick,
+  toggleInspector,
+  notifyDegradedIfNeeded,
+} = useEnvironmentInspector();
+
 const isGlobalDossierOpen = ref(false);
-const isEnvDiagnosticOpen = ref(false);
 const isPreferencesOpen = ref(false);
 const isWirelessVlanOpen = ref(false);
-const envScore = ref<number | null>(null);
 
-// 启动自检状态（默认未确认前全部按未就绪/待探活展示，严格依据底层实测结果置位）
+// 启动自检状态（由全局单例 Composable useEnvironmentInspector 驱动）
 const isInitializing = ref(true);
-const isNpcapAvailable = ref(false);
-const isUsbpcapAvailable = ref(false);
-const isTsharkAvailable = ref(false);
 const initProgress = ref(15);
 const initStatusMessage = ref('正在初始化底层通信总线与内存池...');
 const initSteps = ref([
@@ -914,18 +929,7 @@ async function refreshAuditComplianceRate(): Promise<void> {
 }
 
 async function loadEnvReadiness(): Promise<void> {
-  try {
-    const res: any = await invoke('get_environment_inspection_cmd');
-    envScore.value = res.readiness_score;
-    const npcapComp = res.components?.find((c: any) => c.id === 'npcap');
-    const usbpcapComp = res.components?.find((c: any) => c.id === 'usbpcap');
-    const tsharkComp = res.components?.find((c: any) => c.id === 'tshark');
-    isNpcapAvailable.value = Boolean(npcapComp?.is_ready);
-    isUsbpcapAvailable.value = Boolean(usbpcapComp?.is_ready);
-    isTsharkAvailable.value = Boolean(tsharkComp?.is_ready);
-  } catch (e) {
-    console.warn('[ENV_CHECK] 失败:', e);
-  }
+  await inspectEnvironment(false);
 }
 
 const globalDossierIp = ref('');
@@ -1037,13 +1041,19 @@ async function stopSerialCapture(port?: string) {
   }
 }
 
-async function startUsbCapture() {
+async function startUsbCapture(hubDevice?: string) {
   try {
-    const res = await invoke<string>('start_usb_capture');
+    const res = await invoke<string>('start_usb_capture', {
+      hubDevice: hubDevice && hubDevice.trim() ? hubDevice.trim() : null,
+    });
     isUsbRunning.value = true;
     addLog(res);
     await refreshUsbDevices();
-    notifySuccess('USB 总线探针已就绪', '已成功挂钩系统底层 USB 外设通信总线');
+    if (res.includes('降级') || res.includes('0 帧')) {
+      notifyInfo('USB 总线嗅探提示', res);
+    } else {
+      notifySuccess('USB 总线探针已就绪', res);
+    }
   } catch (e) {
     addLog(`[ERROR] USB 嗅探启动失败: ${e}`);
     notifyError('USB 嗅探启动受阻', e);
@@ -1257,13 +1267,9 @@ onMounted(() => {
     setTimeout(() => {
       isInitializing.value = false;
       notifySuccess('探针主引擎已就绪', selectedIface.value ? `已挂载适配器: ${selectedIface.value}` : '多轨自愈引擎已就绪');
-
-      const skipModal = localStorage.getItem('omni_probe_skip_startup_env_modal') === 'true';
-      if (!skipModal && envScore.value !== null && envScore.value < 100) {
-        setTimeout(() => {
-          isEnvDiagnosticOpen.value = true;
-        }, 500);
-      }
+      setTimeout(() => {
+        notifyDegradedIfNeeded();
+      }, 450);
     }, 250);
   }
 

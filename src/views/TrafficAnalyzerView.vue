@@ -531,6 +531,7 @@
                 <option value="1s">1 秒粒度桶</option>
                 <option value="10s">10 秒粒度桶</option>
                 <option value="60s">60 秒粒度桶</option>
+                <option value="1h">1 小时粒度桶</option>
               </select>
               <span style="color: var(--text-muted);">活跃时间桶: <b style="color: var(--text-primary);">{{ tsBuckets.length }}</b> 个</span>
               <span style="color: var(--text-muted);">热点通信对: <b class="text-blue-600 dark:text-sky-300">{{ heatmapCells.length }}</b> 组</span>
@@ -556,13 +557,24 @@
                 </span>
               </div>
             </div>
-            <div class="col-span-5 overflow-y-auto custom-scrollbar max-h-36 border rounded-lg p-1.5 space-y-1" style="background: var(--surface-content); border-color: var(--border-subtle);">
-              <div v-if="tsBuckets.length === 0" class="text-center py-3 text-[11px]" style="color: var(--text-muted);">暂无时序聚合桶记录</div>
-              <div v-for="(b, idx) in tsBuckets.slice(-12).reverse()" :key="idx" class="flex items-center justify-between px-2 py-0.5 rounded text-[11px] ui-num">
-                <span style="color: var(--text-muted);">@{{ new Date(b.slot_timestamp_s * 1000).toLocaleTimeString() }}</span>
-                <span class="text-blue-600 dark:text-sky-300">{{ b.packet_count }} 帧 / {{ b.byte_count }} B</span>
-                <span class="text-amber-600 dark:text-amber-300">工控 {{ b.industrial_packet_count }}</span>
-              </div>
+            <div class="col-span-5 flex flex-col gap-1 max-h-36 border rounded-lg p-1.5" style="background: var(--surface-content); border-color: var(--border-subtle);">
+              <div v-if="tsBuckets.length === 0" class="text-center py-6 text-[11px]" style="color: var(--text-muted);">暂无时序聚合桶记录</div>
+              <template v-else>
+                <div class="h-14 rounded bg-slate-950/85 border border-white/10 px-1 py-0.5 shrink-0 flex items-center">
+                  <svg v-if="tsBuckets.length >= 2" viewBox="0 0 320 48" class="w-full h-full">
+                    <polyline :points="tsPktPolyline" fill="none" stroke="#38bdf8" stroke-width="1.6" stroke-linejoin="round" />
+                    <polyline :points="tsIndPolyline" fill="none" stroke="#f59e0b" stroke-width="1.4" stroke-dasharray="3 2" stroke-linejoin="round" />
+                  </svg>
+                  <div v-else class="w-full text-center text-[10px] text-slate-400">单时间桶等待延续...</div>
+                </div>
+                <div class="overflow-y-auto custom-scrollbar space-y-0.5 flex-1">
+                  <div v-for="(b, idx) in tsBuckets.slice(-8).reverse()" :key="idx" class="flex items-center justify-between px-2 py-0.5 rounded text-[10px] ui-num">
+                    <span style="color: var(--text-muted);">@{{ new Date(b.slot_timestamp_s * 1000).toLocaleTimeString() }}</span>
+                    <span class="text-blue-600 dark:text-sky-300">{{ b.packet_count }} 帧 / {{ b.byte_count }} B</span>
+                    <span class="text-amber-600 dark:text-amber-300">工控 {{ b.industrial_packet_count }}</span>
+                  </div>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -1038,6 +1050,7 @@
             <div class="flex glass-pill p-0.5 rounded-xl text-[11px]">
               <button @click="activeBottomTab = 'hexdump'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer font-medium', activeBottomTab === 'hexdump' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">L7</button>
               <button @click="activeBottomTab = 'dialogue'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer font-medium', activeBottomTab === 'dialogue' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">会话</button>
+              <button @click="activeBottomTab = 'iographs'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer font-medium', activeBottomTab === 'iographs' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">IO图</button>
               <button @click="activeBottomTab = 'wave'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer font-medium', activeBottomTab === 'wave' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">示波</button>
             </div>
             <button @click="isInspectorOpen = false" class="drawer-close-btn" title="收起随行解构抽屉 (ESC 或 R)">
@@ -1129,7 +1142,7 @@
         </div>
 
         <!-- 子视图 2: 双向会话交互流 -->
-        <div v-else-if="activeBottomTab === 'dialogue'" class="flex-1 overflow-hidden p-2">
+        <div v-else-if="activeBottomTab === 'dialogue'" class="flex-1 flex flex-col min-h-0 overflow-hidden p-2">
           <FlowDialogueInspector
             :packets="packets"
             :assets="assets"
@@ -1140,8 +1153,8 @@
         </div>
 
         <!-- 子视图 3: IO Graphs -->
-        <div v-else-if="activeBottomTab === 'iographs'" class="flex-1 overflow-hidden p-2">
-          <IoGraphsPanel />
+        <div v-else-if="activeBottomTab === 'iographs'" class="flex-1 flex flex-col min-h-0 overflow-hidden p-2">
+          <IoGraphsPanel :packets="packets" />
         </div>
 
         <!-- 子视图 4: 实时示波波形追踪 -->
@@ -1550,6 +1563,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, defineAsyncComponent, nextTick, onMounted, onUnmounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { notifyError, notifyInfo, notifySuccess } from '../composables/useNotification';
 import { useUniversalDiff } from '../composables/useUniversalDiff';
 import { saveTextViaNativeDesktop } from '../composables/useDesktopSave';
@@ -2406,9 +2420,26 @@ const txStats = ref<TransactionMetricsSnapshot | null>(null);
 const recentIndustrialTxs = ref<CompletedIndustrialTransaction[]>([]);
 
 const isTimeseriesHeatmapOpen = ref(false);
-const tsResolution = ref<'1s' | '10s' | '60s'>('1s');
+const tsResolution = ref<'1s' | '10s' | '60s' | '1h'>('1s');
 const tsBuckets = ref<TimeSeriesBucket[]>([]);
 const heatmapCells = ref<TopologyHeatmapCell[]>([]);
+
+function buildTsPolyline(field: 'packet_count' | 'industrial_packet_count'): string {
+  const recent = tsBuckets.value.slice(-48);
+  if (recent.length < 2) return '';
+  const maxVal = Math.max(1, ...recent.map(b => b.packet_count || 0));
+  const stepX = 320 / Math.max(1, recent.length - 1);
+  return recent
+    .map((b, idx) => {
+      const val = b[field] || 0;
+      const y = 44 - (val / maxVal) * 40;
+      return `${(idx * stepX).toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+}
+
+const tsPktPolyline = computed(() => buildTsPolyline('packet_count'));
+const tsIndPolyline = computed(() => buildTsPolyline('industrial_packet_count'));
 
 async function fetchIndustrialTxData() {
   try {
@@ -2455,6 +2486,7 @@ const activeBottomTab = ref('hexdump');
 
 function openIoGraphsTab() {
   activeBottomTab.value = 'iographs';
+  isInspectorOpen.value = true;
 }
 
 const selectedPacket = ref<PacketRecord | null>(null);
@@ -3350,6 +3382,7 @@ function saveAsBaseline(pkt: PacketRecord) {
 function openMatrixTab() {
   runMatrixCompare();
   activeBottomTab.value = 'matrix';
+  isInspectorOpen.value = true;
 }
 
 function openWaveTab() {
@@ -3357,12 +3390,13 @@ function openWaveTab() {
     setupWaveFromSelected();
   }
   activeBottomTab.value = 'wave';
+  isInspectorOpen.value = true;
 }
 
-// 示波器波形追踪逻辑
+// 示波器波形追踪逻辑 (实时对接后端 wave-data IPC 事件)
 const waveCanvasRef = ref<HTMLCanvasElement | null>(null);
 const wavePoints = ref<Array<{ value: number; ts_ms: number }>>([]);
-const waveConfig = ref({ ip: '', offset: 0, length: 2, signed: false, little_endian: false });
+const waveConfig = ref({ ip: '*', offset: 0, length: 2, signed: false, little_endian: false });
 const waveActive = ref(false);
 const waveMax = computed(() => wavePoints.value.length ? Math.max(...wavePoints.value.map(p => p.value)) : 0);
 const waveMin = computed(() => wavePoints.value.length ? Math.min(...wavePoints.value.map(p => p.value)) : 0);
@@ -3373,16 +3407,19 @@ function setupWaveFromSelected() {
 }
 
 async function startWave() {
-  if (!waveConfig.value.ip) return;
+  const targetIp = waveConfig.value.ip.trim() || '*';
+  waveConfig.value.ip = targetIp;
+  wavePoints.value = [];
   try {
     await invoke('set_wave_tracker', {
-      ip: waveConfig.value.ip,
+      ip: targetIp,
       offset: waveConfig.value.offset,
       length: waveConfig.value.length,
       signed: waveConfig.value.signed,
       littleEndian: waveConfig.value.little_endian
     });
     waveActive.value = true;
+    emit('appendLog', `[WAVE] 物理示波波形采样已启动 (Target=${targetIp}, Offset=${waveConfig.value.offset}B, Len=${waveConfig.value.length}B)`);
   } catch (e) {
     emit('appendLog', `[ERROR] 示波器波形追踪启动失败: ${e}`);
   }
@@ -3390,7 +3427,7 @@ async function startWave() {
 
 async function stopWave() {
   try {
-    await invoke('set_wave_tracker', { ip: '', offset: 0, length: 0, signed: false });
+    await invoke('set_wave_tracker', { ip: '', offset: 0, length: 0, signed: false, littleEndian: false });
   } catch (e) {
     emit('appendLog', `[ERROR] 停止示波器波形追踪失败: ${e}`);
   }
@@ -3960,12 +3997,24 @@ function handleScopeKeydown(e: KeyboardEvent) {
   }
 }
 
-onMounted(() => {
+let unlistenWaveData: UnlistenFn | null = null;
+
+onMounted(async () => {
   window.addEventListener('keydown', handleScopeKeydown);
   startTopologyAnimation();
   telemetryTimer = setInterval(updateTelemetryMetrics, 1000);
   updateStreamBufferStats();
   streamBufferTimer = setInterval(updateStreamBufferStats, 2000);
+
+  try {
+    unlistenWaveData = await listen<{ ip: string; value: number; ts_ms: number }>('wave-data', (event) => {
+      if (!waveActive.value || !event.payload) return;
+      const next = [...wavePoints.value, { value: Number(event.payload.value) || 0, ts_ms: Number(event.payload.ts_ms) || Date.now() }];
+      wavePoints.value = next.length > 240 ? next.slice(-240) : next;
+    });
+  } catch (e) {
+    console.warn('注册 wave-data 波形监听失败:', e);
+  }
 
   window.addEventListener('click', closeContextMenu);
   window.addEventListener('click', closeAllDropdowns);
@@ -3986,6 +4035,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleScopeKeydown);
+  if (unlistenWaveData) {
+    unlistenWaveData();
+    unlistenWaveData = null;
+  }
   if (topoAnimId) cancelAnimationFrame(topoAnimId);
   if (telemetryTimer) clearInterval(telemetryTimer);
   if (streamBufferTimer) clearInterval(streamBufferTimer);

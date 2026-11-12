@@ -182,6 +182,8 @@ pub fn list_network_interfaces() -> Result<Vec<String>, String> {
                 .map(|d| format!("{} - {}", d.name, d.desc.unwrap_or_default()))
                 .collect();
             list.insert(0, "auto - 自动选择活动物理网卡 (推荐)".into());
+            #[cfg(windows)]
+            list.insert(1, "native-ndis - Windows 内置 NDIS-ETW 免驱 L2 引擎 (无需 Npcap，需管理员)".into());
             return Ok(list);
         }
     }
@@ -189,6 +191,8 @@ pub fn list_network_interfaces() -> Result<Vec<String>, String> {
     // 2. 若底层 Npcap 枚举超时或受限，采用系统物理适配器快速降级方案（不依赖任何硬编码设备 GUID）
     let mut fallback_list = vec![
         "auto - 自动选择活动物理网卡 (推荐)".to_string(),
+        #[cfg(windows)]
+        "native-ndis - Windows 内置 NDIS-ETW 免驱 L2 引擎 (无需 Npcap，需管理员)".to_string(),
         "dual-track - 双轨应用层多端口监听服务 (TCP/UDP 8080, 502, 1883)".to_string(),
     ];
 
@@ -371,16 +375,31 @@ pub fn process_incoming_record(app: &tauri::AppHandle, mut record: PacketRecord)
     GLOBAL_PACKETS_TOTAL.fetch_add(1, Ordering::Relaxed);
     GLOBAL_BYTES_TOTAL.fetch_add(record.length as u64, Ordering::Relaxed);
 
+    // 实时 TCP RTT & 重传有界追踪 (时间复杂度 O(1)，上限 4096 槽位，绝不静态归零)
+    let (tcp_rtt_opt, tcp_is_retrans) = observe_tcp_health(&record);
+    if tcp_rtt_opt.is_some() || tcp_is_retrans {
+        let mut bmap = record.business_data.take().unwrap_or_default();
+        if let Some(rtt) = tcp_rtt_opt {
+            bmap.insert("tcp_rtt_ms".into(), json!((rtt * 100.0).round() / 100.0));
+        }
+        if tcp_is_retrans {
+            bmap.insert("tcp_retransmission".into(), json!(true));
+        }
+        record.business_data = Some(bmap);
+    }
+
     // IO Graphs 高精时序与跨总线因果关联流水线
-    crate::analyzer::record_packet_io(record.length, None, false);
     let payload_bytes = hex::decode(&record.payload_hex).unwrap_or_default();
     let bus_type = if record.transport == "SERIAL" || record.direction.starts_with("SERIAL") {
         "SERIAL"
     } else if record.transport == "USB" || record.direction.starts_with("USB") {
         "USB"
+    } else if record.transport == "WIFI_80211" || record.transport == "BLUETOOTH" {
+        "WIRELESS"
     } else {
         "ETHERNET"
     };
+    crate::analyzer::record_packet_io_with_bus(bus_type, record.length, tcp_rtt_opt, tcp_is_retrans);
     crate::analyzer::record_cross_bus_event(bus_type, record.id, record.timestamp_ns, &record.protocol, &payload_bytes);
 
     // 1. IP 资产与地理情报自动打标 (Zero-Leakage 离线分析)
@@ -818,6 +837,7 @@ pub fn process_incoming_record(app: &tauri::AppHandle, mut record: PacketRecord)
     }
 
     // (8) 异步流式分页缓冲与自动分卷 PCAPng 滚动落盘 (解耦 IPC，保障百万级流量有界内存)
+    crate::net_intelligence::ingest_live_packet(&record);
     crate::stream_paging::buffer_packet_and_auto_flush(record.clone());
 
     // 推送前端渲染
@@ -2054,8 +2074,41 @@ pub fn run_sniffer_pipeline(app: tauri::AppHandle, iface: &str, bpf_filter: &str
         start_windows_raw_socket_sniffer(app.clone(), running.clone());
     }
 
+    // 5. 免 Npcap Windows 原生 NDIS-PacketCapture (ETW) L2 以太网帧捕获引擎激活判定
+    #[cfg(windows)]
+    let ndis_etw_engaged = {
+        let want_ndis = iface.starts_with("native-ndis")
+            || ((iface.is_empty() || iface == "auto" || iface.starts_with("auto")) && !is_npcap_driver_available());
+        if want_ndis {
+            match crate::win_ndis_capture::start_native_ndis_capture(app.clone(), running.clone()) {
+                Ok(()) => {
+                    crate::zero_copy_pool::set_runtime_capture_backend(
+                        "Win32_NDIS_ETW_L2",
+                        false,
+                        false,
+                        false,
+                        false,
+                        0,
+                        "Windows 系统内置 NDIS-PacketCapture ETW 免 Npcap L2 以太网捕获已活跃",
+                    );
+                    true
+                }
+                Err(reason) => {
+                    let _ = app.emit("system-log", format!("[NATIVE-NDIS] ℹ️ {}", reason));
+                    false
+                }
+            }
+        } else {
+            false
+        }
+    };
+    #[cfg(not(windows))]
+    let ndis_etw_engaged = false;
+
     // 6. 确定要绑定的 L2 网络接口（快速识别，不被虚拟网卡阻塞）
-    let target_device_name = if iface.is_empty() || iface == "auto" || iface.starts_with("auto") {
+    let target_device_name = if ndis_etw_engaged && iface.starts_with("native-ndis") {
+        String::new()
+    } else if iface.is_empty() || iface == "auto" || iface.starts_with("auto") {
         let mut found_name = String::new();
         if let Ok(devs) = safe_list_devices(Duration::from_millis(500)) {
             for d in &devs {
@@ -2075,7 +2128,7 @@ pub fn run_sniffer_pipeline(app: tauri::AppHandle, iface: &str, bpf_filter: &str
                 }
             }
         }
-        if found_name.is_empty() {
+        if found_name.is_empty() && !ndis_etw_engaged {
             let _ = app.emit(
                 "system-log",
                 "[SNIFFER] ℹ️ 未枚举到可用 Npcap 物理网络驱动，已切换启用「Raw Socket + 应用层双轨 + 局域网广播 + ARP 雷达」纯真实物理捕获链路".to_string(),
@@ -2101,8 +2154,23 @@ pub fn run_sniffer_pipeline(app: tauri::AppHandle, iface: &str, bpf_filter: &str
 
         let (tx, rx) = std::sync::mpsc::channel();
         let dev_to_open = dev_obj.clone();
+        let maybe_wireless = {
+            let n = target_device_name.to_lowercase();
+            n.contains("wi-fi") || n.contains("wifi") || n.contains("wlan") || n.contains("wireless") || n.contains("802.11")
+        };
         std::thread::spawn(move || {
             let res = (|| -> Result<Capture<Active>, String> {
+                #[cfg(not(windows))]
+                if maybe_wireless {
+                    // 类 Unix/macOS/Linux 无线网卡优先尝试激活 802.11 Monitor Mode (.rfmon)，驱动不支持时无缝回落 .promisc(true)
+                    if let Ok(cap_rf) = Capture::from_device(dev_to_open.clone()) {
+                        if let Ok(active_rf) = cap_rf.rfmon(true).promisc(true).snaplen(65535).buffer_size(32 * 1024 * 1024).timeout(50).open() {
+                            return Ok(active_rf);
+                        }
+                    }
+                }
+                #[cfg(windows)]
+                let _ = maybe_wireless;
                 let cap_inactive = Capture::from_device(dev_to_open).map_err(|e| e.to_string())?;
                 cap_inactive
                     .promisc(true)
@@ -2307,17 +2375,61 @@ pub fn run_sniffer_pipeline(app: tauri::AppHandle, iface: &str, bpf_filter: &str
                     })();
 
                     if is_wifi_80211 {
-                        // 802.11 无线链路层抓包直通 wifi_monitor 监控引擎
+                        // 802.11 无线链路层抓包：同步喂入 wifi_monitor 引擎与主取证流水线 (入库 jsonl + 实时总线)
                         let ts_str = chrono::Local::now().format("%H:%M:%S.%3f").to_string();
-                        if datalink == pcap::Linktype(127) {
+                        let parsed_dot11 = if datalink == pcap::Linktype(127) {
                             let (rt, offset) = crate::wifi_monitor::parse_radiotap_header(packet.data);
                             if offset < packet.data.len() {
-                                if let Some(info) = crate::wifi_monitor::parse_dot11_frame(&packet.data[offset..], rt) {
-                                    crate::wifi_monitor::record_wifi_frame(&info, &ts_str);
-                                }
+                                crate::wifi_monitor::parse_dot11_frame(&packet.data[offset..], rt)
+                            } else {
+                                None
                             }
-                        } else if let Some(info) = crate::wifi_monitor::parse_dot11_frame(packet.data, Default::default()) {
+                        } else {
+                            crate::wifi_monitor::parse_dot11_frame(packet.data, Default::default())
+                        };
+                        if let Some(info) = parsed_dot11 {
                             crate::wifi_monitor::record_wifi_frame(&info, &ts_str);
+                            let ts_ns = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
+                            let id = PACKET_COUNTER.fetch_add(1, Ordering::Relaxed);
+                            let raw_hex = hex::encode(packet.data);
+                            let ent = ForensicEngine::calculate_entropy(packet.data);
+                            let mut bmap = HashMap::new();
+                            bmap.insert("wifi_80211".into(), serde_json::to_value(&info).unwrap_or_default());
+                            if let Some(rssi) = info.radiotap.rssi_dbm {
+                                bmap.insert("rssi_dbm".into(), json!(rssi));
+                            }
+                            if let Some(ch) = info.channel {
+                                bmap.insert("wifi_channel".into(), json!(ch));
+                            }
+                            let proto = if info.is_deauth_threat {
+                                "WIFI_DEAUTH_ALERT".to_string()
+                            } else {
+                                format!("802.11_{}", info.subtype_name.split_whitespace().next().unwrap_or("FRAME"))
+                            };
+                            let chain_hash = advance_global_chain(ts_ns, &format!("WIFI|{}|{}", info.bssid, raw_hex));
+                            let wifi_rec = PacketRecord {
+                                id,
+                                timestamp: ts_str,
+                                timestamp_ns: ts_ns,
+                                direction: "WLAN_AIR".into(),
+                                transport: "WIFI_80211".into(),
+                                protocol: proto,
+                                src_ip: info.src_mac.clone(),
+                                dst_ip: info.dst_mac.clone(),
+                                src_port: 0,
+                                dst_port: 0,
+                                length: packet.data.len(),
+                                payload_hex: raw_hex.clone(),
+                                raw_frame_hex: raw_hex,
+                                entropy: ent,
+                                entropy_level: if info.is_deauth_threat { "critical".into() } else { classify_entropy(ent) },
+                                mac_src: info.src_mac,
+                                mac_dst: info.dst_mac,
+                                chain_hash,
+                                business_data: Some(bmap),
+                                raw_text: Some(format!("802.11 {} [BSSID {}] SSID={} Ch={:?} RSSI={:?}dBm", info.subtype_name, info.bssid, info.ssid.as_deref().unwrap_or("-"), info.channel, info.radiotap.rssi_dbm)),
+                            };
+                            process_incoming_record(&app, wifi_rec);
                         }
                     } else if !is_tcp_data_segment {
                         if let Some(record) = parse_ethernet_frame(packet.data, &mut last_hash) {
@@ -2678,7 +2790,7 @@ pub fn classify_network_direction(src_ip: &str, dst_ip: &str) -> String {
 }
 
 /// 以太网帧解析器（完整覆盖 TCP/UDP/ICMP/IPv6/ARP 及全量二层原始帧，100% 结构化填报，拒绝 None 伪代码）
-fn parse_ethernet_frame(data: &[u8], last_hash: &mut String) -> Option<PacketRecord> {
+pub(crate) fn parse_ethernet_frame(data: &[u8], last_hash: &mut String) -> Option<PacketRecord> {
     let eth = match EthernetPacket::new(data) {
         Some(e) => e,
         None => {
@@ -3656,4 +3768,177 @@ mod tests {
         assert!(stats.current_buffered > 0, "内存缓冲队列必须正确增加记录");
     }
 
+    #[test]
+    fn test_tcp_health_tracker_rtt_and_retransmission() {
+        let mut tracker = TcpHealthTracker::new(4096);
+        let mk_pkt = |id: u64, ts_ns: u128, src: &str, dst: &str, sp: u16, dp: u16, seq: u32, ack: u32, flags: u8, payload_len: usize| -> PacketRecord {
+            let mut bd = HashMap::new();
+            bd.insert("sequence_number".into(), json!(seq));
+            bd.insert("acknowledgment_number".into(), json!(ack));
+            bd.insert("tcp_flags_raw".into(), json!(flags));
+            bd.insert("app_payload_bytes".into(), json!(payload_len));
+            PacketRecord {
+                id,
+                timestamp: "12:00:00.000".into(),
+                timestamp_ns: ts_ns,
+                direction: "OUT".into(),
+                transport: "TCP".into(),
+                protocol: "TCP".into(),
+                src_ip: src.into(),
+                dst_ip: dst.into(),
+                src_port: sp,
+                dst_port: dp,
+                length: payload_len + 40,
+                payload_hex: String::new(),
+                raw_frame_hex: String::new(),
+                entropy: 1.0,
+                entropy_level: "safe".into(),
+                mac_src: String::new(),
+                mac_dst: String::new(),
+                chain_hash: String::new(),
+                business_data: Some(bd),
+                raw_text: None,
+            }
+        };
+
+        // 1. SYN seq=100 at t=0ms -> SYN-ACK ack=101 at t=12.5ms
+        let syn = mk_pkt(1, 1_000_000_000, "10.0.0.1", "10.0.0.2", 5000, 80, 100, 0, 0x02, 0);
+        assert_eq!(tracker.observe(&syn), (None, false));
+
+        let syn_ack = mk_pkt(2, 1_012_500_000, "10.0.0.2", "10.0.0.1", 80, 5000, 200, 101, 0x12, 0);
+        let (rtt_opt, retrans) = tracker.observe(&syn_ack);
+        assert!(!retrans);
+        assert!((rtt_opt.expect("应当精确算出 SYN-ACK 往返时延") - 12.5).abs() < 0.05);
+
+        // 2. SYN-ACK 触发三次握手第三次 ACK RTT 统计 (7.5ms) -> Data duplicate seq=101 triggers retransmission=true
+        let d1 = mk_pkt(3, 1_020_000_000, "10.0.0.1", "10.0.0.2", 5000, 80, 101, 201, 0x18, 10);
+        let (d1_rtt, d1_retrans) = tracker.observe(&d1);
+        assert!(!d1_retrans);
+        assert!((d1_rtt.expect("第三次握手 ACK 应当匹配 SYN-ACK RTT") - 7.5).abs() < 0.05);
+        let d1_dup = mk_pkt(4, 1_050_000_000, "10.0.0.1", "10.0.0.2", 5000, 80, 101, 201, 0x18, 10);
+        let (_, retrans2) = tracker.observe(&d1_dup);
+        assert!(retrans2, "重复发送同 SEQ 且非零载荷的数据段必须标记为重传");
+    }
+}
+
+/// 有界 TCP 往返时延 (RTT) 与重传实时观测追踪器 (时间复杂度 O(1), 最大常驻 4096 项)
+struct TcpHealthTracker {
+    max_entries: usize,
+    pending_acks: HashMap<(String, u16, String, u16, u32), u128>,
+    pending_order: std::collections::VecDeque<(String, u16, String, u16, u32)>,
+    seen_seqs: HashMap<(String, u16, String, u16, u32), usize>,
+    seen_order: std::collections::VecDeque<(String, u16, String, u16, u32)>,
+}
+
+impl TcpHealthTracker {
+    fn new(max_entries: usize) -> Self {
+        Self {
+            max_entries,
+            pending_acks: HashMap::with_capacity(max_entries.min(512)),
+            pending_order: std::collections::VecDeque::with_capacity(max_entries.min(512)),
+            seen_seqs: HashMap::with_capacity(max_entries.min(512)),
+            seen_order: std::collections::VecDeque::with_capacity(max_entries.min(512)),
+        }
+    }
+
+    fn observe(&mut self, record: &PacketRecord) -> (Option<f64>, bool) {
+        if record.transport != "TCP" {
+            return (None, false);
+        }
+        let bd = match record.business_data.as_ref() {
+            Some(m) => m,
+            None => return (None, false),
+        };
+        let seq = match bd.get("sequence_number").and_then(|v| v.as_u64()) {
+            Some(s) => s as u32,
+            None => return (None, false),
+        };
+        let ack = bd.get("acknowledgment_number").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+        let flags = bd.get("tcp_flags_raw").and_then(|v| v.as_u64()).unwrap_or(0) as u8;
+        let payload_len = bd.get("app_payload_bytes").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+
+        let is_syn = (flags & 0x02) != 0;
+        let is_fin = (flags & 0x01) != 0;
+        let is_ack = (flags & 0x10) != 0;
+        let is_rst = (flags & 0x04) != 0;
+
+        // 1. 若带 ACK 且匹配反向在途期望确认号，计算实测往返时延 (ms)
+        let mut rtt_ms = None;
+        if is_ack && !is_rst {
+            let rev_key = (
+                record.dst_ip.clone(),
+                record.dst_port,
+                record.src_ip.clone(),
+                record.src_port,
+                ack,
+            );
+            if let Some(sent_ns) = self.pending_acks.remove(&rev_key) {
+                if record.timestamp_ns > sent_ns {
+                    let ms = (record.timestamp_ns - sent_ns) as f64 / 1_000_000.0;
+                    if ms >= 0.01 && ms <= 60_000.0 {
+                        rtt_ms = Some(ms);
+                    }
+                }
+            }
+        }
+
+        // 2. 重传识别（同方向同 SEQ 且非零载荷或 SYN 重复出现）
+        let mut is_retrans = false;
+        if !is_rst && (payload_len > 0 || is_syn) {
+            let seq_key = (
+                record.src_ip.clone(),
+                record.src_port,
+                record.dst_ip.clone(),
+                record.dst_port,
+                seq,
+            );
+            if let Some(&prev_len) = self.seen_seqs.get(&seq_key) {
+                if prev_len == payload_len && (payload_len > 0 || is_syn) {
+                    is_retrans = true;
+                }
+            } else {
+                if self.seen_seqs.len() >= self.max_entries {
+                    if let Some(oldest) = self.seen_order.pop_front() {
+                        self.seen_seqs.remove(&oldest);
+                    }
+                }
+                self.seen_seqs.insert(seq_key.clone(), payload_len);
+                self.seen_order.push_back(seq_key);
+            }
+        }
+
+        // 3. 记录正向期望确认号（排除重传帧避免 Karn 算法失真）
+        if !is_retrans && !is_rst {
+            let advance = (payload_len as u32)
+                .saturating_add(if is_syn { 1 } else { 0 })
+                .saturating_add(if is_fin { 1 } else { 0 });
+            if advance > 0 {
+                let expect_ack = seq.wrapping_add(advance);
+                let pend_key = (
+                    record.src_ip.clone(),
+                    record.src_port,
+                    record.dst_ip.clone(),
+                    record.dst_port,
+                    expect_ack,
+                );
+                if self.pending_acks.len() >= self.max_entries {
+                    if let Some(oldest) = self.pending_order.pop_front() {
+                        self.pending_acks.remove(&oldest);
+                    }
+                }
+                self.pending_acks.insert(pend_key.clone(), record.timestamp_ns);
+                self.pending_order.push_back(pend_key);
+            }
+        }
+
+        (rtt_ms, is_retrans)
+    }
+}
+
+static GLOBAL_TCP_HEALTH_TRACKER: once_cell::sync::Lazy<Arc<Mutex<TcpHealthTracker>>> =
+    once_cell::sync::Lazy::new(|| Arc::new(Mutex::new(TcpHealthTracker::new(4096))));
+
+fn observe_tcp_health(record: &PacketRecord) -> (Option<f64>, bool) {
+    let mut tracker = crate::lock_guard::lock_mutex(&GLOBAL_TCP_HEALTH_TRACKER, "sniffer::observe_tcp_health");
+    tracker.observe(record)
 }

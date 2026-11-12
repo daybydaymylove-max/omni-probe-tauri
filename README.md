@@ -1,4 +1,4 @@
-# Omni-Probe 工业级全能网络探针系统 (v0.3.1)
+# Omni-Probe 工业级全能网络探针系统 (v0.3.2)
 
 <div align="center">
 
@@ -6,17 +6,18 @@
 
 ### 面向现代工业物联网、智能变电站、汽车电子与现场总线的原生桌面多总线协议探针与诊断平台
 
-[![Release](https://img.shields.io/badge/Release-v0.3.1-blue.svg)](https://github.com/daybydaymylove-max/omni-probe-tauri/releases)
+[![Release](https://img.shields.io/badge/Release-v0.3.2-blue.svg)](https://github.com/daybydaymylove-max/omni-probe-tauri/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Rust](https://img.shields.io/badge/Rust-Edition_2024-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-24C8DB.svg)](https://tauri.app/)
 [![Vue](https://img.shields.io/badge/Vue-3.5%2B-42b883.svg)](https://vuejs.org/)
-[![Tests](https://img.shields.io/badge/Tests-364_Passed-success.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-396_Passed-success.svg)]()
 [![Code_Style](https://img.shields.io/badge/Code%20Style-Zero%20Placeholders-brightgreen.svg)]()
 [![Architecture](https://img.shields.io/badge/Architecture-Multi--Track%20Self--Healing-indigo.svg)]()
 
+[📖 完整操作手册 (USER_MANUAL)](docs/USER_MANUAL.md) •
 [系统架构](#-系统架构与核心组件) •
-[v0.3.1 核心演进](#-v031-核心架构演进亮点) •
+[v0.3.2 核心演进](#-v032-核心架构演进亮点) •
 [核心技术特性](#-核心技术特性) •
 [多轨自愈保障](#-底层多轨并行保障与运行时自愈架构) •
 [偏好设置与更新](#-系统偏好设置中心与在线更新) •
@@ -44,7 +45,12 @@
 
 ---
 
-## 🌟 v0.3.1 核心架构演进亮点
+## 🌟 v0.3.2 核心架构演进亮点
+
+### 0. 全维度硬件/无线/网络监测与行业比对深度演进
+- **网络主动扫描与全量流式多维统计 (`net_intelligence`)**：支持 CIDR (`/23`..`/32` 上限 512 主机 / 2048 任务并发限流)、只读 Banner 识别（HTTP/SSH/FTP/Redis）及标准载荷触发式 UDP 探测 (`DNS/NTP/SNMP/BACnet`)；内置 $O(1)$ 无截断流式统计累加器呈现 ECharts 协议分层占比、Top Talkers、RFC 2544 七档帧长分布、MAD 时间抖动，并支持黄金基线持久化、离线 `.pcap` 双样本直对比及防 XSS 转义 HTML/MD 审计报告导出；
+- **COM & USB 单片机深度开发伴侣 (`bus_intelligence`)**：集成 Cooley-Tukey Radix-2 FFT 功率谱与 Sakoe-Chiba DTW 黄金波形对齐比对、VOFA+ `JustFloat`/自定义 `Struct` 多通道解调、PID 阶跃特性求解、MCU Timer `(PSC, ARR)`/UART ±2% 容限速算、RTOS 行式终端及 SUMP/OLS `.vcd` 多总线数字方波解调；
+- **蓝牙 BR/EDR & BLE 连续空口监听 (`bluetooth_monitor`)**：集成 WinRT 持续广播监听、BTHPORT-ETW 底层 HCI/L2CAP 抓包、RFC 1761 `.btsnoop` 双向导入导出及四联 ECharts 近场空间分布与 RSSI 历史对比图。
 
 ### 1. 全平台原生分发矩阵 (Cross-Platform Releases)
 全面支持 GitHub Releases 自动化多平台分发体系，提供各操作系统原生体验：
@@ -59,15 +65,14 @@
 - **全球 IP 物理定位轨**：首选高精度 `ip2region.xdb` 二进制数据库（支持官方镜像源一键流式秒速更新下载）；若数据库文件离线缺失，**自愈引擎自动调用内置标准 RFC 1918 / 6598 LPM 最长前缀匹配拓扑字典**；
 - **工业规约深解剖轨**：支持接入系统 Wireshark / tshark 外部管道；若未安装，**自动启用内置 42+ 种纯 Rust 原生工控/电力/汽车总线深度逐字段解剖器**，保证核心业务分析 100% 独立可用。
 
-### 3. 统一系统偏好设置中心 (Preferences & Control Center)
-支持随时使用 `Ctrl+,` 快捷键呼出一体化控制面板，采用 Apple Mica Frost 质感分组管理核心参数：
-- 🩺 **运行环境与多轨自愈**：开机自检弹窗开关控制、多轨自愈就绪矩阵状态实时看板、直达全景环境诊断中心；
-- 🚀 **版本检查与在线更新**：开机自动检查新版开关、当前安装版本 vs GitHub 最新版本实时语义化比对、发布日志预览、一键直达下载首选安装包；
-- 🎨 **视觉质感与布局形态**：2026 Apple Liquid 冰晶明亮与烟熏深色双模态无缝切换、悬浮 Dock 栏收缩/展开形态控制；
-- 💾 **存证与数据引擎**：60 秒司法级 SHA-256 完整性哈希封条周期管控、一键重置捕获缓冲池与内核日志。
+### 3. 统一系统偏好设置与顶栏「环境检查器」 (Preferences & Non-Blocking Inspector)
+- **非阻塞顶栏环境检查器**：废除开机强遮罩阻断，采用挂载在顶栏状态微囊下的轻量级锚定 Popover（`useEnvironmentInspector` 单例数据源），提供手风琴依赖逐项装配与按需激发的 Win32 RIO / eBPF-XDP 内核遥测面板；
+- **统一偏好设置 (`Ctrl+,`)**：采用 Apple Mica Frost 质感分组管理环境提醒、在线版本比对、深浅双模态外观、Dock 形态及司法封条存储周期。
 
-### 4. 自动化版本检查与一键更新 (Auto-Updater Engine)
-后台集成轻量级静默版本检测引擎，基于 GitHub Releases API 与语义化版本（SemVer）比对算法，自动识别宿主平台并精准匹配首选安装包资产，在发现新版本时以桌面级友好通知提醒用户，避免漏更关键安全补丁。
+### 4. 全物理总线示波工作台、BLE/Wi-Fi 双模扫描与实时历史对比
+- **COM 串口 / 单片机**：支持多通道文本传感器绘图 (`temp:25.4 hum:61.2` / CSV)、二进制寄存器解调示波、`TX→RX` 1200ms 异步匹配与 IEEE 1364 `.vcd` 数字方波解调；
+- **实时 vs 历史对照**：流式回溯磁盘 `received_data.jsonl*` 归档与实时秒桶叠图比对吞吐偏差与平均载荷；
+- **USB / Wi-Fi / 蓝牙双模监测**：支持 `USBPcap` Root Hub 选举与真实 Control 描述符采集；集成 Win32 `wlanapi.dll` + 5GHz 热力图/RSSI 折线，以及 `bthprops.cpl` + 原生 WinRT BLE 空口主动广告扫描与 Log-Distance 近场雷达；完整实操详见 [**《软件操作手册》**](docs/USER_MANUAL.md)。
 
 ---
 
@@ -296,9 +301,9 @@ npm run desktop
 npm run tauri build
 ```
 编译产物将生成在 `src-tauri/target/release/bundle/` 目录下：
-- **Windows**：`msi/omni-probe-tauri_0.3.1_x64_en-US.msi` 与 `nsis/omni-probe-tauri_0.3.1_x64-setup.exe`；
-- **macOS**：`dmg/omni-probe-tauri_0.3.1_universal.dmg`；
-- **Linux**：`appimage/omni-probe-tauri_0.3.1_amd64.AppImage` 与 `deb/omni-probe-tauri_0.3.1_amd64.deb`。
+- **Windows**：`msi/omni-probe-tauri_0.3.2_x64_en-US.msi` 与 `nsis/omni-probe-tauri_0.3.2_x64-setup.exe`；
+- **macOS**：`dmg/omni-probe-tauri_0.3.2_universal.dmg`；
+- **Linux**：`appimage/omni-probe-tauri_0.3.2_amd64.AppImage` 与 `deb/omni-probe-tauri_0.3.2_amd64.deb`。
 
 ---
 
@@ -324,18 +329,16 @@ Omni-Probe 采用**“专有原生逐字段解剖 + 声明式编译器长尾扩�
 本项目坚持学术诚信与工业生产级质量交付标准，拒绝未经测试的代码推向生产：
 
 ```bash
-# 1. 运行所有 Rust 核心库单元测试 (覆盖协议解剖、零拷贝引擎、串口拦截、差分算法与 RBAC 安全测试)
+# 1. 运行所有 Rust 核心库单元测试 (覆盖协议解剖、零拷贝引擎、网络/总线/蓝牙深度监测、串口拦截、差分算法与 RBAC 安全测试)
 cargo test --manifest-path src-tauri/Cargo.toml --lib
-# 实测输出：test result: ok. 355 passed; 0 failed; 0 ignored
+# 实测输出：test result: ok. 386 passed; 0 failed; 0 ignored
 
-# 2. 运行端到端跨模块集成穿透测试套件
+# 2. 运行端到端跨模块集成穿透测试与文档同步守卫测试套件
 cargo test --manifest-path src-tauri/Cargo.toml --test '*'
-# 实测输出：live_system_verification (1 passed) + universal_diff_exhaustive_verification (8 passed)
+# 实测输出：live_system_verification (1 passed) + manual_sync_check (1 passed) + universal_diff_exhaustive_verification (8 passed) — 全量总计 396 项通过
 
-# 3. 后端自动化测试总计：364 项测试 100% 全部通过 (0 失败，0 跳过，0 panic)
-
-# 4. 编译器静态检查与纯原生桌面全量编译打包
-npm run build   # vue-tsc --noEmit && vite build (704 modules transformed, 0 TypeScript errors)
+# 3. 编译器静态检查与纯原生桌面全量编译打包
+npm run build   # vue-tsc --noEmit && vite build (709 modules transformed, 0 TypeScript errors)
 npm run tauri build   # 产出原生桌面 EXE、MSI 与 NSIS 安装包
 ```
 

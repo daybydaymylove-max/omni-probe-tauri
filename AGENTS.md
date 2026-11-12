@@ -17,3 +17,7 @@
 ## 4. 严禁军事化、浮夸中二与伪宏大词汇 (Strict Ban on Militaristic & Pseudoscience Jargon)
 - **显式禁用词库**：绝对禁止在 UI 界面、路由名称、组件命名、注释及交流中使用“态势中枢”、“安全中枢”、“监控中枢”、“控制中枢”、“态势大盘”、“指挥中枢/指挥舱”、“战时/平时”、“战备”、“作战”等军事化、游戏化与伪宏大词汇；
 - **标准替代规范**：统一替换为现代工业网络标准的客观术语，如“运行监控看板”、“综合监控面板”、“系统状态概览”、“流量分析看板”、“运行控制台 (Monitoring Dashboard / Status Overview)”。
+
+## 5. 软件操作手册同步演进规范 (Living Manual Sync Protocol)
+- **强同步原则**：[`docs/USER_MANUAL.md`](docs/USER_MANUAL.md) 为系统的实时操作基准文档。凡涉及新增/调整 10 大主工作台、浮层控制台、物理总线采集流、快捷键、`config.json` 配置项或底层兼容性边界时，**必须在当次修改中同步修订 `docs/USER_MANUAL.md` 对应章节及顶部同步记录表**。
+- **自动化防漂移检验**：仓库内置 `src-tauri/tests/manual_sync_check.rs` 集成测试，在 `cargo test` 阶段自动校验 `Cargo.toml` 版本号与 `src/App.vue` 全部工作台名称在操作手册中的同步覆盖率；文档未同步更新时视为交付未闭合，不得合并发布。

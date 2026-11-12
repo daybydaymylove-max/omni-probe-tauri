@@ -747,57 +747,93 @@ pub fn start_asset_discovery_daemon(app: tauri::AppHandle) {
 /// 针对单个 IP 进行高频常用端口非阻塞并发探测 (Active Port Prober)
 /// 覆盖：80 (HTTP), 443 (HTTPS), 5003 (SL651遥测), 502 (Modbus工业), 8080 (Web备用), 
 /// 22 (SSH), 1883 (MQTT物联), 445 (SMB共享), 53 (DNS), 21 (FTP), 23 (Telnet), 3389 (RDP)
-pub fn probe_asset_ports(ip: &str, timeout_ms: u64) -> Vec<u16> {
-    if classify_ip(ip).is_none() {
+/// 行业全量默认高价值探测端口列表 (覆盖通用 Web/管理/文件/数据库 + 工控物联网核心端口 共 38 项)
+pub const DEFAULT_PROBE_PORTS: &[u16] = &[
+    21, 22, 23, 25, 53, 80, 102, 110, 135, 139, 143, 443, 445, 502, 1433, 1521, 1883,
+    2375, 2404, 3306, 3389, 4840, 5003, 5432, 5900, 6379, 8000, 8080, 8443, 8883,
+    8888, 9000, 9090, 9200, 11211, 20000, 27017, 44818, 47808,
+];
+
+/// 按指定端口切片与并发批量上限探测目标资产开放端口
+/// 时间复杂度: O(P / B), B = 12 批并发限制防 OS 线程枯竭; 空间复杂度: O(P)
+pub fn probe_asset_ports_with_list(ip: &str, ports_to_probe: &[u16], timeout_ms: u64) -> Vec<u16> {
+    if classify_ip(ip).is_none() || ports_to_probe.is_empty() {
         return Vec::new();
     }
 
-    let ports_to_probe: &[u16] = &[80, 443, 5003, 502, 8080, 22, 1883, 445, 53, 21, 23, 3389];
     let ip_parsed = match ip.parse::<std::net::IpAddr>() {
         Ok(addr) => addr,
         Err(_) => return Vec::new(),
     };
 
-    let timeout = Duration::from_millis(timeout_ms);
-    let mut handles = Vec::new();
-
-    for &port in ports_to_probe {
-        let h = std::thread::spawn(move || {
-            let socket_addr = std::net::SocketAddr::new(ip_parsed, port);
-            if std::net::TcpStream::connect_timeout(&socket_addr, timeout).is_ok() {
-                Some(port)
-            } else {
-                None
-            }
-        });
-        handles.push(h);
-    }
-
+    let clamped_timeout = Duration::from_millis(timeout_ms.clamp(100, 5000));
     let mut open_ports = Vec::new();
-    for h in handles {
-        if let Ok(Some(p)) = h.join() {
-            open_ports.push(p);
+
+    for chunk in ports_to_probe.chunks(12) {
+        let mut handles = Vec::with_capacity(chunk.len());
+        for &port in chunk {
+            let h = std::thread::spawn(move || {
+                let socket_addr = std::net::SocketAddr::new(ip_parsed, port);
+                if std::net::TcpStream::connect_timeout(&socket_addr, clamped_timeout).is_ok() {
+                    Some(port)
+                } else {
+                    None
+                }
+            });
+            handles.push(h);
+        }
+        for h in handles {
+            if let Ok(Some(p)) = h.join() {
+                open_ports.push(p);
+            }
         }
     }
 
     open_ports.sort_unstable();
+    open_ports.dedup();
     open_ports
 }
 
-/// 根据开放端口推断应用协议画像
+pub fn probe_asset_ports(ip: &str, timeout_ms: u64) -> Vec<u16> {
+    probe_asset_ports_with_list(ip, DEFAULT_PROBE_PORTS, timeout_ms)
+}
+
+/// 根据开放端口推断应用协议画像 (覆盖 IT 服务、数据库、远程管理及 OT 工控规约)
 pub fn infer_protocol_by_port(port: u16) -> &'static str {
     match port {
-        80 | 8080 | 8443 => "HTTP",
-        443 => "HTTPS",
-        5003 => "SL651_WATER",
-        502 => "MODBUS",
-        1883 => "MQTT",
-        22 => "SSH",
-        445 => "SMB",
-        53 => "DNS",
         21 => "FTP",
+        22 => "SSH",
         23 => "TELNET",
+        25 => "SMTP",
+        53 => "DNS",
+        80 | 81 | 8000 | 8080 | 8081 | 8888 | 9000 | 9090 => "HTTP",
+        102 => "S7COMM",
+        110 => "POP3",
+        135 => "RPC",
+        139 => "NETBIOS",
+        143 => "IMAP",
+        443 | 8443 => "HTTPS",
+        445 => "SMB",
+        502 => "MODBUS",
+        1433 => "MSSQL",
+        1521 => "ORACLE",
+        1883 => "MQTT",
+        2375 => "DOCKER",
+        2404 => "IEC104",
+        3306 => "MYSQL",
         3389 => "RDP",
+        4840 => "OPC_UA",
+        5003 => "SL651_WATER",
+        5432 => "POSTGRESQL",
+        5900 => "VNC",
+        6379 => "REDIS",
+        8883 => "MQTT_TLS",
+        9200 => "ELASTICSEARCH",
+        11211 => "MEMCACHED",
+        20000 => "DNP3",
+        27017 => "MONGODB",
+        44818 => "ETHERNET_IP",
+        47808 => "BACNET",
         _ => "TCP_SERVICE",
     }
 }
@@ -1307,13 +1343,20 @@ mod tests {
     fn test_infer_protocol_by_port() {
         assert_eq!(infer_protocol_by_port(80), "HTTP");
         assert_eq!(infer_protocol_by_port(443), "HTTPS");
+        assert_eq!(infer_protocol_by_port(8443), "HTTPS");
         assert_eq!(infer_protocol_by_port(5003), "SL651_WATER");
         assert_eq!(infer_protocol_by_port(502), "MODBUS");
+        assert_eq!(infer_protocol_by_port(102), "S7COMM");
+        assert_eq!(infer_protocol_by_port(2404), "IEC104");
+        assert_eq!(infer_protocol_by_port(4840), "OPC_UA");
         assert_eq!(infer_protocol_by_port(1883), "MQTT");
+        assert_eq!(infer_protocol_by_port(6379), "REDIS");
+        assert_eq!(infer_protocol_by_port(3306), "MYSQL");
         assert_eq!(infer_protocol_by_port(22), "SSH");
         assert_eq!(infer_protocol_by_port(445), "SMB");
         assert_eq!(infer_protocol_by_port(53), "DNS");
         assert_eq!(infer_protocol_by_port(9999), "TCP_SERVICE");
+        assert!(DEFAULT_PROBE_PORTS.len() >= 38);
     }
 
     #[test]

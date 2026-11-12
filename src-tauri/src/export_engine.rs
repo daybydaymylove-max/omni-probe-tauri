@@ -15,7 +15,7 @@ use std::io::{Read, Write};
 use std::path::Path;
 use serde::{Deserialize, Serialize};
 
-use crate::pcap_engine::{decode_pcap_bytes, encode_packets_to_pcap, RawPacketItem};
+use crate::pcap_engine::{decode_capture_file, encode_packets_to_pcap, RawPacketItem};
 
 /// 供导出的报文数据结构 (由前端或内部传入)
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -224,12 +224,100 @@ pub fn import_pcap_file(file_path: &str) -> Result<Vec<crate::sniffer::PacketRec
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer).map_err(|e| format!("读取 PCAP 文件失败: {}", e))?;
 
-    let raw_items = decode_pcap_bytes(&buffer)?;
+    let (capture_info, raw_items) = decode_capture_file(&buffer)?;
+    let primary_link_type = capture_info.interfaces.first().map(|iface| iface.link_type).unwrap_or(1);
     let mut imported = Vec::new();
 
     let ip_engine_guard = crate::ip_intelligence::GLOBAL_IP_ENGINE.lock().ok();
 
     for item in raw_items {
+        let ts_sec = item.timestamp_sec as u128;
+        let ts_usec = item.timestamp_usec as u128;
+        let timestamp_ns = ts_sec * 1_000_000_000 + ts_usec * 1_000;
+        let dt = chrono::DateTime::from_timestamp(item.timestamp_sec as i64, (item.timestamp_usec * 1000) as u32)
+            .unwrap_or_else(chrono::Utc::now);
+        let ts_str = format!("{}.{:06}", dt.format("%H:%M:%S"), item.timestamp_usec);
+
+        // 分支 1: USBPcap 链路 (LINKTYPE_USBPCAP = 249 或 DLT_USB_LINUX = 220)
+        if primary_link_type == 249 || primary_link_type == 220 {
+            let mut usb_rec = crate::usb::build_usb_urb_packet_record("PCAP_IMPORT", timestamp_ns, &item.data);
+            usb_rec.id = item.id;
+            usb_rec.timestamp = ts_str.clone();
+            if let Some(bt_info) = crate::usb::parse_usbpcap_header(&item.data)
+                .and_then(|(_, body)| crate::bluetooth_monitor::parse_bluetooth_packet(body))
+                .or_else(|| crate::bluetooth_monitor::parse_bluetooth_packet(&item.data))
+            {
+                crate::bluetooth_monitor::record_bluetooth_packet(&bt_info, &ts_str);
+            }
+            imported.push(usb_rec);
+            continue;
+        }
+
+        // 分支 2: IEEE 802.11 / Radiotap 链路 (LINKTYPE_IEEE802_11 = 105, LINKTYPE_IEEE802_11_RADIOTAP = 127)
+        if primary_link_type == 105 || primary_link_type == 127 {
+            let (radiotap, dot11_slice) = if primary_link_type == 127 {
+                let (rt, hdr_len) = crate::wifi_monitor::parse_radiotap_header(&item.data);
+                if hdr_len > 0 && hdr_len < item.data.len() {
+                    (rt, &item.data[hdr_len..])
+                } else {
+                    (crate::wifi_monitor::RadiotapMetrics::default(), item.data.as_slice())
+                }
+            } else {
+                (crate::wifi_monitor::RadiotapMetrics::default(), item.data.as_slice())
+            };
+
+            if let Some(dot11) = crate::wifi_monitor::parse_dot11_frame(dot11_slice, radiotap) {
+                crate::wifi_monitor::record_wifi_frame(&dot11, &ts_str);
+                let payload_hex = hex::encode_upper(dot11_slice);
+                let raw_hex = hex::encode_upper(&item.data);
+                let entropy = crate::forensics::ForensicEngine::calculate_entropy(dot11_slice);
+                let mut hasher = sha2::Sha256::new();
+                hasher.update(format!("{}|{}|{}|{}|{}", item.id, timestamp_ns, dot11.src_mac, dot11.dst_mac, payload_hex));
+                let chain_hash = format!("{:x}", hasher.finalize());
+
+                let mut bdata = std::collections::HashMap::new();
+                bdata.insert("bus_type".to_string(), serde_json::Value::String("WIFI_80211".to_string()));
+                bdata.insert("capture_source".to_string(), serde_json::Value::String("PCAP_80211".to_string()));
+                if let Some(ref s) = dot11.ssid {
+                    bdata.insert("wifi_ssid".to_string(), serde_json::Value::String(s.clone()));
+                }
+                if let Some(ch) = dot11.channel {
+                    bdata.insert("wifi_channel".to_string(), serde_json::Value::Number(serde_json::Number::from(ch)));
+                }
+                if let Some(rssi) = dot11.radiotap.rssi_dbm {
+                    bdata.insert("wifi_rssi_dbm".to_string(), serde_json::Value::Number(serde_json::Number::from(rssi)));
+                }
+                if dot11.is_deauth_threat {
+                    bdata.insert("is_threat".to_string(), serde_json::Value::Bool(true));
+                    bdata.insert("threat_type".to_string(), serde_json::Value::String("WIFI_DEAUTH_FLOOD".to_string()));
+                }
+
+                imported.push(crate::sniffer::PacketRecord {
+                    id: item.id,
+                    timestamp: ts_str,
+                    timestamp_ns,
+                    direction: "WIRELESS".to_string(),
+                    transport: "802.11".to_string(),
+                    protocol: dot11.subtype_name.clone(),
+                    src_ip: dot11.src_mac.clone(),
+                    dst_ip: dot11.dst_mac.clone(),
+                    src_port: 0,
+                    dst_port: dot11.channel.unwrap_or(0) as u16,
+                    length: item.data.len(),
+                    payload_hex,
+                    raw_frame_hex: raw_hex,
+                    entropy,
+                    entropy_level: crate::sniffer::classify_entropy(entropy),
+                    mac_src: dot11.src_mac,
+                    mac_dst: dot11.dst_mac,
+                    chain_hash,
+                    business_data: Some(bdata),
+                    raw_text: Some(format!("802.11 {} SSID={} CH={:?} RSSI={:?}dBm", dot11.subtype_name, dot11.ssid.as_deref().unwrap_or("-"), dot11.channel, dot11.radiotap.rssi_dbm)),
+                });
+                continue;
+            }
+        }
+
         let raw_hex = hex::encode_upper(&item.data);
 
         // 提取 MAC
@@ -256,14 +344,6 @@ pub fn import_pcap_file(file_path: &str) -> Result<Vec<crate::sniffer::PacketRec
         } else {
             "normal".to_string()
         };
-
-        let ts_sec = item.timestamp_sec as u128;
-        let ts_usec = item.timestamp_usec as u128;
-        let timestamp_ns = ts_sec * 1_000_000_000 + ts_usec * 1_000;
-
-        let dt = chrono::DateTime::from_timestamp(item.timestamp_sec as i64, (item.timestamp_usec * 1000) as u32)
-            .unwrap_or_else(|| chrono::Utc::now());
-        let ts_str = format!("{}.{:06}", dt.format("%H:%M:%S"), item.timestamp_usec);
 
         let raw_text = Some(crate::sniffer::generate_raw_text_preview(&payload_bytes));
 
@@ -912,6 +992,80 @@ mod tests {
         assert_eq!(token.status, 0);
         assert_eq!(token.generalized_time, "20261108034500Z");
         assert!(token.token_der.starts_with(b"RFC3161_TSA_AUTH_TOKEN_V1_"));
+    }
+
+    #[test]
+    fn test_import_pcap_usb_and_wifi_linktypes() {
+        fn build_pcap(link_type: u32, payload: &[u8]) -> Vec<u8> {
+            let mut buf = Vec::new();
+            buf.extend_from_slice(&0xA1B2C3D4u32.to_le_bytes());
+            buf.extend_from_slice(&2u16.to_le_bytes());
+            buf.extend_from_slice(&4u16.to_le_bytes());
+            buf.extend_from_slice(&0i32.to_le_bytes());
+            buf.extend_from_slice(&0u32.to_le_bytes());
+            buf.extend_from_slice(&65535u32.to_le_bytes());
+            buf.extend_from_slice(&link_type.to_le_bytes());
+            buf.extend_from_slice(&1762800000u32.to_le_bytes());
+            buf.extend_from_slice(&123456u32.to_le_bytes());
+            buf.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+            buf.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+            buf.extend_from_slice(payload);
+            buf
+        }
+
+        let dir = std::env::temp_dir().join("omni_probe_pcap_linktypes_test");
+        let _ = std::fs::create_dir_all(&dir);
+
+        // 1) Radiotap (127) + 802.11 Beacon
+        let mut wifi_pkt = vec![0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00]; // 8B radiotap
+        wifi_pkt.extend_from_slice(&[0x80, 0x00, 0x00, 0x00]); // Beacon
+        wifi_pkt.extend_from_slice(&[0xFF; 6]); // dst
+        wifi_pkt.extend_from_slice(&[0x00, 0x11, 0x22, 0x33, 0x44, 0x55]); // src
+        wifi_pkt.extend_from_slice(&[0x00, 0x11, 0x22, 0x33, 0x44, 0x55]); // bssid
+        wifi_pkt.extend_from_slice(&[0x00, 0x00]);
+        wifi_pkt.extend_from_slice(&[0x00; 10]); // Timestamp + Beacon Int
+        wifi_pkt.extend_from_slice(&[0x11, 0x00]); // Capability
+        wifi_pkt.extend_from_slice(&[0x00, 0x07, b'T', b'E', b'S', b'T', b'_', b'A', b'P']);
+        let wifi_path = dir.join("wifi_test.pcap");
+        std::fs::write(&wifi_path, build_pcap(127, &wifi_pkt)).unwrap();
+
+        let wifi_records = import_pcap_file(wifi_path.to_str().unwrap()).unwrap();
+        assert_eq!(wifi_records.len(), 1);
+        assert_eq!(wifi_records[0].transport, "802.11");
+        assert_eq!(
+            wifi_records[0].business_data.as_ref().and_then(|b| b.get("capture_source")).and_then(|v| v.as_str()),
+            Some("PCAP_80211")
+        );
+
+        // 2) USBPcap (249) + USB Control Device Descriptor
+        let mut usb_pkt = vec![0u8; 28];
+        usb_pkt[0..2].copy_from_slice(&28u16.to_le_bytes()); // headerLen = 28
+        usb_pkt[16] = 0x01; // is_in = true (PDO -> FDO IN)
+        usb_pkt[17..19].copy_from_slice(&1u16.to_le_bytes()); // bus = 1
+        usb_pkt[19..21].copy_from_slice(&2u16.to_le_bytes()); // device = 2
+        usb_pkt[21] = 0x80; // IN EP0
+        usb_pkt[22] = 0x02; // Control
+        usb_pkt[23..27].copy_from_slice(&18u32.to_le_bytes());
+        usb_pkt[27] = 0x01; // stage
+        let dev_desc: [u8; 18] = [
+            18, 0x01, 0x00, 0x02, 0x02, 0x00, 0x00, 64,
+            0x34, 0x12, 0x78, 0x56, 0x00, 0x01, 1, 2, 0, 1,
+        ];
+        usb_pkt.extend_from_slice(&dev_desc);
+        let usb_path = dir.join("usb_test.pcap");
+        std::fs::write(&usb_path, build_pcap(249, &usb_pkt)).unwrap();
+
+        let usb_records = import_pcap_file(usb_path.to_str().unwrap()).unwrap();
+        assert_eq!(usb_records.len(), 1);
+        assert_eq!(usb_records[0].transport, "USB");
+        assert_eq!(usb_records[0].protocol, "USB_DESCRIPTOR");
+        assert!(usb_records[0].src_ip.contains("D2"));
+        assert_eq!(
+            usb_records[0].business_data.as_ref().and_then(|b| b.get("usb_device_addr")).and_then(|v| v.as_u64()),
+            Some(2)
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
 }

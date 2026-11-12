@@ -4,6 +4,7 @@ pub mod analyzer;
 pub mod forensics;
 pub mod hardware;
 pub mod serial;
+pub mod bus_intelligence;
 pub mod dpi;
 pub mod cloud;
 pub mod config;
@@ -123,8 +124,11 @@ pub use can_diagnostic::{
 // 物理硬件逻辑分析仪原生采样位流驱动与纳秒电气级信号解调分析引擎 (sigrok / PulseView / Saleae Logic 对标)
 pub mod hardware_logic_analyzer;
 pub use hardware_logic_analyzer::{
+    capture_sump_logic_samples_cmd,
+    decode_multibus_vcd_cmd,
     demodulate_physical_uart_cmd,
     evaluate_signal_integrity_cmd,
+    probe_sump_logic_analyzer_cmd,
 };
 // 基于 eBPF / XDP 的内核级高性能 TCP 流线速分流与旁路直通引擎 (TASK-41)
 pub mod xdp_engine;
@@ -136,6 +140,8 @@ pub use xdp_engine::{
 };
 // Windows Filtering Platform (WFP via fwpuclnt.dll) 内核态网络过滤引擎
 pub mod wfp_engine;
+// 免 Npcap Windows 内置 NDIS-PacketCapture ETW 原始 L2 以太网帧捕获引擎
+pub mod win_ndis_capture;
 // 跨平台内建驱动级串口透明拦截引擎 (POSIX PTY / Win32 NamedPipe / RFC2217 / WDM IRP Tap)
 pub mod serial_intercept;
 // 工业级流式磁盘大文件 Myers 线性分治比对、目录比较与双向原子合并引擎
@@ -171,11 +177,48 @@ pub use vlan_monitor::{
     reset_vlan_telemetry_cmd,
 };
 
+// COM / USB 深度开发、数字信号比对与巡检报告引擎
+pub use bus_intelligence::{
+    analyze_mcu_console_lines_cmd,
+    calc_uart_baud_error_cmd,
+    compute_serial_checksum_cmd,
+    compute_step_response_metrics_cmd,
+    compute_waveform_fft_cmd,
+    decode_modbus_32bit_word_cmd,
+    delete_serial_auto_rule_cmd,
+    delete_waveform_baseline_cmd,
+    export_bus_inspection_report_cmd,
+    export_serial_stream_log_cmd,
+    export_usb_usbpcap_pcap_cmd,
+    generate_bus_inspection_report_cmd,
+    get_bus_intelligence_snapshot_cmd,
+    list_waveform_baselines_cmd,
+    parse_binary_struct_batch_cmd,
+    pick_and_import_usb_pcap_cmd,
+    pick_and_send_serial_bin_file_cmd,
+    save_waveform_baseline_cmd,
+    smart_compare_waveforms_cmd,
+    solve_mcu_timer_psc_arr_cmd,
+    start_serial_periodic_tx_cmd,
+    stop_serial_periodic_tx_cmd,
+    upsert_serial_auto_rule_cmd,
+};
+
 // 蓝牙 BR/EDR / BLE / HCI 专业监测与近场空间感知
 pub mod bluetooth_monitor;
 pub use bluetooth_monitor::{
+    compare_bluetooth_realtime_vs_history_cmd,
+    export_bluetooth_btsnoop_cmd,
     get_bluetooth_telemetry_cmd,
+    pick_and_import_bluetooth_btsnoop_cmd,
+    read_ble_gatt_characteristic_cmd,
     reset_bluetooth_telemetry_cmd,
+    save_bluetooth_baseline_cmd,
+    scan_ble_gatt_services_cmd,
+    start_bthport_etw_capture_cmd,
+    start_continuous_ble_monitor_cmd,
+    stop_bthport_etw_capture_cmd,
+    stop_continuous_ble_monitor_cmd,
 };
 
 // 无线与 VLAN 统一诊断分析器
@@ -199,6 +242,19 @@ pub use net_assist::{
     get_net_assist_clients_cmd,
     calculate_checksum_cmd,
     get_local_ip_addresses_cmd,
+};
+
+// 网络深度主动扫描、Wireshark 级多维统计、基线/.pcap 比对与行业审计报告引擎
+pub mod net_intelligence;
+pub use net_intelligence::{
+    run_network_port_scan_cmd,
+    analyze_network_traffic_stats_cmd,
+    reset_live_net_stats_cmd,
+    save_network_baseline_cmd,
+    get_network_baseline_cmd,
+    compare_network_with_baseline_cmd,
+    pick_and_compare_network_pcap_cmd,
+    export_network_audit_report_cmd,
 };
 
 use once_cell::sync::Lazy;
@@ -492,8 +548,38 @@ async fn stop_serial_capture(port: Option<String>) -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn start_usb_capture(app: tauri::AppHandle) -> Result<String, String> {
-    usb::start_usb_sniffer(app)
+async fn start_usb_capture(app: tauri::AppHandle, hub_device: Option<String>) -> Result<String, String> {
+    usb::start_usb_sniffer_on_hub(app, hub_device)
+}
+
+#[tauri::command]
+async fn list_usbpcap_hubs_cmd() -> Result<Vec<usb::UsbPcapHubInfo>, String> {
+    Ok(usb::list_usbpcap_hubs())
+}
+
+#[tauri::command]
+async fn get_captured_usb_descriptor_cmd(vid: String, pid: String) -> Result<String, String> {
+    usb::get_captured_usb_descriptor_hex(&vid, &pid)
+}
+
+/// Tauri 接口：解析 IEEE 1364 VCD 逻辑分析仪物理电平波形成为 UART 字节流
+#[tauri::command]
+async fn decode_vcd_uart_waveform_cmd(
+    vcd_content: String,
+    target_signal: String,
+    baud_rate: u32,
+    parity: Option<String>,
+) -> Result<serial::VcdUartDecodedResult, String> {
+    tokio::task::spawn_blocking(move || {
+        serial::decode_vcd_uart_waveform_with_options(
+            &vcd_content,
+            &target_signal,
+            baud_rate,
+            parity.as_deref(),
+        )
+    })
+    .await
+    .map_err(|e| format!("VCD 解调线程异常: {}", e))?
 }
 
 #[tauri::command]
@@ -520,8 +606,11 @@ async fn parse_usb_descriptor_tree_cmd(raw_hex: String) -> Result<usb::UsbDescri
 }
 
 #[tauri::command]
-async fn get_io_graph_series_cmd(window_seconds: u32) -> Result<analyzer::IoGraphSeries, String> {
-    Ok(analyzer::get_io_graph_series(window_seconds))
+async fn get_io_graph_series_cmd(
+    window_seconds: u32,
+    bus_filter: Option<String>,
+) -> Result<analyzer::IoGraphSeries, String> {
+    Ok(analyzer::get_io_graph_series_filtered(window_seconds, bus_filter.as_deref()))
 }
 
 #[tauri::command]
@@ -817,6 +906,7 @@ async fn clear_logs() -> Result<String, String> {
 
     // 3. 删除历史比对基线（等价 Python 基线重置语义；锚定数据目录）
     let _ = std::fs::remove_file(forensics::data_path("baseline_payloads.json"));
+    net_intelligence::reset_live_net_stats();
 
     Ok(format!(
         "[CLEANUP] 取证数据彻底清空完成：{}/4 个证据文件已截断，封条与基线已重置",
@@ -2331,6 +2421,9 @@ pub fn run() {
             stop_serial_capture,
             send_serial_data_cmd,
             list_usb_devices,
+            list_usbpcap_hubs_cmd,
+            get_captured_usb_descriptor_cmd,
+            decode_vcd_uart_waveform_cmd,
             parse_usb_descriptor_tree_cmd,
             start_usb_capture,
             stop_usb_capture,
@@ -2534,9 +2627,12 @@ pub fn run() {
             dissect_can_packet_cmd,
             get_can_causal_records_cmd,
             get_can_bus_health_cmd,
-            // 物理硬件逻辑分析仪原生采样位流驱动与纳秒电气级信号解调 (TASK-40)
+            // 物理硬件逻辑分析仪原生采样位流驱动与纳秒电气级信号解调 (TASK-40 + SUMP 探头 + 4总线解码)
             demodulate_physical_uart_cmd,
             evaluate_signal_integrity_cmd,
+            probe_sump_logic_analyzer_cmd,
+            capture_sump_logic_samples_cmd,
+            decode_multibus_vcd_cmd,
             get_xdp_bypass_metrics_cmd,
             mark_flow_bypassed_cmd,
             evaluate_xdp_packet_cmd,
@@ -2561,12 +2657,51 @@ pub fn run() {
             // Wi-Fi / 802.11 无线与链路监测
             get_wifi_telemetry_cmd,
             reset_wifi_telemetry_cmd,
+            wifi_monitor::scan_os_wifi_networks_cmd,
             // VLAN / QinQ 专业虚拟局域网监测
             get_vlan_telemetry_cmd,
             reset_vlan_telemetry_cmd,
-            // 蓝牙 BR/EDR / BLE / HCI 专业监测
+            // 蓝牙 BR/EDR / BLE / HCI 专业监测与 GATT 服务枚举 + BTHPORT ETW 原生抓取 + BTSnoop & 基线对比
             get_bluetooth_telemetry_cmd,
             reset_bluetooth_telemetry_cmd,
+            bluetooth_monitor::scan_native_bluetooth_devices_cmd,
+            bluetooth_monitor::scan_ble_gatt_services_cmd,
+            read_ble_gatt_characteristic_cmd,
+            save_bluetooth_baseline_cmd,
+            compare_bluetooth_realtime_vs_history_cmd,
+            export_bluetooth_btsnoop_cmd,
+            pick_and_import_bluetooth_btsnoop_cmd,
+            start_continuous_ble_monitor_cmd,
+            stop_continuous_ble_monitor_cmd,
+            start_bthport_etw_capture_cmd,
+            stop_bthport_etw_capture_cmd,
+            // COM & USB 深度辅助开发、黄金波形 FFT/DTW 智能比对与专业巡检报告引擎
+            save_waveform_baseline_cmd,
+            list_waveform_baselines_cmd,
+            delete_waveform_baseline_cmd,
+            smart_compare_waveforms_cmd,
+            compute_waveform_fft_cmd,
+            get_bus_intelligence_snapshot_cmd,
+            compute_serial_checksum_cmd,
+            upsert_serial_auto_rule_cmd,
+            delete_serial_auto_rule_cmd,
+            start_serial_periodic_tx_cmd,
+            stop_serial_periodic_tx_cmd,
+            export_usb_usbpcap_pcap_cmd,
+            pick_and_import_usb_pcap_cmd,
+            generate_bus_inspection_report_cmd,
+            export_bus_inspection_report_cmd,
+            // 嵌入式单片机开发伴侣 (VOFA JustFloat/Struct多通道 / PID阶跃 / MCU外设速算 / 固件分片下发 / ANSI终端)
+            parse_binary_struct_batch_cmd,
+            compute_step_response_metrics_cmd,
+            solve_mcu_timer_psc_arr_cmd,
+            calc_uart_baud_error_cmd,
+            decode_modbus_32bit_word_cmd,
+            analyze_mcu_console_lines_cmd,
+            pick_and_send_serial_bin_file_cmd,
+            export_serial_stream_log_cmd,
+            // 历史总线索归档流式回溯
+            forensics::query_historical_bus_archive_cmd,
             // 无线与 VLAN 统一诊断解剖
             dissect_wireless_or_vlan_hex_cmd,
             // 全球网络空间地理态势地图与双向测绘数据 (TASK-46)
@@ -2580,6 +2715,15 @@ pub fn run() {
             get_net_assist_clients_cmd,
             calculate_checksum_cmd,
             get_local_ip_addresses_cmd,
+            // 网络深度主动扫描、多维流量统计、基线/.pcap 比对与行业报告导出
+            run_network_port_scan_cmd,
+            analyze_network_traffic_stats_cmd,
+            reset_live_net_stats_cmd,
+            save_network_baseline_cmd,
+            get_network_baseline_cmd,
+            compare_network_with_baseline_cmd,
+            pick_and_compare_network_pcap_cmd,
+            export_network_audit_report_cmd,
             // 自动版本检查与在线更新
             check_app_update_cmd,
             // 跨平台内建驱动级串口透明拦截 (PTY / Win32 NamedPipe / RFC2217 / WDM IRP Tap)
@@ -2616,6 +2760,7 @@ pub fn run() {
                 honeypot::stop_honeypot();
                 active_probe::stop_stream_pull();
                 serial::stop_serial_probe(None);
+                bus_intelligence::stop_serial_periodic_tx_cmd();
                 serial::stop_serial_bridge(None);
                 serial_intercept::stop_intercept_session(None);
                 usb::stop_usb_sniffer();

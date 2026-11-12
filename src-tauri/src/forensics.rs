@@ -1237,6 +1237,318 @@ pub fn start_periodic_sealing(
     });
 }
 
+/// 历史总线索归档趋势统计桶（供实时曲线 vs 历史归档对比渲染）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HistoricalArchiveTrendPoint {
+    pub bucket_label: String,
+    pub packet_count: u64,
+    pub byte_count: u64,
+    pub packets_per_sec: f64,
+    pub bytes_per_sec: f64,
+}
+
+/// 历史总线存证查询汇总结果
+///
+/// # 算法复杂度
+/// - 时间复杂度: O(L), L 为归档 JSONL 总行数，单遍流式读取，不将整个文件读入内存；
+/// - 空间复杂度: O(min(L, limit) + B), 仅缓存限定数量最新样本与分桶计数。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HistoricalBusArchiveResult {
+    pub bus_filter: String,
+    pub source_filter: Option<String>,
+    pub scanned_files: Vec<String>,
+    pub total_lines_scanned: u64,
+    pub matched_packets: u64,
+    pub matched_bytes: u64,
+    pub avg_packet_size: f64,
+    pub avg_entropy: f64,
+    pub avg_packets_per_sec: f64,
+    pub peak_bytes_per_sec: f64,
+    pub corrupted_lines: u64,
+    pub protocol_breakdown: std::collections::HashMap<String, u64>,
+    pub trend_points: Vec<HistoricalArchiveTrendPoint>,
+    pub recent_samples: Vec<serde_json::Value>,
+    pub diagnostic_message: String,
+}
+
+fn packet_matches_bus(val: &serde_json::Value, bus_upper: &str, source_filter: Option<&str>) -> bool {
+    let transport = val.get("transport").and_then(|v| v.as_str()).unwrap_or("").to_uppercase();
+    let protocol = val.get("protocol").and_then(|v| v.as_str()).unwrap_or("").to_uppercase();
+    let direction = val.get("direction").and_then(|v| v.as_str()).unwrap_or("").to_uppercase();
+    let bus_type = val
+        .get("business_data")
+        .and_then(|b| b.get("bus_type"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_uppercase();
+
+    let src_upper = val.get("src_ip").and_then(|v| v.as_str()).unwrap_or("").to_uppercase();
+    let dst_upper = val.get("dst_ip").and_then(|v| v.as_str()).unwrap_or("").to_uppercase();
+    let is_serial = transport == "SERIAL"
+        || direction.starts_with("SERIAL")
+        || protocol.contains("UART")
+        || protocol.contains("SERIAL")
+        || protocol == "MODBUS-RTU"
+        || protocol == "MODBUS_RTU"
+        || protocol == "DL/T 645"
+        || protocol == "NMEA-0183"
+        || bus_type == "SERIAL"
+        || src_upper.starts_with("COM")
+        || dst_upper.starts_with("COM");
+    let is_usb = transport == "USB"
+        || direction.starts_with("USB")
+        || protocol.starts_with("USB")
+        || bus_type == "USB"
+        || bus_type == "USB_URB"
+        || src_upper.starts_with("USB");
+
+    let bus_ok = match bus_upper {
+        "" | "ALL" => true,
+        "PHYSICAL" => is_serial || is_usb,
+        "SERIAL" | "UART" | "COM" => is_serial || protocol.contains("MODBUS"),
+        "USB" => is_usb,
+        "WIFI" | "WIFI_80211" | "802.11" | "WIRELESS" => {
+            transport == "802.11" || bus_type == "WIFI_80211" || direction == "WIRELESS" || protocol.contains("WIFI")
+        }
+        "BLUETOOTH" | "BLE" | "HCI" => {
+            transport.contains("BT") || protocol.contains("BLE") || protocol.contains("HCI") || protocol.contains("BLUETOOTH")
+        }
+        "ETHERNET" | "NIC" | "NET" => {
+            transport == "TCP" || transport == "UDP" || transport == "ICMP" || transport == "ARP" || bus_type == "ETHERNET"
+        }
+        other => transport == other || protocol.contains(other) || bus_type == other,
+    };
+
+    if !bus_ok {
+        return false;
+    }
+
+    if let Some(src) = source_filter.filter(|s| !s.trim().is_empty()) {
+        let needle = src.trim().to_uppercase();
+        let raw_text = val.get("raw_text").and_then(|v| v.as_str()).unwrap_or("").to_uppercase();
+        return src_upper.contains(&needle) || dst_upper.contains(&needle) || raw_text.contains(&needle);
+    }
+
+    true
+}
+
+/// 从多种日志时间戳 (如 "10:00:01.100" 或 "2026-11-11T10:00:01.100Z") 提取精确 "HH:MM:SS" 秒级分桶键
+/// 时间复杂度: O(L) 单次线性扫描
+#[inline]
+fn extract_hhmmss_bucket(ts_raw: &str) -> String {
+    let trimmed = ts_raw.trim();
+    if let Some(t_pos) = trimmed.find('T') {
+        let after = &trimmed[t_pos + 1..];
+        let end = after.find(|c: char| !c.is_ascii_digit() && c != ':').unwrap_or(after.len());
+        let hhmmss = &after[..end];
+        if hhmmss.len() >= 8 {
+            return hhmmss[..8].to_string();
+        }
+    }
+    if trimmed.len() >= 8 && trimmed.as_bytes().get(2) == Some(&b':') && trimmed.as_bytes().get(5) == Some(&b':') {
+        return trimmed[..8].to_string();
+    }
+    if let Some(space_pos) = trimmed.find(' ') {
+        let after = trimmed[space_pos + 1..].trim();
+        if after.len() >= 8 && after.as_bytes().get(2) == Some(&b':') {
+            return after[..8].to_string();
+        }
+    }
+    if trimmed.len() >= 8 {
+        trimmed[..8].to_string()
+    } else if trimmed.is_empty() {
+        "00:00:00".to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
+/// 在指定数据目录中流式检索历史总线存证与计算对比统计量
+pub fn query_historical_bus_archive_in_dir(
+    dir: &std::path::Path,
+    base_name: &str,
+    bus_filter: &str,
+    source_filter: Option<&str>,
+    limit: usize,
+) -> HistoricalBusArchiveResult {
+    use std::io::BufRead;
+
+    let bus_upper = bus_filter.trim().to_uppercase();
+    let sample_cap = limit.clamp(1, 500);
+    let mut candidate_files: Vec<std::path::PathBuf> = Vec::new();
+
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let fname = entry.file_name().to_string_lossy().to_string();
+            if fname == base_name || fname.starts_with(&format!("{}.", base_name)) {
+                candidate_files.push(entry.path());
+            }
+        }
+    }
+    // 按文件名升序整理归档文件（历史日期文件在前，当日当前文件在最后）
+    candidate_files.sort_by(|a, b| {
+        let sa = a.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        let sb = b.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        let a_is_current = sa == base_name;
+        let b_is_current = sb == base_name;
+        match (a_is_current, b_is_current) {
+            (true, false) => std::cmp::Ordering::Greater,
+            (false, true) => std::cmp::Ordering::Less,
+            _ => sa.cmp(sb),
+        }
+    });
+
+    let mut scanned_files = Vec::new();
+    let mut total_lines_scanned = 0u64;
+    let mut matched_packets = 0u64;
+    let mut matched_bytes = 0u64;
+    let mut entropy_sum = 0.0f64;
+    let mut corrupted_lines = 0u64;
+    let mut protocol_breakdown: std::collections::HashMap<String, u64> = std::collections::HashMap::new();
+    let mut trend_buckets: std::collections::BTreeMap<String, (u64, u64)> = std::collections::BTreeMap::new();
+    let mut recent_ring: std::collections::VecDeque<serde_json::Value> = std::collections::VecDeque::with_capacity(sample_cap);
+
+    for path in candidate_files {
+        let Ok(file) = File::open(&path) else {
+            continue;
+        };
+        if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+            scanned_files.push(name.to_string());
+        }
+        let reader = std::io::BufReader::new(file);
+        for line_res in reader.lines() {
+            let Ok(line) = line_res else {
+                corrupted_lines += 1;
+                continue;
+            };
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+            total_lines_scanned += 1;
+            let Ok(val) = serde_json::from_str::<serde_json::Value>(trimmed) else {
+                corrupted_lines += 1;
+                continue;
+            };
+            if !packet_matches_bus(&val, &bus_upper, source_filter) {
+                continue;
+            }
+
+            let len = val.get("length").and_then(|v| v.as_u64()).unwrap_or(0);
+            let entropy = val.get("entropy").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let proto = val.get("protocol").and_then(|v| v.as_str()).unwrap_or("UNKNOWN").to_string();
+            let ts_raw = val.get("timestamp").and_then(|v| v.as_str()).unwrap_or("00:00:00");
+            // 统一抽取 HH:MM:SS 秒级桶键（同时兼容 ISO8601 与本地时钟串）
+            let bucket = extract_hhmmss_bucket(ts_raw);
+
+            matched_packets += 1;
+            matched_bytes = matched_bytes.saturating_add(len);
+            entropy_sum += entropy;
+            *protocol_breakdown.entry(proto).or_insert(0) += 1;
+            let entry = trend_buckets.entry(bucket).or_insert((0, 0));
+            entry.0 += 1;
+            entry.1 = entry.1.saturating_add(len);
+
+            if recent_ring.len() >= sample_cap {
+                recent_ring.pop_front();
+            }
+            recent_ring.push_back(val);
+        }
+    }
+
+    let bucket_count = trend_buckets.len().max(1);
+    let total_points = trend_buckets.len();
+    let skip_n = total_points.saturating_sub(120);
+    let mut peak_bytes_per_sec = 0.0f64;
+    let trend_points: Vec<HistoricalArchiveTrendPoint> = trend_buckets
+        .into_iter()
+        .skip(skip_n)
+        .map(|(label, (cnt, bytes))| {
+            let bps = bytes as f64;
+            if bps > peak_bytes_per_sec {
+                peak_bytes_per_sec = bps;
+            }
+            HistoricalArchiveTrendPoint {
+                bucket_label: label,
+                packet_count: cnt,
+                byte_count: bytes,
+                packets_per_sec: cnt as f64,
+                bytes_per_sec: bps,
+            }
+        })
+        .collect();
+
+    let avg_packet_size = if matched_packets > 0 {
+        matched_bytes as f64 / matched_packets as f64
+    } else {
+        0.0
+    };
+    let avg_entropy = if matched_packets > 0 {
+        entropy_sum / matched_packets as f64
+    } else {
+        0.0
+    };
+    let avg_packets_per_sec = if matched_packets > 0 {
+        matched_packets as f64 / bucket_count as f64
+    } else {
+        0.0
+    };
+
+    let diagnostic_message = if scanned_files.is_empty() {
+        "历史存证目录暂无 received_data.jsonl 归档文件；请先开启一次串口/USB/网卡实时抓包后自动落盘。".to_string()
+    } else if matched_packets == 0 {
+        format!(
+            "已扫描 {} 个历史文件（共 {} 行），但未匹配到总线 {} 的历史记录。",
+            scanned_files.len(),
+            total_lines_scanned,
+            if bus_upper.is_empty() { "ALL" } else { &bus_upper }
+        )
+    } else {
+        format!(
+            "已扫描 {} 个历史文件（共 {} 行），命中 {} 条记录（累计 {} 字节）。",
+            scanned_files.len(),
+            total_lines_scanned,
+            matched_packets,
+            matched_bytes
+        )
+    };
+
+    HistoricalBusArchiveResult {
+        bus_filter: if bus_upper.is_empty() { "ALL".to_string() } else { bus_upper },
+        source_filter: source_filter.map(|s| s.to_string()),
+        scanned_files,
+        total_lines_scanned,
+        matched_packets,
+        matched_bytes,
+        avg_packet_size,
+        avg_entropy,
+        avg_packets_per_sec,
+        peak_bytes_per_sec,
+        corrupted_lines,
+        protocol_breakdown,
+        trend_points,
+        recent_samples: recent_ring.into_iter().rev().collect(),
+        diagnostic_message,
+    }
+}
+
+/// 查询当前应用存证目录的本地历史总线数据，供“实时 vs 历史”双曲线叠图对比
+#[tauri::command]
+pub async fn query_historical_bus_archive_cmd(
+    bus_filter: String,
+    source_filter: Option<String>,
+    limit: Option<usize>,
+) -> Result<HistoricalBusArchiveResult, String> {
+    let base_name = evidence_name_jsonl();
+    let dir = data_path(".");
+    let lim = limit.unwrap_or(100);
+    tokio::task::spawn_blocking(move || {
+        query_historical_bus_archive_in_dir(&dir, &base_name, &bus_filter, source_filter.as_deref(), lim)
+    })
+    .await
+    .map_err(|e| format!("历史归档查询线程异常: {}", e))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1283,5 +1595,51 @@ mod tests {
         // IPv4 头部校验和自洽性验证（对头部重算应为 0）
         let hdr = &frame[14..34];
         assert_eq!(internet_checksum(hdr), 0, "IPv4 头部校验和必须自洽");
+    }
+
+    #[test]
+    fn test_historical_bus_archive_query_and_corrupted_lines_resilience() {
+        let dir = std::env::temp_dir().join("omni_probe_hist_archive_test");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        // 1) 空目录边界
+        let empty_res = query_historical_bus_archive_in_dir(&dir, "received_data.jsonl", "SERIAL", None, 50);
+        assert_eq!(empty_res.matched_packets, 0);
+        assert!(empty_res.scanned_files.is_empty());
+
+        // 2) 混入正常 SERIAL / USB 记录 + 以太网 TCP + ISO8601 时间戳 + 畸形损坏 JSON 行
+        let archive_path = dir.join("received_data.jsonl.2026-11-10");
+        let lines = concat!(
+            "{\"id\":1,\"timestamp\":\"10:00:01.100\",\"transport\":\"SERIAL\",\"protocol\":\"MODBUS-RTU\",\"src_ip\":\"COM3\",\"dst_ip\":\"HOST\",\"length\":8,\"entropy\":2.5}\n",
+            "{broken json line corrupted\n",
+            "{\"id\":2,\"timestamp\":\"2026-11-10T10:00:03.400Z\",\"transport\":\"SERIAL\",\"protocol\":\"UART-TEXT\",\"src_ip\":\"COM3\",\"dst_ip\":\"HOST\",\"length\":16,\"entropy\":3.5}\n",
+            "{\"id\":3,\"timestamp\":\"10:00:02.000\",\"transport\":\"USB\",\"protocol\":\"USB-HID\",\"src_ip\":\"USB#2\",\"dst_ip\":\"HOST\",\"length\":64,\"entropy\":4.0}\n",
+            "{\"id\":4,\"timestamp\":\"10:00:04.000\",\"transport\":\"TCP\",\"protocol\":\"HTTP\",\"src_ip\":\"192.168.1.10\",\"dst_ip\":\"10.0.0.1\",\"length\":120,\"entropy\":5.0}\n"
+        );
+        std::fs::write(&archive_path, lines).unwrap();
+
+        let serial_res = query_historical_bus_archive_in_dir(&dir, "received_data.jsonl", "SERIAL", Some("COM3"), 50);
+        assert_eq!(serial_res.scanned_files.len(), 1);
+        assert_eq!(serial_res.total_lines_scanned, 5);
+        assert_eq!(serial_res.corrupted_lines, 1);
+        assert_eq!(serial_res.matched_packets, 2);
+        assert_eq!(serial_res.matched_bytes, 24);
+        assert!((serial_res.avg_packet_size - 12.0).abs() < 1e-6);
+        assert_eq!(serial_res.trend_points.len(), 2);
+        assert_eq!(serial_res.trend_points[0].bucket_label, "10:00:01");
+        assert_eq!(serial_res.trend_points[1].bucket_label, "10:00:03");
+
+        let usb_res = query_historical_bus_archive_in_dir(&dir, "received_data.jsonl", "USB", None, 50);
+        assert_eq!(usb_res.matched_packets, 1);
+        assert_eq!(usb_res.matched_bytes, 64);
+
+        // 3) PHYSICAL 总线仅纳管 SERIAL + USB，严密排除 TCP 等以太网数据包
+        let phys_res = query_historical_bus_archive_in_dir(&dir, "received_data.jsonl", "PHYSICAL", None, 50);
+        assert_eq!(phys_res.matched_packets, 3);
+        assert_eq!(phys_res.matched_bytes, 88);
+        assert_eq!(phys_res.trend_points.len(), 3);
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
