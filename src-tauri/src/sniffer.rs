@@ -150,7 +150,14 @@ pub fn is_npcap_driver_available() -> bool {
     }
 }
 
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
+pub fn is_npcap_driver_available() -> bool {
+    // 只要内核网络协议栈存在且未丢失动态链接库即可放行 safe_list_devices 做真实探测
+    crate::platform_net::detect_linux_libpcap_library().is_some()
+        || std::path::Path::new("/proc/net/dev").exists()
+}
+
+#[cfg(not(any(windows, target_os = "linux")))]
 pub fn is_npcap_driver_available() -> bool {
     true
 }
@@ -218,11 +225,17 @@ pub fn list_network_interfaces() -> Result<Vec<String>, String> {
 
     #[cfg(target_os = "linux")]
     {
+        for iface in crate::platform_net::discover_linux_interfaces() {
+            let entry = format!("{} - {} ({}/{})", iface.iface_name, iface.iface_name, iface.ip, iface.prefix_len);
+            if !fallback_list.iter().any(|item| item.starts_with(&format!("{} - ", iface.iface_name))) {
+                fallback_list.push(entry);
+            }
+        }
         if let Ok(entries) = std::fs::read_dir("/sys/class/net") {
             for entry in entries.flatten() {
                 let name = entry.file_name().to_string_lossy().to_string();
-                if name != "lo" && !fallback_list.iter().any(|item| item.starts_with(&name)) {
-                    fallback_list.push(format!("{} - Linux 物理网络接口", name));
+                if name != "lo" && !fallback_list.iter().any(|item| item.starts_with(&format!("{} - ", name))) {
+                    fallback_list.push(format!("{} - Linux 网络接口", name));
                 }
             }
         }
@@ -838,6 +851,7 @@ pub fn process_incoming_record(app: &tauri::AppHandle, mut record: PacketRecord)
 
     // (8) 异步流式分页缓冲与自动分卷 PCAPng 滚动落盘 (解耦 IPC，保障百万级流量有界内存)
     crate::net_intelligence::ingest_live_packet(&record);
+    crate::vpn_detector::ingest_vpn_packet(&record);
     crate::stream_paging::buffer_packet_and_auto_flush(record.clone());
 
     // 推送前端渲染
@@ -884,6 +898,15 @@ fn detect_netmask_for_ip(target_ip: &std::net::Ipv4Addr) -> std::net::Ipv4Addr {
         }
     }
 
+    #[cfg(target_os = "linux")]
+    {
+        for iface in crate::platform_net::discover_linux_interfaces() {
+            if iface.ip == *target_ip {
+                return iface.netmask;
+            }
+        }
+    }
+
     // RFC 1918 及常规默认掩码科学推导（A类 /8, B类 /16, C类 /24）
     let oct = target_ip.octets();
     if oct[0] == 10 {
@@ -920,12 +943,35 @@ pub fn detect_default_gateway() -> Option<std::net::Ipv4Addr> {
             }
         }
     }
+    #[cfg(target_os = "linux")]
+    {
+        if let Ok(content) = std::fs::read_to_string("/proc/net/route") {
+            let mut routes = crate::platform_net::parse_linux_proc_route(&content);
+            routes.sort_by_key(|r| r.metric);
+            for r in routes {
+                if r.destination == std::net::Ipv4Addr::UNSPECIFIED
+                    && !r.gateway.is_unspecified()
+                    && !r.gateway.is_loopback()
+                {
+                    return Some(r.gateway);
+                }
+            }
+        }
+    }
+
     None
 }
 
 /// 动态探测本机物理活动主网卡的 IPv4 地址与子网掩码 (IP, Netmask)
 /// 严格遵循网络工程标准：内核路由裁决优先，科学自适应 10.x / 172.x / 192.168.x 等任意网段，零硬编码
 pub fn detect_primary_ipv4_and_subnet() -> (std::net::Ipv4Addr, std::net::Ipv4Addr) {
+    #[cfg(target_os = "linux")]
+    {
+        let ifaces = crate::platform_net::discover_linux_interfaces();
+        if let Some(best) = ifaces.into_iter().find(|i| !i.is_tunnel).or_else(|| crate::platform_net::discover_linux_interfaces().into_iter().next()) {
+            return (best.ip, best.netmask);
+        }
+    }
     // 1. 在 Windows 体系下，优先深度解析真实物理局域网网卡（以太网/Wi-Fi），绝不被 VPN 隧道/代理虚拟网卡（如 10.10.x.x）误导
     #[cfg(windows)]
     {
@@ -1810,6 +1856,8 @@ mod win_raw {
     pub const AF_INET: i32 = 2;
     pub const SOCK_RAW: i32 = 3;
     pub const IPPROTO_IP: i32 = 0;
+    pub const SOL_SOCKET: i32 = 0xFFFF;
+    pub const SO_RCVTIMEO: i32 = 0x1006;
     pub const SIO_RCVALL: u32 = 0x98000001;
     pub const RCVALL_ON: u32 = 1;
     pub const INVALID_SOCKET: usize = !0;
@@ -1836,9 +1884,9 @@ mod win_raw {
     #[link(name = "ws2_32")]
     unsafe extern "system" {
         pub fn WSAStartup(w_version_requested: u16, lp_wsa_data: *mut WSADATA) -> i32;
-        pub fn WSACleanup() -> i32;
         pub fn socket(af: i32, socket_type: i32, protocol: i32) -> usize;
         pub fn bind(s: usize, name: *const SockAddrIn, namelen: i32) -> i32;
+        pub fn setsockopt(s: usize, level: i32, optname: i32, optval: *const c_void, optlen: i32) -> i32;
         pub fn WSAIoctl(
             s: usize,
             dw_io_control_code: u32,
@@ -1854,6 +1902,257 @@ mod win_raw {
         pub fn closesocket(s: usize) -> i32;
         pub fn WSAGetLastError() -> i32;
     }
+
+    /// 进程级幂等初始化 WinSock2（避免多网卡并发线程互调 WSACleanup 破坏句柄）
+    pub fn ensure_wsa_initialized() -> i32 {
+        use std::sync::atomic::{AtomicI32, Ordering};
+        static WSA_INIT: std::sync::Once = std::sync::Once::new();
+        static WSA_RC: AtomicI32 = AtomicI32::new(0);
+        WSA_INIT.call_once(|| unsafe {
+            let mut wsa_data: WSADATA = std::mem::zeroed();
+            let rc = WSAStartup(0x0202, &mut wsa_data);
+            WSA_RC.store(rc, Ordering::SeqCst);
+        });
+        WSA_RC.load(Ordering::SeqCst)
+    }
+}
+
+/// 并发 Raw Socket 最大监听接口数量保护上限，防虚拟网卡爆炸
+const MAX_CONCURRENT_RAW_IFACES: usize = 8;
+
+/// 活跃物理与虚拟隧道网络接口描述符
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ActiveCaptureIface {
+    pub iface_name: String,
+    pub ip: std::net::Ipv4Addr,
+    pub netmask: std::net::Ipv4Addr,
+    pub default_route_metric: Option<u32>,
+    pub has_gateway: bool,
+    pub is_tunnel: bool,
+}
+
+/// 解析 Windows `route print 0.0.0.0` 提取各出站接口 IP 的最小默认/分流路由跃点数
+/// 时间复杂度: O(L), 空间复杂度: O(M) (L 为路由表行数，M 为活跃默认路由接口数)
+pub fn parse_default_route_metrics(route_text: &str) -> HashMap<std::net::Ipv4Addr, u32> {
+    let mut best_metric: HashMap<std::net::Ipv4Addr, u32> = HashMap::new();
+    for line in route_text.lines() {
+        let cols: Vec<&str> = line.split_whitespace().collect();
+        if cols.len() < 5 {
+            continue;
+        }
+        // 识别全路由 0.0.0.0/0 及常见的 VPN 劫持半默认分流路由 0.0.0.0/1 和 128.0.0.0/1
+        let is_default_like = (cols[0] == "0.0.0.0" && (cols[1] == "0.0.0.0" || cols[1] == "128.0.0.0"))
+            || (cols[0] == "128.0.0.0" && cols[1] == "128.0.0.0");
+        if !is_default_like {
+            continue;
+        }
+        if let (Ok(iface_ip), Ok(metric)) = (cols[3].parse::<std::net::Ipv4Addr>(), cols[4].parse::<u32>()) {
+            if !iface_ip.is_loopback() && !iface_ip.is_unspecified() {
+                best_metric
+                    .entry(iface_ip)
+                    .and_modify(|m| {
+                        if metric < *m {
+                            *m = metric;
+                        }
+                    })
+                    .or_insert(metric);
+            }
+        }
+    }
+    best_metric
+}
+
+/// 从 `netsh interface ipv4 show addresses` 与路由表文本聚合全部待监听接口，并按外网优先级排序
+/// 时间复杂度: O(M log M), 空间复杂度: O(M)
+pub fn collect_capture_interfaces_from_text(
+    netsh_text: &str,
+    route_text: &str,
+    preferred_iface: &str,
+) -> Vec<ActiveCaptureIface> {
+    let route_metrics = parse_default_route_metrics(route_text);
+    let mut result: Vec<ActiveCaptureIface> = Vec::new();
+    let mut seen_ips: std::collections::BTreeSet<std::net::Ipv4Addr> = std::collections::BTreeSet::new();
+
+    let splitter = if netsh_text.contains("接口 ") { "接口 " } else { "Interface " };
+    for block in netsh_text.split(splitter) {
+        if block.trim().is_empty() {
+            continue;
+        }
+        let mut iface_name = String::new();
+        let mut ips: Vec<std::net::Ipv4Addr> = Vec::new();
+        let mut mask = std::net::Ipv4Addr::new(255, 255, 255, 0);
+        let mut has_gateway = false;
+
+        for line in block.lines() {
+            let trimmed = line.trim();
+            if iface_name.is_empty() {
+                if let Some(q1) = trimmed.find('"') {
+                    if let Some(q2) = trimmed[q1 + 1..].find('"') {
+                        iface_name = trimmed[q1 + 1..q1 + 1 + q2].to_string();
+                    }
+                }
+            }
+            if trimmed.contains("IP 地址") || trimmed.contains("IP Address") {
+                if let Some(ip_str) = trimmed.split(':').nth(1) {
+                    if let Ok(ip) = ip_str.trim().parse::<std::net::Ipv4Addr>() {
+                        let oct = ip.octets();
+                        if !ip.is_loopback()
+                            && !ip.is_unspecified()
+                            && !(oct[0] == 169 && oct[1] == 254)
+                        {
+                            ips.push(ip);
+                        }
+                    }
+                }
+            } else if trimmed.contains("子网前缀") || trimmed.contains("Subnet Prefix") {
+                for pat in ["掩码 ", "mask "] {
+                    if let Some(ms) = trimmed.find(pat) {
+                        let part = &trimmed[ms + pat.len()..];
+                        if let Some(me) = part.find(')') {
+                            if let Ok(m) = part[..me].trim().parse::<std::net::Ipv4Addr>() {
+                                mask = m;
+                            }
+                        }
+                    }
+                }
+            } else if trimmed.contains("默认网关") || trimmed.contains("Default Gateway") {
+                if let Some(gw_str) = trimmed.split(':').nth(1) {
+                    let gw = gw_str.trim();
+                    if !gw.is_empty() && gw != "0.0.0.0" && gw != "None" {
+                        has_gateway = true;
+                    }
+                }
+            }
+        }
+
+        let lower_name = iface_name.to_ascii_lowercase();
+        if lower_name.contains("loopback") || lower_name.contains("pseudo") {
+            continue;
+        }
+        let is_tunnel = lower_name.contains("tun")
+            || lower_name.contains("tap")
+            || lower_name.contains("wintun")
+            || lower_name.contains("wireguard")
+            || lower_name.contains("openconnect")
+            || lower_name.contains("clash")
+            || lower_name.contains("sing-box")
+            || lower_name.contains("tailscale")
+            || (lower_name.chars().any(|c| c.is_ascii_digit()) && lower_name.contains('.'));
+
+        for ip in ips {
+            if !seen_ips.insert(ip) {
+                continue;
+            }
+            let metric = route_metrics.get(&ip).copied();
+            result.push(ActiveCaptureIface {
+                iface_name: if iface_name.is_empty() { format!("Adapter-{}", ip) } else { iface_name.clone() },
+                ip,
+                netmask: mask,
+                default_route_metric: metric,
+                has_gateway: has_gateway || metric.is_some(),
+                is_tunnel,
+            });
+        }
+    }
+
+    // 按实际默认外网路由真实优先级排序：有最小默认路由 Metric 者最前 -> 有网关 -> 物理/隧道口 -> 其余局部虚拟切换
+    result.sort_by_key(|item| {
+        let metric_rank = item.default_route_metric.unwrap_or(u32::MAX);
+        let lower = item.iface_name.to_ascii_lowercase();
+        let is_local_vm_switch = lower.contains("vmware") || lower.contains("vethernet") || lower.contains("virtualbox") || lower.contains("wsl");
+        let tier = if item.default_route_metric.is_some() {
+            0u8
+        } else if item.has_gateway || item.is_tunnel {
+            1u8
+        } else if !is_local_vm_switch {
+            2u8
+        } else {
+            3u8
+        };
+        (tier, metric_rank, item.ip)
+    });
+
+    // 若用户显式指定某个具体系统网卡，则精确聚焦匹配该网卡
+    let pref = preferred_iface.trim();
+    let is_auto_or_engine = pref.is_empty()
+        || pref.starts_with("auto")
+        || pref.starts_with("native-ndis")
+        || pref.starts_with("dual-track");
+    if !is_auto_or_engine {
+        let stripped = pref
+            .strip_prefix("system - ")
+            .unwrap_or(pref)
+            .split(" (系统活动连接)")
+            .next()
+            .unwrap_or(pref)
+            .split(" - ")
+            .last()
+            .unwrap_or(pref)
+            .trim()
+            .to_ascii_lowercase();
+        if !stripped.is_empty() {
+            let matched: Vec<ActiveCaptureIface> = result
+                .iter()
+                .filter(|item| {
+                    let n = item.iface_name.to_ascii_lowercase();
+                    n == stripped || n.contains(&stripped) || stripped.contains(&n)
+                })
+                .cloned()
+                .collect();
+            if !matched.is_empty() {
+                return matched.into_iter().take(MAX_CONCURRENT_RAW_IFACES).collect();
+            }
+        }
+    }
+
+    result.into_iter().take(MAX_CONCURRENT_RAW_IFACES).collect()
+}
+
+/// 探测当前 Windows 主机全部活跃外网/隧道/局域网接口（带内核路由回退兜底）
+#[cfg(windows)]
+pub fn discover_capture_target_interfaces(preferred_iface: &str) -> Vec<ActiveCaptureIface> {
+    let netsh_out = std::process::Command::new("netsh")
+        .args(["interface", "ipv4", "show", "addresses"])
+        .creation_flags(0x08000000)
+        .output()
+        .ok()
+        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+        .unwrap_or_default();
+
+    let route_out = std::process::Command::new("route")
+        .args(["print", "0.0.0.0"])
+        .creation_flags(0x08000000)
+        .output()
+        .ok()
+        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+        .unwrap_or_default();
+
+    let mut list = collect_capture_interfaces_from_text(&netsh_out, &route_out, preferred_iface);
+    if list.is_empty() {
+        let (ip, mask) = detect_primary_ipv4_and_subnet();
+        if !ip.is_loopback() {
+            list.push(ActiveCaptureIface {
+                iface_name: "Primary-Fallback".to_string(),
+                ip,
+                netmask: mask,
+                default_route_metric: Some(100),
+                has_gateway: true,
+                is_tunnel: false,
+            });
+        }
+    }
+    list
+}
+
+/// 多接口并发 Raw Socket 绑定结果聚合器（向主流水线实时汇报是否有任一外网捕获口存活）
+#[derive(Default)]
+pub struct RawSocketLaunchReport {
+    pub finished_attempts: usize,
+    pub total_candidates: usize,
+    pub bound_targets: Vec<String>,
+    pub access_denied_errors: usize,
+    pub unsupported_einval_errors: usize,
+    pub other_errors: Vec<String>,
 }
 
 /// 启动 Windows 原生 Raw Socket 混杂嗅探引擎（Native Promiscuous Raw Socket Sniffer）
@@ -1898,15 +2197,71 @@ fn process_raw_ipv4_slice(app: &tauri::AppHandle, packet_data: &[u8]) {
     }
 }
 
-#[cfg(windows)]
-pub fn start_windows_raw_socket_sniffer(app: tauri::AppHandle, running: Arc<Mutex<bool>>) {
-    std::thread::spawn(move || {
-        // 动态获取物理网卡活动 IPv4
-        let (local_ip, _) = detect_primary_ipv4_and_subnet();
+/// 评估外网/全链路捕获实际覆盖能力（纯函数状态机，便于回归与边缘场景测试）
+pub fn evaluate_capture_capability_state(
+    npcap_opened: bool,
+    npcap_target: &str,
+    ndis_etw_engaged: bool,
+    raw_report: &RawSocketLaunchReport,
+) -> (bool, &'static str, String, Vec<String>) {
+    if npcap_opened {
+        return (
+            true,
+            "FULL_LINK_L2",
+            String::new(),
+            vec![format!("Npcap L2 ({})", npcap_target)],
+        );
+    }
+    if ndis_etw_engaged {
+        return (
+            true,
+            "FULL_LINK_L2",
+            String::new(),
+            vec!["Windows NDIS-ETW L2 (全网卡内核混杂)".to_string()],
+        );
+    }
+    if !raw_report.bound_targets.is_empty() {
+        return (
+            true,
+            "MULTI_IFACE_L3_RAW",
+            String::new(),
+            raw_report.bound_targets.clone(),
+        );
+    }
+    let reason = if raw_report.access_denied_errors > 0 {
+        "本机未安装 Npcap，且当前进程非管理员特权（Win32 WSAEACCES=10013 / ETW ERROR_ACCESS_DENIED=5），Raw Socket 与 NDIS-ETW 外网抓包均被系统拒绝；目前仅剩免权局域网 SSDP/mDNS/ARP 雷达运行，外网出入 TCP/UDP 流量无法被监测。请右键「以管理员身份运行」或安装 Npcap（勿勾选仅限管理员）。".to_string()
+    } else if !raw_report.other_errors.is_empty() {
+        format!(
+            "本机未启用 Npcap/NDIS，且所有活跃接口 Raw Socket 挂载均失败 ({})；当前仅能监测局域网广播/多播与 ARP。",
+            raw_report.other_errors.join("; ")
+        )
+    } else if raw_report.unsupported_einval_errors > 0 {
+        "当前接口均不支持 L3 Raw Socket 混杂模式 (WSAEINVAL=10022) 且未安装 Npcap，仅运行局域网多播雷达。".to_string()
+    } else {
+        "未发现可挂载的活跃外网接口且未安装 Npcap，当前仅运行局域网广播雷达。".to_string()
+    };
+    (false, "LAN_ONLY_DEGRADED", reason, Vec::new())
+}
 
-        // 1. 优先尝试启动 Windows 原生 Winsock2 Registered I/O (RIO) 物理锁定大页零拷贝抓包引擎
-        match crate::zero_copy_pool::win_rio::WindowsRioRawReceiver::try_bind_raw(local_ip) {
+#[cfg(windows)]
+fn spawn_single_interface_raw_receiver(
+    app: tauri::AppHandle,
+    running: Arc<Mutex<bool>>,
+    target: ActiveCaptureIface,
+    report_arc: Arc<Mutex<RawSocketLaunchReport>>,
+) {
+    std::thread::spawn(move || {
+        let target_label = format!("{} ({})", target.iface_name, target.ip);
+
+        // 1. 优先尝试 Win32 Winsock2 Registered I/O (RIO) 物理锁页零拷贝环
+        match crate::zero_copy_pool::win_rio::WindowsRioRawReceiver::try_bind_raw(target.ip) {
             Ok(mut rio) => {
+                let bound_snapshot = {
+                    let mut rep = crate::lock_guard::lock_mutex(&report_arc, "sniffer::raw_report_rio");
+                    rep.finished_attempts += 1;
+                    rep.bound_targets.push(format!("RIO: {}", target_label));
+                    rep.bound_targets.clone()
+                };
                 crate::zero_copy_pool::set_runtime_capture_backend(
                     "Win32_RIO_RegisteredIO_Hugepage",
                     true,
@@ -1915,18 +2270,24 @@ pub fn start_windows_raw_socket_sniffer(app: tauri::AppHandle, running: Arc<Mute
                     rio.is_large_pages,
                     rio.pinned_bytes,
                     &format!(
-                        "Windows RIO Registered I/O 零拷贝环活跃 (IP {} | 锁页 {} KB | LargePages={})",
-                        local_ip,
-                        rio.pinned_bytes / 1024,
-                        rio.is_large_pages
+                        "Windows RIO 并发零拷贝已绑定 {} 个接口 (含 {} | 锁页 {} KB)",
+                        bound_snapshot.len(),
+                        target.ip,
+                        rio.pinned_bytes / 1024
                     ),
+                );
+                crate::zero_copy_pool::set_capture_scope_status(
+                    true,
+                    "MULTI_IFACE_L3_RAW",
+                    "",
+                    bound_snapshot,
                 );
                 let _ = app.emit(
                     "system-log",
                     format!(
-                        "[RIO-ZEROCOPY] 已激活 Windows Registered I/O 物理大页零拷贝抓包环 -> 绑定 {}, 物理锁页: {}, 缓冲容量: {} MB",
-                        local_ip,
-                        rio.is_physically_pinned,
+                        "[RIO-ZEROCOPY] ✅ 已激活 Win32 RIO 物理大页抓包环 -> {} [{}], 缓冲: {} MB",
+                        target.iface_name,
+                        target.ip,
                         rio.pinned_bytes / (1024 * 1024)
                     ),
                 );
@@ -1939,49 +2300,81 @@ pub fn start_windows_raw_socket_sniffer(app: tauri::AppHandle, running: Arc<Mute
                         std::thread::sleep(Duration::from_millis(1));
                     }
                 }
-                let _ = app.emit("system-log", "[RIO-ZEROCOPY] Windows RIO 大页零拷贝引擎已安全销毁锁页并退出".to_string());
                 return;
             }
             Err(rio_err) => {
                 let _ = app.emit(
                     "system-log",
-                    format!("[RIO-ZEROCOPY] ℹ️ 未启用 Winsock RIO 零拷贝直通 ({})，自动降级标准 Raw Socket + 双缓冲池化通道", rio_err),
+                    format!(
+                        "[RIO-ZEROCOPY] ℹ️ 接口 {} ({}) 未启用 RIO ({})，切入标准并发 Raw Socket",
+                        target.iface_name, target.ip, rio_err
+                    ),
                 );
             }
         }
 
-        // 2. 降级标准 Raw Socket + GLOBAL_ZERO_COPY_POOL 双缓冲池化通道
+        // 2. 标准 Win32 Raw Socket (SOCK_RAW + SO_RCVTIMEO + SIO_RCVALL)
         unsafe {
-            let mut wsa_data: win_raw::WSADATA = std::mem::zeroed();
-            if win_raw::WSAStartup(0x0202, &mut wsa_data) != 0 {
-                let _ = app.emit("system-log", "[RAW-SOCKET] ⚠️ WSAStartup 初始化失败".to_string());
+            let wsa_rc = win_raw::ensure_wsa_initialized();
+            if wsa_rc != 0 {
+                let mut rep = crate::lock_guard::lock_mutex(&report_arc, "sniffer::raw_report_wsa");
+                rep.finished_attempts += 1;
+                rep.other_errors.push(format!("WSAStartup rc={}", wsa_rc));
                 return;
             }
 
             let s = win_raw::socket(win_raw::AF_INET, win_raw::SOCK_RAW, win_raw::IPPROTO_IP);
             if s == win_raw::INVALID_SOCKET {
                 let err = win_raw::WSAGetLastError();
+                {
+                    let mut rep = crate::lock_guard::lock_mutex(&report_arc, "sniffer::raw_report_sock");
+                    rep.finished_attempts += 1;
+                    if err == 10013 {
+                        rep.access_denied_errors += 1;
+                    } else {
+                        rep.other_errors.push(format!("{}: socket err {}", target.ip, err));
+                    }
+                }
                 let _ = app.emit(
                     "system-log",
-                    format!("[RAW-SOCKET] ℹ️ 原生 Raw Socket 启动提示 (代码: {})。如需全网卡混杂抓包请右键以管理员身份运行；非管理员模式下已由应用层多端口双轨服务与局域网广播雷达承接流量！", err),
+                    format!(
+                        "[RAW-SOCKET] ⚠️ 接口 {} ({}) 创建 SOCK_RAW 失败 (Win32={}){} ",
+                        target.iface_name,
+                        target.ip,
+                        err,
+                        if err == 10013 { " — 权限不足(WSAEACCES)，请以管理员身份运行" } else { "" }
+                    ),
                 );
-                win_raw::WSACleanup();
                 return;
             }
+
+            // 设置 500ms 接收超时，保证点击停止抓包后套接字快速唤醒退出
+            let rcv_timeout_ms: u32 = 500;
+            let _ = win_raw::setsockopt(
+                s,
+                win_raw::SOL_SOCKET,
+                win_raw::SO_RCVTIMEO,
+                &rcv_timeout_ms as *const u32 as *const std::ffi::c_void,
+                std::mem::size_of::<u32>() as i32,
+            );
 
             let mut sin: win_raw::SockAddrIn = std::mem::zeroed();
             sin.sin_family = win_raw::AF_INET as i16;
             sin.sin_port = 0;
-            sin.sin_addr = u32::from_ne_bytes(local_ip.octets());
+            sin.sin_addr = u32::from_ne_bytes(target.ip.octets());
 
             if win_raw::bind(s, &sin, std::mem::size_of::<win_raw::SockAddrIn>() as i32) != 0 {
                 let err = win_raw::WSAGetLastError();
-                let _ = app.emit(
-                    "system-log",
-                    format!("[RAW-SOCKET] ⚠️ 原生 Raw Socket 绑定物理网卡 IP {} 失败 (代码: {})", local_ip, err),
-                );
+                {
+                    let mut rep = crate::lock_guard::lock_mutex(&report_arc, "sniffer::raw_report_bind");
+                    rep.finished_attempts += 1;
+                    if err == 10013 {
+                        rep.access_denied_errors += 1;
+                    } else {
+                        rep.other_errors.push(format!("{}: bind err {}", target.ip, err));
+                    }
+                }
                 win_raw::closesocket(s);
-                win_raw::WSACleanup();
                 return;
             }
 
@@ -1997,49 +2390,122 @@ pub fn start_windows_raw_socket_sniffer(app: tauri::AppHandle, running: Arc<Mute
                 &mut bytes_ret,
                 std::ptr::null_mut(),
                 std::ptr::null_mut(),
-            ) != 0 {
+            ) != 0
+            {
                 let err = win_raw::WSAGetLastError();
+                {
+                    let mut rep = crate::lock_guard::lock_mutex(&report_arc, "sniffer::raw_report_ioctl");
+                    rep.finished_attempts += 1;
+                    if err == 10013 {
+                        rep.access_denied_errors += 1;
+                    } else if err == 10022 {
+                        rep.unsupported_einval_errors += 1;
+                    } else {
+                        rep.other_errors.push(format!("{}: SIO_RCVALL err {}", target.ip, err));
+                    }
+                }
                 let _ = app.emit(
                     "system-log",
-                    format!("[RAW-SOCKET] ℹ️ 混杂模式 SIO_RCVALL 激活提示 (代码: {})。非特权环境下已由多端口双轨与局域网广播雷达承接。", err),
+                    format!(
+                        "[RAW-SOCKET] ℹ️ 接口 {} ({}) SIO_RCVALL 未启用 (Win32={})，已安全跳过并保持其余活跃接口工作",
+                        target.iface_name, target.ip, err
+                    ),
                 );
                 win_raw::closesocket(s);
-                win_raw::WSACleanup();
                 return;
             }
 
+            let bound_snapshot = {
+                let mut rep = crate::lock_guard::lock_mutex(&report_arc, "sniffer::raw_report_ok");
+                rep.finished_attempts += 1;
+                rep.bound_targets.push(target_label.clone());
+                rep.bound_targets.clone()
+            };
             crate::zero_copy_pool::set_runtime_capture_backend(
-                "Win32_RawSocket_ZeroCopy_Pool",
+                "Win32_MultiIface_RawSocket_Pool",
                 false,
                 false,
                 false,
                 false,
                 0,
-                &format!("标准 Win32 Raw Socket (IP {}) + 双缓冲乒乓槽位池活跃", local_ip),
+                &format!("Win32 多接口并发 Raw Socket 已绑定: {}", bound_snapshot.join(", ")),
+            );
+            crate::zero_copy_pool::set_capture_scope_status(
+                true,
+                "MULTI_IFACE_L3_RAW",
+                "",
+                bound_snapshot.clone(),
             );
             let _ = app.emit(
                 "system-log",
-                format!("[RAW-SOCKET] 🚀 Windows 原生混杂嗅探引擎已就绪！成功绑定物理 IP {} 并激活 SIO_RCVALL 全量流量捕获！", local_ip),
+                format!(
+                    "[RAW-SOCKET] 🚀 混杂嗅探已绑定接口 {} ({}) [当前并发监听 {} 张网卡/隧道]",
+                    target.iface_name,
+                    target.ip,
+                    bound_snapshot.len()
+                ),
             );
 
             let mut buf = vec![0u8; 65536];
-
-            while *crate::lock_guard::lock_mutex(&running, "sniffer::lan_radar_outer") {
+            while *crate::lock_guard::lock_mutex(&running, "sniffer::raw_rx_loop") {
                 let n = win_raw::recv(s, buf.as_mut_ptr(), buf.len() as i32, 0);
                 if n > 0 {
                     let packet_data = &buf[..n as usize];
                     crate::zero_copy_pool::record_captured_frame_in_pool(packet_data);
                     process_raw_ipv4_slice(&app, packet_data);
                 } else if n < 0 {
-                    std::thread::sleep(Duration::from_millis(10));
+                    // SO_RCVTIMEO 超时 (10060) 等短暂错误：继续判断 running 状态，零 busy loop
+                    std::thread::sleep(Duration::from_millis(5));
                 }
             }
 
             win_raw::closesocket(s);
-            win_raw::WSACleanup();
-            let _ = app.emit("system-log", "[RAW-SOCKET] Windows 原生混杂嗅探引擎已安全退出".to_string());
         }
     });
+}
+
+#[cfg(windows)]
+pub fn start_windows_raw_socket_sniffer(
+    app: tauri::AppHandle,
+    running: Arc<Mutex<bool>>,
+    preferred_iface: &str,
+) -> Arc<Mutex<RawSocketLaunchReport>> {
+    let targets = discover_capture_target_interfaces(preferred_iface);
+    let report_arc = Arc::new(Mutex::new(RawSocketLaunchReport {
+        total_candidates: targets.len(),
+        ..Default::default()
+    }));
+
+    if targets.is_empty() {
+        let _ = app.emit(
+            "system-log",
+            "[RAW-SOCKET] ⚠️ 未发现任何活跃非回环 IPv4 网络接口，无法启动 Raw Socket 外网捕获".to_string(),
+        );
+        return report_arc;
+    }
+
+    let summary_list: Vec<String> = targets
+        .iter()
+        .map(|t| {
+            format!(
+                "{}({})[{}]",
+                t.iface_name,
+                t.ip,
+                t.default_route_metric
+                    .map(|m| format!("M={}", m))
+                    .unwrap_or_else(|| if t.is_tunnel { "TUN".to_string() } else { "LAN".to_string() })
+            )
+        })
+        .collect();
+    let _ = app.emit(
+        "system-log",
+        format!("[RAW-SOCKET] 准备并发挂载 {} 个活跃网络/隧道接口: {}", targets.len(), summary_list.join(", ")),
+    );
+
+    for t in targets {
+        spawn_single_interface_raw_receiver(app.clone(), running.clone(), t, report_arc.clone());
+    }
+    report_arc
 }
 
 /// 探针主抓包流水线
@@ -2058,11 +2524,10 @@ pub fn run_sniffer_pipeline(app: tauri::AppHandle, iface: &str, bpf_filter: &str
     // 3. 激活全局域网全网段设备雷达周期性扫描（仅记录真实 ARP 应答设备，绝不注入虚假模拟终端）
     trigger_lan_radar_discovery(app.clone());
 
-    // 4. 启动 Windows 原生 Raw Socket (SIO_RCVALL) 混杂嗅探引擎（兜底捕获本机物理网卡进出的全部 IPv4 流量）
-    //    【BPF 语义边界运行时告知】该引擎不走 Npcap 数据链路层，BPF 过滤器不生效；
-    //    用户设置非空过滤器时必须显式告知，杜绝"以为已过滤实则全量"的静默语义降级
+    // 4. 启动 Windows 原生多接口并发 Raw Socket (SIO_RCVALL) 混杂嗅探引擎
+    //    （自动并发绑定物理网卡 + 活跃 VPN/TUN 虚拟隧道口，彻底消除隧道抢流导致的外网失明）
     #[cfg(windows)]
-    {
+    let raw_report_opt: Option<Arc<Mutex<RawSocketLaunchReport>>> = {
         if !bpf_filter.trim().is_empty() {
             let _ = app.emit(
                 "system-log",
@@ -2071,14 +2536,16 @@ pub fn run_sniffer_pipeline(app: tauri::AppHandle, iface: &str, bpf_filter: &str
                     .to_string(),
             );
         }
-        start_windows_raw_socket_sniffer(app.clone(), running.clone());
-    }
+        Some(start_windows_raw_socket_sniffer(app.clone(), running.clone(), iface))
+    };
+    #[cfg(not(windows))]
+    let raw_report_opt: Option<Arc<Mutex<RawSocketLaunchReport>>> = None;
 
     // 5. 免 Npcap Windows 原生 NDIS-PacketCapture (ETW) L2 以太网帧捕获引擎激活判定
     #[cfg(windows)]
     let ndis_etw_engaged = {
         let want_ndis = iface.starts_with("native-ndis")
-            || ((iface.is_empty() || iface == "auto" || iface.starts_with("auto")) && !is_npcap_driver_available());
+            || (!iface.starts_with("dual-track") && !is_npcap_driver_available());
         if want_ndis {
             match crate::win_ndis_capture::start_native_ndis_capture(app.clone(), running.clone()) {
                 Ok(()) => {
@@ -2090,6 +2557,21 @@ pub fn run_sniffer_pipeline(app: tauri::AppHandle, iface: &str, bpf_filter: &str
                         false,
                         0,
                         "Windows 系统内置 NDIS-PacketCapture ETW 免 Npcap L2 以太网捕获已活跃",
+                    );
+                    crate::zero_copy_pool::set_capture_scope_status(
+                        true,
+                        "FULL_LINK_L2",
+                        "",
+                        vec!["Windows NDIS-ETW L2 (全网卡内核混杂)".to_string()],
+                    );
+                    let _ = app.emit(
+                        "capture-capability-warning",
+                        json!({
+                            "external_ready": true,
+                            "scope": "FULL_LINK_L2",
+                            "reason": "",
+                            "targets": ["Windows NDIS-ETW L2"]
+                        }),
                     );
                     true
                 }
@@ -2105,20 +2587,42 @@ pub fn run_sniffer_pipeline(app: tauri::AppHandle, iface: &str, bpf_filter: &str
     #[cfg(not(windows))]
     let ndis_etw_engaged = false;
 
-    // 6. 确定要绑定的 L2 网络接口（快速识别，不被虚拟网卡阻塞）
+    // 6. 确定要绑定的 L2 网络接口（优先匹配默认外网路由最小 Metric 出口 IP，兼容无线 Wi-Fi 与隧道网卡）
     let target_device_name = if ndis_etw_engaged && iface.starts_with("native-ndis") {
         String::new()
     } else if iface.is_empty() || iface == "auto" || iface.starts_with("auto") {
         let mut found_name = String::new();
+        #[cfg(windows)]
+        let preferred_egress_ip = discover_capture_target_interfaces("").into_iter().next().map(|i| i.ip);
+        #[cfg(target_os = "linux")]
+        let preferred_egress_ip = crate::platform_net::discover_linux_interfaces()
+            .into_iter()
+            .next()
+            .map(|i| i.ip);
+        #[cfg(not(any(windows, target_os = "linux")))]
+        let preferred_egress_ip: Option<std::net::Ipv4Addr> = None;
+
         if let Ok(devs) = safe_list_devices(Duration::from_millis(500)) {
-            for d in &devs {
-                let desc = d.desc.clone().unwrap_or_default().to_lowercase();
-                if desc.contains("realtek") || desc.contains("ethernet") || desc.contains("gigabit") || desc.contains("2.5g") || desc.contains("pci") {
-                    found_name = d.name.clone();
-                    break;
+            // 第一优先级：Npcap 设备地址列表中精确包含当前默认路由外网出口 IP 的网卡（不误绑未插线的有线口）
+            if let Some(best_ip) = preferred_egress_ip {
+                for d in &devs {
+                    if d.addresses.iter().any(|a| a.addr == std::net::IpAddr::V4(best_ip)) {
+                        found_name = d.name.clone();
+                        break;
+                    }
                 }
             }
-            // 物理网卡关键词未命中时回退到任意非回环设备（杜绝硬编码 GUID）
+            // 第二优先级：按活跃以太网 / Wi-Fi 关键词匹配
+            if found_name.is_empty() {
+                for d in &devs {
+                    let desc = d.desc.clone().unwrap_or_default().to_lowercase();
+                    if desc.contains("wi-fi") || desc.contains("wifi") || desc.contains("wlan") || desc.contains("realtek") || desc.contains("ethernet") || desc.contains("gigabit") || desc.contains("2.5g") || desc.contains("pci") {
+                        found_name = d.name.clone();
+                        break;
+                    }
+                }
+            }
+            // 第三优先级：回退到任意非回环设备（杜绝硬编码 GUID）
             if found_name.is_empty() {
                 for d in devs {
                     if !d.name.contains("Loopback") && !d.desc.clone().unwrap_or_default().to_lowercase().contains("loopback") {
@@ -2131,10 +2635,30 @@ pub fn run_sniffer_pipeline(app: tauri::AppHandle, iface: &str, bpf_filter: &str
         if found_name.is_empty() && !ndis_etw_engaged {
             let _ = app.emit(
                 "system-log",
-                "[SNIFFER] ℹ️ 未枚举到可用 Npcap 物理网络驱动，已切换启用「Raw Socket + 应用层双轨 + 局域网广播 + ARP 雷达」纯真实物理捕获链路".to_string(),
+                "[SNIFFER] ℹ️ 未枚举到可用 Npcap 物理网络驱动，已切换启用「多接口并发 Raw Socket + 应用层双轨 + 局域网广播 + ARP 雷达」捕获链路".to_string(),
             );
         }
         found_name
+    } else if iface.starts_with("system - ") {
+        let stripped = iface
+            .strip_prefix("system - ")
+            .unwrap_or(iface)
+            .split(" (系统活动连接)")
+            .next()
+            .unwrap_or(iface)
+            .trim()
+            .to_ascii_lowercase();
+        let mut matched_npcap = String::new();
+        if let Ok(devs) = safe_list_devices(Duration::from_millis(500)) {
+            for d in devs {
+                let desc = d.desc.unwrap_or_default().to_ascii_lowercase();
+                if desc.contains(&stripped) || d.name.to_ascii_lowercase().contains(&stripped) {
+                    matched_npcap = d.name;
+                    break;
+                }
+            }
+        }
+        matched_npcap
     } else {
         let clean_name = iface.split(" - ").next().unwrap_or(iface).trim();
         clean_name.to_string()
@@ -2234,6 +2758,21 @@ pub fn run_sniffer_pipeline(app: tauri::AppHandle, iface: &str, bpf_filter: &str
             cur_t.is_large_pages,
             cur_t.pinned_buffer_bytes,
             &format!("Npcap L2 混杂捕获已挂载接口 {}, 接入 XDP 五元组分流与乒乓零拷贝池", target_device_name),
+        );
+        crate::zero_copy_pool::set_capture_scope_status(
+            true,
+            "FULL_LINK_L2",
+            "",
+            vec![format!("Npcap L2 ({})", target_device_name)],
+        );
+        let _ = app.emit(
+            "capture-capability-warning",
+            json!({
+                "external_ready": true,
+                "scope": "FULL_LINK_L2",
+                "reason": "",
+                "targets": [target_device_name]
+            }),
         );
 
         let forensic = ForensicEngine::new();
@@ -2432,7 +2971,7 @@ pub fn run_sniffer_pipeline(app: tauri::AppHandle, iface: &str, bpf_filter: &str
                             process_incoming_record(&app, wifi_rec);
                         }
                     } else if !is_tcp_data_segment {
-                        if let Some(record) = parse_ethernet_frame(packet.data, &mut last_hash) {
+                        if let Some(record) = parse_linktype_frame_to_record(datalink, packet.data, &mut last_hash) {
                             process_incoming_record(&app, record);
                         }
                     }
@@ -2465,6 +3004,95 @@ pub fn run_sniffer_pipeline(app: tauri::AppHandle, iface: &str, bpf_filter: &str
             CAPTURE_DROPPED_INTERFACE.store(st.if_dropped as u64, Ordering::Relaxed);
         }
     } else {
+        // 若未开启 Npcap L2 且未启用 NDIS-ETW，协调等待多接口并发 Raw Socket 完成初始化（上限 600ms）
+        if !ndis_etw_engaged {
+            if let Some(ref rep_arc) = raw_report_opt {
+                for _ in 0..6 {
+                    if !*crate::lock_guard::lock_mutex(&running, "sniffer::cap_probe_wait") {
+                        break;
+                    }
+                    let done = {
+                        let r = crate::lock_guard::lock_mutex(rep_arc, "sniffer::cap_probe_chk");
+                        !r.bound_targets.is_empty() || r.finished_attempts >= r.total_candidates
+                    };
+                    if done {
+                        break;
+                    }
+                    std::thread::sleep(Duration::from_millis(100));
+                }
+
+                let rep_snapshot = crate::lock_guard::lock_mutex(rep_arc, "sniffer::cap_probe_final");
+                let (ext_ready, scope, reason, targets) = evaluate_capture_capability_state(
+                    false,
+                    "",
+                    false,
+                    &rep_snapshot,
+                );
+                crate::zero_copy_pool::set_capture_scope_status(ext_ready, scope, &reason, targets.clone());
+                if !ext_ready {
+                    crate::zero_copy_pool::set_runtime_capture_backend(
+                        "LAN_Radar_Only_Degraded",
+                        false,
+                        false,
+                        false,
+                        false,
+                        0,
+                        &reason,
+                    );
+                    let _ = app.emit("system-log", format!("[CAPTURE-SCOPE-WARN] ⚠️ {}", reason));
+                }
+                let _ = app.emit(
+                    "capture-capability-warning",
+                    json!({
+                        "external_ready": ext_ready,
+                        "scope": scope,
+                        "reason": reason,
+                        "targets": targets
+                    }),
+                );
+            } else {
+                #[cfg(target_os = "linux")]
+                {
+                    let (priv_st, distro) = crate::platform_net::inspect_linux_privilege_and_distro();
+                    let exe_disp = std::env::current_exe()
+                        .ok()
+                        .map(|p| p.to_string_lossy().into_owned())
+                        .unwrap_or_else(|| "omni-probe-tauri".to_string());
+                    let reason = if !priv_st.is_capture_capable {
+                        format!(
+                            "当前系统 [{}] 进程缺少底层原始套接字权限 (euid={}, CapEff={:#x}，缺少 CAP_NET_RAW)，无法截获外网出入 TCP/UDP 流量；当前仅剩免权局域网多播与 ARP 雷达可用。请在终端执行 `sudo setcap cap_net_raw,cap_net_admin=eip \"{}\"` 后重启程序。",
+                            distro, priv_st.euid, priv_st.cap_eff_mask, exe_disp
+                        )
+                    } else {
+                        format!(
+                            "当前系统 [{}] 未检测到可用 libpcap 接口或抓包设备打开失败，目前仅处于局域网广播雷达模式。请检查 libpcap 动态库与选定网卡状态。",
+                            distro
+                        )
+                    };
+                    crate::zero_copy_pool::set_capture_scope_status(false, "LAN_ONLY_DEGRADED", &reason, Vec::new());
+                    crate::zero_copy_pool::set_runtime_capture_backend(
+                        "LAN_Radar_Only_Degraded",
+                        false,
+                        false,
+                        false,
+                        false,
+                        0,
+                        &reason,
+                    );
+                    let _ = app.emit("system-log", format!("[CAPTURE-SCOPE-WARN] ⚠️ {}", reason));
+                    let _ = app.emit(
+                        "capture-capability-warning",
+                        json!({
+                            "external_ready": false,
+                            "scope": "LAN_ONLY_DEGRADED",
+                            "reason": reason,
+                            "targets": []
+                        }),
+                    );
+                }
+            }
+        }
+
         while *crate::lock_guard::lock_mutex(&running, "sniffer::lan_radar_outer") {
             std::thread::sleep(Duration::from_millis(200));
         }
@@ -3149,6 +3777,7 @@ pub(crate) fn parse_ethernet_frame(data: &[u8], last_hash: &mut String) -> Optio
             let mut b_map = HashMap::new();
 
             // IEEE 802.1Q / 802.1ad QinQ VLAN 深度剥离与遥测分析
+            let mut l2_summary_override: Option<String> = None;
             let (proto_name, is_vlan_frame) = if crate::vlan_monitor::is_vlan_ethertype(other_eth.0) {
                 let stripped = crate::vlan_monitor::strip_vlan_tags(other_eth.0, payload_bytes);
                 crate::vlan_monitor::record_vlan_packet(
@@ -3177,6 +3806,29 @@ pub(crate) fn parse_ethernet_frame(data: &[u8], last_hash: &mut String) -> Optio
                     "VLAN_802.1Q".to_string()
                 };
                 (p_name, true)
+            } else if let Some(neighbor) = crate::lldp_cdp::parse_and_ingest_l2_discovery(
+                other_eth.0,
+                &mac_dst,
+                &mac_src,
+                payload_bytes,
+                &timestamp,
+            ) {
+                b_map.insert("l2_discovery".into(), json!(&neighbor));
+                if !neighbor.management_ip.is_empty() {
+                    b_map.insert("switch_mgmt_ip".into(), json!(&neighbor.management_ip));
+                }
+                if let Some(vid) = neighbor.native_vlan {
+                    b_map.insert("native_vlan".into(), json!(vid));
+                }
+                l2_summary_override = Some(format!(
+                    "{} Neighbor [{}] Port: {} | MgmtIP: {} | VLAN: {}",
+                    neighbor.protocol,
+                    neighbor.system_name,
+                    neighbor.port_id,
+                    if neighbor.management_ip.is_empty() { "N/A" } else { &neighbor.management_ip },
+                    neighbor.native_vlan.map(|v| v.to_string()).unwrap_or_else(|| "N/A".into())
+                ));
+                (neighbor.protocol, false)
             } else {
                 let p_name = match other_eth.0 {
                     0x88CC => "LLDP".into(),
@@ -3198,7 +3850,9 @@ pub(crate) fn parse_ethernet_frame(data: &[u8], last_hash: &mut String) -> Optio
             b_map.insert("source_mac".into(), json!(&mac_src));
             b_map.insert("destination_mac".into(), json!(&mac_dst));
 
-            let summary_text = if is_vlan_frame {
+            let summary_text = if let Some(ov) = l2_summary_override {
+                ov
+            } else if is_vlan_frame {
                 format!(
                     "VLAN Encapsulated Frame [{}] {} -> {} (Length: {}B)",
                     proto_name, mac_src, mac_dst, data.len()
@@ -3244,22 +3898,17 @@ pub(crate) fn parse_ethernet_frame(data: &[u8], last_hash: &mut String) -> Optio
     }
 }
 
-/// 针对 Windows 原生 Raw Socket (SIO_RCVALL) 捕获的纯 IPv4 报文解析器
-pub fn parse_ipv4_raw_packet(data: &[u8], last_hash: &mut String) -> Option<PacketRecord> {
-    let ipv4 = match Ipv4Packet::new(data) {
-        Some(ip) if ip.get_version() == 4 => ip,
-        _ => return None,
-    };
-
-    let src_ip = ipv4.get_source().to_string();
-    let dst_ip = ipv4.get_destination().to_string();
-    let total_len = ipv4.get_total_length() as usize;
-    let proto = ipv4.get_next_level_protocol();
-    let ttl = ipv4.get_ttl();
-    let hdr_len = (ipv4.get_header_length() as usize) * 4;
-    let l4_payload = data.get(hdr_len..).unwrap_or(&[]);
-    let l4_info = extract_l4(proto, l4_payload);
-
+/// L3/L4 公共帧构造器（DRY 复用：同时服务 IPv4 / IPv6 Raw Socket 及 Linux SLL / TUN 设备捕获）
+#[inline]
+fn build_l3_raw_packet_record(
+    src_ip: String,
+    dst_ip: String,
+    total_len: usize,
+    ttl_or_hop: u8,
+    l4_info: L4Info<'_>,
+    data: &[u8],
+    last_hash: &mut String,
+) -> PacketRecord {
     let id = PACKET_COUNTER.fetch_add(1, Ordering::Relaxed);
     let ts_ns = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -3268,7 +3917,7 @@ pub fn parse_ipv4_raw_packet(data: &[u8], last_hash: &mut String) -> Option<Pack
     let timestamp = chrono::Local::now().format("%H:%M:%S.%3f").to_string();
 
     let mut b_map = l4_info.control_data;
-    b_map.insert("ttl".into(), json!(ttl));
+    b_map.insert("ttl".into(), json!(ttl_or_hop));
     let (protocol, entropy, entropy_level, payload_hex, raw_text) = if !l4_info.payload.is_empty() {
         let ent = ForensicEngine::calculate_entropy(l4_info.payload);
         let ent_lvl = classify_entropy(ent);
@@ -3290,10 +3939,12 @@ pub fn parse_ipv4_raw_packet(data: &[u8], last_hash: &mut String) -> Option<Pack
         (proto, ent, ent_lvl, String::new(), raw)
     };
 
-    // 统一全局链式哈希（废除 raw socket 独立链 RAW_SOCKET_GENESIS，并入单一司法证据链）
     let chain_hash = advance_global_chain(
         ts_ns,
-        &format!("{}:{}->{}:{}|{}|{}", src_ip, l4_info.src_port, dst_ip, l4_info.dst_port, l4_info.transport, payload_hex),
+        &format!(
+            "{}:{}->{}:{}|{}|{}",
+            src_ip, l4_info.src_port, dst_ip, l4_info.dst_port, l4_info.transport, payload_hex
+        ),
     );
     *last_hash = chain_hash.clone();
 
@@ -3302,10 +3953,9 @@ pub fn parse_ipv4_raw_packet(data: &[u8], last_hash: &mut String) -> Option<Pack
     } else {
         total_len
     };
-
     let direction = classify_network_direction(&src_ip, &dst_ip);
 
-    Some(PacketRecord {
+    PacketRecord {
         id,
         timestamp,
         timestamp_ns: ts_ns,
@@ -3326,7 +3976,112 @@ pub fn parse_ipv4_raw_packet(data: &[u8], last_hash: &mut String) -> Option<Pack
         chain_hash,
         business_data: Some(b_map),
         raw_text: Some(raw_text),
-    })
+    }
+}
+
+/// 针对 Windows 原生 Raw Socket (SIO_RCVALL) 及 TUN 三层虚拟网卡捕获的纯 IPv4 报文解析器
+pub fn parse_ipv4_raw_packet(data: &[u8], last_hash: &mut String) -> Option<PacketRecord> {
+    let ipv4 = match Ipv4Packet::new(data) {
+        Some(ip) if ip.get_version() == 4 => ip,
+        _ => return None,
+    };
+
+    let src_ip = ipv4.get_source().to_string();
+    let dst_ip = ipv4.get_destination().to_string();
+    let total_len = ipv4.get_total_length() as usize;
+    let proto = ipv4.get_next_level_protocol();
+    let ttl = ipv4.get_ttl();
+    let hdr_len = (ipv4.get_header_length() as usize) * 4;
+    if hdr_len < 20 || hdr_len > data.len() {
+        return None;
+    }
+    let l4_payload = &data[hdr_len..];
+    let l4_info = extract_l4(proto, l4_payload);
+
+    Some(build_l3_raw_packet_record(
+        src_ip, dst_ip, total_len, ttl, l4_info, data, last_hash,
+    ))
+}
+
+/// 针对无 MAC 帧头三层接口 (Linux TUN/WG/SLL/IPv6 Raw) 的纯 IPv6 报文解析器
+pub fn parse_ipv6_raw_packet(data: &[u8], last_hash: &mut String) -> Option<PacketRecord> {
+    let ipv6 = match Ipv6Packet::new(data) {
+        Some(ip) if ip.get_version() == 6 => ip,
+        _ => return None,
+    };
+    if data.len() < 40 {
+        return None;
+    }
+    let src_ip = ipv6.get_source().to_string();
+    let dst_ip = ipv6.get_destination().to_string();
+    let total_len = (ipv6.get_payload_length() as usize) + 40;
+    let proto = ipv6.get_next_header();
+    let hop = ipv6.get_hop_limit();
+    let l4_info = extract_l4(proto, &data[40..]);
+
+    Some(build_l3_raw_packet_record(
+        src_ip, dst_ip, total_len, hop, l4_info, data, last_hash,
+    ))
+}
+
+/// 统一数据链路层帧派发器（兼容标准 Ethernet II、Linux `any` SLL/SLL2 及三层 TUN 原始 IP 口）
+/// 时间复杂度: O(1) 头部解析, 空间复杂度: O(1)
+pub fn parse_linktype_frame_to_record(
+    datalink: pcap::Linktype,
+    data: &[u8],
+    last_hash: &mut String,
+) -> Option<PacketRecord> {
+    if data.is_empty() {
+        return None;
+    }
+    match datalink.0 {
+        // DLT_RAW (101 / 12): VPN tun0/wg0 无二层 MAC 头，首字节即 IP 版本号
+        101 | 12 => match data[0] >> 4 {
+            4 => parse_ipv4_raw_packet(data, last_hash),
+            6 => parse_ipv6_raw_packet(data, last_hash),
+            _ => None,
+        },
+        // DLT_LINUX_SLL (113): Linux `any` 全网卡聚合捕获 (16B header, [14..16] 为 EtherType)
+        113 => {
+            if data.len() < 16 {
+                return None;
+            }
+            let proto = u16::from_be_bytes([data[14], data[15]]);
+            match proto {
+                0x0800 => parse_ipv4_raw_packet(&data[16..], last_hash),
+                0x86DD => parse_ipv6_raw_packet(&data[16..], last_hash),
+                _ => None,
+            }
+        }
+        // DLT_LINUX_SLL2 (276): 新版 Linux `any` 全网卡聚合捕获 (20B header, [0..2] 为 EtherType)
+        276 => {
+            if data.len() < 20 {
+                return None;
+            }
+            let proto = u16::from_be_bytes([data[0], data[1]]);
+            match proto {
+                0x0800 => parse_ipv4_raw_packet(&data[20..], last_hash),
+                0x86DD => parse_ipv6_raw_packet(&data[20..], last_hash),
+                _ => None,
+            }
+        }
+        // DLT_NULL (0): BSD/macOS utun/lo (4B protocol family, AF_INET=2 / AF_INET6=24|28|30)
+        0 => {
+            if data.len() < 4 {
+                return None;
+            }
+            let fam = u32::from_ne_bytes([data[0], data[1], data[2], data[3]]);
+            if fam == 2 {
+                parse_ipv4_raw_packet(&data[4..], last_hash)
+            } else if fam == 10 || fam == 24 || fam == 28 || fam == 30 {
+                parse_ipv6_raw_packet(&data[4..], last_hash)
+            } else {
+                None
+            }
+        }
+        // 默认 DLT_EN10MB (1) 等标准二层以太网帧
+        _ => parse_ethernet_frame(data, last_hash),
+    }
 }
 
 /// pub：熵值分级供 active_probe.rs 等模块复用统一阈值
@@ -3651,9 +4406,8 @@ mod tests {
         println!("1. detect_primary_ipv4_and_subnet => local_ip: {}, mask: {}", local_ip, mask);
 
         unsafe {
-            let mut wsa_data: win_raw::WSADATA = std::mem::zeroed();
-            let wsa_res = win_raw::WSAStartup(0x0202, &mut wsa_data);
-            println!("2. WSAStartup(0x0202) => res: {}", wsa_res);
+            let wsa_res = win_raw::ensure_wsa_initialized();
+            println!("2. ensure_wsa_initialized() => res: {}", wsa_res);
 
             let s = win_raw::socket(win_raw::AF_INET, win_raw::SOCK_RAW, win_raw::IPPROTO_IP);
             if s == win_raw::INVALID_SOCKET {
@@ -3696,7 +4450,6 @@ mod tests {
                 }
                 win_raw::closesocket(s);
             }
-            win_raw::WSACleanup();
         }
 
         println!("\n=== [DIAGNOSTIC] 应用层双轨服务 (端口监听免驱模式) 实测 ===");
@@ -3818,6 +4571,164 @@ mod tests {
         let d1_dup = mk_pkt(4, 1_050_000_000, "10.0.0.1", "10.0.0.2", 5000, 80, 101, 201, 0x18, 10);
         let (_, retrans2) = tracker.observe(&d1_dup);
         assert!(retrans2, "重复发送同 SEQ 且非零载荷的数据段必须标记为重传");
+    }
+
+    #[test]
+    fn test_capture_iface_discovery_prefers_tunnel_and_default_metric() {
+        let netsh_sample = r#"
+接口 "Loopback Pseudo-Interface 1" 的配置
+    IP 地址:                           127.0.0.1
+    子网前缀:                        127.0.0.0/8 (掩码 255.0.0.0)
+
+接口 "138.197.159.140_ec3e7a48" 的配置
+    IP 地址:                           10.10.10.82
+    子网前缀:                        10.10.10.0/24 (掩码 255.255.255.0)
+
+接口 "以太网" 的配置
+    IP 地址:                           192.168.1.114
+    子网前缀:                        192.168.1.0/24 (掩码 255.255.255.0)
+    默认网关:                         192.168.1.1
+
+接口 "APIPA-Test" 的配置
+    IP 地址:                           169.254.12.34
+"#;
+        let route_sample = r#"
+          0.0.0.0          0.0.0.0      192.168.1.1    192.168.1.114    281
+          0.0.0.0          0.0.0.0         On-link       10.10.10.82      2
+"#;
+        let all = collect_capture_interfaces_from_text(netsh_sample, route_sample, "auto - 自动选择活动物理网卡");
+        assert_eq!(all.len(), 2, "必须同时保留隧道口与物理口且过滤 127/169.254");
+        assert_eq!(all[0].ip, std::net::Ipv4Addr::new(10, 10, 10, 82), "Metric=2 的默认出口隧道应排首位");
+        assert!(all[0].is_tunnel);
+        assert_eq!(all[1].ip, std::net::Ipv4Addr::new(192, 168, 1, 114), "物理以太网也必须同时加入并发监听");
+
+        // 指定单一系统网卡时只精准绑定该网卡
+        let only_eth = collect_capture_interfaces_from_text(netsh_sample, route_sample, "system - 以太网 (系统活动连接)");
+        assert_eq!(only_eth.len(), 1);
+        assert_eq!(only_eth[0].ip, std::net::Ipv4Addr::new(192, 168, 1, 114));
+    }
+
+    #[test]
+    fn test_capture_iface_discovery_edge_boundaries() {
+        // 1. 极限空输入与乱码防御
+        assert!(collect_capture_interfaces_from_text("", "", "").is_empty());
+        assert!(collect_capture_interfaces_from_text("garbage !@#\n1234", "bad route", "auto").is_empty());
+
+        // 2. 超量虚拟接口并发上限防御 (<= MAX_CONCURRENT_RAW_IFACES)
+        let mut many_netsh = String::new();
+        for idx in 1..=14u8 {
+            many_netsh.push_str(&format!(
+                "Interface \"Eth-{}\"\n    IP Address: 192.168.{}.10\n    Default Gateway: 192.168.{}.1\n\n",
+                idx, idx, idx
+            ));
+        }
+        let capped = collect_capture_interfaces_from_text(&many_netsh, "", "");
+        assert_eq!(capped.len(), MAX_CONCURRENT_RAW_IFACES);
+    }
+
+    #[test]
+    fn test_capture_capability_state_machine_and_setsockopt() {
+        let denied_rep = RawSocketLaunchReport {
+            finished_attempts: 2,
+            total_candidates: 2,
+            bound_targets: Vec::new(),
+            access_denied_errors: 2,
+            unsupported_einval_errors: 0,
+            other_errors: Vec::new(),
+        };
+        let (ok1, scope1, reason1, _) = evaluate_capture_capability_state(false, "", false, &denied_rep);
+        assert!(!ok1);
+        assert_eq!(scope1, "LAN_ONLY_DEGRADED");
+        assert!(reason1.contains("10013") && reason1.contains("管理员"));
+
+        let ok_rep = RawSocketLaunchReport {
+            finished_attempts: 2,
+            total_candidates: 2,
+            bound_targets: vec!["138.197.159.140_ec3e7a48 (10.10.10.82)".to_string()],
+            ..Default::default()
+        };
+        let (ok2, scope2, _, targets2) = evaluate_capture_capability_state(false, "", false, &ok_rep);
+        assert!(ok2);
+        assert_eq!(scope2, "MULTI_IFACE_L3_RAW");
+        assert_eq!(targets2.len(), 1);
+
+        // Win32 FFI setsockopt(SO_RCVTIMEO) 真机探活（普通 UDP 套接字无需管理员权限）
+        #[cfg(windows)]
+        unsafe {
+            assert_eq!(win_raw::ensure_wsa_initialized(), 0);
+            let sock = win_raw::socket(win_raw::AF_INET, 2 /* SOCK_DGRAM */, 17 /* IPPROTO_UDP */);
+            assert_ne!(sock, win_raw::INVALID_SOCKET);
+            let timeout_ms: u32 = 500;
+            let rc = win_raw::setsockopt(
+                sock,
+                win_raw::SOL_SOCKET,
+                win_raw::SO_RCVTIMEO,
+                &timeout_ms as *const u32 as *const std::ffi::c_void,
+                std::mem::size_of::<u32>() as i32,
+            );
+            assert_eq!(rc, 0, "Win32 setsockopt(SO_RCVTIMEO) 必须成功生效");
+            win_raw::closesocket(sock);
+        }
+    }
+
+    #[test]
+    fn test_linux_sll_sll2_and_raw_tun_linktype_dissection() {
+        let mut h = String::new();
+        // 构造标准 20B IPv4 + 8B UDP(5353->5353, "TEST") L3 帧
+        let mut ip4 = vec![0u8; 20 + 8 + 4];
+        let ip4_len = ip4.len() as u16;
+        ip4[0] = 0x45;
+        ip4[2..4].copy_from_slice(&ip4_len.to_be_bytes());
+        ip4[8] = 64;
+        ip4[9] = 17; // UDP
+        ip4[12..16].copy_from_slice(&[10, 66, 0, 2]);
+        ip4[16..20].copy_from_slice(&[8, 8, 8, 8]);
+        ip4[20..22].copy_from_slice(&50000u16.to_be_bytes());
+        ip4[22..24].copy_from_slice(&53u16.to_be_bytes());
+        ip4[24..26].copy_from_slice(&12u16.to_be_bytes());
+        ip4[28..32].copy_from_slice(b"TEST");
+
+        // 1. DLT_RAW (101) TUN 设备无 MAC 头直解
+        let rec_raw = parse_linktype_frame_to_record(pcap::Linktype(101), &ip4, &mut h)
+            .expect("DLT_RAW TUN IPv4 解析失败");
+        assert_eq!(rec_raw.src_ip, "10.66.0.2");
+        assert_eq!(rec_raw.dst_ip, "8.8.8.8");
+        assert_eq!(rec_raw.dst_port, 53);
+
+        // 2. DLT_LINUX_SLL (113) `any` 设备 16B header
+        let mut sll = vec![0u8; 16];
+        sll[14..16].copy_from_slice(&0x0800u16.to_be_bytes());
+        sll.extend_from_slice(&ip4);
+        let rec_sll = parse_linktype_frame_to_record(pcap::Linktype(113), &sll, &mut h)
+            .expect("DLT_LINUX_SLL 解析失败");
+        assert_eq!(rec_sll.src_ip, "10.66.0.2");
+
+        // 3. DLT_LINUX_SLL2 (276) 新版 Linux `any` 20B header
+        let mut sll2 = vec![0u8; 20];
+        sll2[0..2].copy_from_slice(&0x0800u16.to_be_bytes());
+        sll2.extend_from_slice(&ip4);
+        let rec_sll2 = parse_linktype_frame_to_record(pcap::Linktype(276), &sll2, &mut h)
+            .expect("DLT_LINUX_SLL2 解析失败");
+        assert_eq!(rec_sll2.dst_ip, "8.8.8.8");
+
+        // 4. 构造 40B IPv6 + 8B UDP 帧验证 DLT_RAW IPv6 解析与截断边界防御
+        let mut ip6 = vec![0u8; 40 + 8];
+        ip6[0] = 0x60;
+        ip6[4..6].copy_from_slice(&8u16.to_be_bytes());
+        ip6[6] = 17; // UDP
+        ip6[7] = 64;
+        ip6[8..24].copy_from_slice(&[0x24, 0x08, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+        ip6[24..40].copy_from_slice(&[0x24, 0x00, 0x32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+        ip6[40..42].copy_from_slice(&40000u16.to_be_bytes());
+        ip6[42..44].copy_from_slice(&443u16.to_be_bytes());
+        ip6[44..46].copy_from_slice(&8u16.to_be_bytes());
+        let rec_v6 = parse_linktype_frame_to_record(pcap::Linktype(101), &ip6, &mut h)
+            .expect("DLT_RAW IPv6 解析失败");
+        assert_eq!(rec_v6.dst_port, 443);
+
+        // 截断畸形边界防御
+        assert!(parse_linktype_frame_to_record(pcap::Linktype(113), &[0u8; 5], &mut h).is_none());
+        assert!(parse_linktype_frame_to_record(pcap::Linktype(101), &[], &mut h).is_none());
     }
 }
 

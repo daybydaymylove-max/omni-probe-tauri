@@ -1,4 +1,4 @@
-# Omni-Probe 工业级全能网络探针系统 (v0.3.2)
+# Omni-Probe 工业级全能网络探针系统 (v0.3.5)
 
 <div align="center">
 
@@ -6,18 +6,18 @@
 
 ### 面向现代工业物联网、智能变电站、汽车电子与现场总线的原生桌面多总线协议探针与诊断平台
 
-[![Release](https://img.shields.io/badge/Release-v0.3.2-blue.svg)](https://github.com/daybydaymylove-max/omni-probe-tauri/releases)
+[![Release](https://img.shields.io/badge/Release-v0.3.5-blue.svg)](https://github.com/daybydaymylove-max/omni-probe-tauri/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Rust](https://img.shields.io/badge/Rust-Edition_2024-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-24C8DB.svg)](https://tauri.app/)
 [![Vue](https://img.shields.io/badge/Vue-3.5%2B-42b883.svg)](https://vuejs.org/)
-[![Tests](https://img.shields.io/badge/Tests-396_Passed-success.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-433_Passed-success.svg)]()
 [![Code_Style](https://img.shields.io/badge/Code%20Style-Zero%20Placeholders-brightgreen.svg)]()
 [![Architecture](https://img.shields.io/badge/Architecture-Multi--Track%20Self--Healing-indigo.svg)]()
 
 [📖 完整操作手册 (USER_MANUAL)](docs/USER_MANUAL.md) •
 [系统架构](#-系统架构与核心组件) •
-[v0.3.2 核心演进](#-v032-核心架构演进亮点) •
+[v0.3.5 核心演进](#-v035-核心架构演进亮点) •
 [核心技术特性](#-核心技术特性) •
 [多轨自愈保障](#-底层多轨并行保障与运行时自愈架构) •
 [偏好设置与更新](#-系统偏好设置中心与在线更新) •
@@ -45,12 +45,23 @@
 
 ---
 
-## 🌟 v0.3.2 核心架构演进亮点
+## 🌟 v0.3.5 核心架构演进亮点
 
-### 0. 全维度硬件/无线/网络监测与行业比对深度演进
+### 0. 测地线多跳路由溯源与空间态势看板 (Geodesic Traceroute & Digital Globe)
+- **跨平台中文代码页管道容错解码 (`traceroute_engine`)**：彻底剔除要求纯 UTF-8 的异步流读取循环，重构为底层字节缓冲结合 `encoding_rs::GB18030` 解码，完美解决中文 Windows 控制台（CP936/GBK 代码页）下首行“通过最多 30 个跃点跟踪到...”引发 `InvalidData` 异常导致流式探测死锁在 Hop 0 的技术物理根因；并注册 `stop_traceroute_cmd` 命令支持前端一键安全 kill 底层子进程；
+- **四元数球面线性插值 (Slerp) 大圆测地空间算法**：实现并导出 `interpolateGreatCirclePoint` 测地大圆空间插值算法，对缺乏独立公网城市坐标的局域网网关（如 `192.168.x.x`）、运营商宽带私网中继（`100.64.x.x`）以及防火墙 ICMP 丢包超时跳（`*`），沿测地大圆航线按比例自动标定三维空间信标，保证在 3D 数字地球上 100% 具备经纬度空间锚点与连贯光弧飞线；
+- **双模态架构与全量指标表格无损融合**：
+  - **双布局模式**：支持 **`左右分栏 (Split View)`**（左侧 45% 数据面板，右侧 55% 交互式 3D 数字地球/地图/拓扑）与 **`上下大盘 (Stacked View)`**（上方数字地球/拓扑，下方全宽 8 列指标明细大表）一键自由切换；
+  - **双视图标签**：数据工作区内一键切换 **`地区跃迁流`**（垂直时间轴展示途经国家、省市、运营商 ISP、经纬度与测地跨距）与 **`逐跳指标明细 (8列)`**（含跳数、IP、RTT 耗时彩条、网络角色/拓扑层级、地理归属、子网 CIDR、物理线缆距、Bufferbloat 缓冲排队剖析）；
+  - **局域网微观拓扑企业架构**：完整恢复 Purdue 模型分层节点间增量 RTT 差值标签（`+ms`）、Cat6 介质物理模型、二层直通线速与广播环路排队诊断；
+  - **三维空间对焦联动**：在 3D 数字地球 Canvas 上支持鼠标悬停信标拾取即时详情卡（`hoveredHop`）、点击信标平滑旋转对焦，以及单击左侧卡片/表格任意行瞬间对焦；
+- **原生网工交互终端 (RFC 854 Telnet / 原生 SSH2) 与信创环境全景自愈 (`v0.3.4` 基础能力延续)**：纯异步 RFC 854 Telnet / OpenSSH 双向管道、统信 UOS / 银河麒麟 原生打包矩阵与 WebView2 独立绿色自愈；
+- **网工高频原子工具箱与二层拓扑全量巩固 (`v0.3.3` 基础能力延续)**：IPv4/IPv6/VLSM 子网计算、RFC 1035 原生 DNS UDP 探针、TCPing/HTTP TTFB 测速、RFC 1350 TFTP + 安全沙箱 HTTP 文件服务、IEEE 802.1AB LLDP / Cisco CDP 二层邻接发现及 RFC 3414/3826 SNMPv3 USM 加密采集交换机 FDB 转发表；
+- **全维度硬件/无线/网络监测与行业比对深度演进 (`v0.3.2` 基础能力延续)**：
 - **网络主动扫描与全量流式多维统计 (`net_intelligence`)**：支持 CIDR (`/23`..`/32` 上限 512 主机 / 2048 任务并发限流)、只读 Banner 识别（HTTP/SSH/FTP/Redis）及标准载荷触发式 UDP 探测 (`DNS/NTP/SNMP/BACnet`)；内置 $O(1)$ 无截断流式统计累加器呈现 ECharts 协议分层占比、Top Talkers、RFC 2544 七档帧长分布、MAD 时间抖动，并支持黄金基线持久化、离线 `.pcap` 双样本直对比及防 XSS 转义 HTML/MD 审计报告导出；
 - **COM & USB 单片机深度开发伴侣 (`bus_intelligence`)**：集成 Cooley-Tukey Radix-2 FFT 功率谱与 Sakoe-Chiba DTW 黄金波形对齐比对、VOFA+ `JustFloat`/自定义 `Struct` 多通道解调、PID 阶跃特性求解、MCU Timer `(PSC, ARR)`/UART ±2% 容限速算、RTOS 行式终端及 SUMP/OLS `.vcd` 多总线数字方波解调；
-- **蓝牙 BR/EDR & BLE 连续空口监听 (`bluetooth_monitor`)**：集成 WinRT 持续广播监听、BTHPORT-ETW 底层 HCI/L2CAP 抓包、RFC 1761 `.btsnoop` 双向导入导出及四联 ECharts 近场空间分布与 RSSI 历史对比图。
+- **蓝牙 BR/EDR & BLE 连续空口监听 (`bluetooth_monitor`)**：集成 WinRT 持续广播监听、BTHPORT-ETW 底层 HCI/L2CAP 抓包、RFC 1761 `.btsnoop` 双向导入导出及四联 ECharts 近场空间分布与 RSSI 历史对比图；
+- **全环境 VPN / 加密代理隧道四维交叉侦测 (`vpn_detector`)**：涵盖终端本地环境（虚拟 TUN/Wintun 网卡、0.0.0.0/1 分流路由、注册表 ProxyEnable、127.0.0.1 代理端口探活与 SOCKS5 实测、进程与自定义根 CA）、链路层 DPI（WireGuard/OpenVPN/IPsec/IKEv2/PPTP/L2TP/SOCKS5/HTTP CONNECT）、DFI（香农熵+字节卡方检验 $\chi^2$ + TCP SYN MSS 缩水测算）及离线 `ip2region.xdb` 机房/DoH-DoT/Fake-IP 错位画像，输出 ECharts 四维可信度雷达图、方式归因结论与防 XSS HTML/MD 审计报告。
 
 ### 1. 全平台原生分发矩阵 (Cross-Platform Releases)
 全面支持 GitHub Releases 自动化多平台分发体系，提供各操作系统原生体验：
@@ -301,9 +312,9 @@ npm run desktop
 npm run tauri build
 ```
 编译产物将生成在 `src-tauri/target/release/bundle/` 目录下：
-- **Windows**：`msi/omni-probe-tauri_0.3.2_x64_en-US.msi` 与 `nsis/omni-probe-tauri_0.3.2_x64-setup.exe`；
-- **macOS**：`dmg/omni-probe-tauri_0.3.2_universal.dmg`；
-- **Linux**：`appimage/omni-probe-tauri_0.3.2_amd64.AppImage` 与 `deb/omni-probe-tauri_0.3.2_amd64.deb`。
+- **Windows**：`msi/omni-probe-tauri_0.3.4_x64_en-US.msi` 与 `nsis/omni-probe-tauri_0.3.4_x64-setup.exe`；
+- **macOS**：`dmg/omni-probe-tauri_0.3.4_universal.dmg`；
+- **Linux**：`appimage/omni-probe-tauri_0.3.4_amd64.AppImage` 与 `deb/omni-probe-tauri_0.3.4_amd64.deb`。
 
 ---
 
@@ -329,16 +340,18 @@ Omni-Probe 采用**“专有原生逐字段解剖 + 声明式编译器长尾扩�
 本项目坚持学术诚信与工业生产级质量交付标准，拒绝未经测试的代码推向生产：
 
 ```bash
-# 1. 运行所有 Rust 核心库单元测试 (覆盖协议解剖、零拷贝引擎、网络/总线/蓝牙深度监测、串口拦截、差分算法与 RBAC 安全测试)
+# 1. 运行所有 Rust 核心库与二进制单元测试 (覆盖协议解剖、零拷贝引擎、网络/总线/蓝牙/VPN/SNMPv3/TFTP/工具箱与 RBAC 安全测试)
 cargo test --manifest-path src-tauri/Cargo.toml --lib
-# 实测输出：test result: ok. 386 passed; 0 failed; 0 ignored
+cargo test --manifest-path src-tauri/Cargo.toml --bin omni-probe-tauri
+# 实测输出：411 passed (lib) + 1 passed (bin); 0 failed; 0 ignored
 
-# 2. 运行端到端跨模块集成穿透测试与文档同步守卫测试套件
+# 2. 运行端到端跨模块集成穿透测试、文档同步守卫及前端 Vitest 单元测试
 cargo test --manifest-path src-tauri/Cargo.toml --test '*'
-# 实测输出：live_system_verification (1 passed) + manual_sync_check (1 passed) + universal_diff_exhaustive_verification (8 passed) — 全量总计 396 项通过
+npm test
+# 实测输出：live_system_verification (1) + manual_sync_check (1) + universal_diff (8) + Vitest (6) — 双端全量总计 428 项通过
 
 # 3. 编译器静态检查与纯原生桌面全量编译打包
-npm run build   # vue-tsc --noEmit && vite build (709 modules transformed, 0 TypeScript errors)
+npm run build   # vue-tsc --noEmit && vite build (714 modules transformed, 0 TypeScript errors)
 npm run tauri build   # 产出原生桌面 EXE、MSI 与 NSIS 安装包
 ```
 

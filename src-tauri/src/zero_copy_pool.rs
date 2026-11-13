@@ -1133,11 +1133,19 @@ pub struct KernelZeroCopyTelemetry {
     pub pool_utilization_percent: f64,
     pub pool_total_memory_bytes: usize,
     pub status_detail: String,
+    pub external_capture_ready: bool,
+    pub capture_scope: String,
+    pub degradation_reason: String,
+    pub bound_capture_targets: Vec<String>,
 }
 
 struct ZeroCopyRuntimeCounters {
     active_backend: std::sync::RwLock<String>,
     status_detail: std::sync::RwLock<String>,
+    external_capture_ready: AtomicBool,
+    capture_scope: std::sync::RwLock<String>,
+    degradation_reason: std::sync::RwLock<String>,
+    bound_capture_targets: std::sync::RwLock<Vec<String>>,
     rio_active: AtomicBool,
     npcap_pool_active: AtomicBool,
     is_physically_pinned: AtomicBool,
@@ -1152,6 +1160,10 @@ static GLOBAL_RUNTIME_COUNTERS: once_cell::sync::Lazy<ZeroCopyRuntimeCounters> =
     once_cell::sync::Lazy::new(|| ZeroCopyRuntimeCounters {
         active_backend: std::sync::RwLock::new("Idle".to_string()),
         status_detail: std::sync::RwLock::new("捕获引擎尚未启动或处于待机状态".to_string()),
+        external_capture_ready: AtomicBool::new(false),
+        capture_scope: std::sync::RwLock::new("IDLE".to_string()),
+        degradation_reason: std::sync::RwLock::new(String::new()),
+        bound_capture_targets: std::sync::RwLock::new(Vec::new()),
         rio_active: AtomicBool::new(false),
         npcap_pool_active: AtomicBool::new(false),
         is_physically_pinned: AtomicBool::new(false),
@@ -1192,6 +1204,23 @@ pub fn set_runtime_capture_backend(
     GLOBAL_RUNTIME_COUNTERS.pinned_buffer_bytes.store(pinned_bytes, Ordering::Relaxed);
 }
 
+pub fn set_capture_scope_status(
+    external_ready: bool,
+    scope: &str,
+    reason: &str,
+    targets: Vec<String>,
+) {
+    GLOBAL_RUNTIME_COUNTERS
+        .external_capture_ready
+        .store(external_ready, Ordering::Relaxed);
+    let mut s = crate::lock_guard::write_rwlock(&GLOBAL_RUNTIME_COUNTERS.capture_scope, "zero_copy_pool::scope");
+    *s = scope.to_string();
+    let mut r = crate::lock_guard::write_rwlock(&GLOBAL_RUNTIME_COUNTERS.degradation_reason, "zero_copy_pool::reason");
+    *r = reason.to_string();
+    let mut t = crate::lock_guard::write_rwlock(&GLOBAL_RUNTIME_COUNTERS.bound_capture_targets, "zero_copy_pool::targets");
+    *t = targets;
+}
+
 pub fn reset_runtime_capture_backend() {
     set_runtime_capture_backend(
         "Idle",
@@ -1202,12 +1231,16 @@ pub fn reset_runtime_capture_backend() {
         0,
         "捕获流水线已停止，锁页物理资源与缓冲区已释放",
     );
+    set_capture_scope_status(false, "IDLE", "", Vec::new());
 }
 
 pub fn get_runtime_zero_copy_telemetry() -> KernelZeroCopyTelemetry {
     let pool_metrics = crate::lock_guard::lock_mutex(&GLOBAL_ZERO_COPY_POOL, "zero_copy_pool::metrics").get_metrics();
     let backend = crate::lock_guard::read_rwlock(&GLOBAL_RUNTIME_COUNTERS.active_backend, "zero_copy_pool::read_backend").clone();
     let detail = crate::lock_guard::read_rwlock(&GLOBAL_RUNTIME_COUNTERS.status_detail, "zero_copy_pool::read_detail").clone();
+    let scope = crate::lock_guard::read_rwlock(&GLOBAL_RUNTIME_COUNTERS.capture_scope, "zero_copy_pool::read_scope").clone();
+    let reason = crate::lock_guard::read_rwlock(&GLOBAL_RUNTIME_COUNTERS.degradation_reason, "zero_copy_pool::read_reason").clone();
+    let targets = crate::lock_guard::read_rwlock(&GLOBAL_RUNTIME_COUNTERS.bound_capture_targets, "zero_copy_pool::read_targets").clone();
 
     KernelZeroCopyTelemetry {
         active_backend: backend,
@@ -1226,6 +1259,10 @@ pub fn get_runtime_zero_copy_telemetry() -> KernelZeroCopyTelemetry {
         pool_utilization_percent: pool_metrics.utilization_percent,
         pool_total_memory_bytes: pool_metrics.total_memory_bytes,
         status_detail: detail,
+        external_capture_ready: GLOBAL_RUNTIME_COUNTERS.external_capture_ready.load(Ordering::Relaxed),
+        capture_scope: scope,
+        degradation_reason: reason,
+        bound_capture_targets: targets,
     }
 }
 

@@ -186,6 +186,11 @@ impl RollingPcapWriter {
         self.config.snaplen_mode = mode;
     }
 
+    /// 获取当前滚动落盘配置与截断策略快照
+    pub fn get_config(&self) -> RollingPcapConfig {
+        self.config.clone()
+    }
+
     /// 写入单个报文
     pub fn write_packet(&mut self, data: &[u8], ts_sec: u32, ts_usec: u32) -> Result<(), String> {
         if !self.config.enabled {

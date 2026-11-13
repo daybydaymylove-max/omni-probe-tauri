@@ -353,10 +353,43 @@
           <span class="px-2 py-0.5 rounded-lg bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 text-[11px] ui-num font-medium">压缩率: {{ (hierarchyViewport?.compression_ratio ?? 0).toFixed(1) }}%</span>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
+          <select v-model="snmpVersion" class="ui-input px-2 py-1 text-xs ui-num">
+            <option value="v2c">SNMPv2c</option>
+            <option value="v3">SNMPv3 USM</option>
+          </select>
+          <input
+            v-model="snmpSwitchIp"
+            placeholder="交换机 IP (如 192.168.1.254)"
+            class="ui-input px-2.5 py-1 text-xs w-40 ui-num"
+          />
+          <input
+            v-if="snmpVersion === 'v2c'"
+            v-model="snmpCommunity"
+            placeholder="Community (public)"
+            class="ui-input px-2 py-1 text-xs w-28 font-mono"
+          />
+          <template v-else>
+            <input v-model="snmpV3User" placeholder="USM 用户名" class="ui-input px-2 py-1 text-xs w-24 ui-num" />
+            <select v-model="snmpV3AuthAlgo" class="ui-input px-1.5 py-1 text-xs ui-num">
+              <option value="Sha1">SHA1</option>
+              <option value="Sha256">SHA256</option>
+              <option value="Md5">MD5</option>
+              <option value="None">NoAuth</option>
+            </select>
+            <input v-if="snmpV3AuthAlgo !== 'None'" v-model="snmpV3AuthPass" type="password" placeholder="Auth 口令" class="ui-input px-2 py-1 text-xs w-24" />
+            <select v-model="snmpV3PrivAlgo" class="ui-input px-1.5 py-1 text-xs ui-num">
+              <option value="Aes128">AES128</option>
+              <option value="None">NoPriv</option>
+            </select>
+            <input v-if="snmpV3PrivAlgo !== 'None'" v-model="snmpV3PrivPass" type="password" placeholder="AES 口令" class="ui-input px-2 py-1 text-xs w-24" />
+          </template>
+          <button @click="pollSnmpSwitch" :disabled="isPollingSnmp || !snmpSwitchIp.trim()" class="ui-btn-secondary px-2.5 py-1 text-xs">
+            {{ isPollingSnmp ? 'SNMP 采集中...' : `采集 ${snmpVersion.toUpperCase()} FDB` }}
+          </button>
           <input
             v-model="switchLocateIp"
             placeholder="交换机端口定位 (输入 IP)..."
-            class="ui-input px-2.5 py-1 text-xs w-48"
+            class="ui-input px-2.5 py-1 text-xs w-44 ui-num"
           />
           <button @click="locateSwitchPort" :disabled="!switchLocateIp.trim()" class="ui-btn-primary px-2.5 py-1 text-xs">
             定位物理端口
@@ -373,6 +406,49 @@
 
       <div v-if="switchPortLocResult" class="px-3 py-2 rounded-xl bg-indigo-500/10 border border-indigo-500/25 text-indigo-700 dark:text-indigo-200 text-xs shrink-0">
         {{ switchPortLocResult }}
+      </div>
+
+      <!-- 分布式与本机探针节点实况汇聚条 (get_distributed_probe_cluster_cmd) -->
+      <div v-if="probeCluster" class="px-3 py-2 rounded-xl ui-sub-card flex items-center justify-between flex-wrap gap-2 text-[11px] ui-num shrink-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="font-bold text-sky-700 dark:text-sky-300">
+            探针集群在线节点: {{ Object.values(probeCluster.probes).filter(p => p.is_alive).length }} / {{ Object.keys(probeCluster.probes).length }}
+          </span>
+          <span v-for="p in Object.values(probeCluster.probes).slice(0, 4)" :key="p.probe_id" class="ui-pill px-2 py-0.5">
+            {{ p.probe_ip }} ({{ p.probe_zone }}) · 累计包 {{ p.current_pps.toLocaleString() }} · 丢包 {{ p.total_drops }}
+          </span>
+        </div>
+        <span style="color: var(--text-muted)">已接入交换机: {{ registeredSwitchesCount }} 台 | HTTP 上报端口 :9091/probe/heartbeat</span>
+      </div>
+
+      <!-- IEEE 802.1AB LLDP / Cisco CDP 二层邻接自动发现条 -->
+      <div class="px-3 py-2 rounded-xl ui-sub-card flex items-center justify-between flex-wrap gap-2 text-[11px] ui-num shrink-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="font-bold text-emerald-700 dark:text-emerald-300">
+            LLDP/CDP 二层直连交换机 ({{ l2Neighbors.length }}):
+          </span>
+          <span v-if="l2Neighbors.length === 0" style="color: var(--text-muted)">
+            嗅探或导入帧后自动识别上联交换机名称、端口与 Native VLAN
+          </span>
+          <button
+            v-for="n in l2Neighbors.slice(0, 4)"
+            :key="n.record_key"
+            @click="n.management_ip && (snmpSwitchIp = n.management_ip)"
+            class="ui-pill px-2 py-0.5 hover:opacity-80 cursor-pointer"
+            :title="`${n.protocol} · 端口 ${n.port_id} · 管理 IP ${n.management_ip || 'N/A'} · VLAN ${n.native_vlan ?? 'N/A'}`"
+          >
+            [{{ n.protocol }}] {{ n.system_name }} · {{ n.port_id }}{{ n.native_vlan ? ` (VLAN ${n.native_vlan})` : '' }}
+          </button>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <input
+            v-model="l2HexInput"
+            placeholder="粘贴 LLDP/CDP HEX 测试..."
+            class="ui-input px-2 py-0.5 text-[11px] w-44 font-mono"
+          />
+          <button @click="decodeL2HexSample" :disabled="!l2HexInput.trim()" class="ui-btn-secondary px-2 py-0.5 text-[11px]">解码入图</button>
+          <button v-if="l2Neighbors.length > 0" @click="clearL2Neighbors" class="ui-btn-secondary px-2 py-0.5 text-[11px]">清空</button>
+        </div>
       </div>
 
       <div class="flex-1 grid grid-cols-12 gap-3 overflow-hidden min-h-0">
@@ -883,18 +959,148 @@ interface PhysicalPortLocation {
   switch_id: string;
   switch_ip: string;
   switch_name: string;
-  if_index: number;
-  if_name: string;
-  vlan_id: number;
+  port_index: number;
+  port_name: string;
+  port_alias: string;
+  is_trunk_uplink: boolean;
+  link_speed_mbps: number;
+  port_error_count: number;
+}
+interface ProbeRuntimeStatus {
+  probe_id: string;
+  probe_ip: string;
+  probe_zone: string;
+  is_alive: boolean;
+  clock_skew_ns: number;
+  last_heartbeat_server_ns: number;
+  current_pps: number;
+  current_bps: number;
+  total_drops: number;
+  cpu_usage_pct: number;
+  memory_used_mb: number;
+}
+interface DistributedProbeCollector {
+  probes: Record<string, ProbeRuntimeStatus>;
+  heartbeat_timeout_secs: number;
+  total_cluster_pps: number;
+  total_cluster_bps: number;
+}
+interface RegisteredSwitchSummary {
+  switch_id: string;
+}
+interface L2DiscoveryNeighbor {
+  record_key: string;
+  protocol: string;
+  src_mac: string;
+  system_name: string;
+  port_id: string;
+  management_ip: string;
+  native_vlan: number | null;
+  ttl_secs: number;
+}
+interface SnmpSwitchDeviceResult {
+  sys_name: string;
+  management_ip: string;
+  mac_to_port: Record<string, number>;
 }
 
 const hierarchyViewport = ref<TopologyViewPortResult | null>(null);
+const probeCluster = ref<DistributedProbeCollector | null>(null);
+const registeredSwitchesCount = ref(0);
+const l2Neighbors = ref<L2DiscoveryNeighbor[]>([]);
+const l2HexInput = ref('');
+
+const snmpVersion = ref<'v2c' | 'v3'>('v2c');
+const snmpSwitchIp = ref('');
+const snmpCommunity = ref('public');
+const snmpV3User = ref('netops');
+const snmpV3AuthAlgo = ref<'None' | 'Md5' | 'Sha1' | 'Sha256'>('Sha1');
+const snmpV3AuthPass = ref('');
+const snmpV3PrivAlgo = ref<'None' | 'Aes128'>('Aes128');
+const snmpV3PrivPass = ref('');
+const isPollingSnmp = ref(false);
 const switchLocateIp = ref('');
 const switchPortLocResult = ref('');
 
+async function refreshProbeClusterAndSwitches() {
+  try {
+    const [cluster, switches, neighbors] = await Promise.all([
+      invoke<DistributedProbeCollector>('get_distributed_probe_cluster_cmd'),
+      invoke<RegisteredSwitchSummary[]>('list_registered_switches_cmd'),
+      invoke<L2DiscoveryNeighbor[]>('get_l2_discovery_neighbors_cmd')
+    ]);
+    probeCluster.value = cluster;
+    registeredSwitchesCount.value = Array.isArray(switches) ? switches.length : 0;
+    l2Neighbors.value = Array.isArray(neighbors) ? neighbors : [];
+  } catch (e) {
+    console.error('刷新分布式探针集群与交换机台账失败:', e);
+  }
+}
+
+async function decodeL2HexSample() {
+  const raw = l2HexInput.value.trim();
+  if (!raw) return;
+  try {
+    const res = await invoke<L2DiscoveryNeighbor>('decode_l2_discovery_hex_cmd', {
+      rawHex: raw,
+      ingest: true
+    });
+    l2HexInput.value = '';
+    switchPortLocResult.value = `二层 ${res.protocol} 解码入图: ${res.system_name} | 端口 ${res.port_id} | 管理 IP ${res.management_ip || 'N/A'}`;
+    await refreshProbeClusterAndSwitches();
+  } catch (e) {
+    switchPortLocResult.value = `LLDP/CDP 解码失败: ${String(e)}`;
+  }
+}
+
+async function clearL2Neighbors() {
+  await invoke<boolean>('clear_l2_discovery_neighbors_cmd');
+  await refreshProbeClusterAndSwitches();
+}
+
+async function pollSnmpSwitch() {
+  const ip = snmpSwitchIp.value.trim();
+  if (!ip || isPollingSnmp.value) return;
+  isPollingSnmp.value = true;
+  try {
+    let sw: SnmpSwitchDeviceResult;
+    if (snmpVersion.value === 'v3') {
+      sw = await invoke<SnmpSwitchDeviceResult>('poll_snmp_v3_switch_cmd', {
+        switchIp: ip,
+        port: 161,
+        creds: {
+          username: snmpV3User.value.trim(),
+          auth_algo: snmpV3AuthAlgo.value,
+          auth_password: snmpV3AuthPass.value,
+          priv_algo: snmpV3PrivAlgo.value,
+          priv_password: snmpV3PrivPass.value
+        }
+      });
+    } else {
+      const community = snmpCommunity.value.trim() || 'public';
+      sw = await invoke<SnmpSwitchDeviceResult>('poll_snmp_switch_cmd', {
+        switchIp: ip,
+        community,
+        port: 161
+      });
+    }
+    const macCount = sw && sw.mac_to_port ? Object.keys(sw.mac_to_port).length : 0;
+    switchPortLocResult.value = `SNMP${snmpVersion.value} 实采完成: [${sw.sys_name} (${sw.management_ip})] 已写入 ${macCount} 条 Bridge-MIB FDB 转发表`;
+    await refreshProbeClusterAndSwitches();
+  } catch (e) {
+    switchPortLocResult.value = `SNMP${snmpVersion.value} 采集失败: ${String(e)}`;
+  } finally {
+    isPollingSnmp.value = false;
+  }
+}
+
 async function fetchHierarchyViewport() {
   try {
-    hierarchyViewport.value = await invoke<TopologyViewPortResult>('get_hierarchical_topology_viewport_cmd', { maxBudget: 64 });
+    const [viewport] = await Promise.all([
+      invoke<TopologyViewPortResult>('get_hierarchical_topology_viewport_cmd', { maxBudget: 64 }),
+      refreshProbeClusterAndSwitches()
+    ]);
+    hierarchyViewport.value = viewport;
   } catch (e) {
     console.error('加载分层拓扑失败:', e);
   }
@@ -925,9 +1131,14 @@ async function locateSwitchPort() {
   if (!ip) return;
   try {
     const res = await invoke<PhysicalPortLocation | null>('locate_asset_switch_port_cmd', { ip, mac: null });
-    switchPortLocResult.value = res
-      ? `已定位至交换机 [${res.switch_name} (${res.switch_ip})] 物理端口 ${res.if_name} (VLAN ${res.vlan_id}) | MAC: ${res.target_mac}`
-      : `未在已登记 SNMP Bridge-MIB 转发表中匹配到 ${ip} 的物理接入端口`;
+    if (res) {
+      const aliasInfo = res.port_alias ? ` [${res.port_alias}]` : '';
+      const uplinkTag = res.is_trunk_uplink ? 'Uplink-Trunk' : 'Access';
+      switchPortLocResult.value =
+        `已定位至交换机 [${res.switch_name} (${res.switch_ip})] 物理端口 ${res.port_name}${aliasInfo} (#${res.port_index}, ${res.link_speed_mbps}Mbps, ${uplinkTag}, 错包:${res.port_error_count}) | MAC: ${res.target_mac}`;
+    } else {
+      switchPortLocResult.value = `未在已登记 SNMP Bridge-MIB 转发表中匹配到 ${ip} 的物理接入端口`;
+    }
   } catch (e) {
     switchPortLocResult.value = `查询失败: ${String(e)}`;
   }
@@ -1136,5 +1347,6 @@ function roleBadgeColor(role: string): string {
 
 onMounted(() => {
   loadSnapshots();
+  refreshProbeClusterAndSwitches();
 });
 </script>

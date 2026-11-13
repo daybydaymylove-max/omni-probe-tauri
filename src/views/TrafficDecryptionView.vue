@@ -119,15 +119,20 @@
               </span>
             </div>
           </div>
-          <span class="ui-pill text-[11px] px-2 py-0.5 rounded-full shrink-0 ui-num">
+          <button
+            @click="toggleActiveBlockingMode"
+            class="ui-pill text-[11px] px-2.5 py-1 rounded-full shrink-0 ui-num font-semibold cursor-pointer transition-colors"
+            :class="proxyStatus.active_blocking_enforced
+              ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40'
+              : 'hover:bg-[var(--surface-hover)]'"
+            title="切换 WAF / 敏感外传规则：纯审计放行 vs 返回 HTTP 403 主动阻断"
+          >
             {{
-              !proxyStatus.is_running
-                ? '未挂载代理'
-                : proxyStatus.active_blocking_enforced
-                  ? `已阻断 ${proxyStatus.blocked_requests}`
-                  : '只读审计'
+              proxyStatus.active_blocking_enforced
+                ? `已阻断 ${proxyStatus.blocked_requests} (点击切回放行)`
+                : '只读审计 (点击开阻断)'
             }}
-          </span>
+          </button>
         </div>
 
         <div class="ui-sub-card p-3 flex items-center justify-between gap-2">
@@ -1015,10 +1020,29 @@ const formatPayload = (snippet: string) => {
 // 后端交互
 const fetchStatus = async () => {
   try {
-    proxyStatus.value = await invoke<ProxyStatus>('get_proxy_status_cmd');
-    keylogStatus.value = await invoke<TlsKeyLogStatus>('get_keylog_status_cmd');
+    const [st, kl, blockingEnforced] = await Promise.all([
+      invoke<ProxyStatus>('get_proxy_status_cmd'),
+      invoke<TlsKeyLogStatus>('get_keylog_status_cmd'),
+      invoke<boolean>('get_active_blocking_mode_cmd'),
+    ]);
+    proxyStatus.value = { ...st, active_blocking_enforced: blockingEnforced };
+    keylogStatus.value = kl;
   } catch (e) {
     console.error('获取代理状态失败:', e);
+  }
+};
+
+const toggleActiveBlockingMode = async () => {
+  try {
+    const next = !proxyStatus.value.active_blocking_enforced;
+    const confirmed = await invoke<boolean>('set_active_blocking_mode_cmd', { enforced: next });
+    proxyStatus.value.active_blocking_enforced = confirmed;
+    notifySuccess(
+      confirmed ? '已启用主动阻断拦截模式' : '已切换为透明审计放行模式',
+      confirmed ? '命中 BLOCK 安全规则的解密代理请求将返回 HTTP 403 截断' : '全部请求将透传放行并仅留存完整比对日志'
+    );
+  } catch (e) {
+    notifyError('切换阻断拦截策略失败', e);
   }
 };
 

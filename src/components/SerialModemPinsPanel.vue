@@ -162,6 +162,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import AppIcon from './AppIcon.vue';
 
 export interface SerialModemStatus {
@@ -261,13 +262,44 @@ function togglePolling() {
   }
 }
 
-onMounted(() => {
+let unlistenModemChanged: UnlistenFn | null = null;
+
+onMounted(async () => {
   if (selectedPort.value) {
     fetchStatus();
+  }
+  try {
+    unlistenModemChanged = await listen<Partial<SerialModemStatus> & { port?: string }>(
+      'serial-modem-status-changed',
+      ({ payload }) => {
+        const targetPort = payload.port || payload.port_name;
+        if (!targetPort || targetPort === selectedPort.value) {
+          if (modemStatus.value) {
+            modemStatus.value = {
+              ...modemStatus.value,
+              cts: payload.cts ?? modemStatus.value.cts,
+              dsr: payload.dsr ?? modemStatus.value.dsr,
+              ri: payload.ri ?? modemStatus.value.ri,
+              cd: payload.cd ?? modemStatus.value.cd,
+              rts: payload.rts ?? modemStatus.value.rts,
+              dtr: payload.dtr ?? modemStatus.value.dtr,
+            };
+          } else {
+            fetchStatus();
+          }
+        }
+      }
+    );
+  } catch (e) {
+    console.warn('[SerialModemPinsPanel] 挂载引脚事件监听失败:', e);
   }
 });
 
 onUnmounted(() => {
+  if (unlistenModemChanged) {
+    unlistenModemChanged();
+    unlistenModemChanged = null;
+  }
   if (pollTimer) {
     clearInterval(pollTimer);
     pollTimer = null;

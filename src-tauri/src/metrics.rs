@@ -60,10 +60,9 @@ pub fn start_metrics_server(app: tauri::AppHandle, port: u16) {
     });
 }
 
-/// 处理单次 HTTP 请求，输出 Prometheus text format
+/// 处理单次 HTTP 请求，支持 GET /metrics (Prometheus) 与 POST /probe/heartbeat (边缘探针上报接入)
 async fn handle_metrics_request(stream: &mut tokio::net::TcpStream) {
-    // 读取请求行（只关心路径，不做完整 HTTP 解析）
-    let mut buf = vec![0u8; 1024];
+    let mut buf = vec![0u8; 8192];
     let n = match tokio::time::timeout(
         std::time::Duration::from_millis(500),
         tokio::io::AsyncReadExt::read(stream, &mut buf),
@@ -73,15 +72,40 @@ async fn handle_metrics_request(stream: &mut tokio::net::TcpStream) {
     };
 
     let req = String::from_utf8_lossy(&buf[..n]);
-    let is_metrics_path = req.starts_with("GET /metrics");
-
-    let response = if is_metrics_path {
+    let response = if req.starts_with("GET /metrics") {
         let body = build_metrics_body();
         format!(
             "HTTP/1.1 200 OK\r\nContent-Type: text/plain; version=0.0.4; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
             body.len(),
             body
         )
+    } else if req.starts_with("POST /probe/heartbeat") || req.starts_with("POST /api/probe/heartbeat") {
+        let body_part = req.split("\r\n\r\n").nth(1).unwrap_or("").trim();
+        match serde_json::from_str::<crate::snmp_topology::ProbeHeartbeat>(body_part) {
+            Ok(hb) => {
+                let now_ns = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_nanos() as u64;
+                if let Ok(mut collector) = crate::snmp_topology::GLOBAL_PROBE_COLLECTOR.lock() {
+                    collector.process_heartbeat(hb, now_ns);
+                }
+                let ok_body = r#"{"status":"accepted"}"#;
+                format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    ok_body.len(),
+                    ok_body
+                )
+            }
+            Err(e) => {
+                let err_body = format!(r#"{{"status":"error","message":"{}"}}"#, e);
+                format!(
+                    "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    err_body.len(),
+                    err_body
+                )
+            }
+        }
     } else {
         "HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\nNot Found".to_string()
     };

@@ -13,7 +13,7 @@
             <h3 class="text-sm font-bold flex items-center gap-2" style="color: var(--text-primary)">
               <span>系统偏好设置中心</span>
               <span class="text-[11px] ui-num px-2 py-0.5 rounded-full bg-sky-500/12 text-sky-700 dark:text-sky-300 border border-sky-500/25 font-bold">
-                v0.3.2
+                v0.3.4
               </span>
             </h3>
             <div class="text-[11px] ui-num mt-0.5" style="color: var(--text-muted)">
@@ -89,7 +89,7 @@
               <div>
                 <div class="flex items-center gap-2">
                   <span class="text-xs font-bold" style="color: var(--text-primary)">当前安装版本:</span>
-                  <span class="text-xs ui-num font-bold" style="color: var(--accent-primary-text)">v0.3.2</span>
+                  <span class="text-xs ui-num font-bold" style="color: var(--accent-primary-text)">v0.3.4</span>
                   <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-500/25">原生桌面多平台架构</span>
                 </div>
                 <div class="text-[11px] mt-1" style="color: var(--text-muted)">官方仓库: github.com/daybydaymylove-max/omni-probe-tauri</div>
@@ -195,6 +195,63 @@
               </span>
             </div>
 
+            <!-- 抓包截断策略 (SnaplenMode) -->
+            <div class="p-3.5 ui-sub-card space-y-2.5">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <div class="text-xs font-bold" style="color: var(--text-primary)">链路抓包截断策略 (Snaplen)</div>
+                  <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">控制持续落盘写入的单个报文最大截取长度，平衡取证完整性与磁盘 I/O</div>
+                </div>
+                <div class="flex items-center gap-1.5 text-xs">
+                  <button
+                    @click="saveSnaplenMode('full')"
+                    :class="['px-2.5 py-1 rounded-lg font-semibold cursor-pointer', snaplenMode === 'full' ? 'bg-sky-600 text-white' : 'ui-btn-secondary']"
+                  >
+                    全帧保全 (Full)
+                  </button>
+                  <button
+                    @click="saveSnaplenMode('header_only')"
+                    :class="['px-2.5 py-1 rounded-lg font-semibold cursor-pointer', snaplenMode === 'header_only' ? 'bg-sky-600 text-white' : 'ui-btn-secondary']"
+                  >
+                    仅包头 (96B)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 持续滚动 PCAP 分卷落盘引擎设置 -->
+            <div class="p-3.5 ui-sub-card space-y-3 text-xs">
+              <div class="flex items-center justify-between gap-2">
+                <div>
+                  <div class="font-bold" style="color: var(--text-primary)">持续滚动 PCAP 分卷落盘引擎</div>
+                  <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">自动按文件体积切割滚动 PCAP，并在超出配额时 FIFO 清理历史分片</div>
+                </div>
+                <label class="flex items-center gap-1.5 cursor-pointer font-semibold" style="color: var(--text-primary)">
+                  <input type="checkbox" v-model="rollingCfg.enabled" class="accent-sky-600" />
+                  <span>{{ rollingCfg.enabled ? '已启用' : '未启用' }}</span>
+                </label>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 ui-num">
+                <div>
+                  <div class="text-[10px] mb-1" style="color: var(--text-muted)">输出目录</div>
+                  <input v-model="rollingCfg.output_dir" class="ui-input w-full px-2 py-1 text-xs" placeholder="./captures" />
+                </div>
+                <div>
+                  <div class="text-[10px] mb-1" style="color: var(--text-muted)">单卷上限 (MB)</div>
+                  <input v-model.number="rollingCfg.max_size_mb" type="number" min="1" max="4096" class="ui-input w-full px-2 py-1 text-xs" />
+                </div>
+                <div>
+                  <div class="text-[10px] mb-1" style="color: var(--text-muted)">总磁盘配额 (GB)</div>
+                  <input v-model.number="rollingCfg.max_quota_gb" type="number" min="1" max="1024" class="ui-input w-full px-2 py-1 text-xs" />
+                </div>
+              </div>
+              <div class="flex justify-end">
+                <button @click="saveRollingPcapConfig" class="ui-btn-primary px-3 py-1 rounded-xl text-xs font-semibold">
+                  应用落盘策略
+                </button>
+              </div>
+            </div>
+
             <div class="p-3.5 rounded-2xl bg-rose-500/8 border border-rose-500/25 flex items-center justify-between gap-4">
               <div>
                 <div class="text-xs font-bold text-rose-700 dark:text-rose-300">清空捕获缓冲池与内核日志</div>
@@ -223,13 +280,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { notifySuccess, notifyError, notifyInfo } from '../composables/useNotification';
 import AppIcon from './AppIcon.vue';
 
-defineProps<{
+const props = defineProps<{
   isOpen: boolean;
   isLight: boolean;
   isDockExpanded: boolean;
@@ -302,4 +359,73 @@ async function openLink(url: string) {
     notifyError('无法唤起系统浏览器打开链接', String(e));
   }
 }
+
+// 4. 存证与滚动 PCAP / Snaplen 策略状态
+interface BackendRollingConfig {
+  enabled: boolean;
+  output_dir: string;
+  max_file_size_bytes: number;
+  max_file_duration_secs: number;
+  max_disk_quota_bytes: number;
+  snaplen_mode: 'Full' | { HeaderOnly: number } | string;
+}
+
+const snaplenMode = ref<'full' | 'header_only'>('full');
+const rollingCfg = ref({
+  enabled: false,
+  output_dir: './captures',
+  max_size_mb: 50,
+  max_duration_secs: 3600,
+  max_quota_gb: 2,
+});
+
+async function loadStorageEngineConfig() {
+  try {
+    const cfg = await invoke<BackendRollingConfig>('get_rolling_pcap_config_cmd');
+    rollingCfg.value = {
+      enabled: cfg.enabled,
+      output_dir: cfg.output_dir || './captures',
+      max_size_mb: Math.max(1, Math.round(cfg.max_file_size_bytes / (1024 * 1024))),
+      max_duration_secs: cfg.max_file_duration_secs || 3600,
+      max_quota_gb: Math.max(1, Math.round(cfg.max_disk_quota_bytes / (1024 * 1024 * 1024))),
+    };
+    snaplenMode.value = cfg.snaplen_mode === 'Full' ? 'full' : 'header_only';
+  } catch (e) {
+    console.warn('[PreferencesModal] 获取滚动落盘配置失败:', e);
+  }
+}
+
+async function saveSnaplenMode(mode: 'full' | 'header_only') {
+  try {
+    snaplenMode.value = mode;
+    const msg = await invoke<string>('set_snaplen_mode_cmd', { mode, limit: mode === 'header_only' ? 96 : null });
+    notifySuccess('抓包截断策略已更新', msg);
+  } catch (e) {
+    notifyError('设置 Snaplen 失败', String(e));
+  }
+}
+
+async function saveRollingPcapConfig() {
+  try {
+    const msg = await invoke<string>('set_rolling_pcap_config_cmd', {
+      enabled: rollingCfg.value.enabled,
+      outputDir: rollingCfg.value.output_dir.trim() || './captures',
+      maxSizeMb: Math.max(1, Number(rollingCfg.value.max_size_mb) || 50),
+      maxDurationSecs: Math.max(60, Number(rollingCfg.value.max_duration_secs) || 3600),
+      maxQuotaGb: Math.max(1, Number(rollingCfg.value.max_quota_gb) || 2),
+    });
+    notifySuccess('滚动落盘配置已生效', msg);
+  } catch (e) {
+    notifyError('更新滚动落盘配置失败', String(e));
+  }
+}
+
+watch(
+  () => props.isOpen,
+  (open) => {
+    if (open) {
+      loadStorageEngineConfig();
+    }
+  }
+);
 </script>

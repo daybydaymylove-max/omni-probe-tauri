@@ -16,41 +16,32 @@
 // 7. 防御性极限编程与零占位符 (Zero Placeholders): 严格覆盖超时丢包、私网保留段、跨国越野等边界测试.
 // ============================================================
 
-use std::collections::HashMap;
 use std::net::Ipv4Addr;
 use std::process::Stdio;
 use std::str::FromStr;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
-use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
 use crate::ip_intelligence::GLOBAL_IP_ENGINE;
+pub use crate::geo_coordinates_catalog::{GeoCoordinates, OfflineGeoCatalog, GLOBAL_GEO_CATALOG};
 
-/// 物理地理经纬度坐标点
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct GeoCoordinates {
-    /// 纬度 (-90.0 ~ +90.0)
-    pub latitude: f64,
-    /// 经度 (-180.0 ~ +180.0)
-    pub longitude: f64,
-    /// 国家/地区代码 (ISO 3166-1 alpha-2 / 国家名称)
-    pub country: String,
-    /// 省份/州名称
-    pub province: String,
-    /// 城市名称
-    pub city: String,
-    /// 显示标签
-    pub label: String,
-}
+/// 全局任务取消标志
+pub static CANCEL_TRACEROUTE: AtomicBool = AtomicBool::new(false);
+/// 全局任务正在运行标志
+pub static TRACEROUTE_RUNNING: AtomicBool = AtomicBool::new(false);
 
 /// 单跳路由探测结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TracerouteHop {
-    /// 跳数序号 (从 1 开始)
+    /// 跳数序号 (从 1 开始，0 为本机起点)
     pub hop: u32,
+    /// 兼容前端历史命名字段 hop_number
+    #[serde(default)]
+    pub hop_number: u32,
     /// 响应路由器 IP 地址
     pub ip: String,
     /// 往返时延 RTT (毫秒)
@@ -59,6 +50,15 @@ pub struct TracerouteHop {
     pub is_timeout: bool,
     /// 经纬度地理坐标 (若可解析)
     pub geo: Option<GeoCoordinates>,
+    /// 平铺纬度 (-90.0 ~ +90.0)
+    #[serde(default)]
+    pub latitude: f64,
+    /// 平铺经度 (-180.0 ~ +180.0)
+    #[serde(default)]
+    pub longitude: f64,
+    /// 是否具备有效地理空间坐标
+    #[serde(default)]
+    pub has_geo: bool,
     /// 归属国家
     pub country: String,
     /// 归属省份
@@ -83,6 +83,12 @@ pub struct TracerouteHop {
     pub lan_role: Option<String>,
     /// 局域网所属子网网段 (例如 192.168.31.0/24)
     pub subnet_cidr: Option<String>,
+    /// 是否为最终到达目标端点
+    #[serde(default)]
+    pub is_destination: bool,
+    /// 缓冲排队拥塞膨胀率 (实测 RTT / 理论光纤 RTT)
+    #[serde(default)]
+    pub bufferbloat_ratio: f64,
 }
 
 /// 完整路由追踪诊断报告
@@ -152,349 +158,9 @@ pub fn estimate_theoretical_fiber_rtt_ms(distance_km: f64) -> f64 {
 }
 
 // ============================================================
-// 2. 全球与全国离线高精经纬度坐标烘焙字典库 (100% 离线脱机)
+// 2. 全球与全国离线高精经纬度坐标地理空间引擎
+// 模块已解耦迁移至 crate::geo_coordinates_catalog，提供 333+ 中国地级市与全球 200+ 国家全覆盖
 // ============================================================
-
-pub struct OfflineGeoCatalog {
-    city_map: HashMap<&'static str, (f64, f64)>,
-    province_map: HashMap<&'static str, (f64, f64)>,
-    country_map: HashMap<&'static str, (f64, f64)>,
-    local_anchor: (f64, f64),
-}
-
-impl OfflineGeoCatalog {
-    pub fn new() -> Self {
-        let mut city_map = HashMap::new();
-        let mut province_map = HashMap::new();
-        let mut country_map = HashMap::new();
-
-        // 2.1 中国主要核心枢纽城市
-        city_map.insert("北京", (39.9042, 116.4074));
-        city_map.insert("上海", (31.2304, 121.4737));
-        city_map.insert("深圳", (22.5431, 114.0579));
-        city_map.insert("广州", (23.1291, 113.2644));
-        city_map.insert("杭州", (30.2741, 120.1551));
-        city_map.insert("南京", (32.0603, 118.7969));
-        city_map.insert("武汉", (30.5928, 114.3055));
-        city_map.insert("成都", (30.5728, 104.0668));
-        city_map.insert("重庆", (29.5630, 106.5516));
-        city_map.insert("西安", (34.3416, 108.9398));
-        city_map.insert("郑州", (34.7466, 113.6253));
-        city_map.insert("济南", (36.6512, 117.1201));
-        city_map.insert("青岛", (36.0671, 120.3826));
-        city_map.insert("合肥", (31.8206, 117.2272));
-        city_map.insert("福州", (26.0745, 119.2965));
-        city_map.insert("厦门", (24.4798, 118.0894));
-        city_map.insert("长沙", (28.2282, 112.9388));
-        city_map.insert("南昌", (28.6820, 115.8579));
-        city_map.insert("沈阳", (41.8057, 123.4315));
-        city_map.insert("大连", (38.9140, 121.6147));
-        city_map.insert("长春", (43.8171, 125.3235));
-        city_map.insert("哈尔滨", (45.8038, 126.5349));
-        city_map.insert("天津", (39.0842, 117.2009));
-        city_map.insert("石家庄", (38.0428, 114.5149));
-        city_map.insert("太原", (37.8706, 112.5489));
-        city_map.insert("呼和浩特", (40.8415, 111.7519));
-        city_map.insert("南宁", (22.8170, 108.3665));
-        city_map.insert("海口", (20.0440, 110.1999));
-        city_map.insert("三亚", (18.2528, 109.5119));
-        city_map.insert("贵阳", (26.6477, 106.6302));
-        city_map.insert("昆明", (24.8801, 102.8329));
-        city_map.insert("拉萨", (29.6525, 91.1721));
-        city_map.insert("兰州", (36.0611, 103.8343));
-        city_map.insert("西宁", (36.6232, 101.7789));
-        city_map.insert("银川", (38.4872, 106.2309));
-        city_map.insert("乌鲁木齐", (43.8256, 87.6168));
-        city_map.insert("香港", (22.3193, 114.1694));
-        city_map.insert("澳门", (22.1987, 113.5439));
-        city_map.insert("台北", (25.0330, 121.5654));
-        city_map.insert("高雄", (22.6273, 120.3014));
-
-        // 2.2 中国各省中心坐标 (二级回退)
-        province_map.insert("广东", (23.1291, 113.2644));
-        province_map.insert("江苏", (32.0603, 118.7969));
-        province_map.insert("浙江", (30.2741, 120.1551));
-        province_map.insert("山东", (36.6512, 117.1201));
-        province_map.insert("河南", (34.7466, 113.6253));
-        province_map.insert("四川", (30.5728, 104.0668));
-        province_map.insert("湖北", (30.5928, 114.3055));
-        province_map.insert("湖南", (28.2282, 112.9388));
-        province_map.insert("河北", (38.0428, 114.5149));
-        province_map.insert("福建", (26.0745, 119.2965));
-        province_map.insert("安徽", (31.8206, 117.2272));
-        province_map.insert("辽宁", (41.8057, 123.4315));
-        province_map.insert("陕西", (34.3416, 108.9398));
-        province_map.insert("江西", (28.6820, 115.8579));
-        province_map.insert("重庆", (29.5630, 106.5516));
-        province_map.insert("广西", (22.8170, 108.3665));
-        province_map.insert("云南", (24.8801, 102.8329));
-        province_map.insert("山西", (37.8706, 112.5489));
-        province_map.insert("贵州", (26.6477, 106.6302));
-        province_map.insert("吉林", (43.8171, 125.3235));
-        province_map.insert("黑龙江", (45.8038, 126.5349));
-        province_map.insert("内蒙古", (40.8415, 111.7519));
-        province_map.insert("新疆", (43.8256, 87.6168));
-        province_map.insert("甘肃", (36.0611, 103.8343));
-        province_map.insert("海南", (20.0440, 110.1999));
-        province_map.insert("宁夏", (38.4872, 106.2309));
-        province_map.insert("青海", (36.6232, 101.7789));
-        province_map.insert("西藏", (29.6525, 91.1721));
-        province_map.insert("台湾", (25.0330, 121.5654));
-
-        // 2.3 国际主要国家与网络核心枢纽 (中英双语全面支持 xdb 输出格式)
-        country_map.insert("中国", (35.8617, 104.1954));
-        country_map.insert("China", (35.8617, 104.1954));
-        country_map.insert("美国", (37.0902, -95.7129));
-        country_map.insert("United States", (37.0902, -95.7129));
-        country_map.insert("日本", (36.2048, 138.2529));
-        country_map.insert("Japan", (36.2048, 138.2529));
-        country_map.insert("新加坡", (1.3521, 103.8198));
-        country_map.insert("Singapore", (1.3521, 103.8198));
-        country_map.insert("韩国", (35.9078, 127.7669));
-        country_map.insert("South Korea", (35.9078, 127.7669));
-        country_map.insert("Korea", (35.9078, 127.7669));
-        country_map.insert("德国", (51.1657, 10.4515));
-        country_map.insert("Germany", (51.1657, 10.4515));
-        country_map.insert("英国", (55.3781, -3.4360));
-        country_map.insert("United Kingdom", (55.3781, -3.4360));
-        country_map.insert("法国", (46.2276, 2.2137));
-        country_map.insert("France", (46.2276, 2.2137));
-        country_map.insert("荷兰", (52.1326, 5.2913));
-        country_map.insert("Netherlands", (52.1326, 5.2913));
-        country_map.insert("俄罗斯", (61.5240, 105.3188));
-        country_map.insert("Russia", (61.5240, 105.3188));
-        country_map.insert("Russian Federation", (61.5240, 105.3188));
-        country_map.insert("加拿大", (56.1304, -106.3468));
-        country_map.insert("Canada", (56.1304, -106.3468));
-        country_map.insert("澳大利亚", (-25.2744, 133.7751));
-        country_map.insert("Australia", (-25.2744, 133.7751));
-        country_map.insert("印度", (20.5937, 78.9629));
-        country_map.insert("India", (20.5937, 78.9629));
-        country_map.insert("巴西", (-14.2350, -51.9253));
-        country_map.insert("Brazil", (-14.2350, -51.9253));
-        country_map.insert("南非", (-30.5595, 22.9375));
-        country_map.insert("South Africa", (-30.5595, 22.9375));
-        country_map.insert("阿联酋", (23.4241, 53.8478));
-        country_map.insert("United Arab Emirates", (23.4241, 53.8478));
-        country_map.insert("瑞士", (46.8182, 8.2275));
-        country_map.insert("Switzerland", (46.8182, 8.2275));
-        country_map.insert("瑞典", (60.1282, 18.6435));
-        country_map.insert("Sweden", (60.1282, 18.6435));
-        country_map.insert("芬兰", (61.9241, 25.7482));
-        country_map.insert("Finland", (61.9241, 25.7482));
-        country_map.insert("挪威", (60.4720, 8.4689));
-        country_map.insert("Norway", (60.4720, 8.4689));
-        country_map.insert("丹麦", (56.2639, 9.5018));
-        country_map.insert("Denmark", (56.2639, 9.5018));
-        country_map.insert("爱尔兰", (53.1424, -7.6921));
-        country_map.insert("Ireland", (53.1424, -7.6921));
-        country_map.insert("波兰", (51.9194, 19.1451));
-        country_map.insert("Poland", (51.9194, 19.1451));
-        country_map.insert("意大利", (41.8719, 12.5674));
-        country_map.insert("Italy", (41.8719, 12.5674));
-        country_map.insert("西班牙", (40.4637, -3.7492));
-        country_map.insert("Spain", (40.4637, -3.7492));
-        country_map.insert("葡萄牙", (39.3999, -8.2245));
-        country_map.insert("Portugal", (39.3999, -8.2245));
-        country_map.insert("乌克兰", (48.3794, 31.1656));
-        country_map.insert("Ukraine", (48.3794, 31.1656));
-        country_map.insert("土耳其", (38.9637, 35.2433));
-        country_map.insert("Turkey", (38.9637, 35.2433));
-        country_map.insert("以色列", (31.0461, 34.8516));
-        country_map.insert("Israel", (31.0461, 34.8516));
-        country_map.insert("泰国", (15.8700, 100.9925));
-        country_map.insert("Thailand", (15.8700, 100.9925));
-        country_map.insert("越南", (14.0583, 108.2772));
-        country_map.insert("Vietnam", (14.0583, 108.2772));
-        country_map.insert("马来西亚", (4.2105, 101.9758));
-        country_map.insert("Malaysia", (4.2105, 101.9758));
-        country_map.insert("印度尼西亚", (-0.7893, 113.9213));
-        country_map.insert("Indonesia", (-0.7893, 113.9213));
-        country_map.insert("菲律宾", (12.8797, 121.7740));
-        country_map.insert("Philippines", (12.8797, 121.7740));
-        country_map.insert("墨西哥", (23.6345, -102.5528));
-        country_map.insert("Mexico", (23.6345, -102.5528));
-        country_map.insert("阿根廷", (-38.4161, -63.6167));
-        country_map.insert("Argentina", (-38.4161, -63.6167));
-        country_map.insert("智利", (-35.6751, -71.5430));
-        country_map.insert("Chile", (-35.6751, -71.5430));
-        country_map.insert("新西兰", (-40.9006, 174.8860));
-        country_map.insert("New Zealand", (-40.9006, 174.8860));
-        country_map.insert("沙特", (23.8859, 45.0792));
-        country_map.insert("Saudi Arabia", (23.8859, 45.0792));
-        country_map.insert("埃及", (26.8206, 30.8025));
-        country_map.insert("Egypt", (26.8206, 30.8025));
-        country_map.insert("香港", (22.3193, 114.1694));
-        country_map.insert("Hong Kong", (22.3193, 114.1694));
-        country_map.insert("台湾", (25.0330, 121.5654));
-        country_map.insert("Taiwan", (25.0330, 121.5654));
-
-        // 国际美国主要州中心 (中英文)
-        province_map.insert("加利福尼亚", (36.7783, -119.4179));
-        province_map.insert("California", (36.7783, -119.4179));
-        province_map.insert("德克萨斯", (31.9686, -99.9018));
-        province_map.insert("Texas", (31.9686, -99.9018));
-        province_map.insert("纽约", (40.7128, -74.0060));
-        province_map.insert("New York", (40.7128, -74.0060));
-        province_map.insert("华盛顿", (47.7511, -120.7401));
-        province_map.insert("Washington", (47.7511, -120.7401));
-        province_map.insert("弗吉尼亚", (37.4316, -78.6569));
-        province_map.insert("Virginia", (37.4316, -78.6569));
-        province_map.insert("俄勒冈", (43.8041, -120.5542));
-        province_map.insert("Oregon", (43.8041, -120.5542));
-        province_map.insert("伊利诺伊", (40.6331, -89.3985));
-        province_map.insert("Illinois", (40.6331, -89.3985));
-        province_map.insert("佛罗里达", (27.6648, -81.5158));
-        province_map.insert("Florida", (27.6648, -81.5158));
-        province_map.insert("马萨诸塞", (42.4072, -71.3824));
-        province_map.insert("Massachusetts", (42.4072, -71.3824));
-        province_map.insert("新泽西", (40.0583, -74.4057));
-        province_map.insert("New Jersey", (40.0583, -74.4057));
-
-        // 国际著名骨干机房城市 (中英文双语模糊匹配)
-        city_map.insert("东京", (35.6762, 139.6503));
-        city_map.insert("大阪", (34.6937, 135.5023));
-        city_map.insert("首尔", (37.5665, 126.9780));
-        city_map.insert("硅谷", (37.3861, -122.0839));
-        city_map.insert("圣何塞", (37.3382, -121.8863));
-        city_map.insert("旧金山", (37.7749, -122.4194));
-        city_map.insert("洛杉矶", (34.0522, -118.2437));
-        city_map.insert("西雅图", (47.6062, -122.3321));
-        city_map.insert("芝加哥", (41.8781, -87.6298));
-        city_map.insert("达拉斯", (32.7767, -96.7970));
-        city_map.insert("纽约", (40.7128, -74.0060));
-        city_map.insert("阿什本", (39.0438, -77.4874)); // 全球最大互联网交换中心
-        city_map.insert("法兰克福", (50.1109, 8.6821));
-        city_map.insert("柏林", (52.5200, 13.4050));
-        city_map.insert("慕尼黑", (48.1351, 11.5820));
-        city_map.insert("伦敦", (51.5074, -0.1278));
-        city_map.insert("巴黎", (48.8566, 2.3522));
-        city_map.insert("阿姆斯特丹", (52.3676, 4.9041));
-        city_map.insert("苏黎世", (47.3769, 8.5417));
-        city_map.insert("斯德哥尔摩", (59.3293, 18.0686));
-        city_map.insert("莫斯科", (55.7558, 37.6173));
-        city_map.insert("迪拜", (25.2048, 55.2708));
-        city_map.insert("孟买", (19.0760, 72.8777));
-        city_map.insert("悉尼", (-33.8688, 151.2093));
-        city_map.insert("墨尔本", (-37.8136, 144.9631));
-        city_map.insert("多伦多", (43.6532, -79.3832));
-        city_map.insert("温哥华", (49.2827, -123.1207));
-        city_map.insert("圣保罗", (-23.5505, -46.6333));
-        city_map.insert("曼谷", (13.7563, 100.5018));
-        city_map.insert("吉隆坡", (3.1390, 101.6869));
-        city_map.insert("雅加达", (-6.2088, 106.8456));
-        city_map.insert("马尼拉", (14.5995, 120.9842));
-        city_map.insert("河内", (21.0285, 105.8542));
-        city_map.insert("胡志明", (10.8231, 106.6297));
-        // 常见直辖与英文别名
-        city_map.insert("Beijing", (39.9042, 116.4074));
-        city_map.insert("Shanghai", (31.2304, 121.4737));
-        city_map.insert("Shenzhen", (22.5431, 114.0579));
-        city_map.insert("Guangzhou", (23.1291, 113.2644));
-        city_map.insert("Hong Kong", (22.3193, 114.1694));
-        city_map.insert("Tokyo", (35.6762, 139.6503));
-        city_map.insert("Singapore", (1.3521, 103.8198));
-        city_map.insert("Seoul", (37.5665, 126.9780));
-        city_map.insert("San Jose", (37.3382, -121.8863));
-        city_map.insert("Los Angeles", (34.0522, -118.2437));
-        city_map.insert("Seattle", (47.6062, -122.3321));
-        city_map.insert("New York", (40.7128, -74.0060));
-        city_map.insert("Ashburn", (39.0438, -77.4874));
-        city_map.insert("Frankfurt", (50.1109, 8.6821));
-        city_map.insert("London", (51.5074, -0.1278));
-        city_map.insert("Amsterdam", (52.3676, 4.9041));
-        city_map.insert("Sydney", (-33.8688, 151.2093));
-
-        Self {
-            city_map,
-            province_map,
-            country_map,
-            // 探针本机默认锚点 (深圳 / 珠三角工业网络核心, 可配置)
-            local_anchor: (22.5431, 114.0579),
-        }
-    }
-
-    /// 根据归属地层级 (国家, 省份, 城市) 依次多级模糊匹配出最优经纬度坐标
-    pub fn lookup(&self, country: &str, province: &str, city: &str) -> Option<GeoCoordinates> {
-        let city_lower = city.trim().to_lowercase();
-        let prov_lower = province.trim().to_lowercase();
-        let ctry_lower = country.trim().to_lowercase();
-
-        let match_field = |input: &str, key: &str| -> bool {
-            if input.is_empty() || input == "0" {
-                return false;
-            }
-            if input.contains(key) {
-                return true;
-            }
-            input.chars().count() >= 2 && key.contains(input)
-        };
-
-        // 1. 优先尝试精准匹配城市 (兼容城市名落在 city 或 province 直辖市字段)
-        for (c_name, &(lat, lon)) in &self.city_map {
-            let c_low = c_name.to_lowercase();
-            let hit_city = match_field(&city_lower, &c_low);
-            let hit_prov = match_field(&prov_lower, &c_low);
-            if hit_city || hit_prov {
-                let disp_city = if !city.is_empty() { city } else { province };
-                return Some(GeoCoordinates {
-                    latitude: lat,
-                    longitude: lon,
-                    country: country.to_string(),
-                    province: province.to_string(),
-                    city: disp_city.to_string(),
-                    label: format!("{}/{}", country, disp_city),
-                });
-            }
-        }
-
-        // 2. 二级回退: 匹配省份中心
-        for (p_name, &(lat, lon)) in &self.province_map {
-            let p_low = p_name.to_lowercase();
-            if match_field(&prov_lower, &p_low) {
-                return Some(GeoCoordinates {
-                    latitude: lat,
-                    longitude: lon,
-                    country: country.to_string(),
-                    province: province.to_string(),
-                    city: province.to_string(),
-                    label: format!("{}/{}", country, province),
-                });
-            }
-        }
-
-        // 3. 三级回退: 匹配国家中心
-        for (ctry_name, &(lat, lon)) in &self.country_map {
-            let c_low = ctry_name.to_lowercase();
-            if match_field(&ctry_lower, &c_low) {
-                return Some(GeoCoordinates {
-                    latitude: lat,
-                    longitude: lon,
-                    country: country.to_string(),
-                    province: String::new(),
-                    city: String::new(),
-                    label: country.to_string(),
-                });
-            }
-        }
-
-        None
-    }
-
-    /// 获取本地探针物理起点的经纬度坐标锚点
-    pub fn get_local_anchor(&self) -> GeoCoordinates {
-        GeoCoordinates {
-            latitude: self.local_anchor.0,
-            longitude: self.local_anchor.1,
-            country: "中国".to_string(),
-            province: "广东".to_string(),
-            city: "本地探针终端".to_string(),
-            label: "本地监控节点 (Probe Source)".to_string(),
-        }
-    }
-}
-
-pub static GLOBAL_GEO_CATALOG: Lazy<OfflineGeoCatalog> = Lazy::new(OfflineGeoCatalog::new);
 
 /// 自动探测使用者访问指定目标时所使用的本地活跃出站 IPv4 地址 (无需网络通信，由 OS 路由表内核判定)
 pub fn detect_outbound_local_ip(target: &str) -> Ipv4Addr {
@@ -611,12 +277,22 @@ pub fn resolve_self_ip_geo(target: Option<&str>) -> (Ipv4Addr, TracerouteHop) {
             .or_else(|| Some(GLOBAL_GEO_CATALOG.get_local_anchor()))
     };
 
+    let (latitude, longitude, has_geo) = if let Some(ref g) = geo {
+        (g.latitude, g.longitude, true)
+    } else {
+        (0.0, 0.0, false)
+    };
+
     let hop = TracerouteHop {
         hop: 0,
+        hop_number: 0,
         ip: local_ip_str,
         rtt_ms: Some(0.0),
         is_timeout: false,
         geo,
+        latitude,
+        longitude,
+        has_geo,
         country,
         province,
         city,
@@ -628,6 +304,8 @@ pub fn resolve_self_ip_geo(target: Option<&str>) -> (Ipv4Addr, TracerouteHop) {
         is_lan: is_self_lan,
         lan_role,
         subnet_cidr,
+        is_destination: false,
+        bufferbloat_ratio: 1.0,
     };
 
     (local_ip, hop)
@@ -729,9 +407,18 @@ pub async fn execute_traceroute(
 
     cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
 
-    let mut child = cmd.spawn().map_err(|e| format!("启动路由追踪进程失败: {}", e))?;
-    let stdout = child.stdout.take().ok_or("无法捕获进程标准输出")?;
-    let mut reader = BufReader::new(stdout).lines();
+    CANCEL_TRACEROUTE.store(false, Ordering::SeqCst);
+    TRACEROUTE_RUNNING.store(true, Ordering::SeqCst);
+
+    let mut child = cmd.spawn().map_err(|e| {
+        TRACEROUTE_RUNNING.store(false, Ordering::SeqCst);
+        format!("启动路由追踪进程失败: {}", e)
+    })?;
+    let stdout = child.stdout.take().ok_or_else(|| {
+        TRACEROUTE_RUNNING.store(false, Ordering::SeqCst);
+        "无法捕获进程标准输出".to_string()
+    })?;
+    let mut reader = BufReader::new(stdout);
 
     // 1. 立即探测并确定使用者的自我 IP (Self Local/Public IP) 与地理坐标 (Hop 0)
     let (self_ip, self_hop) = resolve_self_ip_geo(Some(&target));
@@ -750,7 +437,26 @@ pub async fn execute_traceroute(
     let mut is_completed = false;
     let mut last_valid_rtt = None;
 
-    while let Ok(Some(line)) = reader.next_line().await {
+    let mut line_buf = Vec::new();
+    while let Ok(bytes_read) = reader.read_until(b'\n', &mut line_buf).await {
+        if bytes_read == 0 {
+            break; // 进程已到达 EOF
+        }
+
+        if CANCEL_TRACEROUTE.load(Ordering::SeqCst) {
+            let _ = child.kill().await;
+            break;
+        }
+
+        // 工业级容错解码: 优先尝试 UTF-8, 若包含 GBK/OEM 非法字节则使用 GB18030 保证 Windows 中文控制台输出 100% 完整解析
+        let line = match std::str::from_utf8(&line_buf) {
+            Ok(s) => s.to_string(),
+            Err(_) => {
+                let (cow, _, _) = encoding_rs::GB18030.decode(&line_buf);
+                cow.into_owned()
+            }
+        };
+        line_buf.clear();
         // 尝试从首部提取解析出的目标 IP (如 "通过最多 30 个跃点跟踪到 8.8.8.8 的路由:")
         if final_resolved_target_ip == target {
             for word in line.split_whitespace() {
@@ -811,6 +517,9 @@ pub async fn execute_traceroute(
                         hops_records[0].city = city.clone();
                         hops_records[0].isp = format!("{} (出口宽带)", isp);
                         hops_records[0].geo = Some(curr_geo.clone());
+                        hops_records[0].latitude = curr_geo.latitude;
+                        hops_records[0].longitude = curr_geo.longitude;
+                        hops_records[0].has_geo = true;
                         last_coord = curr_geo.clone();
                         self_geo_refined = true;
 
@@ -857,12 +566,32 @@ pub async fn execute_traceroute(
             };
             let subnet_cidr = infer_lan_subnet_cidr(&hop_ip);
 
+            let (hop_lat, hop_lon, hop_has_geo) = if let Some(ref g) = geo_coord {
+                (g.latitude, g.longitude, true)
+            } else {
+                (0.0, 0.0, false)
+            };
+
+            let bufferbloat_ratio = if let Some(rtt_val) = rtt {
+                if theoretical_fiber > 0.05 {
+                    (rtt_val / theoretical_fiber).max(1.0)
+                } else {
+                    1.0
+                }
+            } else {
+                1.0
+            };
+
             let hop_item = TracerouteHop {
                 hop: hop_num,
+                hop_number: hop_num,
                 ip: hop_ip.clone(),
                 rtt_ms: rtt,
                 is_timeout,
                 geo: geo_coord,
+                latitude: hop_lat,
+                longitude: hop_lon,
+                has_geo: hop_has_geo,
                 country,
                 province,
                 city,
@@ -874,6 +603,8 @@ pub async fn execute_traceroute(
                 is_lan: is_hop_lan,
                 lan_role,
                 subnet_cidr,
+                is_destination: is_target_hop,
+                bufferbloat_ratio,
             };
 
             // 边探测边向前端发射流式事件 (驱动前端地图实时动态绘制测地飞线)
@@ -895,6 +626,9 @@ pub async fn execute_traceroute(
     }
 
     let _ = child.wait().await;
+    TRACEROUTE_RUNNING.store(false, Ordering::SeqCst);
+    CANCEL_TRACEROUTE.store(false, Ordering::SeqCst);
+
     let duration = start_time_instant.elapsed().as_millis() as u64;
 
     let summary = if is_completed {
@@ -969,6 +703,12 @@ pub fn lookup_ip_geo_coordinates_cmd(ip: String) -> Result<Option<GeoCoordinates
 pub fn get_self_ip_geo_cmd(target: Option<String>) -> Result<TracerouteHop, String> {
     let (_, self_hop) = resolve_self_ip_geo(target.as_deref());
     Ok(self_hop)
+}
+
+#[tauri::command]
+pub async fn stop_traceroute_cmd() -> Result<bool, String> {
+    CANCEL_TRACEROUTE.store(true, Ordering::SeqCst);
+    Ok(true)
 }
 
 // ============================================================

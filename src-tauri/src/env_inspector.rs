@@ -138,46 +138,73 @@ impl EnvironmentInspector {
         }
     }
 
-    /// 探活 Npcap / WinPcap 抓包驱动
+    /// 探活 Npcap / WinPcap (Windows) 或 libpcap (国产/通用 Linux) 抓包驱动
     pub fn inspect_npcap() -> ComponentStatus {
-        let is_dll_loaded = crate::sniffer::is_npcap_driver_available();
-        
-        let mut found_path = None;
-        let candidate_paths = [
-            r"C:\Windows\System32\Npcap\wpcap.dll",
-            r"C:\Windows\System32\wpcap.dll",
-            r"C:\Program Files\Npcap",
-        ];
-
-        for p_str in &candidate_paths {
-            let p = Path::new(p_str);
-            if p.exists() {
-                found_path = Some(p_str.to_string());
-                break;
-            }
+        #[cfg(target_os = "linux")]
+        {
+            let lib_path = crate::platform_net::detect_linux_libpcap_library();
+            let is_ready = lib_path.is_some();
+            let (_, distro) = crate::platform_net::inspect_linux_privilege_and_distro();
+            return ComponentStatus {
+                id: "npcap".to_string(),
+                name: "libpcap 底层包捕获运行库".to_string(),
+                category: "CaptureDriver".to_string(),
+                is_ready,
+                version: lib_path.as_ref().map(|_| format!("libpcap Ready ({})", distro)),
+                path: lib_path,
+                capability_enabled: "解锁全网卡 L2 混杂抓包、BPF 硬件过滤、原始 802.11 无线捕获及链路层报文注入。".to_string(),
+                fallback_mode: "缺少 libpcap 动态库时无法挂载底层网卡帧抓取，仅应用层双轨监听与接口拨测可用。".to_string(),
+                official_url: "https://www.tcpdump.org/".to_string(),
+                install_tips: format!(
+                    "当前系统 [{}] 可执行: Debian/UOS/Deepin 运行 `sudo apt install -y libpcap0.8`，Kylin/openEuler 运行 `sudo dnf install -y libpcap`；免 root 抓包赋予 Capability: `sudo setcap cap_net_raw,cap_net_admin=eip $(readlink -f /proc/self/exe)`。",
+                    distro
+                ),
+                can_auto_install: false,
+                installer_filename: None,
+                estimated_size_mb: None,
+            };
         }
 
-        let is_ready = is_dll_loaded || found_path.is_some();
-        let version = if is_ready {
-            Some("Npcap L2 Driver (Loaded)".to_string())
-        } else {
-            None
-        };
+        #[cfg(not(target_os = "linux"))]
+        {
+            let is_dll_loaded = crate::sniffer::is_npcap_driver_available();
+            let mut found_path = None;
+            let candidate_paths = [
+                r"C:\Windows\System32\Npcap\wpcap.dll",
+                r"C:\Windows\System32\wpcap.dll",
+                r"C:\Program Files\Npcap",
+            ];
 
-        ComponentStatus {
-            id: "npcap".to_string(),
-            name: "Npcap / WinPcap 网络捕获驱动".to_string(),
-            category: "CaptureDriver".to_string(),
-            is_ready,
-            version,
-            path: found_path,
-            capability_enabled: "解锁 L2 数据链路层嗅探、千兆网卡混杂模式、全量 ARP/LLDP/广播捕获与以太网报文主动注入能力。".to_string(),
-            fallback_mode: "自愈降级为 Windows 原生 Raw Sockets 模式 (受限于操作系统安全策略，仅能嗅探部分进出单播与双轨监听端口)。".to_string(),
-            official_url: "https://npcap.com/#download".to_string(),
-            install_tips: "安装时请勾选: ① 'Install Npcap in WinPcap API-compatible Mode'; ② 'Support raw 802.11 traffic'。".to_string(),
-            can_auto_install: true,
-            installer_filename: Some("npcap-1.80.exe".to_string()),
-            estimated_size_mb: Some(1.15),
+            for p_str in &candidate_paths {
+                let p = Path::new(p_str);
+                if p.exists() {
+                    found_path = Some(p_str.to_string());
+                    break;
+                }
+            }
+
+            let is_ready = is_dll_loaded || found_path.is_some();
+            let version = if is_ready {
+                Some("Npcap L2 Driver (Loaded)".to_string())
+            } else {
+                None
+            };
+
+            ComponentStatus {
+                id: "npcap".to_string(),
+                name: "Npcap / WinPcap 网络捕获驱动".to_string(),
+                category: "CaptureDriver".to_string(),
+                is_ready,
+                version,
+                path: found_path,
+                capability_enabled: "解锁 L2 数据链路层嗅探、千兆网卡混杂模式、全量 ARP/LLDP/广播捕获与以太网报文主动注入能力。".to_string(),
+                fallback_mode: "自愈降级为 Windows 原生并发 Raw Sockets + NDIS-ETW 模式 (未以管理员权限运行时将受系统安全策略阻断外网单播)。".to_string(),
+                official_url: "https://npcap.com/#download".to_string(),
+                install_tips: "安装时请勾选: ① 'Install Npcap in WinPcap API-compatible Mode'; ② 'Support raw 802.11 traffic'（勿勾选 AdminOnly）。".to_string(),
+                can_auto_install: true,
+                installer_filename: Some("npcap-1.80.exe".to_string()),
+                estimated_size_mb: Some(1.15),
+            }
         }
     }
 
@@ -203,59 +230,120 @@ impl EnvironmentInspector {
         }
     }
 
-    /// 探活 USBPcap 物理外设捕获驱动
+    /// 探活 USBPcap (Windows) 或 usbmon (国产/通用 Linux) 物理外设捕获驱动
     pub fn inspect_usbpcap() -> ComponentStatus {
-        let candidate_paths = [
-            r"C:\Program Files\USBPcap\USBPcapCMD.exe",
-            r"C:\Program Files (x86)\USBPcap\USBPcapCMD.exe",
-        ];
-
-        let mut found_path = None;
-        for p_str in &candidate_paths {
-            let p = Path::new(p_str);
-            if p.exists() {
-                found_path = Some(p_str.to_string());
-                break;
-            }
+        #[cfg(target_os = "linux")]
+        {
+            let usbmon_node = crate::platform_net::detect_linux_usbmon_node();
+            let is_ready = usbmon_node.is_some();
+            return ComponentStatus {
+                id: "usbpcap".to_string(),
+                name: "Linux 内核 usbmon 总线捕获模块".to_string(),
+                category: "HardwareDriver".to_string(),
+                is_ready,
+                version: usbmon_node.as_ref().map(|_| "usbmon kernel module".to_string()),
+                path: usbmon_node,
+                capability_enabled: "支持对 USB 根集线器 URB 帧、HID/大容量存储/转串口控制传输展开底层物理总线实时监测。".to_string(),
+                fallback_mode: "未挂载 usbmon 时仍可通过 sysfs 读取全拓扑设备描述符与物理串口，无损基础功能。".to_string(),
+                official_url: "https://docs.kernel.org/usb/usbmon.html".to_string(),
+                install_tips: "在麒麟/UOS/openEuler 终端执行 `sudo modprobe usbmon` 并检查 `/dev/usbmon*` 读取权限即可生效。".to_string(),
+                can_auto_install: false,
+                installer_filename: None,
+                estimated_size_mb: None,
+            };
         }
 
-        let is_ready = found_path.is_some() || Path::new(r"\\.\USBPcap1").exists();
+        #[cfg(not(target_os = "linux"))]
+        {
+            let candidate_paths = [
+                r"C:\Program Files\USBPcap\USBPcapCMD.exe",
+                r"C:\Program Files (x86)\USBPcap\USBPcapCMD.exe",
+            ];
 
-        ComponentStatus {
-            id: "usbpcap".to_string(),
-            name: "USBPcap 内核级 USB 总线捕获驱动".to_string(),
-            category: "HardwareDriver".to_string(),
-            is_ready,
-            version: if is_ready { Some("USBPcap Driver Active".to_string()) } else { None },
-            path: found_path,
-            capability_enabled: "解锁物理 USB 根集线器 (Root Hub) 全双工 URB 数据包微秒级物理抓取、BadUSB 自动化打字机恶意攻击审计 (IAT < 25ms 亚人类击键特征感知)、U 盘物理 SCSI 指令/大容量存储协议还原，以及 USB 转串口芯片底层控制信令分析。".to_string(),
-            fallback_mode: "【严重功能受限】缺失 USBPcap 驱动时，系统将被迫放弃物理 USB 总线原始通信截获能力，无法感知 BadUSB 硬件固件伪装与物理层攻击，USB 深度工作台将被迫降级为仅监听只读的 Windows PnP 设备热插拔事件，无法获取任何 USB 载荷与控制帧；网络以太网嗅探与串口 COM 通信不受影响。".to_string(),
-            official_url: "https://desowin.org/usbpcap/".to_string(),
-            install_tips: "可在安装 Wireshark 时勾选【Install USBPcap】驱动组件；亦可点击右侧【自动从官网安装】一键下载安装。安装完成后需重启操作系统使底层内核服务生效。".to_string(),
-            can_auto_install: true,
-            installer_filename: Some("USBPcapSetup-1.5.4.0.exe".to_string()),
-            estimated_size_mb: Some(0.19),
+            let mut found_path = None;
+            for p_str in &candidate_paths {
+                let p = Path::new(p_str);
+                if p.exists() {
+                    found_path = Some(p_str.to_string());
+                    break;
+                }
+            }
+
+            let is_ready = found_path.is_some() || Path::new(r"\\.\USBPcap1").exists();
+
+            ComponentStatus {
+                id: "usbpcap".to_string(),
+                name: "USBPcap 内核级 USB 总线捕获驱动".to_string(),
+                category: "HardwareDriver".to_string(),
+                is_ready,
+                version: if is_ready { Some("USBPcap Driver Active".to_string()) } else { None },
+                path: found_path,
+                capability_enabled: "解锁物理 USB 根集线器 (Root Hub) 全双工 URB 数据包微秒级物理抓取、BadUSB 自动化打字机恶意攻击审计 (IAT < 25ms 亚人类击键特征感知)、U 盘物理 SCSI 指令/大容量存储协议还原，以及 USB 转串口芯片底层控制信令分析。".to_string(),
+                fallback_mode: "【严重功能受限】缺失 USBPcap 驱动时，系统将被迫放弃物理 USB 总线原始通信截获能力，无法感知 BadUSB 硬件固件伪装与物理层攻击，USB 深度工作台将被迫降级为仅监听只读的 Windows PnP 设备热插拔事件，无法获取任何 USB 载荷与控制帧；网络以太网嗅探与串口 COM 通信不受影响。".to_string(),
+                official_url: "https://desowin.org/usbpcap/".to_string(),
+                install_tips: "可在安装 Wireshark 时勾选【Install USBPcap】驱动组件；亦可点击右侧【自动从官网安装】一键下载安装。安装完成后需重启操作系统使底层内核服务生效。".to_string(),
+                can_auto_install: true,
+                installer_filename: Some("USBPcapSetup-1.5.4.0.exe".to_string()),
+                estimated_size_mb: Some(0.19),
+            }
         }
     }
 
-    /// 探活 Windows 进程是否拥有管理员特权 (Administrator)
+    /// 探活进程是否拥有底层原始抓包特权 (Windows Administrator 或 Linux root/CAP_NET_RAW)
     pub fn inspect_admin_privilege() -> ComponentStatus {
-        let is_admin = Self::check_is_admin();
+        #[cfg(target_os = "linux")]
+        {
+            let (priv_st, distro) = crate::platform_net::inspect_linux_privilege_and_distro();
+            let exe_disp = std::env::current_exe()
+                .ok()
+                .map(|p| p.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "/usr/bin/omni-probe-tauri".to_string());
+            let ver_label = if priv_st.euid == 0 {
+                format!("root (euid=0 | {})", distro)
+            } else if priv_st.has_cap_net_raw {
+                format!("CAP_NET_RAW Enabled ({})", distro)
+            } else {
+                format!("Unprivileged (euid={}, CapEff={:#x} | {})", priv_st.euid, priv_st.cap_eff_mask, distro)
+            };
+            return ComponentStatus {
+                id: "admin".to_string(),
+                name: "Linux 底层抓包特权 (root / CAP_NET_RAW)".to_string(),
+                category: "SystemPrivilege".to_string(),
+                is_ready: priv_st.is_capture_capable,
+                version: Some(ver_label),
+                path: Some(exe_disp.clone()),
+                capability_enabled: "允许通过 AF_PACKET/libpcap 打开任意物理/隧道网卡混杂捕获，完整感知内外网全部出入帧。".to_string(),
+                fallback_mode: "普通桌面用户缺少 CAP_NET_RAW 与 root 权限时无法截获外网单播与第三方流量，仅局域网广播多播可用。".to_string(),
+                official_url: "https://wiki.wireshark.org/CaptureSetup/CapturePrivileges".to_string(),
+                install_tips: format!(
+                    "推荐免 root 永久授权（适用麒麟/UOS/openEuler）: 终端执行 `sudo setcap cap_net_raw,cap_net_admin=eip \"{}\"` 后重启程序，或使用 `sudo -E \"{}\"` 启动。",
+                    exe_disp, exe_disp
+                ),
+                can_auto_install: false,
+                installer_filename: None,
+                estimated_size_mb: None,
+            };
+        }
 
-        ComponentStatus {
-            id: "admin".to_string(),
-            name: "操作系统管理员特权 (Administrator)".to_string(),
-            category: "SystemPrivilege".to_string(),
-            is_ready: is_admin,
-            version: None,
-            path: None,
-            capability_enabled: "开启网卡硬件混杂模式配置权限、Raw Socket SIO_RCVALL 网卡监听与低层驱动安全访问。".to_string(),
-            fallback_mode: "普通用户权限下仅能监听本进程绑定的网络端口，无法截获全网段广播与第三方主机流量。".to_string(),
-            official_url: "https://learn.microsoft.com/en-us/windows/security/application-security/application-control/user-account-control/".to_string(),
-            install_tips: "右键单击 Omni-Probe 桌面图标，选择【以管理员身份运行】即可一键激活全部底层特权。".to_string(),
-            can_auto_install: false,
-            installer_filename: None,
-            estimated_size_mb: None,
+        #[cfg(not(target_os = "linux"))]
+        {
+            let is_admin = Self::check_is_admin();
+
+            ComponentStatus {
+                id: "admin".to_string(),
+                name: "操作系统管理员特权 (Administrator)".to_string(),
+                category: "SystemPrivilege".to_string(),
+                is_ready: is_admin,
+                version: None,
+                path: None,
+                capability_enabled: "开启网卡硬件混杂模式配置权限、Raw Socket SIO_RCVALL 网卡监听与低层驱动安全访问。".to_string(),
+                fallback_mode: "普通用户权限下仅能监听本进程绑定的网络端口，无法截获全网段广播与第三方主机流量。".to_string(),
+                official_url: "https://learn.microsoft.com/en-us/windows/security/application-security/application-control/user-account-control/".to_string(),
+                install_tips: "右键单击 Omni-Probe 桌面图标，选择【以管理员身份运行】即可一键激活全部底层特权。".to_string(),
+                can_auto_install: false,
+                installer_filename: None,
+                estimated_size_mb: None,
+            }
         }
     }
 
@@ -514,10 +602,145 @@ impl EnvironmentInspector {
         }
     }
 
-    #[cfg(not(windows))]
+    #[cfg(target_os = "linux")]
+    #[allow(dead_code)]
+    fn check_is_admin() -> bool {
+        let (priv_st, _) = crate::platform_net::inspect_linux_privilege_and_distro();
+        priv_st.is_capture_capable
+    }
+
+    #[cfg(not(any(windows, target_os = "linux")))]
+    #[allow(dead_code)]
     fn check_is_admin() -> bool {
         true
     }
+
+    /// 跨平台国产信创操作系统与内核特权生态全景探活
+    /// 涵盖统信 UOS、银河麒麟 Kylin、openEuler、Deepin、中科方德等系统及 CPU 体系结构
+    pub fn inspect_chinagov_os_telemetry() -> ChinaGovOsTelemetry {
+        let cpu_arch = std::env::consts::ARCH.to_string();
+
+        #[cfg(target_os = "linux")]
+        {
+            let (priv_st, distro) = crate::platform_net::inspect_linux_privilege_and_distro();
+            let distro_id = distro.id.to_lowercase();
+            let is_chinagov = distro_id.contains("uos")
+                || distro_id.contains("kylin")
+                || distro_id.contains("deepin")
+                || distro_id.contains("openeuler")
+                || distro_id.contains("neokylin");
+
+            let mut instructions = Vec::new();
+            if !priv_st.is_capture_capable {
+                instructions.push("当前进程缺少 CAP_NET_RAW 或 CAP_NET_ADMIN 特权，网络混杂抓包将受限。".to_string());
+                instructions.push("请在终端执行提权命令: sudo setcap cap_net_raw,cap_net_admin=eip <程序路径>".to_string());
+            } else {
+                instructions.push("Linux 原生网络抓包特权已就绪 (CAP_NET_RAW/CAP_NET_ADMIN 验证通过)".to_string());
+            }
+
+            let firewall_engine = if Path::new("/usr/sbin/nft").exists() || Path::new("/sbin/nft").exists() {
+                "nftables (现代原子规则表)".to_string()
+            } else if Path::new("/usr/sbin/iptables").exists() || Path::new("/sbin/iptables").exists() {
+                "iptables (传统表级过滤)".to_string()
+            } else {
+                "无原生防火墙工具 (已启用纯内置 WFP 仿真)".to_string()
+            };
+
+            let webview_status = if Path::new("/usr/lib/x86_64-linux-gnu/libwebkit2gtk-4.1.so.0").exists()
+                || Path::new("/usr/lib/aarch64-linux-gnu/libwebkit2gtk-4.1.so.0").exists()
+                || Path::new("/usr/lib64/libwebkit2gtk-4.1.so.0").exists()
+            {
+                "WebKit2GTK 4.1 运行时正常".to_string()
+            } else {
+                "WebKit2GTK 依赖检测中/已降级".to_string()
+            };
+
+            ChinaGovOsTelemetry {
+                is_chinagov_linux: is_chinagov,
+                distro_id: distro.id,
+                distro_name: distro.pretty_name,
+                distro_version: distro.version_id,
+                cpu_arch,
+                has_cap_net_raw: priv_st.has_cap_net_raw,
+                has_cap_net_admin: priv_st.has_cap_net_admin,
+                is_capture_capable: priv_st.is_capture_capable,
+                firewall_engine,
+                webview2_status: webview_status,
+                guide_instructions: instructions,
+            }
+        }
+
+        #[cfg(windows)]
+        {
+            let is_admin = Self::check_is_admin();
+            let mut instructions = Vec::new();
+            if !is_admin {
+                instructions.push("当前以受限标准用户运行，无法直接操作底层 WFP 防火墙拦截规则。".to_string());
+                instructions.push("如需启用全功能主机级阻断与链路重置，请右键选择【以管理员身份运行】。".to_string());
+            } else {
+                instructions.push("Windows 系统管理员特权已就绪，WFP 与 NDIS-ETW 抓包通道完全可用。".to_string());
+            }
+
+            // 检查同级绿色 WebView2Runtime 状态
+            let exe_dir = std::env::current_exe()
+                .ok()
+                .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+                .unwrap_or_else(|| std::path::PathBuf::from("."));
+            let portable_wv2 = exe_dir.join("WebView2Runtime");
+            let webview_status = if portable_wv2.exists() {
+                format!("便携式独立运行时就绪 ({})", portable_wv2.display())
+            } else {
+                "系统全局 WebView2 运行时 (或标准注册表挂载)".to_string()
+            };
+
+            ChinaGovOsTelemetry {
+                is_chinagov_linux: false,
+                distro_id: "windows".to_string(),
+                distro_name: "Microsoft Windows (支持跨平台信创编译)".to_string(),
+                distro_version: "NT 10.0+".to_string(),
+                cpu_arch,
+                has_cap_net_raw: is_admin,
+                has_cap_net_admin: is_admin,
+                is_capture_capable: true,
+                firewall_engine: "Windows Filtering Platform (WFP)".to_string(),
+                webview2_status: webview_status,
+                guide_instructions: instructions,
+            }
+        }
+
+        #[cfg(not(any(windows, target_os = "linux")))]
+        {
+            ChinaGovOsTelemetry {
+                is_chinagov_linux: false,
+                distro_id: "unix_other".to_string(),
+                distro_name: "Generic Unix / POSIX".to_string(),
+                distro_version: "Unknown".to_string(),
+                cpu_arch,
+                has_cap_net_raw: true,
+                has_cap_net_admin: true,
+                is_capture_capable: true,
+                firewall_engine: "POSIX Socket Filter".to_string(),
+                webview2_status: "Webkit".to_string(),
+                guide_instructions: vec!["通用 POSIX 平台运行中".to_string()],
+            }
+        }
+    }
+}
+
+/// 国产信创环境遥测与特权诊断数据结构
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChinaGovOsTelemetry {
+    pub is_chinagov_linux: bool,
+    pub distro_id: String,
+    pub distro_name: String,
+    pub distro_version: String,
+    pub cpu_arch: String,
+    pub has_cap_net_raw: bool,
+    pub has_cap_net_admin: bool,
+    pub is_capture_capable: bool,
+    pub firewall_engine: String,
+    pub webview2_status: String,
+    pub guide_instructions: Vec<String>,
 }
 
 // ==============================================================================
@@ -569,5 +792,14 @@ mod tests {
         assert_eq!(usbpcap_meta.target_filename, "USBPcapSetup-1.5.4.0.exe");
 
         assert!(EnvironmentInspector::get_official_installer_meta("unknown_xxx").is_none());
+    }
+
+    #[test]
+    fn test_chinagov_os_telemetry() {
+        let telemetry = EnvironmentInspector::inspect_chinagov_os_telemetry();
+        assert!(!telemetry.cpu_arch.is_empty());
+        assert!(!telemetry.distro_name.is_empty());
+        assert!(!telemetry.firewall_engine.is_empty());
+        assert!(!telemetry.guide_instructions.is_empty());
     }
 }

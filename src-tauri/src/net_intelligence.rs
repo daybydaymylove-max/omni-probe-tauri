@@ -372,7 +372,7 @@ async fn probe_single_tcp_banner_with_mode(
         }
         TcpProbeMode::Http => {
             let req = format!(
-                "HEAD / HTTP/1.0\r\nHost: {}\r\nUser-Agent: OmniProbe/0.3.2\r\nConnection: close\r\n\r\n",
+                "HEAD / HTTP/1.0\r\nHost: {}\r\nUser-Agent: OmniProbe/0.3.4\r\nConnection: close\r\n\r\n",
                 ip
             );
             if tokio::time::timeout(banner_timeout, stream.write_all(req.as_bytes()))
@@ -2153,7 +2153,12 @@ mod tests {
             .await
             .expect("绑定测试端口失败");
         let port = listener.local_addr().unwrap().port();
-        let closed_port = if port < 65000 { port + 1 } else { port - 1 };
+        // 分配独立临时端口并立即关闭，避免 port+1 与其他并行异步测试的 TcpListener::bind(":0") 递增撞车
+        let closed_listener = TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("绑定关闭参考端口失败");
+        let closed_port = closed_listener.local_addr().unwrap().port();
+        drop(closed_listener);
 
         let srv = tokio::spawn(async move {
             if let Ok((mut socket, _)) = listener.accept().await {

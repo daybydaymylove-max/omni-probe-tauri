@@ -900,6 +900,21 @@ pub fn get_local_ip_addresses_cmd() -> Vec<LocalIpInfo> {
         }
     }
 
+    // 3. 国产 Linux / 通用 Linux 全接口零依赖枚举（支持离线隔离内网与多网段适配器）
+    #[cfg(target_os = "linux")]
+    {
+        for iface in crate::platform_net::discover_linux_interfaces() {
+            let ip_str = iface.ip.to_string();
+            if !list.iter().any(|r| r.ip == ip_str) {
+                list.push(LocalIpInfo {
+                    ip: ip_str,
+                    name: format!("{} ({}/{} 活跃接口)", iface.iface_name, iface.ip, iface.prefix_len),
+                    is_loopback: false,
+                });
+            }
+        }
+    }
+
     list
 }
 

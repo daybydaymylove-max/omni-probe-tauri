@@ -658,9 +658,7 @@ html:not(.dark) {
   }
 
   .ui-modal-backdrop {
-    background-color: var(--surface-overlay);
-    backdrop-filter: blur(22px) saturate(165%);
-    -webkit-backdrop-filter: blur(22px) saturate(165%);
+    background-color: rgba(2, 6, 23, 0.55);
   }
 
   .ui-modal-surface {

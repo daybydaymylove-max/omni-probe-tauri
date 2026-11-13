@@ -199,6 +199,13 @@
             <span class="hidden xl:inline text-[11px] font-medium">无线/蓝牙</span>
           </button>
 
+          <button @click="isNetToolboxOpen = true"
+            class="h-7 px-2 rounded-full flex items-center justify-center gap-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-glass-pill-hover)] cursor-pointer transition-colors whitespace-nowrap"
+            title="网工原子工具箱 (Subnet / DNS / TCPing / TFTP · Ctrl+T)" aria-label="网工原子工具箱">
+            <AppIcon name="terminal" :size="14" class="shrink-0" />
+            <span class="hidden xl:inline text-[11px] font-medium">工具箱</span>
+          </button>
+
           <button @click="isPreferencesOpen = true"
             class="w-7 h-7 rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-glass-pill-hover)] cursor-pointer transition-colors"
             title="系统偏好设置 (Ctrl+,)" aria-label="系统偏好设置">
@@ -375,7 +382,9 @@
           :selectedSerial="selectedSerial"
           :serialBaudRate="serialBaudRate"
           :usbDevices="usbDevices"
+          :captureCapability="captureCapability"
           @startCapture="startCapture"
+          @openEnvInspector="openInspector('deps')"
           @pauseCapture="pauseCapture"
           @resumeCapture="resumeCapture"
           @stopCapture="stopCapture"
@@ -553,6 +562,9 @@
     <!-- 全局通用数据差分比对工作台 (支持 2~N 组精比与磁盘大文件双向 Merge，按需懒加载) -->
     <PacketDiffModal v-if="diffBus.isDiffModalOpen.value" />
 
+    <!-- 网工高频原子工具箱 (Ctrl+T) -->
+    <NetToolboxModal v-if="isNetToolboxOpen" :show="isNetToolboxOpen" @close="isNetToolboxOpen = false" />
+
     <!-- 统一全局通知浮层与 Sheet 确认输入模态 -->
     <GlobalNotificationToast />
     <GlobalSheetModal />
@@ -568,7 +580,7 @@
           <div class="space-y-1">
             <h2 class="text-[14px] font-semibold text-[var(--text-primary)] tracking-tight flex items-center justify-center gap-2">
               <span>OMNI-PROBE 网络探针系统</span>
-              <span class="badge-subtle ui-num">v0.3.2</span>
+              <span class="badge-subtle ui-num">v0.3.4</span>
             </h2>
             <p class="text-[12px] text-[var(--text-secondary)]">工业级多总线网络分析仪 · 正在执行引擎初始化校验</p>
           </div>
@@ -623,7 +635,7 @@
     <!-- 底部紧凑实用状态栏 -->
     <footer class="app-footer-bar ui-num">
       <div>物理接口: {{ selectedIface || '自动识别' }} · {{ isNpcapAvailable ? 'Npcap + Raw Socket 双轨引擎' : 'Raw Socket 原生捕获引擎' }} · 环形缓冲: {{ ringBufferUsageText }}</div>
-      <div>已捕获 {{ packets.length.toLocaleString() }} 帧 · Omni-Probe v0.3.2</div>
+      <div>已捕获 {{ packets.length.toLocaleString() }} 帧 · Omni-Probe v0.3.4</div>
     </footer>
   </div>
 </template>
@@ -652,6 +664,7 @@ const IpDossierModal = defineAsyncComponent(() => import('./components/IpDossier
 const PreferencesModal = defineAsyncComponent(() => import('./components/PreferencesModal.vue'));
 const WirelessVlanMonitorModal = defineAsyncComponent(() => import('./components/WirelessVlanMonitorModal.vue'));
 const PacketDiffModal = defineAsyncComponent(() => import('./components/PacketDiffModal.vue'));
+const NetToolboxModal = defineAsyncComponent(() => import('./components/NetToolboxModal.vue'));
 
 const AssetIntelligenceView = defineAsyncComponent(() => import('./views/AssetIntelligenceView.vue'));
 const HardwareBusView = defineAsyncComponent(() => import('./views/HardwareBusView.vue'));
@@ -809,10 +822,14 @@ function handleGlobalKeydown(e: KeyboardEvent) {
     else if (isHoneypotOpen.value) isHoneypotOpen.value = false;
     else if (isGlobalDossierOpen.value) isGlobalDossierOpen.value = false;
     else if (isDeepModalOpen.value) isDeepModalOpen.value = false;
+    else if (isNetToolboxOpen.value) isNetToolboxOpen.value = false;
   } else if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
     e.preventDefault();
     bpfInputRef.value?.focus();
     bpfInputRef.value?.select();
+  } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 't' || e.key === 'T')) {
+    e.preventDefault();
+    isNetToolboxOpen.value = !isNetToolboxOpen.value;
   } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
     e.preventDefault();
     openUniversalDiffCenter();
@@ -829,6 +846,18 @@ const isSerialRunning = ref(false);
 const isUsbRunning = ref(false);
 
 const selectedIface = ref('');
+interface CaptureCapabilityPayload {
+  external_ready: boolean;
+  scope: string;
+  reason: string;
+  targets: string[];
+}
+const captureCapability = ref<CaptureCapabilityPayload>({
+  external_ready: true,
+  scope: 'IDLE',
+  reason: '',
+  targets: [],
+});
 const bpfFilter = ref('');
 const interfaces = ref<string[]>([]);
 
@@ -905,6 +934,7 @@ const {
 const isGlobalDossierOpen = ref(false);
 const isPreferencesOpen = ref(false);
 const isWirelessVlanOpen = ref(false);
+const isNetToolboxOpen = ref(false);
 
 // 启动自检状态（由全局单例 Composable useEnvironmentInspector 驱动）
 const isInitializing = ref(true);
@@ -995,6 +1025,7 @@ async function stopCapture() {
     isSerialRunning.value = false;
     activeSerialPorts.value = [];
     isUsbRunning.value = false;
+    captureCapability.value = { external_ready: true, scope: 'IDLE', reason: '', targets: [] };
     addLog('[PROBE] 探针主引擎及全部物理总线已安全停止');
     notifyInfo('捕获引擎已安全停止', '主引擎、物理串口及 USB 外设嗅探均已安全停机');
   } catch (e) {
@@ -1073,12 +1104,16 @@ async function stopUsbCapture() {
 async function clearData() {
   packets.value = [];
   try {
-    await invoke('clear_logs');
+    await Promise.all([
+      invoke('clear_logs'),
+      invoke('reset_live_net_stats_cmd'),
+      invoke('reset_vpn_audit_stats_cmd'),
+    ]);
   } catch (e) {
-    addLog(`[ERROR] 清空内核日志失败: ${e}`);
+    addLog(`[ERROR] 清空内核日志与统计状态失败: ${e}`);
   }
-  addLog('[CLEANUP] 数据沙箱与流量记录已清空');
-  notifyInfo('数据沙箱已重置', '抓包流量缓存与内核日志已清空');
+  addLog('[CLEANUP] 数据沙箱、流量统计累加器与内核日志已同步清空');
+  notifyInfo('数据沙箱已重置', '抓包流量缓存、实时统计累加器与内核日志已全部清空');
 }
 
 function handleImportedPackets(importedList: any[]) {
@@ -1087,6 +1122,10 @@ function handleImportedPackets(importedList: any[]) {
     addLog(`[TRAFFIC] 成功载入 ${importedList.length} 个离线报文至全局数据总线`);
     notifySuccess('PCAP 数据包导入成功', `成功解析并载入 ${importedList.length} 帧离线流量报文至分析工作台`);
   }
+}
+
+if (typeof window !== 'undefined') {
+  (window as any).__injectMockPackets = handleImportedPackets;
 }
 
 async function refreshSerialPorts() {
@@ -1429,9 +1468,58 @@ onMounted(() => {
     if (!rafId) rafId = requestAnimationFrame(flushPackets);
   });
 
-  listen<any>('usb-packet', ({ payload }) => {
-    pendingPackets.push(payload);
-    if (!rafId) rafId = requestAnimationFrame(flushPackets);
+  let lastThreatToastMs = 0;
+  interface ThreatDetectedPayload {
+    signature_id: number;
+    name: string;
+    severity: string;
+    description: string;
+  }
+  listen<ThreatDetectedPayload>('threat-detected', ({ payload }) => {
+    const desc = `[THREAT #${payload.signature_id}] [${payload.severity}] ${payload.name}: ${payload.description}`;
+    addLog(desc);
+    const now = Date.now();
+    if (now - lastThreatToastMs > 2000) {
+      lastThreatToastMs = now;
+      notifyWarning('实时载荷威胁命中告警', `${payload.name} (${payload.severity})`);
+    }
+  });
+
+  interface IcsAclViolationPayload {
+    packet_id: number;
+    src_ip: string;
+    dst_ip: string;
+    unit_id?: number | null;
+    function_code?: number | null;
+    reason: string;
+  }
+  listen<IcsAclViolationPayload>('ics-acl-violation', ({ payload }) => {
+    addLog(`[ICS-ACL] 越权拦截 #${payload.packet_id}: ${payload.src_ip} -> ${payload.dst_ip} | ${payload.reason}`);
+    const now = Date.now();
+    if (now - lastThreatToastMs > 2000) {
+      lastThreatToastMs = now;
+      notifyWarning('工控访问控制越权告警', `${payload.src_ip} → ${payload.dst_ip}: ${payload.reason}`);
+    }
+  });
+
+  interface ProbeResultPayload {
+    target_ip: string;
+    target_port: number;
+    protocol: string;
+    status: string;
+    latency_ms: number;
+  }
+  listen<ProbeResultPayload>('probe-result', ({ payload }) => {
+    addLog(`[ACTIVE-PROBE] ${payload.target_ip}:${payload.target_port} (${payload.protocol}) => ${payload.status} (${payload.latency_ms.toFixed(1)}ms)`);
+  });
+
+  listen<string>('sniffer-state-changed', ({ payload }) => {
+    if (payload === 'paused') {
+      isPaused.value = true;
+    } else if (payload === 'running') {
+      isRunning.value = true;
+      isPaused.value = false;
+    }
   });
 
   listen<any[]>('assets-updated', ({ payload }) => {
@@ -1458,6 +1546,13 @@ onMounted(() => {
 
   listen<string>('system-log', ({ payload }) => {
     addLog(payload);
+  });
+
+  listen<CaptureCapabilityPayload>('capture-capability-warning', ({ payload }) => {
+    captureCapability.value = payload;
+    if (!payload.external_ready && payload.reason) {
+      notifyWarning('外网捕获受限：当前仅局域网雷达模式', payload.reason);
+    }
   });
 
   invoke<boolean>('is_honeypot_running_cmd').then((hpRunning) => {

@@ -1,0 +1,14 @@
+[Desktop Entry]
+Name=Omni-Probe
+Name[zh_CN]=工业全能网络探针与网工工具箱
+Comment=Industrial-grade Multi-bus Protocol Auditor & Network Engineering Toolkit
+Comment[zh_CN]=工业级多总线协议审计、跨介质流式差分比对与网络工程师现场应急工具集
+Exec=/opt/omni-probe/omni-probe-tauri %U
+Icon=omni-probe
+Terminal=false
+Type=Application
+Categories=Network;Development;System;Security;
+StartupNotify=true
+MimeType=application/vnd.tcpdump.pcap;application/x-pcapng;
+Keywords=network;sniffer;packet;modbus;serial;usb;telnet;ssh;tftp;
+StartupWMClass=omni-probe-tauri

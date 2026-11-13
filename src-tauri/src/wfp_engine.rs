@@ -489,25 +489,223 @@ mod win_wfp_impl {
     }
 }
 
+/// 跨平台 Linux `nftables` 防火墙规则参数构造器（纯参数数组零 Shell 注入，先校验标准化 CIDR）
+pub fn build_linux_nft_block_cmds(raw_target: &str) -> Result<(String, Vec<Vec<String>>), String> {
+    let (_, _, norm) = parse_and_validate_ipv4_cidr(raw_target)?;
+    // 初始化 inet omni_probe_guard 表及输入/输出 hook 链，再下发带 handle 回显的 drop 规则
+    let cmds = vec![
+        vec!["add".into(), "table".into(), "inet".into(), "omni_probe_guard".into()],
+        vec![
+            "add".into(), "chain".into(), "inet".into(), "omni_probe_guard".into(), "omni_in".into(),
+            "{".into(), "type".into(), "filter".into(), "hook".into(), "input".into(), "priority".into(), "0".into(), ";".into(), "policy".into(), "accept".into(), ";".into(), "}".into(),
+        ],
+        vec![
+            "add".into(), "chain".into(), "inet".into(), "omni_probe_guard".into(), "omni_out".into(),
+            "{".into(), "type".into(), "filter".into(), "hook".into(), "output".into(), "priority".into(), "0".into(), ";".into(), "policy".into(), "accept".into(), ";".into(), "}".into(),
+        ],
+        vec![
+            "--echo".into(), "--handle".into(),
+            "add".into(), "rule".into(), "inet".into(), "omni_probe_guard".into(), "omni_in".into(),
+            "ip".into(), "saddr".into(), norm.clone(), "counter".into(), "drop".into(),
+        ],
+        vec![
+            "--echo".into(), "--handle".into(),
+            "add".into(), "rule".into(), "inet".into(), "omni_probe_guard".into(), "omni_out".into(),
+            "ip".into(), "daddr".into(), norm.clone(), "counter".into(), "drop".into(),
+        ],
+    ];
+    Ok((norm, cmds))
+}
+
+/// 从 `nft --echo --handle` 标准输出提取新增规则句柄号 (`# handle <N>`)
+pub fn parse_linux_nft_handle(stdout_text: &str) -> u64 {
+    for token_pair in stdout_text.split_whitespace().collect::<Vec<_>>().windows(2) {
+        if token_pair[0] == "handle" {
+            if let Ok(h) = token_pair[1].trim_end_matches(';').parse::<u64>() {
+                return h;
+            }
+        }
+    }
+    0
+}
+
 #[cfg(not(windows))]
 mod win_wfp_impl {
     use super::*;
 
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    enum LinuxFirewallDriver {
+        Nftables,
+        Iptables,
+        Unavailable,
+    }
+
     pub struct NativeWfpManager {
         active_rules: HashMap<String, WfpKernelRule>,
+        driver: LinuxFirewallDriver,
+        last_message: String,
+        permission_denied: bool,
     }
 
     impl NativeWfpManager {
         pub fn new() -> Self {
+            #[cfg(target_os = "linux")]
+            let (driver, msg) = if std::process::Command::new("nft").arg("--version").output().is_ok_and(|o| o.status.success()) {
+                (LinuxFirewallDriver::Nftables, "Linux 内核防线就绪: nftables (inet omni_probe_guard)".to_string())
+            } else if std::process::Command::new("iptables").arg("--version").output().is_ok_and(|o| o.status.success()) {
+                (LinuxFirewallDriver::Iptables, "Linux 内核防线就绪: iptables 兼容模式".to_string())
+            } else {
+                (LinuxFirewallDriver::Unavailable, "未检测到 nftables (nft) 或 iptables 命令，将仅启用用户态拦截".to_string())
+            };
+            #[cfg(not(target_os = "linux"))]
+            let (driver, msg) = (
+                LinuxFirewallDriver::Unavailable,
+                "当前非 Windows/Linux 桌面环境，未挂载系统防火墙驱动".to_string(),
+            );
             Self {
                 active_rules: HashMap::new(),
+                driver,
+                last_message: msg,
+                permission_denied: false,
             }
         }
 
-        pub fn block_ip(&mut self, target: &str, _reason: &str) -> WfpBlockOutcome {
-            let norm = parse_and_validate_ipv4_cidr(target)
-                .map(|(_, _, n)| n)
-                .unwrap_or_default();
+        pub fn block_ip(&mut self, target: &str, reason: &str) -> WfpBlockOutcome {
+            let (norm, cmds) = match build_linux_nft_block_cmds(target) {
+                Ok(v) => v,
+                Err(e) => {
+                    return WfpBlockOutcome {
+                        success: false,
+                        kernel_enforced: false,
+                        permission_denied: false,
+                        target: target.to_string(),
+                        cidr_normalized: String::new(),
+                        inbound_filter_id: 0,
+                        outbound_filter_id: 0,
+                        message: e,
+                    };
+                }
+            };
+
+            if self.driver == LinuxFirewallDriver::Nftables {
+                let mut in_handle = 0u64;
+                let mut out_handle = 0u64;
+                for (idx, args) in cmds.iter().enumerate() {
+                    match std::process::Command::new("nft").args(args).output() {
+                        Ok(out) if out.status.success() => {
+                            let s = String::from_utf8_lossy(&out.stdout);
+                            if idx == 3 {
+                                in_handle = parse_linux_nft_handle(&s);
+                            } else if idx == 4 {
+                                out_handle = parse_linux_nft_handle(&s);
+                            }
+                        }
+                        Ok(out) => {
+                            let err = String::from_utf8_lossy(&out.stderr).to_string();
+                            let denied = err.contains("Operation not permitted") || err.contains("Permission denied") || err.contains("root");
+                            self.permission_denied = denied;
+                            self.last_message = if denied {
+                                format!("权限不足：请运行 `sudo nft add rule inet omni_probe_guard omni_in ip saddr {} drop` ({})", norm, err.trim())
+                            } else {
+                                format!("nftables 下发失败: {}", err.trim())
+                            };
+                            return WfpBlockOutcome {
+                                success: false,
+                                kernel_enforced: false,
+                                permission_denied: denied,
+                                target: target.to_string(),
+                                cidr_normalized: norm,
+                                inbound_filter_id: 0,
+                                outbound_filter_id: 0,
+                                message: self.last_message.clone(),
+                            };
+                        }
+                        Err(e) => {
+                            return WfpBlockOutcome {
+                                success: false,
+                                kernel_enforced: false,
+                                permission_denied: false,
+                                target: target.to_string(),
+                                cidr_normalized: norm,
+                                inbound_filter_id: 0,
+                                outbound_filter_id: 0,
+                                message: format!("调用 nft 失败: {}", e),
+                            };
+                        }
+                    }
+                }
+                let rule = WfpKernelRule {
+                    target: target.to_string(),
+                    cidr_normalized: norm.clone(),
+                    reason: reason.to_string(),
+                    inbound_filter_id: in_handle,
+                    outbound_filter_id: out_handle,
+                    created_at: chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                    enforcement_mode: "LINUX_NFTABLES_ACTIVE".to_string(),
+                };
+                self.active_rules.insert(norm.clone(), rule);
+                self.permission_denied = false;
+                self.last_message = format!("已在 Linux nftables (inet omni_probe_guard) 下发双向硬阻断: {}", norm);
+                return WfpBlockOutcome {
+                    success: true,
+                    kernel_enforced: true,
+                    permission_denied: false,
+                    target: target.to_string(),
+                    cidr_normalized: norm,
+                    inbound_filter_id: in_handle,
+                    outbound_filter_id: out_handle,
+                    message: self.last_message.clone(),
+                };
+            } else if self.driver == LinuxFirewallDriver::Iptables {
+                let r1 = std::process::Command::new("iptables")
+                    .args(["-I", "INPUT", "-s", &norm, "-j", "DROP"])
+                    .output();
+                let r2 = std::process::Command::new("iptables")
+                    .args(["-I", "OUTPUT", "-d", &norm, "-j", "DROP"])
+                    .output();
+                match (r1, r2) {
+                    (Ok(o1), Ok(o2)) if o1.status.success() && o2.status.success() => {
+                        let rule = WfpKernelRule {
+                            target: target.to_string(),
+                            cidr_normalized: norm.clone(),
+                            reason: reason.to_string(),
+                            inbound_filter_id: 1,
+                            outbound_filter_id: 1,
+                            created_at: chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                            enforcement_mode: "LINUX_IPTABLES_ACTIVE".to_string(),
+                        };
+                        self.active_rules.insert(norm.clone(), rule);
+                        self.last_message = format!("已在 Linux iptables 下发入出站硬阻断: {}", norm);
+                        return WfpBlockOutcome {
+                            success: true,
+                            kernel_enforced: true,
+                            permission_denied: false,
+                            target: target.to_string(),
+                            cidr_normalized: norm,
+                            inbound_filter_id: 1,
+                            outbound_filter_id: 1,
+                            message: self.last_message.clone(),
+                        };
+                    }
+                    (Ok(o1), _) => {
+                        let err = String::from_utf8_lossy(&o1.stderr).to_string();
+                        let denied = err.contains("Permission denied") || err.contains("root");
+                        self.permission_denied = denied;
+                        return WfpBlockOutcome {
+                            success: false,
+                            kernel_enforced: false,
+                            permission_denied: denied,
+                            target: target.to_string(),
+                            cidr_normalized: norm,
+                            inbound_filter_id: 0,
+                            outbound_filter_id: 0,
+                            message: format!("iptables 执行失败: {}", err.trim()),
+                        };
+                    }
+                    _ => {}
+                }
+            }
+
             WfpBlockOutcome {
                 success: false,
                 kernel_enforced: false,
@@ -516,23 +714,49 @@ mod win_wfp_impl {
                 cidr_normalized: norm,
                 inbound_filter_id: 0,
                 outbound_filter_id: 0,
-                message: "非 Windows 平台不支持 Windows Filtering Platform (WFP)".to_string(),
+                message: self.last_message.clone(),
             }
         }
 
         pub fn unblock_ip(&mut self, target: &str) -> Result<String, String> {
-            self.active_rules.remove(target);
-            Err("当前操作系统非 Windows，无 WFP 会话规则".to_string())
+            let norm = parse_and_validate_ipv4_cidr(target)
+                .map(|(_, _, n)| n)
+                .unwrap_or_else(|_| target.trim().to_string());
+            let removed = self.active_rules.remove(&norm).or_else(|| self.active_rules.remove(target));
+            if let Some(rule) = removed {
+                if rule.enforcement_mode == "LINUX_NFTABLES_ACTIVE" {
+                    if rule.inbound_filter_id > 0 {
+                        let _ = std::process::Command::new("nft")
+                            .args(["delete", "rule", "inet", "omni_probe_guard", "omni_in", "handle", &rule.inbound_filter_id.to_string()])
+                            .output();
+                    }
+                    if rule.outbound_filter_id > 0 {
+                        let _ = std::process::Command::new("nft")
+                            .args(["delete", "rule", "inet", "omni_probe_guard", "omni_out", "handle", &rule.outbound_filter_id.to_string()])
+                            .output();
+                    }
+                    return Ok(format!("已从 Linux nftables 移除阻断规则: {}", rule.cidr_normalized));
+                } else if rule.enforcement_mode == "LINUX_IPTABLES_ACTIVE" {
+                    let _ = std::process::Command::new("iptables")
+                        .args(["-D", "INPUT", "-s", &rule.cidr_normalized, "-j", "DROP"])
+                        .output();
+                    let _ = std::process::Command::new("iptables")
+                        .args(["-D", "OUTPUT", "-d", &rule.cidr_normalized, "-j", "DROP"])
+                        .output();
+                    return Ok(format!("已从 Linux iptables 移除阻断规则: {}", rule.cidr_normalized));
+                }
+            }
+            Err(format!("未找到 {} 的活跃内核防火墙阻断条目", target))
         }
 
         pub fn status_report(&mut self) -> WfpStatusReport {
             WfpStatusReport {
-                os_supported: false,
-                engine_connected: false,
-                permission_denied: false,
+                os_supported: self.driver != LinuxFirewallDriver::Unavailable,
+                engine_connected: self.driver != LinuxFirewallDriver::Unavailable,
+                permission_denied: self.permission_denied,
                 last_status_code: 0,
-                last_message: "WFP 仅适用 Windows 操作系统".to_string(),
-                active_rules: vec![],
+                last_message: self.last_message.clone(),
+                active_rules: self.active_rules.values().cloned().collect(),
             }
         }
     }
@@ -591,5 +815,24 @@ mod tests {
         #[cfg(windows)]
         assert!(report.os_supported);
         assert!(!report.last_message.is_empty());
+    }
+
+    #[test]
+    fn test_linux_nftables_command_generation_handle_parsing_and_self_protection() {
+        let (norm, cmds) = build_linux_nft_block_cmds("45.33.32.156/24").expect("合法外部网段应生成 nft 策略");
+        assert_eq!(norm, "45.33.32.0/24");
+        assert_eq!(cmds.len(), 5);
+        assert!(cmds[3].contains(&"45.33.32.0/24".to_string()));
+        assert!(cmds[4].contains(&"daddr".to_string()));
+
+        // 防自锁与防注入校验
+        assert!(build_linux_nft_block_cmds("127.0.0.1").is_err());
+        assert!(build_linux_nft_block_cmds("0.0.0.0/0").is_err());
+        assert!(build_linux_nft_block_cmds("1.2.3.4; rm -rf /").is_err());
+
+        // nft --echo --handle 真实输出解析测试
+        let sample_echo = "add rule inet omni_probe_guard omni_in ip saddr 45.33.32.0/24 counter packets 0 bytes 0 drop # handle 42";
+        assert_eq!(parse_linux_nft_handle(sample_echo), 42);
+        assert_eq!(parse_linux_nft_handle("unexpected output"), 0);
     }
 }

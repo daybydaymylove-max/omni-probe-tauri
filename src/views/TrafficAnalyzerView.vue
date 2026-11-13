@@ -204,6 +204,13 @@
               <span class="hidden 2xl:inline">实时报文全景流</span>
               <span class="2xl:hidden">报文流</span>
             </span>
+            <span
+              v-if="isRunning && captureCapability && captureCapability.external_ready && captureCapability.targets.length > 0"
+              class="hidden xl:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 ui-num shrink-0"
+              :title="`外网并发挂载接口: ${captureCapability.targets.join(', ')}`"
+            >
+              全网 {{ captureCapability.targets.length }} 口
+            </span>
 
             <!-- 协议快速微胶囊群 -->
             <div class="flex items-center gap-0.5 glass-pill p-0.5 rounded-xl text-[11px] shrink-0">
@@ -311,6 +318,10 @@
                 <button @click="toggleTimeseriesHeatmapPanel(); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
                   <AppIcon name="radar" :size="13" class="text-indigo-500" />
                   <span>时序聚合与热力矩阵</span>
+                </button>
+                <button @click="isVpnDetectorOpen = true; closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs font-semibold cursor-pointer" style="color: var(--text-primary);">
+                  <AppIcon name="shield" :size="13" class="text-rose-500" />
+                  <span>VPN / 加密代理四维侦测</span>
                 </button>
               </div>
             </div>
@@ -582,12 +593,36 @@
 
         <!-- 全贯穿虚拟滚动表格容器 (透明透景底衬 + 顶底渐变羽化 + 滚动穿越悬浮栏) -->
         <div ref="tableContainer" @scroll="onScroll" class="flex-1 overflow-auto custom-scrollbar relative min-h-0 select-text bg-transparent liquid-scroll-fade">
+          <!-- 非特权/缺驱动外网降级明确阻断警示横幅 -->
+          <div
+            v-if="isRunning && captureCapability && !captureCapability.external_ready"
+            class="mx-3 mt-[62px] mb-1 rounded-2xl border border-amber-500/45 bg-amber-500/12 px-3.5 py-2.5 flex items-center justify-between gap-3 text-xs z-30 relative shadow-xs"
+          >
+            <div class="flex items-start gap-2 min-w-0">
+              <AppIcon name="alert" :size="15" class="text-amber-600 dark:text-amber-300 shrink-0 mt-0.5" />
+              <div class="min-w-0 space-y-0.5">
+                <div class="font-bold text-amber-800 dark:text-amber-200">
+                  外网捕获通道受限（当前仅局域网多播/ARP 雷达运行中）
+                </div>
+                <div class="text-[11px] leading-snug text-amber-900/85 dark:text-amber-100/85">
+                  {{ captureCapability.reason }}
+                </div>
+              </div>
+            </div>
+            <button
+              @click="$emit('openEnvInspector')"
+              class="ui-btn-primary px-3 py-1.5 rounded-xl text-[11px] font-semibold shrink-0 whitespace-nowrap"
+            >
+              环境自检 / 安装 Npcap
+            </button>
+          </div>
+
           <div :style="{ minWidth: totalTableMinWidth }">
-            <!-- 顶部穿透让位垫片：未开上部工具抽屉时确保初始表头对齐悬浮控制栏下方 -->
-            <div v-if="!(isReplayPanelOpen || isIndustrialTxOpen || isTimeseriesHeatmapOpen)" class="h-[60px] shrink-0 pointer-events-none"></div>
+            <!-- 顶部穿透让位垫片：未开上部工具抽屉与降级横幅时确保初始表头对齐悬浮控制栏下方 -->
+            <div v-if="!(isReplayPanelOpen || isIndustrialTxOpen || isTimeseriesHeatmapOpen || (isRunning && captureCapability && !captureCapability.external_ready))" class="h-[60px] shrink-0 pointer-events-none"></div>
             <!-- 表头 (悬浮停靠在控制栏下方，允许下方滚动数据行穿透上方玻璃条) -->
             <div
-              :class="['ui-table-head sticky z-20 px-3.5 py-2.5 items-center tracking-wider select-none', (isReplayPanelOpen || isIndustrialTxOpen || isTimeseriesHeatmapOpen) ? 'top-0' : 'top-[60px]']"
+              :class="['ui-table-head sticky z-20 px-3.5 py-2.5 items-center tracking-wider select-none', (isReplayPanelOpen || isIndustrialTxOpen || isTimeseriesHeatmapOpen || (isRunning && captureCapability && !captureCapability.external_ready)) ? 'top-0' : 'top-[60px]']"
               :style="gridTemplateStyle"
             >
               <div v-for="(col, idx) in visibleColumns" :key="col.key" class="relative group flex items-center justify-between pr-2.5 h-full min-w-0">
@@ -1049,6 +1084,10 @@
             </button>
             <div class="flex glass-pill p-0.5 rounded-xl text-[11px]">
               <button @click="activeBottomTab = 'hexdump'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer font-medium', activeBottomTab === 'hexdump' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">L7</button>
+              <button @click="activeBottomTab = 'tracemap'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer font-medium flex items-center gap-1', activeBottomTab === 'tracemap' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']" title="查看本地 IP 到目标 IP 的网络 Trace 与 MAP 态势图">
+                <AppIcon name="globe" :size="11" />
+                <span>Trace/MAP</span>
+              </button>
               <button @click="activeBottomTab = 'dialogue'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer font-medium', activeBottomTab === 'dialogue' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">会话</button>
               <button @click="activeBottomTab = 'iographs'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer font-medium', activeBottomTab === 'iographs' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">IO图</button>
               <button @click="activeBottomTab = 'wave'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer font-medium', activeBottomTab === 'wave' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">示波</button>
@@ -1072,6 +1111,16 @@
                 <div>IP · <span class="font-semibold" style="color: var(--text-primary);">{{ selectedPacket.src_ip || '--' }}</span> → <span class="font-semibold" style="color: var(--text-primary);">{{ selectedPacket.dst_ip || '--' }}</span></div>
                 <div class="text-blue-600 dark:text-sky-300 font-medium">端口: <span>{{ selectedPacket.src_port || '-' }}</span> → <span>{{ selectedPacket.dst_port || '-' }}</span></div>
               </div>
+            </div>
+
+            <!-- 本地 IP 到目标 IP 的网络 Trace 跃点拓扑与地理 MAP 态势速览 (用户报文流点击核心诉求) -->
+            <div class="apple-group-card p-2.5">
+              <PacketTraceMapView
+                :packet="selectedPacket"
+                :compact="true"
+                @openFullTraceroute="openTraceroute"
+                @appendLog="msg => emit('appendLog', msg)"
+              />
             </div>
 
             <div class="apple-group-card space-y-2">
@@ -1138,6 +1187,26 @@
             icon="code"
             title="报文深度语义解构视窗"
             description="在左侧列表中点击任意报文，即可实时展开 L2-L7 深度解构与 Hex 对齐视窗。"
+          />
+        </div>
+
+        <!-- 子视图 1.5: 本地 IP 到目标 IP 专属网络 Trace 与 MAP 全息态势 -->
+        <div v-else-if="activeBottomTab === 'tracemap'" class="flex-1 overflow-y-auto p-3.5 space-y-3 text-xs custom-scrollbar">
+          <template v-if="selectedPacket">
+            <div class="apple-group-card p-3">
+              <PacketTraceMapView
+                :packet="selectedPacket"
+                :compact="false"
+                @openFullTraceroute="openTraceroute"
+                @appendLog="msg => emit('appendLog', msg)"
+              />
+            </div>
+          </template>
+          <EmptyState
+            v-else
+            icon="globe"
+            title="本地 ➔ 目标网络 Trace & 地理 MAP 视窗"
+            description="请在左侧报文列表中点击选择任意数据帧，即可实时测算并呈现从本地主机到目标主机的端到端跳数追踪 (Trace) 与地理链路 (MAP) 态势。"
           />
         </div>
 
@@ -1305,6 +1374,12 @@
       :defaultIp="selectedPacket?.src_ip || ''"
       :defaultPort="selectedPacket?.src_port || 80"
       @close="isTargetProbeOpen = false"
+    />
+
+    <!-- 5b. 全环境 VPN / 加密代理隧道四维交叉侦测引擎 -->
+    <VpnTunnelDetectorModal
+      :isOpen="isVpnDetectorOpen"
+      @close="isVpnDetectorOpen = false"
     />
 
     <!-- 6. 端口双向出入执行器模态框 -->
@@ -1518,9 +1593,9 @@
         <AppIcon name="globe" :size="13" />
         <span>源 IP 测地路由追踪</span>
       </button>
-      <button v-if="contextMenu.packet?.dst_ip" @click="menuAction('traceroute_dst')" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors text-emerald-600 dark:text-emerald-300">
+      <button v-if="contextMenu.packet?.dst_ip" @click="menuAction('traceroute_dst')" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors text-emerald-600 dark:text-emerald-300 font-medium">
         <AppIcon name="globe" :size="13" />
-        <span>目的 IP 测地路由追踪</span>
+        <span>追踪本地至目标网络路由 (Trace & MAP)</span>
       </button>
       <button @click="menuAction('copy')" class="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-hover)] flex items-center gap-2 cursor-pointer transition-colors" style="color: var(--text-primary);">
         <AppIcon name="document" :size="13" />
@@ -1569,6 +1644,7 @@ import { useUniversalDiff } from '../composables/useUniversalDiff';
 import { saveTextViaNativeDesktop } from '../composables/useDesktopSave';
 import { uiPrompt } from '../composables/useConfirmDialog';
 import PacketDetailModal from '../components/PacketDetailModal.vue';
+import PacketTraceMapView from '../components/PacketTraceMapView.vue';
 import AppIcon from '../components/AppIcon.vue';
 import EmptyState from '../components/EmptyState.vue';
 
@@ -1646,6 +1722,12 @@ const props = defineProps<{
   selectedSerial: string;
   serialBaudRate: number;
   usbDevices: any[];
+  captureCapability?: {
+    external_ready: boolean;
+    scope: string;
+    reason: string;
+    targets: string[];
+  };
 }>();
 
 const emit = defineEmits([
@@ -1655,7 +1737,7 @@ const emit = defineEmits([
   'updateSerial', 'updateBaudRate', 'updatePortBaudRate',
   'clearData',
   'updateBpf', 'updateIface', 'replayPacket', 'saveBaseline',
-  'appendLog', 'importPackets', 'openHoneypot', 'openWireless', 'switchWorkbench'
+  'appendLog', 'importPackets', 'openHoneypot', 'openWireless', 'switchWorkbench', 'openEnvInspector'
 ]);
 
 const TargetProbeModal = defineAsyncComponent(() => import('../components/TargetProbeModal.vue'));
@@ -1671,6 +1753,7 @@ const MultiSerialCompareModal = defineAsyncComponent(() => import('../components
 const IpDossierModal = defineAsyncComponent(() => import('../components/IpDossierModal.vue'));
 const IoGraphsPanel = defineAsyncComponent(() => import('../components/IoGraphsPanel.vue'));
 const GeodesicTracerouteModal = defineAsyncComponent(() => import('../components/GeodesicTracerouteModal.vue'));
+const VpnTunnelDetectorModal = defineAsyncComponent(() => import('../components/VpnTunnelDetectorModal.vue'));
 
 const diffBus = useUniversalDiff();
 
@@ -2114,6 +2197,7 @@ const telemetryRateText = computed(() => {
 const activeBus = ref<'nic' | 'serial' | 'usb'>('nic');
 const isTransceiverModalOpen = ref(false);
 const isTargetProbeOpen = ref(false);
+const isVpnDetectorOpen = ref(false);
 const isDetailModalOpen = ref(false);
 const isMultiCompareOpen = ref(false);
 const detailPacket = ref<PacketRecord | null>(null);
@@ -3924,6 +4008,8 @@ function menuAction(action: 'inject' | 'detail' | 'baseline' | 'replay' | 'copy'
   } else if (action === 'traceroute_src' && pkt.src_ip) {
     openTraceroute(pkt.src_ip);
   } else if (action === 'traceroute_dst' && pkt.dst_ip) {
+    activeBottomTab.value = 'tracemap';
+    isInspectorOpen.value = true;
     openTraceroute(pkt.dst_ip);
   } else if (action === 'copy') {
     if (pkt.payload_hex && navigator.clipboard) {
@@ -3998,6 +4084,8 @@ function handleScopeKeydown(e: KeyboardEvent) {
 }
 
 let unlistenWaveData: UnlistenFn | null = null;
+let unlistenIndustrialTx: UnlistenFn | null = null;
+let unlistenIndustrialTimeout: UnlistenFn | null = null;
 
 onMounted(async () => {
   window.addEventListener('keydown', handleScopeKeydown);
@@ -4012,8 +4100,19 @@ onMounted(async () => {
       const next = [...wavePoints.value, { value: Number(event.payload.value) || 0, ts_ms: Number(event.payload.ts_ms) || Date.now() }];
       wavePoints.value = next.length > 240 ? next.slice(-240) : next;
     });
+    unlistenIndustrialTx = await listen<CompletedIndustrialTransaction>('industrial-transaction-event', () => {
+      if (isIndustrialTxOpen.value) {
+        fetchIndustrialTxData();
+      }
+    });
+    unlistenIndustrialTimeout = await listen<{ src_ip?: string; dst_ip?: string }>('industrial-transaction-timeout', ({ payload }) => {
+      emit('appendLog', `[INDUSTRIAL-TX-TIMEOUT] 工控主从请求响应超时: ${payload?.src_ip || ''} -> ${payload?.dst_ip || ''}`);
+      if (isIndustrialTxOpen.value) {
+        fetchIndustrialTxData();
+      }
+    });
   } catch (e) {
-    console.warn('注册 wave-data 波形监听失败:', e);
+    console.warn('注册实时事件监听失败:', e);
   }
 
   window.addEventListener('click', closeContextMenu);
@@ -4038,6 +4137,14 @@ onUnmounted(() => {
   if (unlistenWaveData) {
     unlistenWaveData();
     unlistenWaveData = null;
+  }
+  if (unlistenIndustrialTx) {
+    unlistenIndustrialTx();
+    unlistenIndustrialTx = null;
+  }
+  if (unlistenIndustrialTimeout) {
+    unlistenIndustrialTimeout();
+    unlistenIndustrialTimeout = null;
   }
   if (topoAnimId) cancelAnimationFrame(topoAnimId);
   if (telemetryTimer) clearInterval(telemetryTimer);

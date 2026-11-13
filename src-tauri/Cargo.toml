@@ -1,6 +1,6 @@
 [package]
 name = "omni-probe-tauri"
-version = "0.3.2"
+version = "0.3.5"
 description = "Omni-Probe: 工业级多总线协议审计、跨介质流式差分比对与原生桌面网络探针系统"
 authors = [
     "Omni Engineering Team",
@@ -47,6 +47,7 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-feature
 rcgen = "0.13"
 flate2 = "1.0"
 crc32fast = "1.4"
+encoding_rs = "0.8"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

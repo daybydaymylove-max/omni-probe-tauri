@@ -1,4 +1,7 @@
 pub mod lock_guard;
+pub mod platform_net;
+pub mod lldp_cdp;
+pub mod net_toolbox;
 pub mod sniffer;
 pub mod analyzer;
 pub mod forensics;
@@ -99,8 +102,35 @@ pub use snmp_topology::{
     drill_down_topology_node_cmd,
     get_distributed_probe_cluster_cmd,
     get_hierarchical_topology_viewport_cmd,
+    list_registered_switches_cmd,
     locate_asset_switch_port_cmd,
+    poll_snmp_switch_cmd,
+    poll_snmp_v3_switch_cmd,
     roll_up_topology_node_cmd,
+};
+pub use lldp_cdp::{
+    clear_l2_discovery_neighbors_cmd,
+    decode_l2_discovery_hex_cmd,
+    get_l2_discovery_neighbors_cmd,
+};
+pub use net_toolbox::{
+    calculate_subnet_info_cmd,
+    dns_native_query_cmd,
+    get_file_server_status_cmd,
+    http_timing_diagnostic_cmd,
+    split_vlsm_subnets_cmd,
+    start_http_file_server_cmd,
+    start_tftp_server_cmd,
+    stop_http_file_server_cmd,
+    stop_tftp_server_cmd,
+    tcping_diagnostic_cmd,
+};
+pub mod remote_terminal;
+pub use remote_terminal::{
+    open_network_terminal_cmd,
+    send_terminal_input_cmd,
+    close_network_terminal_cmd,
+    list_active_terminals_cmd,
 };
 pub use baseline_learning::{
     get_macro_calendar_baseline_status_cmd,
@@ -156,9 +186,11 @@ pub use glushkov_engine::{
     reset_glushkov_engine_metrics_cmd,
 };
 // 测地线可视路由追踪与地球地理情报引擎 (TASK-43)
+pub mod geo_coordinates_catalog;
 pub mod traceroute_engine;
 pub use traceroute_engine::{
     start_traceroute_cmd,
+    stop_traceroute_cmd,
     lookup_ip_geo_coordinates_cmd,
     get_self_ip_geo_cmd,
 };
@@ -228,7 +260,6 @@ pub use wireless_analyzer::dissect_wireless_or_vlan_hex_cmd;
 // 全球网络空间地理态势与流量测绘引擎
 pub mod geo_map_engine;
 pub use geo_map_engine::{
-    get_global_geo_map_data_cmd,
     resolve_real_traffic_geo_cmd,
     probe_active_os_sockets_cmd,
 };
@@ -255,6 +286,16 @@ pub use net_intelligence::{
     compare_network_with_baseline_cmd,
     pick_and_compare_network_pcap_cmd,
     export_network_audit_report_cmd,
+};
+
+// 全环境 VPN / 加密代理隧道四维交叉侦测与方式归因报告引擎
+pub mod vpn_detector;
+pub use vpn_detector::{
+    run_vpn_environment_audit_cmd,
+    audit_vpn_pcap_file_cmd,
+    reset_vpn_audit_stats_cmd,
+    probe_suspected_proxy_endpoint_cmd,
+    export_vpn_audit_report_cmd,
 };
 
 use once_cell::sync::Lazy;
@@ -408,11 +449,6 @@ async fn inject_raw_packet(raw_hex: String, iface: String) -> Result<String, Str
 #[tauri::command]
 async fn list_interfaces() -> Result<Vec<String>, String> {
     sniffer::list_network_interfaces()
-}
-
-#[tauri::command]
-async fn list_serial_ports() -> Result<Vec<String>, String> {
-    Ok(serial::list_available_serial_ports())
 }
 
 #[tauri::command]
@@ -668,11 +704,6 @@ async fn replay_l4_packet_cmd(target_ip: String, target_port: u16, transport: St
 }
 
 #[tauri::command]
-async fn run_matrix_compare(payloads: Vec<String>) -> Result<analyzer::SmartDiffResult, String> {
-    analyzer::smart_diff_payloads(payloads)
-}
-
-#[tauri::command]
 async fn run_matrix_compare_labeled_cmd(payloads: Vec<String>, labels: Vec<String>) -> Result<analyzer::SmartDiffResult, String> {
     analyzer::smart_diff_payloads_labeled(payloads, labels)
 }
@@ -802,20 +833,6 @@ async fn read_binary_diff_dual_offset_page_cmd(
 }
 
 #[tauri::command]
-async fn read_binary_diff_page_cmd(
-    left_path: String,
-    right_path: String,
-    start_offset: u64,
-    page_size: usize,
-) -> Result<file_diff_merge::BinaryDiffPageResult, String> {
-    tokio::task::spawn_blocking(move || {
-        file_diff_merge::read_binary_diff_page(&left_path, &right_path, start_offset, page_size)
-    })
-    .await
-    .map_err(|e| format!("后台读取二进制页失败: {}", e))?
-}
-
-#[tauri::command]
 async fn compare_directories_cmd(
     left_dir: String,
     right_dir: String,
@@ -907,6 +924,7 @@ async fn clear_logs() -> Result<String, String> {
     // 3. 删除历史比对基线（等价 Python 基线重置语义；锚定数据目录）
     let _ = std::fs::remove_file(forensics::data_path("baseline_payloads.json"));
     net_intelligence::reset_live_net_stats();
+    vpn_detector::reset_vpn_link_stats();
 
     Ok(format!(
         "[CLEANUP] 取证数据彻底清空完成：{}/4 个证据文件已截断，封条与基线已重置",
@@ -1173,37 +1191,6 @@ async fn reload_dpi_signatures_cmd(path: Option<String>) -> Result<String, Strin
 use tauri::Manager;
 
 #[tauri::command]
-fn minimize_app(app: tauri::AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.minimize();
-    }
-}
-
-#[tauri::command]
-fn maximize_app(app: tauri::AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
-        if let Ok(is_max) = window.is_maximized() {
-            if is_max { let _ = window.unmaximize(); } else { let _ = window.maximize(); }
-        }
-    }
-}
-
-#[tauri::command]
-fn close_app(app: tauri::AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.close();
-    }
-    std::process::exit(0);
-}
-
-#[tauri::command]
-fn drag_app(app: tauri::AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.start_dragging();
-    }
-}
-
-#[tauri::command]
 fn hide_to_tray_cmd(app: tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.hide();
@@ -1294,6 +1281,13 @@ async fn set_rolling_pcap_config_cmd(
     max_duration_secs: u64,
     max_quota_gb: u64,
 ) -> Result<String, String> {
+    let cur_snaplen = {
+        let writer = crate::lock_guard::lock_mutex(
+            &pcap_engine::GLOBAL_ROLLING_WRITER,
+            "lib::set_rolling_pcap_config_snap",
+        );
+        writer.get_config().snaplen_mode
+    };
     let mut writer = crate::lock_guard::lock_mutex(
         &pcap_engine::GLOBAL_ROLLING_WRITER,
         "lib::set_rolling_pcap_config_cmd",
@@ -1304,9 +1298,18 @@ async fn set_rolling_pcap_config_cmd(
         max_file_size_bytes: max_size_mb * 1024 * 1024,
         max_file_duration_secs: max_duration_secs,
         max_disk_quota_bytes: max_quota_gb * 1024 * 1024 * 1024,
-        snaplen_mode: pcap_engine::SnaplenMode::Full,
+        snaplen_mode: cur_snaplen,
     });
     Ok("持续滚动落盘配置已成功更新".to_string())
+}
+
+#[tauri::command]
+async fn get_rolling_pcap_config_cmd() -> Result<pcap_engine::RollingPcapConfig, String> {
+    let writer = crate::lock_guard::lock_mutex(
+        &pcap_engine::GLOBAL_ROLLING_WRITER,
+        "lib::get_rolling_pcap_config_cmd",
+    );
+    Ok(writer.get_config())
 }
 
 #[tauri::command]
@@ -1409,15 +1412,6 @@ async fn step_pcap_replay_cmd() -> Result<String, String> {
 async fn get_pcap_replay_telemetry_cmd() -> Result<pcap_replay::ReplayTelemetry, String> {
     let replay = pcap_replay::GLOBAL_REPLAY_ENGINE.lock().map_err(|e| e.to_string())?;
     Ok(replay.get_telemetry())
-}
-
-#[tauri::command]
-async fn get_zero_copy_pool_metrics_cmd() -> Result<zero_copy_pool::ZeroCopyPoolMetrics, String> {
-    let pool = crate::lock_guard::lock_mutex(
-        &zero_copy_pool::GLOBAL_ZERO_COPY_POOL,
-        "lib::get_zero_copy_pool_metrics_cmd",
-    );
-    Ok(pool.get_metrics())
 }
 
 #[tauri::command]
@@ -1778,11 +1772,6 @@ async fn delete_packet_sample_cmd(id: String) -> Result<bool, String> {
 }
 
 #[tauri::command]
-async fn compare_two_packets_cmd(packet_a: sniffer::PacketRecord, packet_b: sniffer::PacketRecord) -> Result<analyzer::DualPacketDiffResult, String> {
-    analyzer::compare_two_packets(packet_a, packet_b)
-}
-
-#[tauri::command]
 async fn compare_universal_payloads_cmd(
     item_a: analyzer::UniversalDiffPayload,
     item_b: analyzer::UniversalDiffPayload,
@@ -1942,6 +1931,11 @@ async fn clear_decrypted_traffic_logs_cmd() -> Result<bool, String> {
 #[tauri::command]
 async fn set_active_blocking_mode_cmd(enforced: bool) -> Result<bool, String> {
     Ok(tls_proxy::set_active_blocking_mode(enforced))
+}
+
+#[tauri::command]
+async fn get_active_blocking_mode_cmd() -> Result<bool, String> {
+    Ok(firewall_filter::is_active_blocking_enforced())
 }
 
 #[tauri::command]
@@ -2142,6 +2136,11 @@ async fn download_and_install_component_cmd(
     component_id: String,
 ) -> Result<String, String> {
     env_inspector::EnvironmentInspector::download_and_launch_installer(app, component_id).await
+}
+
+#[tauri::command]
+fn get_chinagov_os_telemetry_cmd() -> env_inspector::ChinaGovOsTelemetry {
+    env_inspector::EnvironmentInspector::inspect_chinagov_os_telemetry()
 }
 
 // ============================================================
@@ -2408,7 +2407,6 @@ pub fn run() {
             inject_raw_packet,
             list_interfaces,
             // 物理串口与 USB 嗅探及端口操作数据收发
-            list_serial_ports,
             list_serial_ports_detail,
             list_active_serial_probes,
             list_active_serial_bridges,
@@ -2430,7 +2428,6 @@ pub fn run() {
             send_serial_probe_frame_cmd,
             send_port_transceive_cmd,
             // 分析工具与基线管理
-            run_matrix_compare,
             run_matrix_compare_labeled_cmd,
             save_baseline_payloads_cmd,
             load_baseline_payloads_cmd,
@@ -2480,6 +2477,7 @@ pub fn run() {
             // 专业流量分析与持久化 (Sprint 3)
             set_snaplen_mode_cmd,
             set_rolling_pcap_config_cmd,
+            get_rolling_pcap_config_cmd,
             export_packets_pcap_cmd,
             export_packets_pcapng_cmd,
             export_packets_csv_cmd,
@@ -2527,7 +2525,6 @@ pub fn run() {
             save_packet_sample_cmd,
             list_packet_samples_cmd,
             delete_packet_sample_cmd,
-            compare_two_packets_cmd,
             compare_universal_payloads_cmd,
             compare_multi_universal_payloads_cmd,
             export_multi_diff_patch_cmd,
@@ -2554,6 +2551,7 @@ pub fn run() {
             get_decrypted_traffic_logs_cmd,
             clear_decrypted_traffic_logs_cmd,
             set_active_blocking_mode_cmd,
+            get_active_blocking_mode_cmd,
             decrypt_stream_with_keylog_cmd,
             // 四维安全合规审查专属指令
             get_network_audit_events_cmd,
@@ -2581,6 +2579,7 @@ pub fn run() {
             // 底层环境就绪度全景诊断
             get_environment_inspection_cmd,
             download_and_install_component_cmd,
+            get_chinagov_os_telemetry_cmd,
             // 工业事务双向追踪指令
             get_recent_industrial_transactions_cmd,
             get_industrial_transaction_stats_cmd,
@@ -2593,11 +2592,6 @@ pub fn run() {
             get_cascade_metrics_cmd,
             get_timeseries_metrics_cmd,
             get_industrial_heatmap_matrix_cmd,
-            // 窗口控制
-            minimize_app,
-            maximize_app,
-            close_app,
-            drag_app,
             // 离线报文高精调度重放与零拷贝内存池 (TASK-20 / TASK-21)
             load_pcap_replay_file_cmd,
             start_pcap_replay_cmd,
@@ -2606,7 +2600,6 @@ pub fn run() {
             stop_pcap_replay_cmd,
             step_pcap_replay_cmd,
             get_pcap_replay_telemetry_cmd,
-            get_zero_copy_pool_metrics_cmd,
             get_kernel_zero_copy_telemetry_cmd,
             // 交换机物理端口联动、万级主机分级聚合拓扑树与分布式探针汇聚 (TASK-36)
             get_hierarchical_topology_viewport_cmd,
@@ -2614,7 +2607,30 @@ pub fn run() {
             roll_up_topology_node_cmd,
             collapse_all_topology_cmd,
             locate_asset_switch_port_cmd,
+            poll_snmp_switch_cmd,
+            poll_snmp_v3_switch_cmd,
+            list_registered_switches_cmd,
             get_distributed_probe_cluster_cmd,
+            // 二层链路发现 (IEEE 802.1AB LLDP / Cisco CDP)
+            get_l2_discovery_neighbors_cmd,
+            clear_l2_discovery_neighbors_cmd,
+            decode_l2_discovery_hex_cmd,
+            // 网工高频原子工具箱 (子网/VLSM/原生DNS/TCPing/HTTP测速/TFTP&HTTP微服)
+            calculate_subnet_info_cmd,
+            split_vlsm_subnets_cmd,
+            dns_native_query_cmd,
+            tcping_diagnostic_cmd,
+            http_timing_diagnostic_cmd,
+            start_tftp_server_cmd,
+            stop_tftp_server_cmd,
+            start_http_file_server_cmd,
+            stop_http_file_server_cmd,
+            get_file_server_status_cmd,
+            // 网工交互终端 (RFC 854 Telnet / 原生 SSH2 客户端)
+            open_network_terminal_cmd,
+            send_terminal_input_cmd,
+            close_network_terminal_cmd,
+            list_active_terminals_cmd,
             // 宏观长周期与非平稳日历自适应自学习基线 (TASK-37)
             get_macro_calendar_baseline_status_cmd,
             infer_unsupervised_day_regime_cmd,
@@ -2652,6 +2668,7 @@ pub fn run() {
             evaluate_audit_script_cmd,
             // 测地线可视路由追踪与地球地理情报 (TASK-43)
             start_traceroute_cmd,
+            stop_traceroute_cmd,
             lookup_ip_geo_coordinates_cmd,
             get_self_ip_geo_cmd,
             // Wi-Fi / 802.11 无线与链路监测
@@ -2705,7 +2722,6 @@ pub fn run() {
             // 无线与 VLAN 统一诊断解剖
             dissect_wireless_or_vlan_hex_cmd,
             // 全球网络空间地理态势地图与双向测绘数据 (TASK-46)
-            get_global_geo_map_data_cmd,
             resolve_real_traffic_geo_cmd,
             probe_active_os_sockets_cmd,
             // 工业级网络调试助手 (NetAssist)
@@ -2724,6 +2740,12 @@ pub fn run() {
             compare_network_with_baseline_cmd,
             pick_and_compare_network_pcap_cmd,
             export_network_audit_report_cmd,
+            // 全环境 VPN / 加密代理隧道四维交叉侦测与方式归因报告
+            run_vpn_environment_audit_cmd,
+            audit_vpn_pcap_file_cmd,
+            reset_vpn_audit_stats_cmd,
+            probe_suspected_proxy_endpoint_cmd,
+            export_vpn_audit_report_cmd,
             // 自动版本检查与在线更新
             check_app_update_cmd,
             // 跨平台内建驱动级串口透明拦截 (PTY / Win32 NamedPipe / RFC2217 / WDM IRP Tap)
@@ -2741,7 +2763,6 @@ pub fn run() {
             export_unified_patch_file_cmd,
             compare_binary_files_streaming_cmd,
             compare_binary_files_fastcdc_cmd,
-            read_binary_diff_page_cmd,
             read_binary_diff_dual_offset_page_cmd,
             compare_directories_cmd,
             // 原生桌面文件系统对话、原子导出与资源管理器定位

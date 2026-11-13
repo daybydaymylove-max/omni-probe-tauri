@@ -1,7 +1,7 @@
 {
   "name": "omni-probe-tauri",
   "private": true,
-  "version": "0.3.2",
+  "version": "0.3.5",
   "description": "Omni-Probe: 工业级多总线协议审计、跨介质流式差分比对与原生桌面网络探针系统",
   "author": "ChinaCPU Engineering Team <daybydaymylove2009@gmail.com>",
   "license": "Apache-2.0",
@@ -11,6 +11,7 @@
     "desktop": "npm run build && cargo run --manifest-path src-tauri/Cargo.toml",
     "desktop:release": "npm run build && cargo run --release --manifest-path src-tauri/Cargo.toml",
     "build": "vue-tsc --noEmit && vite build",
+    "test": "vitest run",
     "tauri": "tauri"
   },
   "dependencies": {
@@ -30,6 +31,7 @@
     "tailwindcss": "^4.3.3",
     "typescript": "~5.6.2",
     "vite": "^6.0.3",
+    "vitest": "^5.1.0",
     "vue-tsc": "^2.1.10"
   }
 }

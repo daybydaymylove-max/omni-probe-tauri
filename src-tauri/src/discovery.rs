@@ -555,40 +555,43 @@ unsafe extern "system" {
 }
 
 /// 主动全网段深度并发扫描 (Active LAN Subnet Deep Scan)
-/// 自动识别物理以太网/Wi-Fi 网段（排除 VPN），对 1~254 发起高速探活
+/// 自动识别本机全部物理与虚拟局域网网段真实 CIDR (支持 /30../16 任意子网，彻底废除硬编码 /24)
 pub fn scan_lan_subnet_active(app: tauri::AppHandle) {
     std::thread::spawn(move || {
-        let _ = app.emit("system-log", "[ASSET-RADAR] 🚀 正在启动局域网全网段主动深度扫描...".to_string());
+        let _ = app.emit("system-log", "[ASSET-RADAR] 🚀 正在启动全网卡多网段自适应深度扫描...".to_string());
 
         // 1. 首先同步一次内核现有邻居
         sync_kernel_neighbors(Some(&app));
 
-        // 2. 识别真实物理局域网网段 (例如 192.168.1.0/24)
-        // 优先从已有的内核私网 IP 探测物理以太网段，避免被 VPN (10.10.10.x) 劫持
-        let target_subnets = detect_physical_subnets();
+        // 2. 收集全部真实物理/内网接口及其真实 CIDR 子网掩码
+        let target_subnets = detect_physical_subnet_cidrs();
+        let desc_list: Vec<String> = target_subnets
+            .iter()
+            .map(|(ip, mask)| {
+                let prefix = crate::platform_net::netmask_to_prefix_len(*mask);
+                format!("{}/{}", ip, prefix)
+            })
+            .collect();
 
         let _ = app.emit(
             "system-log",
-            format!("[ASSET-RADAR] 🌐 已锁定物理网段: {:?}", target_subnets),
+            format!("[ASSET-RADAR] 🌐 已锁定全部活跃扫描网段 ({}): {:?}", target_subnets.len(), desc_list),
         );
 
-        for (o0, o1, o2, my_host) in target_subnets {
+        for (local_ip, netmask) in target_subnets {
+            let targets = crate::platform_net::enumerate_cidr_scan_targets(local_ip, netmask, 1024);
+            if targets.is_empty() {
+                continue;
+            }
+            let chunk_size = (targets.len() / 8).max(1);
             let mut handles = Vec::new();
 
-            for chunk_idx in 0..4 {
+            for chunk in targets.chunks(chunk_size) {
+                let chunk_ips = chunk.to_vec();
                 #[cfg(windows)]
                 let app_chunk = app.clone();
                 let h = std::thread::spawn(move || {
-                    let start_h = (chunk_idx * 64) + 1;
-                    let end_h = std::cmp::min((chunk_idx + 1) * 64, 254);
-
-                    for host_id in start_h..=end_h {
-                        if host_id == my_host as usize {
-                            continue;
-                        }
-
-                        let target_ip = std::net::Ipv4Addr::new(o0, o1, o2, host_id as u8);
-
+                    for target_ip in chunk_ips {
                         #[cfg(windows)]
                         {
                             let dest_u32 = u32::from_ne_bytes(target_ip.octets());
@@ -610,12 +613,17 @@ pub fn scan_lan_subnet_active(app: tauri::AppHandle) {
 
                         #[cfg(not(windows))]
                         {
+                            // Linux / macOS: 发送短促 UDP 探测与高频管理端口非阻塞连接触发内核二层 ARP 邻居解析
                             if let Ok(socket) = std::net::UdpSocket::bind("0.0.0.0:0") {
                                 let _ = socket.send_to(&[0u8; 4], (target_ip, 65534));
                             }
+                            let _ = std::net::TcpStream::connect_timeout(
+                                &std::net::SocketAddr::new(std::net::IpAddr::V4(target_ip), 80),
+                                Duration::from_millis(25),
+                            );
                         }
 
-                        std::thread::sleep(Duration::from_millis(5));
+                        std::thread::sleep(Duration::from_millis(3));
                     }
                 });
                 handles.push(h);
@@ -626,72 +634,50 @@ pub fn scan_lan_subnet_active(app: tauri::AppHandle) {
             }
         }
 
-        // 再次同步一次内核表
+        // 再次同步一次内核 ARP/邻居表（Linux 下将刚唤醒的同网段 MAC 一并入库）
         sync_kernel_neighbors(Some(&app));
 
         let total = get_all_assets().len();
         let _ = app.emit(
             "system-log",
-            format!("[ASSET-RADAR] ✅ 局域网全网段扫描完成，当前已知资产总数: {} 个节点", total),
+            format!("[ASSET-RADAR] ✅ 多网段自适应扫描完成，当前已知资产总数: {} 个节点", total),
         );
     });
 }
 
-/// 智能探测物理局域网网段 (返回 vec![(o0, o1, o2, host_id)])
-/// 严格零硬编码：优先获取 sniffer::detect_primary_ipv4_and_subnet 探测出的物理主网卡网段
-fn detect_physical_subnets() -> Vec<(u8, u8, u8, u8)> {
-    let mut subnets = Vec::new();
+/// 智能探测全部物理/局域网接口真实 (IPv4, Netmask) 列表（支持多网卡、非 /24 子网及离线内网）
+fn detect_physical_subnet_cidrs() -> Vec<(std::net::Ipv4Addr, std::net::Ipv4Addr)> {
+    let mut subnets: Vec<(std::net::Ipv4Addr, std::net::Ipv4Addr)> = Vec::new();
+    let mut seen_nets = std::collections::BTreeSet::new();
 
-    // 1. 优先获取主活动物理网卡 IP
-    let (primary_ip, _) = crate::sniffer::detect_primary_ipv4_and_subnet();
-    if !primary_ip.is_loopback() && !primary_ip.is_link_local() && !primary_ip.is_unspecified() {
-        let oct = primary_ip.octets();
-        subnets.push((oct[0], oct[1], oct[2], oct[3]));
-        return subnets;
-    }
-
-    // 2. 回退：遍历系统所有非回环非链路本地 IPv4 接口
     #[cfg(windows)]
     {
-        if let Ok(output) = std::process::Command::new("netsh")
-            .args(["interface", "ipv4", "show", "addresses"])
-            .creation_flags(0x08000000)
-            .output()
-        {
-            let text = String::from_utf8_lossy(&output.stdout);
-            for line in text.lines() {
-                if line.contains("IP 地址") || line.contains("IP Address") {
-                    if let Some(ip_str) = line.split(':').nth(1) {
-                        let ip_trimmed = ip_str.trim();
-                        if let Ok(ipv4) = ip_trimmed.parse::<std::net::Ipv4Addr>() {
-                            if !ipv4.is_loopback() && !ipv4.is_link_local() && !ipv4.is_unspecified() {
-                                let oct = ipv4.octets();
-                                let item = (oct[0], oct[1], oct[2], oct[3]);
-                                if !subnets.contains(&item) {
-                                    subnets.push(item);
-                                }
-                            }
-                        }
-                    }
+        for iface in crate::sniffer::discover_capture_target_interfaces("") {
+            if !iface.ip.is_loopback() && !iface.ip.is_link_local() && !iface.ip.is_unspecified() {
+                let net = u32::from(iface.ip) & u32::from(iface.netmask);
+                if seen_nets.insert((net, u32::from(iface.netmask))) {
+                    subnets.push((iface.ip, iface.netmask));
                 }
             }
         }
     }
 
-    #[cfg(not(windows))]
+    #[cfg(target_os = "linux")]
     {
-        // Linux / macOS: 回退读取系统非回环 IPv4
-        if let Ok(socket) = std::net::UdpSocket::bind("0.0.0.0:0") {
-            if socket.connect("1.1.1.1:53").is_ok() {
-                if let Ok(addr) = socket.local_addr() {
-                    if let std::net::IpAddr::V4(v4) = addr.ip() {
-                        if !v4.is_loopback() {
-                            let oct = v4.octets();
-                            subnets.push((oct[0], oct[1], oct[2], oct[3]));
-                        }
-                    }
+        for iface in crate::platform_net::discover_linux_interfaces() {
+            if !iface.ip.is_loopback() && !iface.ip.is_link_local() && !iface.ip.is_unspecified() {
+                let net = u32::from(iface.ip) & u32::from(iface.netmask);
+                if seen_nets.insert((net, u32::from(iface.netmask))) {
+                    subnets.push((iface.ip, iface.netmask));
                 }
             }
+        }
+    }
+
+    if subnets.is_empty() {
+        let (primary_ip, primary_mask) = crate::sniffer::detect_primary_ipv4_and_subnet();
+        if !primary_ip.is_loopback() && !primary_ip.is_link_local() && !primary_ip.is_unspecified() {
+            subnets.push((primary_ip, primary_mask));
         }
     }
 
@@ -713,32 +699,30 @@ pub fn start_asset_discovery_daemon(app: tauri::AppHandle) {
             // 1. 同步系统内核最新邻居表
             sync_kernel_neighbors(Some(&app));
 
-            // 2. 每隔 20 秒执行一次温和的轻量探活
+            // 2. 每隔 20 秒执行一次温和的轻量多网段探活
             if ticker % 5 == 0 {
-                let subnets = detect_physical_subnets();
+                let subnets = detect_physical_subnet_cidrs();
                 #[cfg(windows)]
-                for (o0, o1, o2, _) in subnets {
-                    #[cfg(windows)]
-                    {
-                        // 优先对网关 .1 和常见地址探活
-                        for h in [1, 2, 34, 35, 36, 100, 101, 200, 254] {
-                            let target_ip = std::net::Ipv4Addr::new(o0, o1, o2, h);
-                            let dest_u32 = u32::from_ne_bytes(target_ip.octets());
-                            let mut mac_buf = [0u8; 6];
-                            let mut mac_len = 6u32;
-                            let ret = unsafe {
-                                SendARP(dest_u32, 0, mac_buf.as_mut_ptr(), &mut mac_len as *mut u32)
-                            };
-                            if ret == 0 && mac_len == 6 {
-                                let mac_str = format!(
-                                    "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
-                                    mac_buf[0], mac_buf[1], mac_buf[2], mac_buf[3], mac_buf[4], mac_buf[5]
-                                );
-                                record_asset_with_notify(&app, &target_ip.to_string(), &mac_str, "ARP_HEARTBEAT", 0);
-                            }
+                for (ip, mask) in subnets {
+                    // 自适应真值网段前 16 个常见关键节点探活（支持任意 /8../31 网段）
+                    for target_ip in crate::platform_net::enumerate_cidr_scan_targets(ip, mask, 16) {
+                        let dest_u32 = u32::from_ne_bytes(target_ip.octets());
+                        let mut mac_buf = [0u8; 6];
+                        let mut mac_len = 6u32;
+                        let ret = unsafe {
+                            SendARP(dest_u32, 0, mac_buf.as_mut_ptr(), &mut mac_len as *mut u32)
+                        };
+                        if ret == 0 && mac_len == 6 {
+                            let mac_str = format!(
+                                "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
+                                mac_buf[0], mac_buf[1], mac_buf[2], mac_buf[3], mac_buf[4], mac_buf[5]
+                            );
+                            record_asset_with_notify(&app, &target_ip.to_string(), &mac_str, "ARP_HEARTBEAT", 0);
                         }
                     }
                 }
+                #[cfg(not(windows))]
+                let _ = subnets;
             }
         }
     });

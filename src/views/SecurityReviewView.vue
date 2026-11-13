@@ -1,7 +1,7 @@
 <template>
   <div class="h-full flex flex-col gap-2.5 overflow-hidden font-sans">
 
-    <!-- 1. 顶部操作栏与四维态势核心指标看板 (真 Liquid Glass 控制层) -->
+    <!-- 1. 顶部操作栏与四维综合监控核心指标看板 (真 Liquid Glass 控制层) -->
     <section class="ui-nav-glass rounded-2xl p-3.5 shrink-0 flex flex-col gap-3" style="color: var(--text-primary);">
       <span class="lens-edge-lip" aria-hidden="true"></span>
 
@@ -25,6 +25,11 @@
         </div>
 
         <div class="flex items-center gap-2 flex-wrap">
+          <button @click="showVpnDetectorModal = true" class="ui-btn-secondary px-3 py-1.5 text-xs text-rose-700 dark:text-rose-300 border-rose-500/30">
+            <AppIcon name="radar" :size="14" class="text-rose-500" />
+            <span>VPN/代理隧道侦测</span>
+          </button>
+
           <button @click="generateComprehensiveReport" :disabled="isGeneratingReport" class="ui-btn-primary px-3 py-1.5 text-xs">
             <AppIcon name="document" :size="14" />
             <span>{{ isGeneratingReport ? '生成报告中...' : '出具综合勘验报告' }}</span>
@@ -256,7 +261,16 @@
               {{ t.label }}
             </button>
           </div>
-          <span class="text-[11px] ui-num" style="color: var(--text-muted);">共显示 {{ filteredNetworkEvents.length }} 笔网络安全事件</span>
+          <div class="flex items-center gap-2">
+            <button
+              @click="showVpnDetectorModal = true"
+              class="ui-btn-secondary px-2.5 py-1 text-[11px] font-semibold text-rose-700 dark:text-rose-300 border-rose-500/30"
+              title="启动终端本地+链路DPI+DFI/MSS+机房/DNS错位四维 VPN 隧道侦测"
+            >
+              VPN/代理隧道深度侦测
+            </button>
+            <span class="text-[11px] ui-num" style="color: var(--text-muted);">共显示 {{ filteredNetworkEvents.length }} 笔网络安全事件</span>
+          </div>
         </div>
 
         <!-- 工业专有解包插件生态状态栏 -->
@@ -1026,17 +1040,21 @@
       </div>
     </div>
 
+    <VpnTunnelDetectorModal :isOpen="showVpnDetectorModal" @close="showVpnDetectorModal = false" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, defineAsyncComponent } from 'vue';
 import { notifySuccess, notifyWarning, notifyError } from '../composables/useNotification';
 import { invoke } from '@tauri-apps/api/core';
 import AppIcon from '../components/AppIcon.vue';
 import EmptyState from '../components/EmptyState.vue';
 import { useUniversalDiff } from '../composables/useUniversalDiff';
 import { saveTextViaNativeDesktop } from '../composables/useDesktopSave';
+
+const VpnTunnelDetectorModal = defineAsyncComponent(() => import('../components/VpnTunnelDetectorModal.vue'));
+const showVpnDetectorModal = ref(false);
 
 const diffBus = useUniversalDiff();
 

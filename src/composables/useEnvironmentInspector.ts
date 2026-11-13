@@ -54,6 +54,10 @@ export interface KernelZeroCopyTelemetry {
   pool_utilization_percent: number;
   pool_total_memory_bytes: number;
   status_detail: string;
+  external_capture_ready: boolean;
+  capture_scope: string;
+  degradation_reason: string;
+  bound_capture_targets: string[];
 }
 
 export interface XdpBypassMetrics {

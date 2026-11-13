@@ -2617,6 +2617,85 @@ pub fn stop_bthport_etw_capture_cmd() -> Result<bool, String> {
     Ok(true)
 }
 
+/// 解析 Linux `bluetoothctl devices` 输出行 (`Device AA:BB:CC:DD:EE:FF Name`)
+pub fn parse_linux_bluetoothctl_devices(stdout_text: &str) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    for line in stdout_text.lines() {
+        let trimmed = line.trim();
+        if let Some(rest) = trimmed.strip_prefix("Device ") {
+            let mut parts = rest.splitn(2, ' ');
+            let mac = parts.next().unwrap_or("").trim().to_uppercase();
+            let name = parts.next().unwrap_or("").trim().to_string();
+            if mac.len() == 17 && mac.matches(':').count() == 5 {
+                out.push((
+                    mac.clone(),
+                    if name.is_empty() { format!("BLE-{}", &mac[mac.len() - 5..]) } else { name },
+                ));
+            }
+        }
+    }
+    out
+}
+
+/// 解析 Linux `bluetoothctl info <MAC>` 详情块（Paired / Connected / Trusted / Class / RSSI）
+pub fn parse_linux_bluetoothctl_info(info_text: &str, mac: &str, fallback_name: &str) -> NativeBluetoothDeviceInfo {
+    let mut name = fallback_name.to_string();
+    let mut class_cod = "BlueZ-Device".to_string();
+    let mut connected = false;
+    let mut paired = false;
+    let mut trusted = false;
+    for line in info_text.lines() {
+        let l = line.trim();
+        if let Some(v) = l.strip_prefix("Name:") {
+            let n = v.trim();
+            if !n.is_empty() {
+                name = n.to_string();
+            }
+        } else if let Some(v) = l.strip_prefix("Class:") {
+            class_cod = v.trim().to_string();
+        } else if let Some(v) = l.strip_prefix("Connected:") {
+            connected = v.trim().eq_ignore_ascii_case("yes");
+        } else if let Some(v) = l.strip_prefix("Paired:") {
+            paired = v.trim().eq_ignore_ascii_case("yes");
+        } else if let Some(v) = l.strip_prefix("Trusted:") {
+            trusted = v.trim().eq_ignore_ascii_case("yes");
+        }
+    }
+    NativeBluetoothDeviceInfo {
+        name,
+        address: mac.to_string(),
+        class_of_device: class_cod,
+        connected,
+        remembered: paired || trusted,
+        authenticated: paired,
+        last_seen: chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+        last_used: String::new(),
+    }
+}
+
+/// 解析 Linux `bluetoothctl list` 输出 (`Controller XX:XX:XX:XX:XX:XX HostName [default]`)
+pub fn parse_linux_bluetoothctl_controllers(list_text: &str) -> Vec<NativeBluetoothAdapterInfo> {
+    let mut adapters = Vec::new();
+    for line in list_text.lines() {
+        let trimmed = line.trim();
+        if let Some(rest) = trimmed.strip_prefix("Controller ") {
+            let mut parts = rest.splitn(2, ' ');
+            let addr = parts.next().unwrap_or("").trim().to_uppercase();
+            let name = parts.next().unwrap_or("BlueZ HCI").trim().to_string();
+            if addr.len() == 17 {
+                adapters.push(NativeBluetoothAdapterInfo {
+                    name,
+                    address: addr,
+                    class_of_device: "Linux BlueZ HCI".to_string(),
+                    manufacturer_id: 0,
+                    lmp_subversion: 0,
+                });
+            }
+        }
+    }
+    adapters
+}
+
 /// 跨平台执行操作系统原生蓝牙硬件与附近设备扫描
 /// 时间复杂度: O(R + D) (R 为本地适配器数, D 为已缓存/发现设备数); 空间复杂度: O(R + D)
 pub fn scan_native_bluetooth_devices(issue_inquiry: bool) -> NativeBluetoothScanResult {
@@ -2624,7 +2703,82 @@ pub fn scan_native_bluetooth_devices(issue_inquiry: bool) -> NativeBluetoothScan
     {
         win_bth::scan(issue_inquiry)
     }
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "linux")]
+    {
+        let mut adapters = Vec::new();
+        // 1. 优先通过 /sys/class/bluetooth/hci* 零权限读取物理控制器地址与状态
+        if let Ok(entries) = std::fs::read_dir("/sys/class/bluetooth") {
+            for entry in entries.flatten() {
+                let hci_name = entry.file_name().to_string_lossy().to_string();
+                if hci_name.starts_with("hci") && !hci_name.contains(':') {
+                    let addr = std::fs::read_to_string(entry.path().join("address"))
+                        .unwrap_or_default()
+                        .trim()
+                        .to_uppercase();
+                    let hci_type = std::fs::read_to_string(entry.path().join("type"))
+                        .unwrap_or_else(|_| "BR/EDR+LE".to_string())
+                        .trim()
+                        .to_string();
+                    if !addr.is_empty() {
+                        adapters.push(NativeBluetoothAdapterInfo {
+                            name: hci_name,
+                            address: addr,
+                            class_of_device: format!("sysfs {}", hci_type),
+                            manufacturer_id: 0,
+                            lmp_subversion: 0,
+                        });
+                    }
+                }
+            }
+        }
+        // 2. 通过 BlueZ `bluetoothctl` 探测适配器列表及设备
+        if adapters.is_empty() {
+            if let Ok(out) = std::process::Command::new("bluetoothctl").arg("list").output() {
+                if out.status.success() {
+                    adapters = parse_linux_bluetoothctl_controllers(&String::from_utf8_lossy(&out.stdout));
+                }
+            }
+        }
+        if issue_inquiry && !adapters.is_empty() {
+            let _ = std::process::Command::new("bluetoothctl")
+                .args(["--timeout", "2", "scan", "on"])
+                .output();
+        }
+        let mut devices = Vec::new();
+        if let Ok(out) = std::process::Command::new("bluetoothctl").arg("devices").output() {
+            if out.status.success() {
+                for (mac, fname) in parse_linux_bluetoothctl_devices(&String::from_utf8_lossy(&out.stdout)) {
+                    let dev = if let Ok(inf) = std::process::Command::new("bluetoothctl").args(["info", &mac]).output() {
+                        parse_linux_bluetoothctl_info(&String::from_utf8_lossy(&inf.stdout), &mac, &fname)
+                    } else {
+                        parse_linux_bluetoothctl_info("", &mac, &fname)
+                    };
+                    devices.push(dev);
+                }
+            }
+        }
+        let avail = !adapters.is_empty();
+        let diag = if avail {
+            format!(
+                "Linux BlueZ 原生引擎就绪：发现 {} 个本地蓝牙控制器与 {} 台设备",
+                adapters.len(),
+                devices.len()
+            )
+        } else {
+            "未检测到 Linux 蓝牙控制器 (/sys/class/bluetooth/hci*)，或请确认已安装并启动 bluetoothd 服务。".to_string()
+        };
+        NativeBluetoothScanResult {
+            native_scan_available: avail,
+            platform: "linux".to_string(),
+            inquiry_executed: issue_inquiry && avail,
+            ble_adv_count: devices.len(),
+            adapters,
+            devices,
+            diagnostic_message: diag,
+            summary: get_bluetooth_telemetry_summary(),
+        }
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
     {
         let _ = issue_inquiry;
         NativeBluetoothScanResult {
@@ -2634,7 +2788,7 @@ pub fn scan_native_bluetooth_devices(issue_inquiry: bool) -> NativeBluetoothScan
             ble_adv_count: 0,
             adapters: Vec::new(),
             devices: Vec::new(),
-            diagnostic_message: "当前非 Windows 平台暂需通过 USBPcap/HCI 控制器抓包获取蓝牙设备。".to_string(),
+            diagnostic_message: "当前操作系统需通过外部 HCI / USBPcap 通道接入蓝牙帧。".to_string(),
             summary: get_bluetooth_telemetry_summary(),
         }
     }
@@ -4501,5 +4655,25 @@ CHR|00002a19-0000-1000-8000-00805f9b34fb|17|Read, Notify|Plain|57\n\
         assert_eq!(validate_uuid_chars("0x2A19").unwrap(), "00002a19-0000-1000-8000-00805f9b34fb");
         assert!(validate_uuid_chars("00002a19-0000-1000-8000-00805f9b34fb").is_ok());
         assert!(validate_uuid_chars("2a19; calc.exe").is_err());
+    }
+
+    #[test]
+    fn test_linux_bluez_bluetoothctl_parsers() {
+        let list_out = "Controller D4:3B:04:11:22:33 Kylin-Workstation [default]\n";
+        let ctrls = parse_linux_bluetoothctl_controllers(list_out);
+        assert_eq!(ctrls.len(), 1);
+        assert_eq!(ctrls[0].address, "D4:3B:04:11:22:33");
+
+        let dev_out = "Device 11:22:33:44:55:66 Huawei FreeBuds\nDevice AA:BB:CC:DD:EE:FF\n";
+        let devs = parse_linux_bluetoothctl_devices(dev_out);
+        assert_eq!(devs.len(), 2);
+        assert_eq!(devs[0], ("11:22:33:44:55:66".to_string(), "Huawei FreeBuds".to_string()));
+
+        let info_out = "Device 11:22:33:44:55:66\n\tName: Huawei FreeBuds\n\tClass: 0x00240404\n\tPaired: yes\n\tTrusted: yes\n\tConnected: yes\n";
+        let parsed = parse_linux_bluetoothctl_info(info_out, "11:22:33:44:55:66", "Fallback");
+        assert_eq!(parsed.name, "Huawei FreeBuds");
+        assert!(parsed.connected);
+        assert!(parsed.authenticated);
+        assert!(parsed.remembered);
     }
 }
