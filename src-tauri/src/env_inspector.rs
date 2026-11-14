@@ -572,15 +572,94 @@ impl EnvironmentInspector {
         }
     }
 
-    /// 跨平台安全启动安装包向导可执行程序
+    /// 跨平台安全启动安装包向导可执行程序（支持 Windows UAC 原生提权）
     pub fn launch_executable_installer(exe_path: &Path) -> Result<(), String> {
         #[cfg(windows)]
         {
-            use std::process::Command;
-            Command::new(exe_path)
-                .spawn()
-                .map_err(|e| format!("启动安装程序向导进程失败: {}", e))?;
-            Ok(())
+            use std::ffi::OsStr;
+            use std::os::windows::ffi::OsStrExt;
+
+            if !exe_path.exists() {
+                return Err(format!("安装包文件不存在: {:?}", exe_path));
+            }
+
+            unsafe {
+                #[link(name = "shell32")]
+                unsafe extern "system" {
+                    fn ShellExecuteW(
+                        hwnd: *mut std::ffi::c_void,
+                        lpOperation: *const u16,
+                        lpFile: *const u16,
+                        lpParameters: *const u16,
+                        lpDirectory: *const u16,
+                        nShowCmd: i32,
+                    ) -> usize;
+                }
+                #[link(name = "kernel32")]
+                unsafe extern "system" {
+                    fn GetLastError() -> u32;
+                }
+
+                let file_wide: Vec<u16> = exe_path
+                    .as_os_str()
+                    .encode_wide()
+                    .chain(std::iter::once(0))
+                    .collect();
+
+                let verb_runas: Vec<u16> = OsStr::new("runas")
+                    .encode_wide()
+                    .chain(std::iter::once(0))
+                    .collect();
+
+                let dir_wide: Vec<u16> = exe_path
+                    .parent()
+                    .map(|p| p.as_os_str().encode_wide().chain(std::iter::once(0)).collect())
+                    .unwrap_or_else(|| vec![0]);
+
+                // 1. 优先使用 Windows Shell 原生 "runas" 动词，无缝触发系统 UAC 管理员提权确认框
+                let res = ShellExecuteW(
+                    std::ptr::null_mut(),
+                    verb_runas.as_ptr(),
+                    file_wide.as_ptr(),
+                    std::ptr::null(),
+                    if dir_wide.len() > 1 { dir_wide.as_ptr() } else { std::ptr::null() },
+                    1, // SW_SHOWNORMAL
+                );
+
+                if res > 32 {
+                    return Ok(());
+                }
+
+                let last_err = GetLastError();
+                // 1223 = ERROR_CANCELLED (用户在 UAC 弹窗中点击了“否”或关闭弹窗)
+                if last_err == 1223 || res == 5 {
+                    return Err("用户已取消 Windows 用户账户控制 (UAC) 提权授权，安装未启动。如需安装请重试并点击【是】。".to_string());
+                }
+            }
+
+            // 2. 第一级降级容灾：尝试标准 Command::new 直接启动（适用于当前主进程已拥有管理员令牌的情况）
+            if std::process::Command::new(exe_path).spawn().is_ok() {
+                return Ok(());
+            }
+
+            // 3. 第二级降级容灾：尝试通过 PowerShell Start-Process -Verb RunAs 管道触发
+            let ps_script = format!(
+                "Start-Process -FilePath '{}' -Verb RunAs",
+                exe_path.display()
+            );
+            if let Ok(status) = std::process::Command::new("powershell")
+                .args(["-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-Command", &ps_script])
+                .status()
+            {
+                if status.success() {
+                    return Ok(());
+                }
+            }
+
+            Err(format!(
+                "启动安装向导失败。请手动前往该路径右键【以管理员身份运行】完成安装：{}",
+                exe_path.display()
+            ))
         }
 
         #[cfg(not(windows))]
@@ -801,5 +880,14 @@ mod tests {
         assert!(!telemetry.distro_name.is_empty());
         assert!(!telemetry.firewall_engine.is_empty());
         assert!(!telemetry.guide_instructions.is_empty());
+    }
+
+    #[test]
+    fn test_launch_executable_installer_nonexistent_boundary() {
+        let non_existent = Path::new("C:\\invalid_probe_path_nonexistent\\test_installer.exe");
+        let res = EnvironmentInspector::launch_executable_installer(non_existent);
+        assert!(res.is_err());
+        let err_msg = res.unwrap_err();
+        assert!(err_msg.contains("安装包文件不存在") || err_msg.contains("非 Windows"));
     }
 }

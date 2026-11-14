@@ -1,7 +1,7 @@
 {
   "name": "omni-probe-tauri",
   "private": true,
-  "version": "0.3.5",
+  "version": "0.3.6",
   "description": "Omni-Probe: 工业级多总线协议审计、跨介质流式差分比对与原生桌面网络探针系统",
   "author": "ChinaCPU Engineering Team <daybydaymylove2009@gmail.com>",
   "license": "Apache-2.0",

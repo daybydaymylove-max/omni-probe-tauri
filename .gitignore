@@ -55,3 +55,11 @@ dist-release/
 *.zip
 *.tar.gz
 temp_release_win/
+
+# 本地下载的 NVD CVE 离线数据库与流式解包规则集
+data/*.json.gz
+data/*.tar.gz
+data/rules/
+data/suricata_rules.rules
+src-tauri/data/rules/
+src-tauri/data/suricata_rules.rules

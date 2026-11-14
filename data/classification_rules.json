@@ -1,0 +1,208 @@
+{
+  "version": "2.0-INDUSTRIAL-FULL",
+  "standard": "GB/T 43697-2024 / GB/T 38668-2020 / GB/T 35273-2020",
+  "description": "工业全能网络探针 - 数据分类分级与核心敏感资产探测全量规则库",
+  "categories": [
+    {
+      "code": "CORE_DATA",
+      "name": "核心数据 (Level 4)",
+      "description": "关系国家安全、国民经济命脉、重要民生、重大公共利益的数据，一旦遭到破坏或泄露将造成严重国家安全后果",
+      "severity": "CRITICAL",
+      "default_action": "BLOCK_AND_ALARM"
+    },
+    {
+      "code": "IMPORTANT_DATA",
+      "name": "重要数据 (Level 3)",
+      "description": "一旦遭到篡改、破坏、泄露或者非法利用，可能危害国家安全、经济运行、社会公共利益、企业生存命脉",
+      "severity": "HIGH",
+      "default_action": "ALERT"
+    },
+    {
+      "code": "SENSITIVE_PII",
+      "name": "个人敏感信息 (Level 2)",
+      "description": "一旦泄露或非法使用，容易导致个人名誉、身心健康受到损害或财产安全受到重大危害的个人信息",
+      "severity": "HIGH",
+      "default_action": "MASK_AND_LOG"
+    },
+    {
+      "code": "GENERAL_DATA",
+      "name": "一般数据 (Level 1)",
+      "description": "仅对组织内部常规业务运营或个人产生有限影响的公开或非关键数据",
+      "severity": "LOW",
+      "default_action": "PASS"
+    }
+  ],
+  "rules": [
+    {
+      "id": "RULE-ID-CARD",
+      "name": "中国第二代居民身份证",
+      "category_code": "SENSITIVE_PII",
+      "rule_type": "REGEX_WITH_CHECKSUM",
+      "pattern": "\\b([1-9]\\d{5}(?:18|19|20)\\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\\d|3[01])\\d{3}[0-9Xx])\\b",
+      "checksum_type": "ISO_7064_MOD_11_2",
+      "description": "18位中国二代居民身份证号码，需通过行政区划码与 ISO 7064:1983.MOD 11-2 权重因子算法严格校验"
+    },
+    {
+      "id": "RULE-USCC",
+      "name": "统一社会信用代码 (法人及非法人组织代码)",
+      "category_code": "IMPORTANT_DATA",
+      "rule_type": "REGEX_WITH_CHECKSUM",
+      "pattern": "\\b([0-9A-HJ-NPQRTUWXY]{2}\\d{6}[0-9A-HJ-NPQRTUWXY]{10})\\b",
+      "checksum_type": "GB_32100_MOD_31",
+      "description": "18位统一社会信用代码（含登记管理部门、机构类别、行政区划、组织机构代码及校验码）"
+    },
+    {
+      "id": "RULE-ORG-CODE",
+      "name": "全国组织机构代码",
+      "category_code": "IMPORTANT_DATA",
+      "rule_type": "REGEX_WITH_CHECKSUM",
+      "pattern": "\\b([0-9A-Z]{8}-[0-9X])\\b",
+      "checksum_type": "GB_11714_MOD_11",
+      "description": "全国组织机构代码（8位本体码 + 1位校验码）"
+    },
+    {
+      "id": "RULE-PASSPORT-CN",
+      "name": "中国普通电子护照与公务护照",
+      "category_code": "SENSITIVE_PII",
+      "rule_type": "REGEX",
+      "pattern": "\\b([EDGSedgs]\\d{8}|[PDSpds]\\d{7})\\b",
+      "description": "中国电子护照号（E/G普通护照，P/S公务与外交护照）"
+    },
+    {
+      "id": "RULE-HK-MACAO-PASS",
+      "name": "港澳居民来往内地通行证 (回乡证)",
+      "category_code": "SENSITIVE_PII",
+      "rule_type": "REGEX",
+      "pattern": "\\b([HMhm]\\d{8}|[HMhm]\\d{10})\\b",
+      "description": "港澳居民来往内地通行证证件号（H/M 开头 + 8/10位数字）"
+    },
+    {
+      "id": "RULE-TAIWAN-PASS",
+      "name": "台湾居民来往大陆通行证 (台胞证)",
+      "category_code": "SENSITIVE_PII",
+      "rule_type": "REGEX",
+      "pattern": "\\b(\\d{8}|\\d{10})\\b",
+      "description": "台湾居民来往大陆通行证 8 位新版或 10 位旧版证件编码"
+    },
+    {
+      "id": "RULE-MOBILE-PHONE",
+      "name": "中国大陆移动电话手机号 (全号段)",
+      "category_code": "SENSITIVE_PII",
+      "rule_type": "REGEX",
+      "pattern": "\\b(?:\\+?86)?(1(?:3\\d|4[5-9]|5[0-35-9]|6[2567]|7[0-8]|8\\d|9[0-35-9])\\d{8})\\b",
+      "description": "工信部最新三大基础电信运营商及中国广电 192 号段 11 位有效手机号"
+    },
+    {
+      "id": "RULE-BANK-CARD",
+      "name": "银行卡 / 信用卡卡号 (银联/Visa/MasterCard/Amex)",
+      "category_code": "SENSITIVE_PII",
+      "rule_type": "REGEX_WITH_CHECKSUM",
+      "pattern": "\\b(62\\d{14,17}|4\\d{12}(?:\\d{3})?|5[1-5]\\d{14}|3[47]\\d{13}|35\\d{14})\\b",
+      "checksum_type": "LUHN",
+      "description": "中国银联(62)、Visa(4)、MasterCard(51-55)、Amex(34/37)卡号，需通过 Luhn 模10 算法校验"
+    },
+    {
+      "id": "RULE-SOCIAL-SECURITY",
+      "name": "社会保障卡与医保参保号",
+      "category_code": "SENSITIVE_PII",
+      "rule_type": "REGEX",
+      "pattern": "\\b([A-Za-z]\\d{8,9}|\\d{9})\\b",
+      "description": "城镇职工与城乡居民社会保障卡识别码"
+    },
+    {
+      "id": "RULE-EMAIL",
+      "name": "RFC 5322 互联网电子邮箱地址",
+      "category_code": "SENSITIVE_PII",
+      "rule_type": "REGEX",
+      "pattern": "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b",
+      "description": "标准互联网电子邮箱账户与通信地址"
+    },
+    {
+      "id": "RULE-INDUSTRIAL-TOPOLOGY",
+      "name": "国家关键基础设施工控测站与拓扑配置",
+      "category_code": "CORE_DATA",
+      "rule_type": "KEYWORD",
+      "keywords": [
+        "测站遥测参数", "大坝水情阈值", "闸门控制开度", "PLC工程私钥",
+        "调度自动化中心主站", "水轮发电机组励磁参数", "电网稳控切机策略",
+        "SCADA数据库管理员密文", "集控中心主备同步拓扑"
+      ],
+      "description": "关系到水利水利枢纽、电网变电站与工业母机物理运行的核心工程控制参数与拓扑数据"
+    },
+    {
+      "id": "RULE-GEOSPATIAL-MAPPING",
+      "name": "国家基础测绘空间坐标与涉密地理数据",
+      "category_code": "CORE_DATA",
+      "rule_type": "KEYWORD",
+      "keywords": [
+        "CGCS2000坐标系精密高程", "水下大坝三维激光点云", "涉密国防工程大地坐标",
+        "重力异常基准网参数", "未公开地形矢量图层", "高精度水利遥感影像密级"
+      ],
+      "description": "未公开的国家测绘基准、高精重大水利工程几何坐标与军事防护空间数据"
+    },
+    {
+      "id": "RULE-PRIVATE-KEY",
+      "name": "非对称加密算法私钥明文 (RSA/SM2/EC/OpenSSH)",
+      "category_code": "CORE_DATA",
+      "rule_type": "REGEX",
+      "pattern": "-----\\s*BEGIN[ A-Z0-9_-]*(?:PRIVATE KEY|EC PRIVATE KEY|RSA PRIVATE KEY|SM2 PRIVATE KEY)\\s*-----",
+      "description": "RSA、国密 SM2、椭圆曲线 ECDSA 及 OpenSSH 格式的顶级数字签名与解密私钥明文"
+    },
+    {
+      "id": "RULE-CLOUD-ALIYUN-AKSK",
+      "name": "阿里云云管平台 AccessKey 凭证",
+      "category_code": "IMPORTANT_DATA",
+      "rule_type": "REGEX",
+      "pattern": "(?i)\\b(LTAI[0-9a-zA-Z]{16,24})\\b",
+      "description": "阿里云基础设施访问密钥 AccessKeyId"
+    },
+    {
+      "id": "RULE-CLOUD-TENCENT-AKSK",
+      "name": "腾讯云平台 SecretId 访问凭据",
+      "category_code": "IMPORTANT_DATA",
+      "rule_type": "REGEX",
+      "pattern": "(?i)\\b(AKID[0-9a-zA-Z]{16,32})\\b",
+      "description": "腾讯云控制台 API 与资源调度 SecretId"
+    },
+    {
+      "id": "RULE-CLOUD-AWS-AKSK",
+      "name": "Amazon Web Services (AWS) Access Key",
+      "category_code": "IMPORTANT_DATA",
+      "rule_type": "REGEX",
+      "pattern": "\\b((?:AKIA|ASIA|ABIA|ACCA)[0-9A-Z]{16})\\b",
+      "description": "AWS 全球与中国区 IAM 用户永久/临时 Access Key ID"
+    },
+    {
+      "id": "RULE-GIT-GITHUB-TOKEN",
+      "name": "GitHub 个人访问令牌 (Personal Access Token)",
+      "category_code": "IMPORTANT_DATA",
+      "rule_type": "REGEX",
+      "pattern": "\\b(gh[pousr]_[0-9a-zA-Z]{36,255})\\b",
+      "description": "GitHub 具备代码推送与发布特权的 Personal Access Token"
+    },
+    {
+      "id": "RULE-GIT-GITLAB-TOKEN",
+      "name": "GitLab 访问令牌 (GitLab Access Token)",
+      "category_code": "IMPORTANT_DATA",
+      "rule_type": "REGEX",
+      "pattern": "\\b(glpat-[0-9a-zA-Z\\-_]{20,})\\b",
+      "description": "企业自建或公网 GitLab 代码管理仓库特权访问凭据"
+    },
+    {
+      "id": "RULE-DB-CONNECTION-URI",
+      "name": "生产数据库明文特权连接串 (含账密)",
+      "category_code": "CORE_DATA",
+      "rule_type": "REGEX",
+      "pattern": "(?i)\\b(?:jdbc:)?(?:mysql|postgresql|oracle:thin|sqlserver|redis|mongodb):\\/\\/[a-zA-Z0-9._%+-]+:[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+",
+      "description": "载荷中夹带包含明文用户名和密码的生产数据库直连 URI"
+    },
+    {
+      "id": "RULE-JWT-TOKEN",
+      "name": "JSON Web Token (JWT) 鉴权令牌明文",
+      "category_code": "IMPORTANT_DATA",
+      "rule_type": "REGEX",
+      "pattern": "\\b(eyJ[a-zA-Z0-9_-]{10,}\\.eyJ[a-zA-Z0-9_-]{10,}\\.[a-zA-Z0-9_-]{10,})\\b",
+      "description": "无状态跨域身份认证与特权访问 JWT 结构体"
+    }
+  ]
+}

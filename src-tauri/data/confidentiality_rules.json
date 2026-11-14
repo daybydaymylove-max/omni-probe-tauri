@@ -1,7 +1,7 @@
 {
-  "version": "1.0",
-  "standard": "国家保密局涉密信息系统安全保密测评标准",
-  "description": "工业全能网络探针 - 保密安全审查规则库（标密公文、违规外联与介质安全）",
+  "version": "2.0-INDUSTRIAL-FULL",
+  "standard": "国家保密局涉密信息系统安全保密测评标准 / GB/T 9704-2012《党政机关公文格式》",
+  "description": "工业全能网络探针 - 国家秘密法定标志、红头公文、违规外联红线与商密硬件介质全量规则库",
   "secret_markers": [
     {
       "level": "TOP_SECRET",
@@ -10,10 +10,52 @@
       "description": "国家秘密最高等级，泄露会使国家安全和利益遭受特别严重的损害"
     },
     {
+      "level": "TOP_SECRET",
+      "marker": "绝密★30年",
+      "severity": "CRITICAL",
+      "description": "国家秘密最高等级法定保密期限（30年）"
+    },
+    {
+      "level": "TOP_SECRET",
+      "marker": "绝密★长期",
+      "severity": "CRITICAL",
+      "description": "国家秘密最高等级法定保密期限（长期）"
+    },
+    {
+      "level": "TOP_SECRET",
+      "marker": "绝密级",
+      "severity": "CRITICAL",
+      "description": "国家秘密最高等级公文标注"
+    },
+    {
       "level": "CONFIDENTIAL",
       "marker": "机密★",
       "severity": "HIGH",
       "description": "重要的国家秘密，泄露会使国家安全和利益遭受严重的损害"
+    },
+    {
+      "level": "CONFIDENTIAL",
+      "marker": "机密★20年",
+      "severity": "HIGH",
+      "description": "重要的国家秘密法定保密期限（20年）"
+    },
+    {
+      "level": "CONFIDENTIAL",
+      "marker": "机密★10年",
+      "severity": "HIGH",
+      "description": "重要的国家秘密法定保密期限（10年）"
+    },
+    {
+      "level": "CONFIDENTIAL",
+      "marker": "机密★长期",
+      "severity": "HIGH",
+      "description": "重要的国家秘密法定保密期限（长期）"
+    },
+    {
+      "level": "CONFIDENTIAL",
+      "marker": "机密级",
+      "severity": "HIGH",
+      "description": "重要国家秘密公文标注"
     },
     {
       "level": "SECRET",
@@ -22,69 +64,394 @@
       "description": "一般的国家秘密，泄露会使国家安全和利益遭受损害"
     },
     {
+      "level": "SECRET",
+      "marker": "秘密★10年",
+      "severity": "MEDIUM",
+      "description": "一般国家秘密法定保密期限（10年）"
+    },
+    {
+      "level": "SECRET",
+      "marker": "秘密★5年",
+      "severity": "MEDIUM",
+      "description": "一般国家秘密法定保密期限（5年）"
+    },
+    {
+      "level": "SECRET",
+      "marker": "秘密级",
+      "severity": "MEDIUM",
+      "description": "一般国家秘密公文标注"
+    },
+    {
+      "level": "INTERNAL",
+      "marker": "工作秘密★",
+      "severity": "MEDIUM",
+      "description": "行政机关在履行职能过程中产生的不属于国家秘密但泄露会造成不良影响的未公开事项"
+    },
+    {
+      "level": "INTERNAL",
+      "marker": "工作秘密★不予公开",
+      "severity": "MEDIUM",
+      "description": "行政机关法定工作秘密明确标注不予公开"
+    },
+    {
+      "level": "INTERNAL",
+      "marker": "内部资料★严禁外传",
+      "severity": "MEDIUM",
+      "description": "企事业单位核心内部资料严禁对外流转"
+    },
+    {
       "level": "INTERNAL",
       "marker": "内部文件★不予公开",
       "severity": "MEDIUM",
       "description": "企事业单位核心内部敏感情资与业务公文"
     },
     {
+      "level": "INTERNAL",
+      "marker": "内部掌握★",
+      "severity": "MEDIUM",
+      "description": "部委与行业内部掌握的工作部署与考评口径"
+    },
+    {
       "level": "COMMERCIAL_SECRET",
       "marker": "商业秘密★",
       "severity": "MEDIUM",
       "description": "组织专有不为公众所知悉的技术信息与经营信息"
+    },
+    {
+      "level": "COMMERCIAL_SECRET",
+      "marker": "商业秘密★核心技术",
+      "severity": "HIGH",
+      "description": "企业专有核心专利与工程配方商业秘密"
+    },
+    {
+      "level": "INTERNAL",
+      "marker": "密级和保密期限",
+      "severity": "MEDIUM",
+      "description": "党政机关公文首页版心左上角法定排版项目"
+    },
+    {
+      "level": "INTERNAL",
+      "marker": "知悉范围：",
+      "severity": "MEDIUM",
+      "description": "涉密公文与敏感载荷法定指定受控查阅人员范围"
+    },
+    {
+      "level": "INTERNAL",
+      "marker": "定密依据：",
+      "severity": "MEDIUM",
+      "description": "机关单位确定国家秘密密级、保密期限与知悉范围的法定条文依据"
+    },
+    {
+      "level": "INTERNAL",
+      "marker": "涉密载体编号",
+      "severity": "MEDIUM",
+      "description": "涉密光盘、移动硬盘与纸质档案物理登记流水号"
     }
   ],
   "document_signatures": [
     {
-      "id": "SIG-RED-HEADER",
-      "name": "国家机关/企事业单位红头公文发文字号",
-      "pattern": "[\\u4e00-\\u9fa5]{2,10}(?:发|办发|委发|函|计发)\\[\\d{4}\\]\\d+号",
-      "severity": "HIGH",
-      "description": "标准党政公文发文字号排版格式（如：水利发[2026]12号）"
+      "id": "SIG-RED-HEADER-CENTRAL",
+      "name": "中共中央/国务院核心红头公文字号",
+      "pattern": "(?:中发|中办发|中办字|国发|国办发|国办字|中纪发)[\\s]*[〔\\[\\(（]\\d{4}[〕\\]\\)）][\\s]*\\d+号",
+      "severity": "CRITICAL",
+      "description": "中共中央办公厅与国务院办公厅最高级别发文字号"
     },
     {
-      "id": "SIG-DRAFT-CONFIDENTIAL",
-      "name": "拟制期涉密文件标注",
-      "pattern": "(?:定密依据|知悉范围|解密时间|保密期限)[:：]\\s*(?:\\d+年|长期|公布前)",
+      "id": "SIG-RED-HEADER-MINISTRY",
+      "name": "国家部委规范发文字号",
+      "pattern": "(?:水规计|水资|水保|水防|办水|发改投资|发改高技|工信部网安|工信部信发|公通字|公治字|公网安|财预|财建|国资发|科发|国能发|自然资发|环发|应急发)[\\s]*[〔\\[\\(（]\\d{4}[〕\\]\\)）][\\s]*\\d+号",
+      "severity": "HIGH",
+      "description": "水利部、发改委、工信部、公安部、财政部等国家部委发文字号"
+    },
+    {
+      "id": "SIG-RED-HEADER-PROVINCIAL",
+      "name": "省级党委与人民政府发文字号",
+      "pattern": "[\\u4e00-\\u9fa5]{1,3}(?:省委|省府|省办|市委|市府|市办|委发|政发|办发)[\\s]*[〔\\[\\(（]\\d{4}[〕\\]\\)）][\\s]*\\d+号",
+      "severity": "HIGH",
+      "description": "各省直辖市党委与人民政府规范公文发文字号"
+    },
+    {
+      "id": "SIG-RED-HEADER-JUDICIAL",
+      "name": "最高人民法院与最高人民检察院发文字号",
+      "pattern": "(?:法发|法释|法办|高检发|高检检发)[\\s]*[〔\\[\\(（]\\d{4}[〕\\]\\)）][\\s]*\\d+号",
+      "severity": "HIGH",
+      "description": "司法机关法律解释与审判业务指导性公文发文字号"
+    },
+    {
+      "id": "SIG-RED-HEADER-MILITARY",
+      "name": "国防军工与部队公文字号",
+      "pattern": "(?:军发|军办发|装发|科工发|参发|政发)[\\s]*[〔\\[\\(（]\\d{4}[〕\\]\\)）][\\s]*\\d+号",
+      "severity": "CRITICAL",
+      "description": "国防军事装备研发与涉密保障公文字号"
+    },
+    {
+      "id": "SIG-RED-HEADER-GENERAL",
+      "name": "企事业单位通用规范公文字号",
+      "pattern": "[\\u4e00-\\u9fa5]{2,12}(?:发|办发|委发|函|计发|纪发|通|令)[\\s]*[〔\\[\\(（]\\d{4}[〕\\]\\)）][\\s]*\\d+号",
+      "severity": "HIGH",
+      "description": "标准党政企事业单位发文字号排版格式（GB/T 9704-2012）"
+    },
+    {
+      "id": "SIG-DRAFT-METADATA",
+      "name": "涉密公文拟制法定元数据项",
+      "pattern": "(?:定密依据|知悉范围|解密时间|保密期限)[:：]\\s*(?:\\d+年|长期|公布前|达到解密条件)",
       "severity": "HIGH",
       "description": "标密公文密级确认与保密期限法定元数据项"
+    },
+    {
+      "id": "SIG-SECRECY-COPIES",
+      "name": "涉密公文份号与版心排印",
+      "pattern": "份号[:：]?\\s*[0-9]{6}",
+      "severity": "HIGH",
+      "description": "涉密公文顶端 6 位阿拉伯数字唯一印刷份号"
     }
   ],
   "illegal_egress_rules": [
     {
       "category": "COMMERCIAL_CLOUD_STORAGE",
-      "name": "商业公共网盘外联传输",
-      "domain_patterns": ["*.pan.baidu.com", "*.weiyun.com", "*.onedrive.live.com", "*.dropbox.com", "*.aliyundrive.com"],
+      "name": "公共商业网盘与临时大文件分享平台",
+      "domain_patterns": [
+        "pan.baidu.com", "yun.baidu.com",
+        "weiyun.com",
+        "aliyundrive.com", "alipan.com",
+        "quark.cn", "pan.quark.cn",
+        "115.com", "anxia.com",
+        "lanzou.com", "lanzoux.com", "lanzoui.com",
+        "jianguoyun.com",
+        "wenshushu.cn",
+        "cowtransfer.com",
+        "dropbox.com", "dl.dropbox.com",
+        "onedrive.live.com", "1drv.ms",
+        "drive.google.com",
+        "mega.nz", "mega.co.nz",
+        "box.com",
+        "mediafire.com",
+        "icloud.com",
+        "pcloud.com"
+      ],
       "severity": "HIGH",
-      "description": "涉密网络向商业外部网盘违规上传或流转数据"
+      "description": "涉密终端向商业公共网盘、临时文件快传站点违规上传流转数据"
     },
     {
       "category": "ANONYMOUS_PROXY_VPN",
-      "name": "匿名代理与翻墙跳板外联",
-      "domain_patterns": ["*.torproject.org", "*.nordvpn.com", "*.expressvpn.com", "*.v2ray.com", "*.shadowsocks.org"],
+      "name": "跨境加密代理与匿名翻墙跳板网络",
+      "domain_patterns": [
+        "torproject.org",
+        ".onion",
+        "nordvpn.com",
+        "expressvpn.com",
+        "surfshark.com",
+        "protonvpn.com",
+        "privateinternetaccess.com",
+        "shadowsocks.org",
+        "v2ray.com",
+        "v2fly.org",
+        "xray.fun",
+        "clash.net",
+        "clashverge.dev",
+        "getlantern.org",
+        "psiphon.ca"
+      ],
       "severity": "CRITICAL",
-      "description": "违规连接跨境外联通道与隐匿代理网络"
+      "description": "涉密内网违规建立跨境外联隧道或连接暗网匿名跳板"
     },
     {
       "category": "UNAUTHORIZED_MAIL_RELAY",
-      "name": "非合规第三方公网邮箱传输",
-      "domain_patterns": ["*.mail.google.com", "*.outlook.com", "*.mail.yahoo.com"],
+      "name": "非涉密公网电子邮件中转传输",
+      "domain_patterns": [
+        "mail.google.com", "smtp.gmail.com",
+        "outlook.live.com", "smtp-mail.outlook.com", "hotmail.com",
+        "mail.163.com", "smtp.163.com", "mail.126.com", "yeah.net",
+        "mail.qq.com", "smtp.qq.com", "foxmail.com",
+        "mail.sina.com.cn", "mail.sohu.com",
+        "qiye.aliyun.com", "exmail.qq.com",
+        "263.net"
+      ],
+      "severity": "HIGH",
+      "description": "涉密人员违规利用第三方公网商业邮箱中转单位内部资料"
+    },
+    {
+      "category": "REMOTE_DESKTOP_ASSIST",
+      "name": "非合规远程桌面协助与反弹受控工具",
+      "domain_patterns": [
+        "teamviewer.com", "router.teamviewer.com",
+        "oray.com", "sunlogin.oray.com", "sunlogin.com",
+        "anydesk.com", "net.anydesk.com",
+        "todesk.com", "relay.todesk.com",
+        "rustdesk.com",
+        "gotomypc.com",
+        "logmein.com",
+        "splashtop.com"
+      ],
+      "severity": "CRITICAL",
+      "description": "涉密终端私自开启商业远程协助通道，存在被外部反弹远控极高风险"
+    },
+    {
+      "category": "INSTANT_MESSAGING_COLLAB",
+      "name": "互联网即时通信与社交协作工具外联",
+      "domain_patterns": [
+        "wx.qq.com", "web.wechat.com", "file.wx.qq.com",
+        "dingtalk.com", "im.dingtalk.com",
+        "feishu.cn", "larksuite.com",
+        "telegram.org", "t.me",
+        "whatsapp.com", "web.whatsapp.com",
+        "signal.org",
+        "discord.com", "discordapp.com",
+        "slack.com"
+      ],
       "severity": "MEDIUM",
-      "description": "涉密终端经由公网邮箱违规中转内部资料"
+      "description": "涉密机违规登录互联网即时聊天工具外发传输文件"
+    },
+    {
+      "category": "PUBLIC_CODE_REPOSITORY",
+      "name": "商业代码托管平台私自推拉资产",
+      "domain_patterns": [
+        "github.com", "api.github.com",
+        "gitlab.com",
+        "gitee.com",
+        "bitbucket.org",
+        "coding.net",
+        "sourceforge.net"
+      ],
+      "severity": "HIGH",
+      "description": "防止涉密工程源码、工控协议解析代码及数据库账密向公开仓库推送"
+    },
+    {
+      "category": "GENERATIVE_AI_LEAKAGE",
+      "name": "公共生成式 AI 接口文本泄密外联",
+      "domain_patterns": [
+        "api.openai.com", "chatgpt.com",
+        "api.anthropic.com", "claude.ai",
+        "generativelanguage.googleapis.com",
+        "moonshot.cn", "kimi.ai",
+        "baichuan-ai.com",
+        "zhipuai.cn"
+      ],
+      "severity": "HIGH",
+      "description": "涉密业务资料与公文草稿私自向公共大模型问答接口提交"
+    },
+    {
+      "category": "DYNAMIC_DNS_PENETRATION",
+      "name": "动态域名解析与内网穿透反向代理",
+      "domain_patterns": [
+        "phddns.com", "vicp.net", "vicp.cc",
+        "no-ip.com", "dyndns.org",
+        "ngrok.io", "ngrok.com",
+        "natapp.cn", "cpolar.com",
+        "zerotier.com"
+      ],
+      "severity": "CRITICAL",
+      "description": "涉密主机私自建立反向内网穿透服务，绕过外层网络隔离边界"
     }
   ],
   "authorized_media_whitelist": [
     {
-      "vid": "0951",
-      "pid": "1666",
+      "vid": "096e",
+      "pid": "0807",
+      "device_type": "AUTHORIZED_EPASS_KEY",
+      "description": "飞天诚信 Feitian ePass2003 国密认证双因子安全芯片 Key"
+    },
+    {
+      "vid": "096e",
+      "pid": "0808",
+      "device_type": "AUTHORIZED_EPASS_KEY",
+      "description": "飞天诚信 Feitian ePass3003 高性能国密 SM2/SM3 硬件 Token"
+    },
+    {
+      "vid": "096e",
+      "pid": "0401",
+      "device_type": "AUTHORIZED_ENCRYPTED_DONGLE",
+      "description": "飞天诚信 Feitian ROCKEY ARM 国密算法加密锁"
+    },
+    {
+      "vid": "096e",
+      "pid": "0812",
+      "device_type": "SECURITY_KEY_TOKEN",
+      "description": "飞天诚信 涉密专用硬件智能密码钥匙"
+    },
+    {
+      "vid": "10c4",
+      "pid": "ea60",
+      "device_type": "AUTHORIZED_WATCHKEY",
+      "description": "北京握奇数据 Watchdata WatchKey 国密数字证书硬件 Key"
+    },
+    {
+      "vid": "10c4",
+      "pid": "8123",
       "device_type": "AUTHORIZED_ENCRYPTED_USB",
-      "description": "单位定制专用硬件国密加密U盘 (Kingston DataTraveler)"
+      "description": "北京握奇数据 专用硬件加密级涉密 U 盘"
     },
     {
       "vid": "0483",
       "pid": "5740",
       "device_type": "SECURITY_KEY_TOKEN",
-      "description": "国家密码管理局认证数字证书硬件 Key"
+      "description": "天地融 Tendyron 二代国密数字证书硬件 Key"
+    },
+    {
+      "vid": "1fc9",
+      "pid": "0110",
+      "device_type": "AUTHORIZED_ENCRYPTED_USB",
+      "description": "天地融 Tendyron 涉密安全存储双分区硬件 U 盘"
+    },
+    {
+      "vid": "1e7d",
+      "pid": "2cb0",
+      "device_type": "SECURITY_KEY_TOKEN",
+      "description": "吉大正元 JIT Key 国家密码管理局认证证书 Key"
+    },
+    {
+      "vid": "1e7d",
+      "pid": "3321",
+      "device_type": "AUTHORIZED_ENCRYPTED_USB",
+      "description": "吉大正元 JIT 安全存储加密移动硬盘介质"
+    },
+    {
+      "vid": "2b0e",
+      "pid": "1001",
+      "device_type": "SECURITY_KEY_TOKEN",
+      "description": "三未信安 Sansec 移动终端国密密码钥匙"
+    },
+    {
+      "vid": "2b0e",
+      "pid": "1002",
+      "device_type": "AUTHORIZED_ENCRYPTED_USB",
+      "description": "三未信安 Sansec 硬件防复制加密存储介质"
+    },
+    {
+      "vid": "04b4",
+      "pid": "6570",
+      "device_type": "SECURITY_KEY_TOKEN",
+      "description": "龙脉科技 Century mToken 涉密身份鉴别锁"
+    },
+    {
+      "vid": "1a86",
+      "pid": "7523",
+      "device_type": "SECURITY_KEY_TOKEN",
+      "description": "航天信息 Aisino 国密商用密码安全控制盘"
+    },
+    {
+      "vid": "0951",
+      "pid": "1666",
+      "device_type": "AUTHORIZED_ENCRYPTED_USB",
+      "description": "金士顿 Kingston DataTraveler Locker+ 专用企业硬件加密 U 盘"
+    },
+    {
+      "vid": "0951",
+      "pid": "16bf",
+      "device_type": "AUTHORIZED_ENCRYPTED_USB",
+      "description": "金士顿 Kingston IronKey D300 军工级 FIPS 140-2 Level 3 硬件加密盘"
+    },
+    {
+      "vid": "0dd8",
+      "pid": "1420",
+      "device_type": "AUTHORIZED_ENCRYPTED_USB",
+      "description": "朗科 Netac U660 国密算法硬件按键物理加密盘"
+    },
+    {
+      "vid": "17ef",
+      "pid": "6012",
+      "device_type": "AUTHORIZED_ENCRYPTED_USB",
+      "description": "联想 Lenovo 商务涉密指纹物理加密移动存储盘"
     }
   ]
 }

@@ -715,13 +715,20 @@
                   </div>
 
                   <!-- 4. 目标端点 -->
-                  <div v-if="isColVisible('dst_endpoint')" class="text-[11px] ui-num truncate min-w-0" :title="formatEndpointTitle(pkt.dst_ip, pkt.dst_port, pkt)">
+                  <div v-if="isColVisible('dst_endpoint')" class="text-[11px] ui-num truncate min-w-0" :title="formatEndpointTitle(pkt.dst_ip, pkt.dst_port, pkt, true)">
                     <span
                       class="truncate hover:text-blue-500 hover:underline cursor-pointer transition-colors font-medium"
                       style="color: var(--text-primary);"
                       @click.stop="openIpDossier(pkt.dst_ip)"
                     >
                       {{ formatEndpoint(pkt.dst_ip, pkt.dst_port) }}
+                    </span>
+                    <span
+                      v-if="getEndpointTag(pkt, true)"
+                      class="text-[11px] text-blue-700 dark:text-sky-300 px-1.5 py-0.5 rounded bg-blue-500/12 border border-blue-500/25 shrink-0 font-medium ml-1"
+                      :title="getEndpointLocation(pkt, true)"
+                    >
+                      {{ getEndpointTag(pkt, true) }}
                     </span>
                   </div>
 
@@ -2887,40 +2894,22 @@ function formatEndpoint(ip?: string, port?: number): string {
   return safeIp;
 }
 
-function formatEndpointTitle(ip?: string, port?: number, pkt?: PacketRecord): string {
+function formatEndpointTitle(ip?: string, port?: number, pkt?: PacketRecord, isDst = false): string {
   const ep = formatEndpoint(ip, port);
-  const loc = pkt ? getRemoteIpLocation(pkt) : '';
+  const loc = pkt ? getEndpointLocation(pkt, isDst) : '';
   return loc ? `${ep} (${loc})` : ep;
 }
 
-function getRemoteIpTag(pkt: PacketRecord | null | undefined): string {
-  if (!pkt) return '';
-  const loc = getRemoteIpLocation(pkt);
-  if (!loc) return '';
-  if (loc.includes('内网') || loc.includes('私网') || loc.includes('RFC 1918') || loc.includes('保留')) {
-    return '内网';
-  }
-  if (loc.includes('回环') || loc.includes('127.0.0.1')) {
-    return '回环';
-  }
-  if (loc.includes('专线')) {
-    return '专线';
-  }
-  const parts = loc.split('/').filter(Boolean);
-  const last = parts[parts.length - 1] || '';
-  const clean = last.replace(/[()（）]/g, '').trim();
-  return clean.length > 4 ? clean.slice(0, 4) : clean;
-}
-
-function getRemoteIpLocation(pkt: PacketRecord | null | undefined): string {
+function getEndpointLocation(pkt: PacketRecord | null | undefined, isDst = false): string {
   if (!pkt) return '';
   const bdata = pkt.business_data;
   if (!bdata) return '';
 
-  const country = bdata.src_country && bdata.src_country !== '0' ? String(bdata.src_country).trim() : '';
-  const province = bdata.src_province && bdata.src_province !== '0' && bdata.src_province !== country ? String(bdata.src_province).trim() : '';
-  const city = bdata.src_city && bdata.src_city !== '0' && bdata.src_city !== province ? String(bdata.src_city).trim() : '';
-  const isp = bdata.src_isp && bdata.src_isp !== '0' ? String(bdata.src_isp).trim() : '';
+  const prefix = isDst ? 'dst_' : 'src_';
+  const country = bdata[`${prefix}country`] && bdata[`${prefix}country`] !== '0' ? String(bdata[`${prefix}country`]).trim() : '';
+  const province = bdata[`${prefix}province`] && bdata[`${prefix}province`] !== '0' && bdata[`${prefix}province`] !== country ? String(bdata[`${prefix}province`]).trim() : '';
+  const city = bdata[`${prefix}city`] && bdata[`${prefix}city`] !== '0' && bdata[`${prefix}city`] !== province ? String(bdata[`${prefix}city`]).trim() : '';
+  const isp = bdata[`${prefix}isp`] && bdata[`${prefix}isp`] !== '0' ? String(bdata[`${prefix}isp`]).trim() : '';
 
   const segments: string[] = [];
   if (country) segments.push(country);
@@ -2932,15 +2921,62 @@ function getRemoteIpLocation(pkt: PacketRecord | null | undefined): string {
     return segments.join('/');
   }
 
-  if (bdata.src_zone) {
-    return String(bdata.src_zone).trim();
+  const zone = bdata[`${prefix}zone`];
+  if (zone) {
+    return String(zone).trim();
   }
 
-  if (bdata.src_geo) {
-    return String(bdata.src_geo).trim();
+  const geo = bdata[`${prefix}geo`];
+  if (geo) {
+    return String(geo).trim();
   }
 
   return '';
+}
+
+function getEndpointTag(pkt: PacketRecord | null | undefined, isDst = false): string {
+  if (!pkt) return '';
+  const loc = getEndpointLocation(pkt, isDst);
+  if (!loc) return '';
+  if (loc.includes('内网') || loc.includes('私网') || loc.includes('RFC 1918') || loc.includes('保留')) {
+    return '内网';
+  }
+  if (loc.includes('回环') || loc.includes('127.0.0.1')) {
+    return '回环';
+  }
+  if (loc.includes('专线')) {
+    return '专线';
+  }
+  const parts = loc.split('/').filter(Boolean);
+  if (parts.length === 0) return '';
+  
+  // 智能优先级提取：有城市优先显示城市(如 杭州/南京/Monroe)，无城市有省份显示省份，再次国家/运营商
+  const bdata = pkt.business_data;
+  const prefix = isDst ? 'dst_' : 'src_';
+  if (bdata) {
+    const city = bdata[`${prefix}city`];
+    if (city && city !== '0') {
+      const cleanCity = String(city).replace(/[()（）省市区县]/g, '').trim();
+      if (cleanCity) return cleanCity.slice(0, 4);
+    }
+    const prov = bdata[`${prefix}province`];
+    if (prov && prov !== '0') {
+      const cleanProv = String(prov).replace(/[()（）省市]/g, '').trim();
+      if (cleanProv) return cleanProv.slice(0, 4);
+    }
+  }
+
+  const last = parts[parts.length - 1] || '';
+  const clean = last.replace(/[()（）]/g, '').trim();
+  return clean.length > 4 ? clean.slice(0, 4) : clean;
+}
+
+function getRemoteIpTag(pkt: PacketRecord | null | undefined): string {
+  return getEndpointTag(pkt, false);
+}
+
+function getRemoteIpLocation(pkt: PacketRecord | null | undefined): string {
+  return getEndpointLocation(pkt, false);
 }
 
 function formatRemoteIp(pkt: PacketRecord | null | undefined): string {

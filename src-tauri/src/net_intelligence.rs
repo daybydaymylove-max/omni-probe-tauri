@@ -372,8 +372,9 @@ async fn probe_single_tcp_banner_with_mode(
         }
         TcpProbeMode::Http => {
             let req = format!(
-                "HEAD / HTTP/1.0\r\nHost: {}\r\nUser-Agent: OmniProbe/0.3.4\r\nConnection: close\r\n\r\n",
-                ip
+                "HEAD / HTTP/1.0\r\nHost: {}\r\nUser-Agent: OmniProbe/{}\r\nConnection: close\r\n\r\n",
+                ip,
+                env!("CARGO_PKG_VERSION")
             );
             if tokio::time::timeout(banner_timeout, stream.write_all(req.as_bytes()))
                 .await

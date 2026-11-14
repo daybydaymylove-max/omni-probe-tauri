@@ -441,6 +441,18 @@ pub fn process_incoming_record(app: &tauri::AppHandle, mut record: PacketRecord)
         if let Some(isp) = src_intel.isp {
             bdata.insert("src_isp".to_string(), serde_json::Value::String(isp));
         }
+        if let Some(c) = dst_intel.country {
+            bdata.insert("dst_country".to_string(), serde_json::Value::String(c));
+        }
+        if let Some(p) = dst_intel.province {
+            bdata.insert("dst_province".to_string(), serde_json::Value::String(p));
+        }
+        if let Some(c) = dst_intel.city {
+            bdata.insert("dst_city".to_string(), serde_json::Value::String(c));
+        }
+        if let Some(isp) = dst_intel.isp {
+            bdata.insert("dst_isp".to_string(), serde_json::Value::String(isp));
+        }
         record.business_data = Some(bdata);
     }
 

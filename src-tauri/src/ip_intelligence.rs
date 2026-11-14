@@ -34,7 +34,7 @@ pub struct GeoLocation {
 }
 
 impl GeoLocation {
-    /// 解析 ip2region 官方标准格式: "国家|区域|省份|城市|ISP"
+    /// 解析 ip2region 标准格式 (智能兼容 v1: "国家|区域|省份|城市|ISP" 与 v2: "国家|省份|城市|ISP|国家码")
     pub fn from_raw_string(raw: &str) -> Self {
         let parts: Vec<&str> = raw.split('|').collect();
         let clean_part = |idx: usize| -> String {
@@ -50,6 +50,29 @@ impl GeoLocation {
             }
         };
 
+        if parts.len() >= 5 {
+            let p4 = parts[4].trim();
+            // 若第 5 段为 2 位大写 ASCII 国家代码 (例如 "CN", "US", "BR", "HK", "JP")
+            // 表明当前 XDB 布局为 "国家|省份|城市|ISP|国家码"
+            let is_country_code_at_end = p4.len() == 2 && p4.chars().all(|c| c.is_ascii_uppercase());
+
+            if is_country_code_at_end {
+                let country = clean_part(0);
+                let province = clean_part(1);
+                let city = clean_part(2);
+                let isp = clean_part(3);
+
+                return Self {
+                    country,
+                    region: String::new(),
+                    province,
+                    city,
+                    isp,
+                };
+            }
+        }
+
+        // 默认回退到标准 5 段格式: "国家|区域|省份|城市|ISP"
         Self {
             country: clean_part(0),
             region: clean_part(1),
@@ -672,20 +695,36 @@ mod tests {
         assert!(status["file_size"].as_u64().unwrap_or(0) > 10_000_000);
 
         let res_china = engine.classify("114.114.114.114");
-        assert!(res_china.country.is_some());
-        println!("114.114.114.114 Geo: {:?}", res_china.geo_summary);
+        assert_eq!(res_china.country.as_deref(), Some("中国"));
+        assert_eq!(res_china.province.as_deref(), Some("江苏省"));
+        assert_eq!(res_china.city.as_deref(), Some("南京市"));
 
         let res_ali = engine.classify("223.5.5.5");
-        assert!(res_ali.country.is_some());
-        println!("223.5.5.5 Geo: {:?}", res_ali.geo_summary);
+        assert_eq!(res_ali.country.as_deref(), Some("中国"));
+        assert_eq!(res_ali.province.as_deref(), Some("浙江省"));
+        assert_eq!(res_ali.city.as_deref(), Some("杭州市"));
+        assert_eq!(res_ali.isp.as_deref(), Some("阿里"));
+
+        let res_bj = engine.classify("123.125.114.144"); // 百度北京
+        assert_eq!(res_bj.country.as_deref(), Some("中国"));
+        assert_eq!(res_bj.province.as_deref(), Some("北京市"));
+        assert_eq!(res_bj.isp.as_deref(), Some("联通"));
+
+        let res_zj = engine.classify("202.96.209.133"); // 浙江嘉兴电信
+        assert_eq!(res_zj.country.as_deref(), Some("中国"));
+        assert_eq!(res_zj.province.as_deref(), Some("浙江省"));
+        assert_eq!(res_zj.city.as_deref(), Some("嘉兴市"));
+        assert_eq!(res_zj.isp.as_deref(), Some("电信"));
 
         let res_google = engine.classify("8.8.8.8");
-        assert!(res_google.country.is_some());
-        println!("8.8.8.8 Geo: {:?}", res_google.geo_summary);
+        assert_eq!(res_google.country.as_deref(), Some("United States"));
+        assert_eq!(res_google.province.as_deref(), Some("Louisiana"));
+        assert_eq!(res_google.city.as_deref(), Some("Monroe"));
 
         let res_google_142 = engine.classify("142.250.137.132");
-        println!("142.250.137.132 Geo: {:?}", res_google_142.geo_summary);
-        assert!(res_google_142.country.is_some() || res_google_142.isp.is_some());
+        assert_eq!(res_google_142.country.as_deref(), Some("Brazil"));
+        assert_eq!(res_google_142.province.as_deref(), Some("São Paulo"));
+        assert_eq!(res_google_142.isp.as_deref(), Some("Google LLC"));
     }
 }
 

@@ -1,4 +1,4 @@
-# Omni-Probe 工业级全能网络探针系统 (v0.3.5)
+# Omni-Probe 工业级全能网络探针系统 (v0.3.6)
 
 <div align="center">
 
@@ -6,7 +6,7 @@
 
 ### 面向现代工业物联网、智能变电站、汽车电子与现场总线的原生桌面多总线协议探针与诊断平台
 
-[![Release](https://img.shields.io/badge/Release-v0.3.5-blue.svg)](https://github.com/daybydaymylove-max/omni-probe-tauri/releases)
+[![Release](https://img.shields.io/badge/Release-v0.3.6-blue.svg)](https://github.com/daybydaymylove-max/omni-probe-tauri/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Rust](https://img.shields.io/badge/Rust-Edition_2024-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-24C8DB.svg)](https://tauri.app/)
@@ -17,7 +17,7 @@
 
 [📖 完整操作手册 (USER_MANUAL)](docs/USER_MANUAL.md) •
 [系统架构](#-系统架构与核心组件) •
-[v0.3.5 核心演进](#-v035-核心架构演进亮点) •
+[v0.3.6 核心演进](#-v036-核心架构演进亮点) •
 [核心技术特性](#-核心技术特性) •
 [多轨自愈保障](#-底层多轨并行保障与运行时自愈架构) •
 [偏好设置与更新](#-系统偏好设置中心与在线更新) •
@@ -45,9 +45,13 @@
 
 ---
 
-## 🌟 v0.3.5 核心架构演进亮点
+## 🌟 v0.3.6 核心架构演进亮点
 
-### 0. 测地线多跳路由溯源与空间态势看板 (Geodesic Traceroute & Digital Globe)
+### 0. 系统版本全局化统一与单真理源解耦 (Global Versioning & Decoupled Architecture)
+- **前后端版本单真理源治理**：彻底消除前端视图、模板与工控通信调试中残留的写死版本号；前端集中由 `src/constants/appVersion.ts` 导出统一常量（`APP_VERSION` 与 `APP_VERSION_RAW`），后端 Rust 原生通过 `env!("CARGO_PKG_VERSION")` 在编译期动态绑定，杜绝版本漂移；
+- **全链路归属地 IP2Region v2 结构自适应解构**：针对 `ip2region.xdb` v2 数据格式中的字段错位与冗余分割符进行智能容错解析，支持 `国家|省份|城市|ISP|国家码` 与 4 段式自由切换，结合内网私有 IP/RFC 1918 拓扑标记，全面修复测地线跟踪、全息流量看板、主机探测的双向归属地补齐；
+
+### 1. 测地线多跳路由溯源与空间态势看板 (Geodesic Traceroute & Digital Globe)
 - **跨平台中文代码页管道容错解码 (`traceroute_engine`)**：彻底剔除要求纯 UTF-8 的异步流读取循环，重构为底层字节缓冲结合 `encoding_rs::GB18030` 解码，完美解决中文 Windows 控制台（CP936/GBK 代码页）下首行“通过最多 30 个跃点跟踪到...”引发 `InvalidData` 异常导致流式探测死锁在 Hop 0 的技术物理根因；并注册 `stop_traceroute_cmd` 命令支持前端一键安全 kill 底层子进程；
 - **四元数球面线性插值 (Slerp) 大圆测地空间算法**：实现并导出 `interpolateGreatCirclePoint` 测地大圆空间插值算法，对缺乏独立公网城市坐标的局域网网关（如 `192.168.x.x`）、运营商宽带私网中继（`100.64.x.x`）以及防火墙 ICMP 丢包超时跳（`*`），沿测地大圆航线按比例自动标定三维空间信标，保证在 3D 数字地球上 100% 具备经纬度空间锚点与连贯光弧飞线；
 - **双模态架构与全量指标表格无损融合**：
@@ -312,9 +316,9 @@ npm run desktop
 npm run tauri build
 ```
 编译产物将生成在 `src-tauri/target/release/bundle/` 目录下：
-- **Windows**：`msi/omni-probe-tauri_0.3.4_x64_en-US.msi` 与 `nsis/omni-probe-tauri_0.3.4_x64-setup.exe`；
-- **macOS**：`dmg/omni-probe-tauri_0.3.4_universal.dmg`；
-- **Linux**：`appimage/omni-probe-tauri_0.3.4_amd64.AppImage` 与 `deb/omni-probe-tauri_0.3.4_amd64.deb`。
+- **Windows**：`msi/omni-probe-tauri_0.3.6_x64_en-US.msi` 与 `nsis/omni-probe-tauri_0.3.6_x64-setup.exe`；
+- **macOS**：`dmg/omni-probe-tauri_0.3.6_universal.dmg`；
+- **Linux**：`appimage/omni-probe-tauri_0.3.6_amd64.AppImage` 与 `deb/omni-probe-tauri_0.3.6_amd64.deb`。
 
 ---
 

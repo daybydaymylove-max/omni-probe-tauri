@@ -136,14 +136,46 @@ fn log_file_path() -> PathBuf {
 }
 
 fn load_confidentiality_rules() -> ConfidentialityRuleSet {
-    let p = crate::forensics::data_path("confidentiality_rules.json");
-    if p.exists() {
-        if let Ok(content) = std::fs::read_to_string(&p) {
-            if let Ok(set) = serde_json::from_str::<ConfidentialityRuleSet>(&content) {
-                return set;
+    let candidate_paths = [
+        crate::forensics::data_path("confidentiality_rules.json"),
+        PathBuf::from("data/confidentiality_rules.json"),
+        PathBuf::from("src-tauri/data/confidentiality_rules.json"),
+        PathBuf::from("../data/confidentiality_rules.json"),
+        PathBuf::from("../src-tauri/data/confidentiality_rules.json"),
+        PathBuf::from("../../data/confidentiality_rules.json"),
+    ];
+
+    for p in &candidate_paths {
+        if p.exists() && p.is_file() {
+            if let Ok(content) = std::fs::read_to_string(p) {
+                if let Ok(set) = serde_json::from_str::<ConfidentialityRuleSet>(&content) {
+                    return set;
+                }
             }
         }
     }
+
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(parent) = exe_path.parent() {
+            let p1 = parent.join("data").join("confidentiality_rules.json");
+            if p1.exists() {
+                if let Ok(content) = std::fs::read_to_string(&p1) {
+                    if let Ok(set) = serde_json::from_str::<ConfidentialityRuleSet>(&content) {
+                        return set;
+                    }
+                }
+            }
+            let p2 = parent.join("..").join("data").join("confidentiality_rules.json");
+            if p2.exists() {
+                if let Ok(content) = std::fs::read_to_string(&p2) {
+                    if let Ok(set) = serde_json::from_str::<ConfidentialityRuleSet>(&content) {
+                        return set;
+                    }
+                }
+            }
+        }
+    }
+
     ConfidentialityRuleSet::default()
 }
 
@@ -323,65 +355,93 @@ pub fn inspect_egress_domain(
         SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos(),
     );
 
-    // 工业生产级高危违规外联特征库 (商业云盘/境外免密存储/代码托管外泄/暗网翻墙)
-    let high_risk_targets = [
-        ("pan.baidu.com", "商业网盘违规上传与共享"),
-        ("weiyun.com", "腾讯微云商业网盘外联"),
-        ("aliyundrive.com", "阿里云盘商业外联"),
-        ("quark.cn", "夸克网盘外联"),
-        ("lanzou", "蓝奏云存储分享"),
-        ("jianguoyun.com", "坚果云同步盘外联"),
-        ("wenshushu.cn", "文叔叔临时大文件传输"),
-        ("dropbox.com", "Dropbox 境外云存储外传"),
-        ("onedrive.live.com", "Microsoft OneDrive 云存储外联"),
-        ("drive.google.com", "Google Drive 境外云盘外联"),
-        ("wetransfer.com", "WeTransfer 免密文件快传"),
-        ("mega.nz", "Mega 境外加密云盘外联"),
-        ("sendspace.com", "SendSpace 匿名文件托管"),
-        ("github.com", "GitHub 公开代码托管 (防涉密代码与私钥外泄)"),
-        ("gitee.com", "Gitee 公开代码托管 (防涉密资产外泄)"),
-        ("pastebin.com", "Pastebin 匿名明文剪贴板外传"),
-        ("torproject.org", "Tor 匿名隐匿洋葱网络"),
-        (".onion", "暗网洋葱路由服务连接"),
-        ("t.me", "Telegram 即时通信非法通道"),
-        ("discord.com", "Discord 外部通信通道"),
-    ];
-
-    for &(risk_domain, desc) in &high_risk_targets {
-        if lower_domain.contains(risk_domain) {
-            let id = ALERT_ID_SEQ.fetch_add(1, Ordering::Relaxed);
-            let detail = serde_json::json!({
-                "accessed_domain": domain,
-                "matched_pattern": risk_domain,
-                "policy": "ILLEGAL_EGRESS_PREVENTION_L3",
-                "risk_description": desc
-            });
-            let alert = ConfidentialityAlert {
-                id,
-                timestamp: ts_str.clone(),
-                timestamp_ns: ts_ns,
-                alert_category: "ILLEGAL_EGRESS".to_string(),
-                secrecy_level: "HIGH_RISK".to_string(),
-                src_ip: client_ip.to_string(),
-                dst_ip: "WAN_GATEWAY".to_string(),
-                target_entity: domain.to_string(),
-                summary: format!("触发保密合规违规外联拦截告警: 涉密终端试图连接 [{}] - {}", domain, desc),
-                detail_json: detail.to_string(),
-            };
-
-            append_alert_to_disk(&alert);
-
-            {
-                let mut state = crate::lock_guard::lock_mutex(
-                    &CONFIDENTIALITY_STATE,
-                    "audit_confidentiality::inspect_egress_domain",
-                );
-                if state.alerts.len() >= MAX_CONFIDENTIALITY_ALERTS {
-                    state.alerts.pop_front();
+    // 优先从外部持久化规则库动态匹配违规外联红线
+    let mut matched_rule: Option<(String, String, String)> = None; // (category, desc, matched_pattern)
+    {
+        let state = crate::lock_guard::lock_mutex(
+            &CONFIDENTIALITY_STATE,
+            "audit_confidentiality::inspect_egress_domain_rules",
+        );
+        for rule in &state.rules.illegal_egress_rules {
+            for pattern in &rule.domain_patterns {
+                let clean_pattern = pattern.trim_start_matches("*.").to_lowercase();
+                if lower_domain == clean_pattern || lower_domain.ends_with(&format!(".{}", clean_pattern)) || lower_domain.contains(&clean_pattern) {
+                    matched_rule = Some((rule.category.clone(), rule.name.clone(), pattern.clone()));
+                    break;
                 }
-                state.alerts.push_back(alert);
             }
-            break;
+            if matched_rule.is_some() {
+                break;
+            }
+        }
+    }
+
+    // 若持久化库中未匹配，回退至内置兜底高危特征
+    if matched_rule.is_none() {
+        let fallback_targets = [
+            ("pan.baidu.com", "商业网盘违规上传与共享"),
+            ("weiyun.com", "腾讯微云商业网盘外联"),
+            ("aliyundrive.com", "阿里云盘商业外联"),
+            ("quark.cn", "夸克网盘外联"),
+            ("lanzou", "蓝奏云存储分享"),
+            ("jianguoyun.com", "坚果云同步盘外联"),
+            ("wenshushu.cn", "文叔叔临时大文件传输"),
+            ("dropbox.com", "Dropbox 境外云存储外传"),
+            ("onedrive.live.com", "Microsoft OneDrive 云存储外联"),
+            ("drive.google.com", "Google Drive 境外云盘外联"),
+            ("wetransfer.com", "WeTransfer 免密文件快传"),
+            ("mega.nz", "Mega 境外加密云盘外联"),
+            ("sendspace.com", "SendSpace 匿名文件托管"),
+            ("github.com", "GitHub 公开代码托管 (防涉密代码与私钥外泄)"),
+            ("gitee.com", "Gitee 公开代码托管 (防涉密资产外泄)"),
+            ("pastebin.com", "Pastebin 匿名明文剪贴板外传"),
+            ("torproject.org", "Tor 匿名隐匿洋葱网络"),
+            (".onion", "暗网洋葱路由服务连接"),
+            ("t.me", "Telegram 即时通信非法通道"),
+            ("discord.com", "Discord 外部通信通道"),
+            ("chatgpt.com", "公共大模型问答防泄密"),
+        ];
+        for &(risk_domain, desc) in &fallback_targets {
+            if lower_domain.contains(risk_domain) {
+                matched_rule = Some(("ILLEGAL_EGRESS".to_string(), desc.to_string(), risk_domain.to_string()));
+                break;
+            }
+        }
+    }
+
+    if let Some((cat, desc, matched_pat)) = matched_rule {
+        let id = ALERT_ID_SEQ.fetch_add(1, Ordering::Relaxed);
+        let detail = serde_json::json!({
+            "accessed_domain": domain,
+            "matched_pattern": matched_pat,
+            "category": cat,
+            "policy": "ILLEGAL_EGRESS_PREVENTION_L3",
+            "risk_description": desc
+        });
+        let alert = ConfidentialityAlert {
+            id,
+            timestamp: ts_str.clone(),
+            timestamp_ns: ts_ns,
+            alert_category: "ILLEGAL_EGRESS".to_string(),
+            secrecy_level: "HIGH_RISK".to_string(),
+            src_ip: client_ip.to_string(),
+            dst_ip: "WAN_GATEWAY".to_string(),
+            target_entity: domain.to_string(),
+            summary: format!("触发保密合规违规外联拦截告警: 涉密终端试图连接 [{}] - {}", domain, desc),
+            detail_json: detail.to_string(),
+        };
+
+        append_alert_to_disk(&alert);
+
+        {
+            let mut state = crate::lock_guard::lock_mutex(
+                &CONFIDENTIALITY_STATE,
+                "audit_confidentiality::inspect_egress_domain_record",
+            );
+            if state.alerts.len() >= MAX_CONFIDENTIALITY_ALERTS {
+                state.alerts.pop_front();
+            }
+            state.alerts.push_back(alert);
         }
     }
 }
@@ -521,6 +581,15 @@ pub fn get_confidentiality_alerts(limit: Option<usize>) -> Vec<ConfidentialityAl
     state.alerts.iter().rev().take(lim).cloned().collect()
 }
 
+/// 获取已加载的涉密移动存储介质安全白名单列表
+pub fn get_authorized_media_whitelist() -> Vec<AuthorizedMediaDef> {
+    let state = crate::lock_guard::lock_mutex(
+        &CONFIDENTIALITY_STATE,
+        "audit_confidentiality::get_authorized_media_whitelist",
+    );
+    state.rules.authorized_media_whitelist.clone()
+}
+
 pub fn clear_confidentiality_alerts() {
     let mut state = crate::lock_guard::lock_mutex(
         &CONFIDENTIALITY_STATE,
@@ -562,5 +631,21 @@ mod tests {
         assert_eq!(report.highest_level, "UNCLASSIFIED");
         assert!(report.hit_markers.is_empty());
         assert!(report.document_signatures.is_empty());
+    }
+
+    #[test]
+    fn test_confidentiality_full_rules_loading_and_media_whitelist() {
+        let rules = load_confidentiality_rules();
+        assert!(rules.secret_markers.len() >= 20, "法定密级词库必须达到工业级全谱系 (>=20 条)，当前: {}", rules.secret_markers.len());
+        assert!(rules.document_signatures.len() >= 6, "红头公文多级字号库必须完整覆盖 (>=6 项)，当前: {}", rules.document_signatures.len());
+        assert!(rules.illegal_egress_rules.len() >= 8, "违规外联品类必须覆盖主流红线 (>=8 大类)，当前: {}", rules.illegal_egress_rules.len());
+        assert!(rules.authorized_media_whitelist.len() >= 15, "商密专用安全 U 盘与 Key 必须覆盖主流厂商 (>=15 款)，当前: {}", rules.authorized_media_whitelist.len());
+
+        // 验证飞天诚信、握奇、天地融、吉大正元、金士顿硬件介质在白名单中
+        assert!(rules.authorized_media_whitelist.iter().any(|m| m.vid == "096e" && m.pid == "0807"));
+        assert!(rules.authorized_media_whitelist.iter().any(|m| m.vid == "10c4" && m.pid == "ea60"));
+        assert!(rules.authorized_media_whitelist.iter().any(|m| m.vid == "0483" && m.pid == "5740"));
+        assert!(rules.authorized_media_whitelist.iter().any(|m| m.vid == "1e7d" && m.pid == "2cb0"));
+        assert!(rules.authorized_media_whitelist.iter().any(|m| m.vid == "0951" && m.pid == "16bf"));
     }
 }

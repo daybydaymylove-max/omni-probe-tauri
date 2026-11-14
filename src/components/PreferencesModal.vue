@@ -13,7 +13,7 @@
             <h3 class="text-sm font-bold flex items-center gap-2" style="color: var(--text-primary)">
               <span>系统偏好设置中心</span>
               <span class="text-[11px] ui-num px-2 py-0.5 rounded-full bg-sky-500/12 text-sky-700 dark:text-sky-300 border border-sky-500/25 font-bold">
-                v0.3.4
+                {{ APP_VERSION }}
               </span>
             </h3>
             <div class="text-[11px] ui-num mt-0.5" style="color: var(--text-muted)">
@@ -89,7 +89,7 @@
               <div>
                 <div class="flex items-center gap-2">
                   <span class="text-xs font-bold" style="color: var(--text-primary)">当前安装版本:</span>
-                  <span class="text-xs ui-num font-bold" style="color: var(--accent-primary-text)">v0.3.4</span>
+                  <span class="text-xs ui-num font-bold" style="color: var(--accent-primary-text)">{{ APP_VERSION }}</span>
                   <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-500/25">原生桌面多平台架构</span>
                 </div>
                 <div class="text-[11px] mt-1" style="color: var(--text-muted)">官方仓库: github.com/daybydaymylove-max/omni-probe-tauri</div>
@@ -284,6 +284,7 @@ import { ref, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { notifySuccess, notifyError, notifyInfo } from '../composables/useNotification';
+import { APP_VERSION } from '../constants/appVersion';
 import AppIcon from './AppIcon.vue';
 
 const props = defineProps<{

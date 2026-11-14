@@ -580,7 +580,7 @@
           <div class="space-y-1">
             <h2 class="text-[14px] font-semibold text-[var(--text-primary)] tracking-tight flex items-center justify-center gap-2">
               <span>OMNI-PROBE 网络探针系统</span>
-              <span class="badge-subtle ui-num">v0.3.4</span>
+              <span class="badge-subtle ui-num">{{ APP_VERSION }}</span>
             </h2>
             <p class="text-[12px] text-[var(--text-secondary)]">工业级多总线网络分析仪 · 正在执行引擎初始化校验</p>
           </div>
@@ -635,7 +635,7 @@
     <!-- 底部紧凑实用状态栏 -->
     <footer class="app-footer-bar ui-num">
       <div>物理接口: {{ selectedIface || '自动识别' }} · {{ isNpcapAvailable ? 'Npcap + Raw Socket 双轨引擎' : 'Raw Socket 原生捕获引擎' }} · 环形缓冲: {{ ringBufferUsageText }}</div>
-      <div>已捕获 {{ packets.length.toLocaleString() }} 帧 · Omni-Probe v0.3.4</div>
+      <div>已捕获 {{ packets.length.toLocaleString() }} 帧 · Omni-Probe {{ APP_VERSION }}</div>
     </footer>
   </div>
 </template>
@@ -654,6 +654,7 @@ import { useUniversalDiff } from './composables/useUniversalDiff';
 import { useEnvironmentInspector } from './composables/useEnvironmentInspector';
 import GlobalNotificationToast from './components/GlobalNotificationToast.vue';
 import { notifySuccess, notifyInfo, notifyWarning, notifyError } from './composables/useNotification';
+import { APP_VERSION } from './constants/appVersion';
 
 // 首屏工作台同步直载以保障 0ms 启动瞬间响应；其余 9 个专业工作台与重型模态框采用按需异步拆包
 import TrafficAnalyzerView from './views/TrafficAnalyzerView.vue';
