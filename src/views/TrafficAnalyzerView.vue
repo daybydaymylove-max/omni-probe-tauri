@@ -244,6 +244,15 @@
               <AppIcon :name="isHorizonExpanded ? 'chevron-up' : 'chevron-down'" :size="12" />
               <span>{{ isHorizonExpanded ? (locale === 'en-US' ? 'Collapse Bus' : '收起总线') : (locale === 'en-US' ? 'Bus Topology' : '总线拓扑') }}</span>
             </button>
+
+            <button
+              @click="$emit('openCaptureSetup')"
+              :title="locale === 'en-US' ? 'Open Professional Capture & NIC Profiler' : '打开专业网络抓包配置与物理网卡画像'"
+              class="text-[11px] font-medium px-2 py-0.5 rounded-xl transition-all cursor-pointer flex items-center gap-1 glass-pill whitespace-nowrap shrink-0 hover:text-sky-500 hover:border-sky-500/40 text-[var(--text-secondary)]"
+            >
+              <AppIcon name="settings" :size="12" />
+              <span>{{ locale === 'en-US' ? 'Capture Setup' : '专业抓包配置' }}</span>
+            </button>
           </div>
 
           <!-- 中腹：Display Filter 胶囊 -->
@@ -1745,7 +1754,8 @@ const emit = defineEmits([
   'updateSerial', 'updateBaudRate', 'updatePortBaudRate',
   'clearData',
   'updateBpf', 'updateIface', 'replayPacket', 'saveBaseline',
-  'appendLog', 'importPackets', 'openHoneypot', 'openWireless', 'switchWorkbench', 'openEnvInspector'
+  'appendLog', 'importPackets', 'openHoneypot', 'openWireless', 'switchWorkbench', 'openEnvInspector',
+  'openCaptureSetup'
 ]);
 
 const TargetProbeModal = defineAsyncComponent(() => import('../components/TargetProbeModal.vue'));

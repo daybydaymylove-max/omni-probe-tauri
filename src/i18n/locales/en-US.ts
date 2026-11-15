@@ -186,6 +186,8 @@ export default {
     sidebarCollapse: 'Collapse sidebar navigation',
     nicPlaceholder: 'Select Network Interface (NIC)',
     autoNic: 'Auto Interface Selection',
+    advancedCaptureSetup: 'Configure Adapters & Professional Capture...',
+    openCaptureModal: 'Open Professional Capture & BPF Presets Panel',
     promiscuousMode: 'Promiscuous Mode',
     bpfPlaceholder: 'Enter BPF filter syntax (e.g. tcp port 80 or host 192.168.1.1)...',
     startCapture: 'Start Sniffing',

@@ -186,6 +186,8 @@ export default {
     sidebarCollapse: '收起左侧导航栏',
     nicPlaceholder: '选择物理网卡 (NIC)',
     autoNic: '自动推荐物理网卡',
+    advancedCaptureSetup: '配置网卡画像与专业抓包参数...',
+    openCaptureModal: '打开专业抓包与 BPF 预设面板',
     promiscuousMode: '混杂模式',
     bpfPlaceholder: '输入 BPF 过滤语法 (例: tcp port 80 or host 192.168.1.1)...',
     startCapture: '启动嗅探',

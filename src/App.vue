@@ -108,6 +108,11 @@
                   <span class="truncate">{{ iface }}</span>
                   <AppIcon v-if="selectedIface === iface" name="check" :size="13" />
                 </button>
+                <button type="button" @click="isCaptureModalOpen = true; isIfaceMenuOpen = false"
+                  class="w-full text-left px-2.5 py-1.5 rounded-[10px] cursor-pointer transition-colors flex items-center gap-2 hover:bg-[var(--surface-hover)] border-t border-[var(--border-subtle)] mt-1 text-sky-600 dark:text-sky-400 font-semibold">
+                  <AppIcon name="settings" :size="13" />
+                  <span>{{ t('topbar.advancedCaptureSetup') }}</span>
+                </button>
               </div>
             </div>
           </Transition>
@@ -120,6 +125,14 @@
           <AppIcon name="search" :size="13" class="text-[var(--text-muted)] shrink-0" />
           <input ref="bpfInputRef" v-model="bpfFilter" type="text" :placeholder="t('topbar.bpfPlaceholder')"
             class="bg-transparent text-[var(--text-primary)] text-[12px] outline-none w-full min-w-0 placeholder:text-[var(--text-muted)] font-mono-code">
+          <button
+            type="button"
+            @click="isCaptureModalOpen = true"
+            class="p-1 rounded hover:bg-[var(--surface-glass-pill-hover)] text-[var(--text-muted)] hover:text-sky-500 cursor-pointer shrink-0 transition-colors"
+            :title="t('topbar.openCaptureModal')"
+          >
+            <AppIcon name="filter" :size="12" />
+          </button>
           <span class="text-[11px] font-mono-code text-[var(--text-muted)] shrink-0 hidden 2xl:inline-block opacity-75">⌘K</span>
         </div>
 
@@ -405,6 +418,7 @@
           @openDeepDissector="openDeepModal"
           @openHoneypot="isHoneypotOpen = true"
           @openWireless="isWirelessVlanOpen = true"
+          @openCaptureSetup="isCaptureModalOpen = true"
           @appendLog="addLog"
           @importPackets="handleImportedPackets"
           @switchWorkbench="activeWorkbench = $event"
@@ -565,6 +579,17 @@
     <!-- 网工高频原子工具箱 (Ctrl+T) -->
     <NetToolboxModal v-if="isNetToolboxOpen" :show="isNetToolboxOpen" @close="isNetToolboxOpen = false" />
 
+    <!-- 全局专业网络抓包配置与物理接口画像模态框 -->
+    <NetworkCaptureModal
+      v-if="isCaptureModalOpen"
+      :isOpen="isCaptureModalOpen"
+      :currentIface="selectedIface"
+      :currentBpf="bpfFilter"
+      :isRunning="isRunning"
+      @close="isCaptureModalOpen = false"
+      @apply="handleApplyCapture"
+    />
+
     <!-- 统一全局通知浮层与 Sheet 确认输入模态 -->
     <GlobalNotificationToast />
     <GlobalSheetModal />
@@ -669,6 +694,7 @@ const PreferencesModal = defineAsyncComponent(() => import('./components/Prefere
 const WirelessVlanMonitorModal = defineAsyncComponent(() => import('./components/WirelessVlanMonitorModal.vue'));
 const PacketDiffModal = defineAsyncComponent(() => import('./components/PacketDiffModal.vue'));
 const NetToolboxModal = defineAsyncComponent(() => import('./components/NetToolboxModal.vue'));
+const NetworkCaptureModal = defineAsyncComponent(() => import('./components/NetworkCaptureModal.vue'));
 
 const AssetIntelligenceView = defineAsyncComponent(() => import('./views/AssetIntelligenceView.vue'));
 const HardwareBusView = defineAsyncComponent(() => import('./views/HardwareBusView.vue'));
@@ -940,6 +966,21 @@ const isGlobalDossierOpen = ref(false);
 const isPreferencesOpen = ref(false);
 const isWirelessVlanOpen = ref(false);
 const isNetToolboxOpen = ref(false);
+const isCaptureModalOpen = ref(false);
+
+function handleApplyCapture(payload: { iface: string; bpf: string; snaplen: number; promisc: boolean; bufferMb: number }) {
+  selectedIface.value = payload.iface === 'auto' ? '' : payload.iface;
+  bpfFilter.value = payload.bpf;
+  if (isRunning.value) {
+    stopCapture().then(() => {
+      setTimeout(() => {
+        startCapture();
+      }, 200);
+    });
+  } else {
+    startCapture();
+  }
+}
 
 // 启动自检状态（由全局单例 Composable useEnvironmentInspector 驱动）
 const isInitializing = ref(true);

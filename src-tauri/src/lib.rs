@@ -2626,6 +2626,9 @@ pub fn run() {
             stop_capture,
             inject_raw_packet,
             list_interfaces,
+            sniffer::validate_bpf_filter_cmd,
+            sniffer::get_detailed_network_interfaces_cmd,
+            sniffer::get_capture_telemetry_cmd,
             // 物理串口与 USB 嗅探及端口操作数据收发
             list_serial_ports_detail,
             list_active_serial_probes,
