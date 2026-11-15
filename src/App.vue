@@ -177,9 +177,9 @@
           <span class="lens-edge-lip" aria-hidden="true"></span>
           <button @click="toggleAppleTheme"
             class="h-7 px-2.5 rounded-full hover:bg-[var(--surface-glass-pill-hover)] text-[11.5px] font-medium text-[var(--text-primary)] flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap"
-            :title="isAppleLight ? '切换为深空夜色模式' : '切换为冰晶白昼模式'">
+            :title="isAppleLight ? t('topbar.themeToDark') : t('topbar.themeToLight')">
             <AppIcon :name="isAppleLight ? 'sun' : 'moon'" :size="13" />
-            <span class="hidden lg:inline">{{ isAppleLight ? '浅色' : '深色' }}</span>
+            <span class="hidden lg:inline">{{ isAppleLight ? t('topbar.themeLight') : t('topbar.themeDark') }}</span>
           </button>
 
           <div class="h-3.5 w-px bg-[var(--border-subtle)] mx-0.5"></div>
@@ -187,40 +187,40 @@
           <button @click="openUniversalDiffCenter"
             class="h-7 px-2 rounded-full flex items-center justify-center gap-1 cursor-pointer transition-colors whitespace-nowrap"
             :class="diffBus.queueCount.value >= 2 ? 'bg-[var(--accent-primary)] text-white shadow-xs' : diffBus.queueCount.value === 1 ? 'bg-indigo-500/18 text-indigo-700 dark:text-indigo-300' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-glass-pill-hover)]'"
-            :title="`全局数据比对中心 (${diffBus.queueCount.value} 组已入队 · Ctrl+Shift+D)`" aria-label="全局数据比对中心">
+            :title="t('topbar.diffCenterTitle', { count: diffBus.queueCount.value })" :aria-label="t('topbar.diffCenterTitle', { count: diffBus.queueCount.value })">
             <AppIcon name="scale" :size="14" class="shrink-0" />
             <span v-if="diffBus.queueCount.value > 0" class="text-[11px] ui-num font-bold leading-none">{{ diffBus.queueCount.value }}</span>
           </button>
 
           <button @click="isWirelessVlanOpen = true"
             class="h-7 px-2 rounded-full flex items-center justify-center gap-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-glass-pill-hover)] cursor-pointer transition-colors whitespace-nowrap"
-            title="无线 Wi-Fi / VLAN / 蓝牙近场监测" aria-label="无线与蓝牙监测">
+            :title="t('topbar.wirelessTitle')" :aria-label="t('topbar.wireless')">
             <AppIcon name="wifi" :size="14" class="shrink-0" />
-            <span class="hidden xl:inline text-[11px] font-medium">无线/蓝牙</span>
+            <span class="hidden xl:inline text-[11px] font-medium">{{ t('topbar.wireless') }}</span>
           </button>
 
           <button @click="isNetToolboxOpen = true"
             class="h-7 px-2 rounded-full flex items-center justify-center gap-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-glass-pill-hover)] cursor-pointer transition-colors whitespace-nowrap"
-            title="网工原子工具箱 (Subnet / DNS / TCPing / TFTP · Ctrl+T)" aria-label="网工原子工具箱">
+            :title="t('topbar.netToolboxTitle')" :aria-label="t('topbar.netToolbox')">
             <AppIcon name="terminal" :size="14" class="shrink-0" />
-            <span class="hidden xl:inline text-[11px] font-medium">工具箱</span>
+            <span class="hidden xl:inline text-[11px] font-medium">{{ t('topbar.netToolbox') }}</span>
           </button>
 
           <button @click="isPreferencesOpen = true"
             class="w-7 h-7 rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-glass-pill-hover)] cursor-pointer transition-colors"
-            title="系统偏好设置 (Ctrl+,)" aria-label="系统偏好设置">
+            :title="t('topbar.openPreferences')" :aria-label="t('topbar.openPreferences')">
             <AppIcon name="settings" :size="14" />
           </button>
 
           <button @click="hideWindowToTray"
             class="w-7 h-7 rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-glass-pill-hover)] cursor-pointer transition-colors"
-            title="最小化至操作系统托盘后台驻留" aria-label="最小化到托盘">
+            :title="t('topbar.minimizeToTray')" :aria-label="t('topbar.minimizeToTray')">
             <AppIcon name="chevron-down" :size="14" />
           </button>
 
           <button @click="clearData"
             class="w-7 h-7 rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--accent-red)] hover:bg-[var(--accent-red-soft)] cursor-pointer transition-colors"
-            title="清除当前捕获数据" aria-label="清除数据">
+            :title="t('topbar.clearCaptureData')" :aria-label="t('topbar.clearCaptureData')">
             <AppIcon name="trash" :size="14" />
           </button>
         </div>
@@ -241,14 +241,14 @@
         <div class="flex flex-col gap-3 w-full">
           <div v-if="isDockExpanded" class="flex items-center justify-between px-2 pt-0.5 pb-1.5 border-b border-[var(--border-subtle)]">
             <span class="text-[11px] font-semibold tracking-wider text-[var(--text-muted)] uppercase">
-              功能工作台
+              {{ t('nav.workbenches') }}
             </span>
-            <button @click="toggleDockPinned" title="收起左侧导航栏"
+            <button @click="toggleDockPinned" :title="t('topbar.sidebarCollapse')"
               class="p-1 rounded-lg hover:bg-[var(--surface-glass-pill-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer">
               <AppIcon name="chevron-left" :size="13" />
             </button>
           </div>
-          <button v-else @click="toggleDockPinned" title="展开左侧导航栏"
+          <button v-else @click="toggleDockPinned" :title="t('topbar.sidebarExpand')"
             class="w-9 h-8 mx-auto rounded-[9px] flex items-center justify-center hover:bg-[var(--surface-glass-pill-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer border-b border-[var(--border-subtle)]">
             <AppIcon name="chevron-right" :size="14" />
           </button>
@@ -256,7 +256,7 @@
           <!-- 分域 1: 捕获与总线 -->
           <div class="flex flex-col gap-0.5 w-full">
             <div v-show="isDockExpanded" class="text-[11px] font-semibold text-[var(--text-muted)] px-2 pb-1">
-              捕获与总线
+              {{ t('nav.groupCapture') }}
             </div>
             <button v-for="tab in domainCaptureTabs" :key="tab.id" @click="activeWorkbench = tab.id"
               :title="t(tab.labelKey || tab.label)"
@@ -279,7 +279,7 @@
           <!-- 分域 2: 资产与空间 -->
           <div class="flex flex-col gap-0.5 w-full">
             <div v-show="isDockExpanded" class="text-[11px] font-semibold text-[var(--text-muted)] px-2 pb-1">
-              资产与空间
+              {{ t('nav.groupAssets') }}
             </div>
             <button v-for="tab in domainAssetTabs" :key="tab.id" @click="activeWorkbench = tab.id"
               :title="t(tab.labelKey || tab.label)"
@@ -300,7 +300,7 @@
           <!-- 分域 3: 等保与合规 -->
           <div class="flex flex-col gap-0.5 w-full">
             <div v-show="isDockExpanded" class="text-[11px] font-semibold text-[var(--text-muted)] px-2 pb-1">
-              等保与合规
+              {{ t('nav.groupCompliance') }}
             </div>
             <button v-for="tab in domainComplianceTabs" :key="tab.id" @click="activeWorkbench = tab.id"
               :title="t(tab.labelKey || tab.label)"
@@ -323,7 +323,7 @@
           <!-- 分域 4: 解密与司法 -->
           <div class="flex flex-col gap-0.5 w-full">
             <div v-show="isDockExpanded" class="text-[11px] font-semibold text-[var(--text-muted)] px-2 pb-1">
-              解密与司法
+              {{ t('nav.groupForensics') }}
             </div>
             <button v-for="tab in domainForensicsTabs" :key="tab.id" @click="activeWorkbench = tab.id"
               :title="t(tab.labelKey || tab.label)"
@@ -347,7 +347,7 @@
           <button type="button" @click="isHoneypotOpen = true"
             :class="['flex items-center py-1.5 rounded-[9px] bg-[var(--surface-glass-pill)] hover:bg-[var(--surface-glass-pill-hover)] border border-[var(--border-subtle)] transition-colors cursor-pointer',
               isDockExpanded ? 'justify-between px-2.5 w-full' : 'justify-center w-9 mx-auto px-1']"
-            title="四总线物理就绪 (NIC / COM / USB / 蜜罐) — 点击管理诱饵服务">
+            :title="t('nav.fourBusTooltip')">
             <div class="grid grid-cols-2 gap-1 shrink-0" :class="isDockExpanded ? 'flex items-center gap-1.5' : ''">
               <span class="w-1.5 h-1.5 rounded-full" :style="{ background: isRunning ? (isPaused ? 'var(--accent-amber)' : 'var(--accent-green)') : 'var(--text-muted)' }" title="网卡 NIC"></span>
               <span class="w-1.5 h-1.5 rounded-full" :style="{ background: isSerialRunning ? 'var(--accent-primary)' : 'var(--text-muted)' }" title="串口 COM"></span>
@@ -355,7 +355,7 @@
               <span class="w-1.5 h-1.5 rounded-full" :style="{ background: isHoneypotRunning ? 'var(--accent-amber)' : 'var(--text-muted)' }" title="诱饵蜜罐"></span>
             </div>
             <span v-show="isDockExpanded" class="text-[11px] text-[var(--text-secondary)] font-medium truncate">
-              诱饵与四总线
+              {{ t('nav.honeypotFourBus') }}
             </span>
           </button>
         </div>
@@ -579,10 +579,10 @@
 
           <div class="space-y-1">
             <h2 class="text-[14px] font-semibold text-[var(--text-primary)] tracking-tight flex items-center justify-center gap-2">
-              <span>OMNI-PROBE 网络探针系统</span>
+              <span>{{ t('splash.title') }}</span>
               <span class="badge-subtle ui-num">{{ APP_VERSION }}</span>
             </h2>
-            <p class="text-[12px] text-[var(--text-secondary)]">工业级多总线网络分析仪 · 正在执行引擎初始化校验</p>
+            <p class="text-[12px] text-[var(--text-secondary)]">{{ t('splash.subtitle') }}</p>
           </div>
 
           <div class="w-full space-y-1.5 pt-1">
@@ -610,21 +610,21 @@
 
           <div class="w-full flex items-center justify-between px-3 py-1.5 rounded-[8px] bg-[var(--surface-elevated)] border border-[var(--border-subtle)] text-[11px] ui-num text-[var(--text-secondary)]">
             <span class="flex items-center gap-1">
-              <span>驱动:</span>
+              <span>{{ t('splash.driver') }}:</span>
               <strong :style="{ color: isNpcapAvailable ? 'var(--accent-green)' : 'var(--accent-amber)' }">
-                {{ isNpcapAvailable ? 'Npcap 就绪' : 'Raw Socket 模式' }}
+                {{ isNpcapAvailable ? t('splash.npcapReady') : t('splash.rawSocketMode') }}
               </strong>
             </span>
             <span class="flex items-center gap-1">
               <span>USB:</span>
               <strong :style="{ color: isUsbpcapAvailable ? 'var(--accent-green)' : 'var(--accent-amber)' }">
-                {{ isUsbpcapAvailable ? 'USBPcap 就绪' : 'PnP 监视' }}
+                {{ isUsbpcapAvailable ? t('splash.usbpcapReady') : t('splash.pnpMonitor') }}
               </strong>
             </span>
             <span class="flex items-center gap-1">
-              <span>解剖:</span>
+              <span>{{ t('splash.dissector') }}:</span>
               <strong :style="{ color: isTsharkAvailable ? 'var(--accent-green)' : 'var(--accent-primary-text)' }">
-                {{ isTsharkAvailable ? 'TShark + 内置引擎' : '内置规约引擎' }}
+                {{ isTsharkAvailable ? t('splash.tsharkReady') : t('splash.builtinEngine') }}
               </strong>
             </span>
           </div>
@@ -634,8 +634,8 @@
 
     <!-- 底部紧凑实用状态栏 -->
     <footer class="app-footer-bar ui-num">
-      <div>物理接口: {{ selectedIface || '自动识别' }} · {{ isNpcapAvailable ? 'Npcap + Raw Socket 双轨引擎' : 'Raw Socket 原生捕获引擎' }} · 环形缓冲: {{ ringBufferUsageText }}</div>
-      <div>已捕获 {{ packets.length.toLocaleString() }} 帧 · Omni-Probe {{ APP_VERSION }}</div>
+      <div>{{ t('footer.nic') }}: {{ selectedIface || t('topbar.autoNic') }} · {{ isNpcapAvailable ? t('footer.engineNpcap') : t('footer.engineRawSocket') }} · {{ t('footer.ringBuffer') }}: {{ ringBufferUsageText }}</div>
+      <div>{{ t('footer.captured', { count: packets.length.toLocaleString() }) }} · Omni-Probe {{ APP_VERSION }}</div>
     </footer>
   </div>
 </template>

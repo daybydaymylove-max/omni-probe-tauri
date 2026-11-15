@@ -9,9 +9,9 @@
         <!-- 标题行与节点状态指示 -->
         <div class="flex items-center justify-between mb-1.5 z-10 flex-wrap gap-2">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold tracking-tight" style="color: var(--text-primary);">多总线物理通信拓扑</span>
+            <span class="text-xs font-semibold tracking-tight" style="color: var(--text-primary);">{{ t('trafficView.topologyTitle') }}</span>
             <span class="text-[11px] ui-num px-2 py-0.5 rounded-full bg-blue-500/12 text-blue-700 dark:text-sky-300 border border-blue-500/25 font-medium">
-              {{ topoNodes.length }} 个活跃通信节点
+              {{ t('trafficView.activeNodes', { count: topoNodes.length }) }}
             </span>
           </div>
           <div class="flex items-center gap-2.5 flex-wrap">
@@ -97,7 +97,7 @@
           <!-- 画布内嵌遥测条 (跟随双模态语义液态玻璃胶囊) -->
           <div class="ui-nav-glass absolute bottom-2.5 left-3 flex items-center gap-4 pointer-events-none z-10 px-3.5 py-1.5 rounded-xl font-mono">
             <div>
-              <div class="text-[11px] font-sans" style="color: var(--text-muted);">实时吞吐率</div>
+              <div class="text-[11px] font-sans" style="color: var(--text-muted);">{{ t('trafficView.realtimeThroughput') }}</div>
               <div class="text-sm font-bold flex items-center gap-1 ui-num" style="color: var(--text-primary);">
                 <span>{{ telemetryThroughputMbps }}</span>
                 <span class="text-xs text-[var(--accent-primary-text)] font-normal">Mbps</span>
@@ -105,7 +105,7 @@
             </div>
             <div class="h-5 w-px" style="background: var(--border-subtle);"></div>
             <div>
-              <div class="text-[11px] font-sans" style="color: var(--text-muted);">瞬时包率</div>
+              <div class="text-[11px] font-sans" style="color: var(--text-muted);">{{ t('trafficView.instantPps') }}</div>
               <div class="text-sm font-bold flex items-center gap-1 ui-num" style="color: var(--text-primary);">
                 <span>{{ telemetryPps.toLocaleString() }}</span>
                 <span class="text-xs text-emerald-600 dark:text-emerald-400 font-normal">pps</span>
@@ -113,7 +113,7 @@
             </div>
             <div class="h-5 w-px" style="background: var(--border-subtle);"></div>
             <div>
-              <div class="text-[11px] font-sans" style="color: var(--text-muted);">平均抖动</div>
+              <div class="text-[11px] font-sans" style="color: var(--text-muted);">{{ t('trafficView.avgJitter') }}</div>
               <div class="text-sm font-bold flex items-center gap-1 ui-num" style="color: var(--text-primary);">
                 <span>{{ telemetryJitterMs }}</span>
                 <span class="text-xs font-normal" style="color: var(--text-secondary);">ms</span>
@@ -127,7 +127,7 @@
       <div class="w-full lg:w-80 xl:w-96 ui-content-card p-3.5 flex flex-col justify-between shrink-0">
         <!-- Header -->
         <div class="flex items-center justify-between gap-2">
-          <span class="text-xs font-bold uppercase tracking-wider text-(--text-secondary)">工业合规与系统健康矩阵</span>
+          <span class="text-xs font-bold uppercase tracking-wider text-(--text-secondary)">{{ t('trafficView.matrixTitle') }}</span>
           <span
             class="text-[11px] font-mono-code font-bold px-2 py-0.5 rounded-full border shrink-0 ui-num"
             :class="complianceHealthSummary.badgeClass"
@@ -138,7 +138,7 @@
 
         <!-- Big Metric 1: 累计解包帧数 (Total Frames Audited) -->
         <div class="flex flex-col py-1 border-b border-(--border-subtle)">
-          <span class="text-[11px] text-(--text-muted) font-medium">累计解包帧数 (Total Frames Audited)</span>
+          <span class="text-[11px] text-(--text-muted) font-medium">{{ t('trafficView.totalFramesAudited') }}</span>
           <div class="flex items-baseline gap-2 mt-0.5">
             <span class="metric-display ui-num">{{ packets.length.toLocaleString() }}</span>
             <span class="text-xs font-mono-code ui-num text-emerald-600 dark:text-emerald-400 font-semibold">{{ telemetryRateText }}</span>
@@ -148,7 +148,7 @@
         <!-- Big Metric 2: 工业 OT 协议载荷占比连续分段条 -->
         <div class="flex flex-col gap-1.5 py-1">
           <div class="flex justify-between items-center text-[11px]">
-            <span class="text-slate-400">工业 OT 协议载荷占比</span>
+            <span class="text-slate-400">{{ t('trafficView.otPayloadRatio') }}</span>
             <span class="font-mono text-cyan-950 dark:text-cyan-300 font-bold">{{ industrialRatioText }}</span>
           </div>
           <!-- 分段彩色胶囊条 -->
@@ -629,7 +629,7 @@
                 <div
                   @click="col.sortable ? toggleSort(col.key) : null"
                   :class="['truncate flex items-center gap-0.5 min-w-0 flex-1', col.sortable ? 'cursor-pointer hover:text-blue-500' : '']"
-                  :title="`${getColumnLabel(col)} (点击排序)`"
+                  :title="col.sortable ? (locale === 'en-US' ? `${getColumnLabel(col)} (Click to sort)` : `${getColumnLabel(col)} (点击排序)`) : getColumnLabel(col)"
                 >
                   <span class="truncate">{{ getColumnLabel(col) }}</span>
                   <span v-if="col.sortable && sortKey === col.key" class="text-blue-500 font-bold ml-0.5 shrink-0">
@@ -1001,60 +1001,60 @@
           <div class="bottom-liquid-dock pointer-events-auto relative">
             <span class="lens-edge-lip" aria-hidden="true"></span>
             <div class="scope-group">
-              <button class="scope-btn" :class="{ active: currentScopeFilter === 'all' }" @click="setScope('all')" title="全量流量 (快捷键 0)">
-                <span>全量流</span>
+              <button class="scope-btn" :class="{ active: currentScopeFilter === 'all' }" @click="setScope('all')" :title="t('trafficView.scopeAllTip')">
+                <span>{{ t('trafficView.scopeAll') }}</span>
                 <span class="kbd-badge">0</span>
               </button>
-              <button class="scope-btn" :class="{ active: currentScopeFilter === 'alert' }" @click="setScope('alert')" title="告警与高熵快筛 (快捷键 A)">
+              <button class="scope-btn" :class="{ active: currentScopeFilter === 'alert' }" @click="setScope('alert')" :title="t('trafficView.scopeAlertTip')">
                 <AppIcon name="alert" :size="12" class="text-rose-500" />
-                <span>告警</span>
+                <span>{{ t('trafficView.scopeAlert') }}</span>
                 <span class="kbd-badge">A</span>
               </button>
-              <button class="scope-btn" :class="{ active: currentScopeFilter === 'industrial' }" @click="setScope('industrial')" title="仅显示工控 OT 规约 (快捷键 I)">
+              <button class="scope-btn" :class="{ active: currentScopeFilter === 'industrial' }" @click="setScope('industrial')" :title="t('trafficView.scopeIndustrialTip')">
                 <AppIcon name="zap" :size="12" class="text-amber-500" />
-                <span>工控</span>
+                <span>{{ t('trafficView.scopeIndustrial') }}</span>
                 <span class="kbd-badge">I</span>
               </button>
-              <button class="scope-btn" :class="{ active: currentScopeFilter === 'serial_usb' }" @click="setScope('serial_usb')" title="仅显示物理总线 (快捷键 B)">
+              <button class="scope-btn" :class="{ active: currentScopeFilter === 'serial_usb' }" @click="setScope('serial_usb')" :title="t('trafficView.scopeBusTip')">
                 <AppIcon name="usb" :size="12" class="text-indigo-500" />
-                <span>总线</span>
+                <span>{{ t('trafficView.scopeBus') }}</span>
                 <span class="kbd-badge">B</span>
               </button>
             </div>
 
             <div class="telemetry-capsule shrink-0">
               <div class="flex items-center gap-1">
-                <span class="opacity-65 text-[11px] hidden xl:inline">速率:</span>
+                <span class="opacity-65 text-[11px] hidden xl:inline">{{ t('trafficView.telemetryRate') }}:</span>
                 <b class="ui-num" style="color: var(--text-primary);">{{ telemetryThroughputMbps }}M</b>
               </div>
               <span class="opacity-20">|</span>
               <div class="flex items-center gap-1">
-                <span class="opacity-65 text-[11px] hidden xl:inline">包率:</span>
+                <span class="opacity-65 text-[11px] hidden xl:inline">{{ t('trafficView.telemetryPps') }}:</span>
                 <b class="ui-num" style="color: var(--text-primary);">{{ telemetryPps.toLocaleString() }}pps</b>
               </div>
               <span class="opacity-20">|</span>
               <div class="flex items-center gap-1">
-                <span class="opacity-65 text-[11px] hidden xl:inline">总帧:</span>
+                <span class="opacity-65 text-[11px] hidden xl:inline">{{ t('trafficView.telemetryFrames') }}:</span>
                 <b class="text-blue-600 dark:text-sky-400 ui-num">{{ packets.length.toLocaleString() }}</b>
               </div>
             </div>
 
             <div class="flex items-center gap-1 shrink-0">
-              <button class="action-deck-btn" :class="{ active: isAutoScroll }" @click="isAutoScroll = !isAutoScroll" title="开启/关闭随流滚屏 (快捷键 S)">
-                <span>随流滚屏</span>
+              <button class="action-deck-btn" :class="{ active: isAutoScroll }" @click="isAutoScroll = !isAutoScroll" :title="t('trafficView.autoScrollTip')">
+                <span>{{ t('trafficView.autoScroll') }}</span>
                 <span class="kbd-badge">S</span>
               </button>
-              <button class="action-deck-btn" :class="{ active: isPaused }" @click="isPaused ? $emit('resumeCapture') : $emit('pauseCapture')" title="暂停/恢复嗅探 (快捷键 Space)">
+              <button class="action-deck-btn" :class="{ active: isPaused }" @click="isPaused ? $emit('resumeCapture') : $emit('pauseCapture')" :title="t('trafficView.pauseResumeTip')">
                 <AppIcon :name="isPaused ? 'play' : 'pause'" :size="12" />
-                <span>{{ isPaused ? '恢复' : '暂停' }}</span>
+                <span>{{ isPaused ? t('trafficView.resume') : t('trafficView.pause') }}</span>
                 <span class="kbd-badge">Space</span>
               </button>
-              <button class="action-deck-btn" @click="$emit('clearData')" title="清空缓冲区 (快捷键 ⌥K)">
-                <span>清空</span>
+              <button class="action-deck-btn" @click="$emit('clearData')" :title="t('trafficView.clearTip')">
+                <span>{{ t('trafficView.clear') }}</span>
                 <span class="kbd-badge">⌥K</span>
               </button>
-              <button class="action-deck-btn" @click="isExportOpen = true" title="导出当前 PCAPng 原始包 (快捷键 ⌘E)">
-                <span>导出</span>
+              <button class="action-deck-btn" @click="isExportOpen = true" :title="t('trafficView.exportTip')">
+                <span>{{ t('trafficView.export') }}</span>
                 <span class="kbd-badge">⌘E</span>
               </button>
             </div>
@@ -1654,6 +1654,7 @@ import PacketDetailModal from '../components/PacketDetailModal.vue';
 import PacketTraceMapView from '../components/PacketTraceMapView.vue';
 import AppIcon from '../components/AppIcon.vue';
 import EmptyState from '../components/EmptyState.vue';
+import { useI18n } from '../i18n';
 
 export interface SerialPortDetail {
   port_name: string;
@@ -1748,6 +1749,8 @@ const emit = defineEmits([
 ]);
 
 const TargetProbeModal = defineAsyncComponent(() => import('../components/TargetProbeModal.vue'));
+
+const { t, locale } = useI18n();
 const PortTransceiverModal = defineAsyncComponent(() => import('../components/PortTransceiverModal.vue'));
 const FlowDialogueInspector = defineAsyncComponent(() => import('../components/FlowDialogueInspector.vue'));
 const TcpStreamModal = defineAsyncComponent(() => import('../components/TcpStreamModal.vue'));
@@ -3289,15 +3292,45 @@ function checkFilter(p: PacketRecord, filter: string): boolean {
  * 根据当前总线类型自适应表头标签
  */
 function getColumnLabel(col: ColumnDef): string {
+  if (locale.value === 'en-US') {
+    if (activeBus.value === 'serial') {
+      if (col.key === 'src_ip' || col.key === 'src_endpoint') return 'Serial Port (COM)';
+      if (col.key === 'mac_src') return 'Endpoint';
+      if (col.key === 'src_port') return 'COM Status';
+      if (col.key === 'dst_port') return 'Baud Rate';
+      if (col.key === 'transport') return 'Bus Type';
+      if (col.key === 'direction') return 'COM Direction';
+    } else if (activeBus.value === 'usb') {
+      if (col.key === 'src_ip' || col.key === 'src_endpoint') return 'USB Device ID';
+      if (col.key === 'mac_src') return 'Transfer Type';
+      if (col.key === 'src_port') return 'Endpoint No.';
+      if (col.key === 'dst_port') return 'Comm Status';
+    }
+    switch (col.key) {
+      case 'id': return t('trafficView.colSeq');
+      case 'timestamp': return t('trafficView.colTime');
+      case 'src_endpoint': return t('trafficView.colSrc');
+      case 'dst_endpoint': return t('trafficView.colDst');
+      case 'protocol': return t('trafficView.colProto');
+      case 'length': return t('trafficView.colLength');
+      case 'l7_summary': return t('trafficView.colInfo');
+      case 'direction': return 'Direction';
+      case 'transport': return 'Bus / Transport';
+      case 'entropy': return 'Entropy';
+      case 'mac_src': return 'Src MAC';
+      case 'payload': return 'Hex Payload';
+    }
+  }
+
   if (activeBus.value === 'serial') {
-    if (col.key === 'src_ip') return '物理串口 (COM)';
+    if (col.key === 'src_ip' || col.key === 'src_endpoint') return '物理串口 (COM)';
     if (col.key === 'mac_src') return '通信端点';
     if (col.key === 'src_port') return '串口状态';
     if (col.key === 'dst_port') return '波特率';
     if (col.key === 'transport') return '总线类型';
     if (col.key === 'direction') return '串口流向';
   } else if (activeBus.value === 'usb') {
-    if (col.key === 'src_ip') return 'USB 设备标识';
+    if (col.key === 'src_ip' || col.key === 'src_endpoint') return 'USB 设备标识';
     if (col.key === 'mac_src') return '传输类型';
     if (col.key === 'src_port') return '端点号';
     if (col.key === 'dst_port') return '通信状态';

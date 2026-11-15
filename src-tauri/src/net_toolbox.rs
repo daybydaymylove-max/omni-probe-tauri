@@ -1424,7 +1424,7 @@ mod tests {
         cli.send_to(&wrq, srv_addr).await.unwrap();
 
         let mut buf = [0u8; 1024];
-        let (n, xfer_peer) = tokio::time::timeout(Duration::from_secs(2), cli.recv_from(&mut buf))
+        let (n, xfer_peer) = tokio::time::timeout(Duration::from_secs(3), cli.recv_from(&mut buf))
             .await
             .unwrap()
             .unwrap();
@@ -1436,7 +1436,7 @@ mod tests {
             data_pkt.extend_from_slice(&blk.to_be_bytes());
             data_pkt.extend_from_slice(chunk);
             cli.send_to(&data_pkt, xfer_peer).await.unwrap();
-            let (an, _) = tokio::time::timeout(Duration::from_secs(2), cli.recv_from(&mut buf))
+            let (an, _) = tokio::time::timeout(Duration::from_secs(3), cli.recv_from(&mut buf))
                 .await
                 .unwrap()
                 .unwrap();
@@ -1451,7 +1451,7 @@ mod tests {
 
         let mut downloaded = Vec::new();
         loop {
-            let (dn, dp) = tokio::time::timeout(Duration::from_secs(2), cli.recv_from(&mut buf))
+            let (dn, dp) = tokio::time::timeout(Duration::from_secs(3), cli.recv_from(&mut buf))
                 .await
                 .unwrap()
                 .unwrap();

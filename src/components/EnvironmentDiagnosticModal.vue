@@ -4,7 +4,7 @@
       v-if="inspectorOpen"
       @click.stop
       role="dialog"
-      aria-label="运行环境与内核态检查器"
+      :aria-label="t('envInspector.title')"
       class="absolute right-0 top-full mt-2.5 w-[min(94vw,480px)] max-h-[78vh] ui-modal-surface rounded-2xl flex flex-col overflow-hidden z-50 select-text"
     >
       <span class="lens-edge-lip" aria-hidden="true"></span>
@@ -36,13 +36,13 @@
 
           <div class="min-w-0">
             <div class="flex items-center gap-1.5">
-              <h3 class="text-xs font-bold truncate" style="color: var(--text-primary)">环境检查器</h3>
+              <h3 class="text-xs font-bold truncate" style="color: var(--text-primary)">{{ t('envInspector.headerTitle') }}</h3>
               <span :class="['text-[10px] ui-num font-semibold px-1.5 py-0.5 rounded-full border', statusBadgeClass]">
                 {{ statusBadgeText }}
               </span>
             </div>
             <div class="text-[10px] ui-num truncate mt-0.5" style="color: var(--text-muted)">
-              {{ missingCount === 0 ? '底层依赖链路已完整就绪' : `${missingCount} 项外置组件未装，已切换内置链路` }}
+              {{ missingCount === 0 ? t('envInspector.readyStatus') : t('envInspector.missingStatus', { count: missingCount }) }}
             </div>
           </div>
         </div>
@@ -59,7 +59,7 @@
               ]"
               :style="inspectorTab !== 'deps' ? { color: 'var(--text-secondary)' } : undefined"
             >
-              依赖
+              {{ t('envInspector.tabDeps') }}
             </button>
             <button
               type="button"
@@ -70,7 +70,7 @@
               ]"
               :style="inspectorTab !== 'runtime' ? { color: 'var(--text-secondary)' } : undefined"
             >
-              内核
+              {{ t('envInspector.tabRuntime') }}
             </button>
           </div>
 
@@ -79,7 +79,7 @@
             @click="onManualRefresh"
             :disabled="inspecting"
             class="w-7 h-7 rounded-full ui-pill flex items-center justify-center cursor-pointer disabled:opacity-50"
-            title="立即重新探活"
+            :title="t('envInspector.refreshNow')"
           >
             <AppIcon name="refresh" :size="12" :class="inspecting ? 'animate-spin' : ''" />
           </button>
@@ -88,7 +88,7 @@
             type="button"
             @click="closeInspector"
             class="w-7 h-7 rounded-full ui-pill flex items-center justify-center cursor-pointer"
-            title="关闭 (Esc)"
+            :title="t('envInspector.closeEsc')"
           >
             <AppIcon name="close" :size="13" />
           </button>
@@ -376,6 +376,9 @@
 import { ref, computed } from 'vue';
 import AppIcon from './AppIcon.vue';
 import { useEnvironmentInspector } from '../composables/useEnvironmentInspector';
+import { useI18n } from '../i18n';
+
+const { t, locale } = useI18n();
 
 const {
   inspectorOpen,
@@ -430,6 +433,11 @@ const statusBadgeClass = computed(() => {
 
 const statusBadgeText = computed(() => {
   const level = report.value?.status_level;
+  if (locale.value === 'en-US') {
+    if (level === 'Optimal') return 'Optimal';
+    if (level === 'Standard') return 'Standard';
+    return 'Fallback';
+  }
   if (level === 'Optimal') return '完整态';
   if (level === 'Standard') return '标准态';
   return '兜底态';
