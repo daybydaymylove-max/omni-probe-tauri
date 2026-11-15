@@ -1,4 +1,4 @@
-# Omni-Probe 工业级全能网络探针系统 (v0.3.6)
+# Omni-Probe 全能网络探针系统 (v0.3.6)
 
 <div align="center">
 
