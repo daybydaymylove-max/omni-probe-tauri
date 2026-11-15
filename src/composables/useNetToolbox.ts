@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import { t } from '../i18n';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 
 export interface SubnetCalcResult {
@@ -387,7 +388,7 @@ export function useNetToolbox() {
   async function runSubnetCalc() {
     errorMessage.value = '';
     if (!validateCidrPrecheck(subnetInput.value)) {
-      errorMessage.value = '请输入合法的 IPv4/IPv6 CIDR 或 IP+掩码格式';
+      errorMessage.value = t('netToolbox.errInvalidCidr');
       return;
     }
     try {
@@ -454,7 +455,7 @@ export function useNetToolbox() {
     if (isQueryingDns.value) return;
     errorMessage.value = '';
     if (!dnsDomain.value.trim()) {
-      errorMessage.value = '查询域名不能为空';
+      errorMessage.value = t('netToolbox.errDomainEmpty');
       return;
     }
     isQueryingDns.value = true;
@@ -476,7 +477,7 @@ export function useNetToolbox() {
     errorMessage.value = '';
     const validPort = parsePortInput(tcpingPort.value);
     if (!tcpingHost.value.trim() || !validPort) {
-      errorMessage.value = '请输入合法主机名/IP 与 1~65535 端口';
+      errorMessage.value = t('netToolbox.errInvalidHostPort');
       return;
     }
     isRunningTcping.value = true;
@@ -523,7 +524,7 @@ export function useNetToolbox() {
         await invoke<boolean>('stop_tftp_server_cmd');
       } else {
         if (!tftpRoot.value.trim()) {
-          errorMessage.value = '请先填写 TFTP 共享目录绝对路径';
+          errorMessage.value = t('netToolbox.errTftpPathEmpty');
           return;
         }
         await invoke<string>('start_tftp_server_cmd', {
@@ -545,7 +546,7 @@ export function useNetToolbox() {
         await invoke<boolean>('stop_http_file_server_cmd');
       } else {
         if (!httpServeRoot.value.trim()) {
-          errorMessage.value = '请先填写 HTTP 文件分发目录绝对路径';
+          errorMessage.value = t('netToolbox.errHttpPathEmpty');
           return;
         }
         await invoke<string>('start_http_file_server_cmd', {

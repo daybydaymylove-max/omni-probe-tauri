@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import { t } from '../i18n';
 
 export type NotificationType = 'success' | 'info' | 'warning' | 'error';
 
@@ -40,11 +41,11 @@ let counter = 0;
 
 /**
  * 工业级智能错误语义解析器
- * 将底层晦涩的系统调用、网络驱动与硬件异常转换为面向工业运维人员的友好提示与处置指导
+ * 将底层系统调用、网络驱动与硬件异常转换为面向工业运维人员的友好提示与处置指导
  * 时间复杂度: O(1)
  * 空间复杂度: O(1)
  */
-export function formatFriendlyError(err: unknown, defaultTitle: string = '操作执行受阻'): { title: string; message: string; action?: NotificationAction } {
+export function formatFriendlyError(err: unknown, defaultTitle: string = t('errors.operationBlocked')): { title: string; message: string; action?: NotificationAction } {
   const rawStr = err instanceof Error ? err.message : String(err || '');
 
   // 1. Npcap / WinPcap 底层网卡抓包驱动缺失或未启动
@@ -56,8 +57,8 @@ export function formatFriendlyError(err: unknown, defaultTitle: string = '操作
     rawStr.includes('No packet capture driver')
   ) {
     return {
-      title: '底层网络捕获驱动未就绪',
-      message: 'Windows 操作系统未检测到或无法加载 Npcap/WinPcap 驱动核心组件。请点击顶栏【环境状况胶囊】一键下载安装。',
+      title: t('errors.driverNotReadyTitle'),
+      message: t('errors.driverNotReadyMsg'),
     };
   }
 
@@ -69,8 +70,8 @@ export function formatFriendlyError(err: unknown, defaultTitle: string = '操作
     rawStr.includes('Operation not permitted')
   ) {
     return {
-      title: '系统底层访问权限不足',
-      message: '操作系统安全沙箱拦截了底层物理网卡混杂模式或串口独占控制权。建议关闭程序后，右键图标选择【以管理员身份运行】。',
+      title: t('errors.permDeniedTitle'),
+      message: t('errors.permDeniedMsg'),
     };
   }
 
@@ -82,16 +83,16 @@ export function formatFriendlyError(err: unknown, defaultTitle: string = '操作
     (rawStr.includes('COM') && rawStr.includes('denied'))
   ) {
     return {
-      title: '目标通信串口已被独占',
-      message: '当前选中的物理/虚拟 COM 端口已被其他 PLC 组态工具、串口助手或后台进程独占占用。请释放占用程序后再试。',
+      title: t('errors.serialBusyTitle'),
+      message: t('errors.serialBusyMsg'),
     };
   }
 
   // 4. 离线蓝牙串口寻呼超时
   if (rawStr.includes('BTHENUM') || (rawStr.includes('Bluetooth') && rawStr.includes('timeout'))) {
     return {
-      title: '蓝牙虚拟串口连接超时',
-      message: '远端配对的蓝牙终端当前处于关机、休眠或超出无线通信射频覆盖范围，底层基带寻呼未获得应答。',
+      title: t('errors.bluetoothTimeoutTitle'),
+      message: t('errors.bluetoothTimeoutMsg'),
     };
   }
 
@@ -102,15 +103,15 @@ export function formatFriendlyError(err: unknown, defaultTitle: string = '操作
     rawStr.includes('pcap_compile')
   ) {
     return {
-      title: 'BPF 过滤表达式语法错误',
-      message: `输入的 Berkeley Packet Filter 规则格式非法 (${rawStr})。请参考如 "tcp and port 80" 或 "ip host 192.168.1.1" 的标准语法。`,
+      title: t('errors.bpfSyntaxTitle'),
+      message: t('errors.bpfSyntaxMsg', { err: rawStr }),
     };
   }
 
   // 6. 等保三级安全审计与操作阻断
-  if (rawStr.includes('等保三级') || rawStr.includes('AuditAdmin') || rawStr.includes('权限不足')) {
+  if (rawStr.includes('等保三级') || rawStr.includes('AuditAdmin') || rawStr.includes('权限不足') || rawStr.includes('Permission denied')) {
     return {
-      title: '安全合规与等保权限拦截',
+      title: t('errors.complianceDeniedTitle'),
       message: rawStr,
     };
   }
@@ -119,7 +120,7 @@ export function formatFriendlyError(err: unknown, defaultTitle: string = '操作
   const cleanMsg = rawStr.length > 200 ? rawStr.substring(0, 200) + '...' : rawStr;
   return {
     title: defaultTitle,
-    message: cleanMsg || '底层返回未明异常，请查阅底部系统运行控制台日志获取调用栈详情。',
+    message: cleanMsg || t('errors.operationBlocked'),
   };
 }
 

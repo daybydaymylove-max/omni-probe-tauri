@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { t } from '../i18n';
 import { notifySuccess, notifyInfo, notifyError } from './useNotification';
 
 export interface NativeSaveOutcome {
@@ -15,9 +16,9 @@ export interface NativeSaveOutcome {
 export async function saveTextViaNativeDesktop(
   defaultFilename: string,
   content: string,
-  filterName = '导出报告/脚本文件',
+  filterName = t('common.exportFileFilter'),
   filterPatterns = '*.txt;*.md;*.json;*.csv;*.py;*.patch',
-  title = '另存为 - Omni-Probe 原生桌面导出'
+  title = t('common.saveAsTitle')
 ): Promise<NativeSaveOutcome | null> {
   try {
     const res = await invoke<NativeSaveOutcome>('save_text_with_native_dialog_cmd', {
@@ -28,20 +29,20 @@ export async function saveTextViaNativeDesktop(
       content,
     });
     if (res.saved && res.path) {
-      notifySuccess('已导出至本地磁盘', `${res.path} (${res.bytes_written} 字节)`);
+      notifySuccess(t('common.exportedToDisk'), `${res.path} (${res.bytes_written} ${t('common.bytes') || 'bytes'})`);
     } else if (res.cancelled) {
-      notifyInfo('已取消导出', '未写入任何文件');
+      notifyInfo(t('common.exportCancelled'), t('common.noFileWritten'));
     }
     return res;
   } catch (e) {
-    notifyError('原生文件写入失败', String(e));
+    notifyError(t('common.fileWriteFailed'), String(e));
     return null;
   }
 }
 
 export async function pickNativeFilePath(
-  title = '选择磁盘文件',
-  filterName = '所有支持文件',
+  title = t('common.selectDiskFile'),
+  filterName = t('common.allSupportedFiles'),
   filterPatterns = '*.*'
 ): Promise<string | null> {
   try {
@@ -51,16 +52,16 @@ export async function pickNativeFilePath(
       filterPatterns,
     });
   } catch (e) {
-    notifyError('调起系统文件选择框失败', String(e));
+    notifyError(t('common.fileWriteFailed'), String(e));
     return null;
   }
 }
 
-export async function pickNativeFolderPath(title = '选择本地目录'): Promise<string | null> {
+export async function pickNativeFolderPath(title = t('common.selectLocalFolder')): Promise<string | null> {
   try {
     return await invoke<string | null>('pick_native_folder_dialog_cmd', { title });
   } catch (e) {
-    notifyError('调起系统目录选择框失败', String(e));
+    notifyError(t('common.openFolderFailed'), String(e));
     return null;
   }
 }
@@ -69,6 +70,6 @@ export async function revealInDesktopExplorer(path: string): Promise<void> {
   try {
     await invoke<string>('reveal_in_file_manager_cmd', { path });
   } catch (e) {
-    notifyError('无法打开系统文件管理器', String(e));
+    notifyError(t('common.openFolderFailed'), String(e));
   }
 }

@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue';
 import { notifyInfo, notifySuccess } from './useNotification';
+import { t } from '../i18n';
 
 export interface UniversalDiffItem {
   id?: number | string;
@@ -37,8 +38,8 @@ const droppedFileRight = ref<string>('');
 const scratchpadTextA = ref('');
 const scratchpadTextB = ref('');
 const scratchpadList = ref<Array<{ label: string; text: string }>>([
-  { label: '草稿组 #1 (基准)', text: '' },
-  { label: '草稿组 #2', text: '' },
+  { label: t('universalDiff.draftA') || '草稿组 #1 (基准)', text: '' },
+  { label: t('universalDiff.draftB') || '草稿组 #2', text: '' },
 ]);
 
 /**
@@ -125,7 +126,7 @@ function resolvePayloadEncoding(hexCandidate: string, rawTextCandidate: string, 
  * 工业级全源数据对象规整适配器
  * 兼容 PacketRecord、网络调试日志、硬件总线、解密明文、合规审计、取证档案及纯 Hex/ASCII 草稿
  */
-export function normalizeToDiffableItem(input: any, defaultLabel = '数据样本'): UniversalDiffItem {
+export function normalizeToDiffableItem(input: any, defaultLabel = t('universalDiff.defaultLabel') || '数据样本'): UniversalDiffItem {
   if (!input) {
     return {
       label: defaultLabel,
@@ -265,8 +266,8 @@ export function useUniversalDiff() {
    * 直接打开双项比对工作台
    */
   function openUniversalDiff(itemA: any, itemB: any, mode: DiffViewMode = 'hex') {
-    const normA = normalizeToDiffableItem(itemA, '比对样本 A');
-    const normB = normalizeToDiffableItem(itemB, '比对样本 B');
+    const normA = normalizeToDiffableItem(itemA, t('universalDiff.slotASaved') || '比对样本 A');
+    const normB = normalizeToDiffableItem(itemB, t('universalDiff.slotBSaved') || '比对样本 B');
     diffQueue.value = [normA, normB];
     anchorIndex.value = 0;
     syncSlotsWithQueue();
@@ -295,8 +296,8 @@ export function useUniversalDiff() {
     diffQueue.value = [...diffQueue.value, normalized];
     syncSlotsWithQueue();
     notifySuccess(
-      '已加入多组比对队列',
-      `[${normalized.label}] 已入队，当前队列共 ${diffQueue.value.length} 组样本`
+      t('universalDiff.addedToQueue') || '已加入多组比对队列',
+      t('universalDiff.addedToQueueMsg', { label: normalized.label, count: diffQueue.value.length })
     );
     if (openIfReady && diffQueue.value.length >= 2) {
       activeMode.value = diffQueue.value.length > 2 ? 'multi' : 'hex';
@@ -349,7 +350,7 @@ export function useUniversalDiff() {
     next[0] = norm;
     diffQueue.value = next;
     syncSlotsWithQueue();
-    notifyInfo('已存入比对基准 A', `${norm.label} (${norm.length} 字节)`);
+    notifyInfo(t('universalDiff.slotASaved') || '已存入比对基准 A', `${norm.label} (${norm.length} 字节)`);
   }
 
   /**
@@ -364,7 +365,7 @@ export function useUniversalDiff() {
     next[1] = norm;
     diffQueue.value = next;
     syncSlotsWithQueue();
-    notifyInfo('已存入比对样本 B', `${norm.label} (${norm.length} 字节)`);
+    notifyInfo(t('universalDiff.slotBSaved') || '已存入比对样本 B', `${norm.label} (${norm.length} 字节)`);
   }
 
   /**
@@ -385,7 +386,7 @@ export function useUniversalDiff() {
    */
   function compareSlots() {
     if (diffQueue.value.length < 2) {
-      notifyInfo('提示', '请至少放入 2 组数据样本后再开启比对');
+      notifyInfo(t('common.info') || '提示', t('universalDiff.minSamplesRequired') || '请至少放入 2 组数据样本后再开启比对');
       return;
     }
     activeMode.value = diffQueue.value.length >= 3 ? 'multi' : 'hex';

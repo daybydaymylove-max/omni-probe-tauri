@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { notify, notifyError, notifySuccess } from './useNotification';
+import { t } from '../i18n';
 
 export interface ComponentStatus {
   id: string;
@@ -119,10 +120,10 @@ function setStartupReminderEnabled(enabled: boolean, silent: boolean = false): v
   localStorage.setItem(STARTUP_SKIP_STORAGE_KEY, enabled ? 'false' : 'true');
   if (!silent) {
     notifySuccess(
-      '环境提醒偏好已保存',
+      t('envInspector.prefSaved') || '环境提醒偏好已保存',
       enabled
-        ? '启动检测到可选驱动缺失时，将在角落给出非阻塞建议提醒'
-        : '已开启静默启动模式，仅在顶栏状态胶囊实时展现环境指标'
+        ? (t('envInspector.prefSavedHintNonBlock') || '启动检测到可选驱动缺失时，将在角落给出非阻塞建议提醒')
+        : (t('envInspector.prefSavedHintSilent') || '已开启静默启动模式，仅在顶栏状态胶囊实时展现环境指标')
     );
   }
 }
@@ -140,12 +141,12 @@ async function ensureDownloadListener(): Promise<void> {
       delete next[p.component_id];
       installingMap.value = next;
       launchedMap.value = { ...launchedMap.value, [p.component_id]: true };
-      notifySuccess('外部组件装配已完成', `组件 ${p.component_id} 已准备就绪，请点击完成验证生效`);
+      notifySuccess(t('envInspector.installComplete') || '外部组件装配已完成', `组件 ${p.component_id} 已准备就绪`);
     } else if (p.status === 'error') {
       const next = { ...installingMap.value };
       delete next[p.component_id];
       installingMap.value = next;
-      notifyError('官方安装包下载异常', p.error_msg || '网络请求或文件校验失败');
+      notifyError(t('envInspector.downloadFailed') || '官方安装包下载异常', p.error_msg || '网络请求或文件校验失败');
     } else {
       installingMap.value = { ...installingMap.value, [p.component_id]: p };
     }
@@ -290,12 +291,12 @@ async function startAutoInstall(componentId: string): Promise<void> {
     delete next[componentId];
     installingMap.value = next;
     launchedMap.value = { ...launchedMap.value, [componentId]: true };
-    notifySuccess('装配引导已就绪', res || '已唤起安装流程，完成后可刷新校验状态');
+    notifySuccess(t('envInspector.installLaunched') || '装配引导已就绪', res || '已唤起安装流程');
   } catch (e: unknown) {
     const next = { ...installingMap.value };
     delete next[componentId];
     installingMap.value = next;
-    notifyError('驱动安装引导受阻', e);
+    notifyError(t('envInspector.installFailed') || '驱动安装引导受阻', e);
   }
 }
 
@@ -311,9 +312,9 @@ async function applyXdpPreset(preset: string): Promise<void> {
   try {
     const msg = await invoke<string>('apply_xdp_policy_preset_cmd', { preset });
     await refreshRuntimeTelemetry();
-    notifySuccess('eBPF 字节码策略已部署', msg);
+    notifySuccess(t('envInspector.ebpfDeployed') || 'eBPF 字节码策略已部署', msg);
   } catch (e) {
-    notifyError('eBPF 策略部署受阻', String(e));
+    notifyError(t('envInspector.ebpfDeployFailed') || 'eBPF 策略部署受阻', String(e));
   } finally {
     switchingXdpPolicy.value = false;
   }
@@ -324,7 +325,7 @@ async function openOfficialLink(url: string): Promise<void> {
   try {
     await openUrl(url);
   } catch (e) {
-    notifyError('无法唤起系统关联浏览器打开链接', String(e));
+    notifyError(t('envInspector.browserLaunchFailed') || '无法唤起系统关联浏览器打开链接', String(e));
   }
 }
 
@@ -343,11 +344,11 @@ function notifyDegradedIfNeeded(): void {
 
   notify({
     type: 'info',
-    title: `运行环境就绪度 ${report.value.readiness_score}%`,
-    message: `可选外置组件未完全就绪（${missingNames}），系统已启用原生兜底链路。`,
+    title: t('envInspector.readinessScore', { score: report.value.readiness_score }) || `运行环境就绪度 ${report.value.readiness_score}%`,
+    message: t('envInspector.missingComponentsNotice', { missing: missingNames }) || `可选外置组件未完全就绪（${missingNames}），系统已启用原生兜底链路。`,
     duration: 5500,
     action: {
-      label: '打开检查器',
+      label: t('envInspector.openInspector') || '打开检查器',
       onClick: () => openInspector('deps'),
     },
   });

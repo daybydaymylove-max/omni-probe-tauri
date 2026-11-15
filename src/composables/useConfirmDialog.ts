@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import { t } from '../i18n';
 
 export interface SheetDialogOptions {
   mode: 'confirm' | 'prompt';
@@ -61,10 +62,10 @@ export function uiConfirm(
 ): Promise<boolean> {
   return enqueueDialog<boolean>({
     mode: 'confirm',
-    title: options?.title || '确认操作',
+    title: options?.title || t('common.confirmAction'),
     message,
-    confirmText: options?.confirmText || '确认执行',
-    cancelText: options?.cancelText || '取消',
+    confirmText: options?.confirmText || t('common.confirmExecute'),
+    cancelText: options?.cancelText || t('common.cancel'),
     danger: options?.danger ?? true,
   });
 }
@@ -85,12 +86,12 @@ export function uiPrompt(
 ): Promise<string | null> {
   return enqueueDialog<string | null>({
     mode: 'prompt',
-    title: options?.title || '输入参数',
+    title: options?.title || t('common.inputParam'),
     message,
     defaultValue,
-    placeholder: options?.placeholder || '请输入内容...',
-    confirmText: options?.confirmText || '确定',
-    cancelText: options?.cancelText || '取消',
+    placeholder: options?.placeholder || t('common.inputPlaceholder'),
+    confirmText: options?.confirmText || t('common.ok'),
+    cancelText: options?.cancelText || t('common.cancel'),
     allowEmpty: options?.allowEmpty ?? false,
   });
 }
@@ -101,7 +102,7 @@ export function submitActiveDialog() {
   if (dlg.mode === 'prompt') {
     const trimmed = dlg.inputValue.trim();
     if (!dlg.allowEmpty && !trimmed) {
-      dlg.validationError = '输入内容不能为空';
+      dlg.validationError = t('common.cannotBeEmpty');
       return;
     }
     const val = dlg.allowEmpty ? dlg.inputValue : trimmed;

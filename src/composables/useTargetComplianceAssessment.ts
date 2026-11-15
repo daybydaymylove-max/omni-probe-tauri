@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue';
+import { t } from '../i18n';
 import type { DeviceConfigAnalysisReport } from '../utils/networkDeviceConfigDissector';
 import { computeSm3Hex, computeSha256Hex, escapeHtml } from '../utils/cryptoDigest';
 
@@ -1673,7 +1674,7 @@ export function useTargetComplianceAssessment() {
 
   function resetToDefault() {
     items.value = createDefaultComplianceItems();
-    probeStatusMessage.value = '测评数据已重置为标准基线';
+    probeStatusMessage.value = t('common.complianceReset');
   }
 
   function updateItemStatus(itemId: string, status: ComplianceStatus, customEvidence?: string) {
@@ -1693,12 +1694,12 @@ export function useTargetComplianceAssessment() {
 
   function applyDeviceConfigReport(report: DeviceConfigAnalysisReport) {
     items.value = applyDeviceConfigReportToAssessment(items.value, report);
-    probeStatusMessage.value = `设备配置核查完成: ${report.hostname} (${report.vendorLabel}) · 8项基线合规率 ${report.complianceRatePct}% · 证据已同步映射`;
+    probeStatusMessage.value = t('common.deviceAuditComplete', { host: report.hostname, vendor: report.vendorLabel, rate: report.complianceRatePct });
   }
 
   function applyHostBaselineReport(report: HostBaselineReport) {
     items.value = applyHostBaselineReportToAssessment(items.value, report);
-    probeStatusMessage.value = `主机基线核查完成: ${report.hostname} (${report.os_name}) · ${report.total_checks}项基线合规率 ${report.compliance_rate_pct}% · SCE 证据链已映射`;
+    probeStatusMessage.value = t('common.hostAuditComplete', { host: report.hostname, os: report.os_name, count: report.total_checks, rate: report.compliance_rate_pct });
   }
 
   return {
