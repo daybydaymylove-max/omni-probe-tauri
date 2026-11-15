@@ -11,18 +11,18 @@
           </div>
           <div>
             <h3 class="text-sm font-bold flex items-center gap-2" style="color: var(--text-primary)">
-              <span>系统偏好设置中心</span>
+              <span>{{ t('preferences.modalTitle') }}</span>
               <span class="text-[11px] ui-num px-2 py-0.5 rounded-full bg-sky-500/12 text-sky-700 dark:text-sky-300 border border-sky-500/25 font-bold">
                 {{ APP_VERSION }}
               </span>
             </h3>
             <div class="text-[11px] ui-num mt-0.5" style="color: var(--text-muted)">
-              集中控制: 运行环境自检 · 自动版本更新 · 界面视觉主题 · 数据存储策略
+              {{ t('preferences.modalSubtitle') }}
             </div>
           </div>
         </div>
 
-        <button @click="$emit('close')" class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer" title="关闭">
+        <button @click="$emit('close')" class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer" :title="t('common.close')">
           <AppIcon name="close" :size="15" />
         </button>
       </header>
@@ -47,14 +47,14 @@
           <!-- 1. 运行环境与多轨自愈设置 -->
           <div v-show="activeTab === 'environment'" class="space-y-4">
             <div class="border-b pb-2" style="border-color: var(--border-subtle)">
-              <h4 class="text-xs font-bold" style="color: var(--text-primary)">运行环境探活与多轨自愈控制</h4>
-              <p class="text-[11px] mt-0.5" style="color: var(--text-muted)">管理底层驱动检查时机与离线免驱动自愈策略</p>
+              <h4 class="text-xs font-bold" style="color: var(--text-primary)">{{ t('preferences.environment.title') }}</h4>
+              <p class="text-[11px] mt-0.5" style="color: var(--text-muted)">{{ t('preferences.environment.subtitle') }}</p>
             </div>
 
             <div class="p-3.5 ui-sub-card flex items-center justify-between gap-4">
               <div>
-                <div class="text-xs font-bold" style="color: var(--text-primary)">启动缺项时在角落轻提醒</div>
-                <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">当检测到外置可选组件未安装时给出无阻塞气泡通知；关闭后仅在顶栏状态胶囊指示。</div>
+                <div class="text-xs font-bold" style="color: var(--text-primary)">{{ t('preferences.environment.startupReminder') }}</div>
+                <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">{{ t('preferences.environment.startupReminderDesc') }}</div>
               </div>
               <label class="relative inline-flex items-center cursor-pointer shrink-0">
                 <input type="checkbox" :checked="notifyOnDegradedStartup" @change="toggleStartupEnvReminder" class="sr-only peer">
@@ -65,15 +65,15 @@
             <div class="p-4 ui-sub-card bg-sky-500/8 border-sky-500/25 flex items-center justify-between gap-3 flex-wrap">
               <div>
                 <div class="text-xs font-bold text-sky-700 dark:text-sky-300">
-                  当前底层环境状态 ({{ envScore ?? '--' }}%)
+                  {{ t('preferences.environment.statusScore', { score: envScore ?? '--' }) }}
                 </div>
                 <div class="text-[11px] mt-1 ui-num" style="color: var(--text-secondary)">
-                  {{ missingCount === 0 ? '全量扩展驱动与离线库均已完整就绪。' : `检测到 ${missingCount} 项外置驱动未装，内置多轨兜底运行正常。` }}
+                  {{ missingCount === 0 ? t('preferences.environment.statusReady') : t('preferences.environment.statusMissing', { count: missingCount }) }}
                 </div>
               </div>
               <button @click.stop="$emit('openDiagnostic')" class="ui-btn-primary px-3.5 py-1.5 rounded-xl font-bold text-xs shrink-0">
                 <AppIcon name="shield" :size="13" />
-                <span>打开环境检查器</span>
+                <span>{{ t('preferences.environment.openInspector') }}</span>
               </button>
             </div>
           </div>
@@ -81,30 +81,30 @@
           <!-- 2. 版本更新 -->
           <div v-show="activeTab === 'updates'" class="space-y-4">
             <div class="border-b pb-2" style="border-color: var(--border-subtle)">
-              <h4 class="text-xs font-bold" style="color: var(--text-primary)">在线版本与 GitHub Release 更新</h4>
-              <p class="text-[11px] mt-0.5" style="color: var(--text-muted)">校验官方 GitHub 仓库最新稳定版并提供安装包链接</p>
+              <h4 class="text-xs font-bold" style="color: var(--text-primary)">{{ t('preferences.updates.title') }}</h4>
+              <p class="text-[11px] mt-0.5" style="color: var(--text-muted)">{{ t('preferences.updates.subtitle') }}</p>
             </div>
 
             <div class="p-4 ui-sub-card flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div>
                 <div class="flex items-center gap-2">
-                  <span class="text-xs font-bold" style="color: var(--text-primary)">当前安装版本:</span>
+                  <span class="text-xs font-bold" style="color: var(--text-primary)">{{ t('preferences.updates.currentVersion') }}</span>
                   <span class="text-xs ui-num font-bold" style="color: var(--accent-primary-text)">{{ APP_VERSION }}</span>
-                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-500/25">原生桌面多平台架构</span>
+                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-500/25">v{{ APP_VERSION }} Latest</span>
                 </div>
-                <div class="text-[11px] mt-1" style="color: var(--text-muted)">官方仓库: github.com/daybydaymylove-max/omni-probe-tauri</div>
+                <div class="text-[11px] mt-1" style="color: var(--text-muted)">{{ t('preferences.updates.officialRepo') }}</div>
               </div>
 
               <button @click="checkForUpdates" :disabled="isCheckingUpdate" class="ui-btn-primary px-4 py-2 rounded-xl font-bold text-xs shrink-0">
                 <AppIcon name="refresh" :size="13" :class="isCheckingUpdate ? 'animate-spin' : ''" />
-                <span>{{ isCheckingUpdate ? '正在检查...' : '立即检查新版本' }}</span>
+                <span>{{ isCheckingUpdate ? t('preferences.updates.checking') : t('preferences.updates.checkNow') }}</span>
               </button>
             </div>
 
             <div class="p-3.5 ui-sub-card flex items-center justify-between gap-4">
               <div>
-                <div class="text-xs font-bold" style="color: var(--text-primary)">启动时后台自动检查新版本</div>
-                <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">连接互联网时自动对比 GitHub Release 最新版本并在通知栏提示。</div>
+                <div class="text-xs font-bold" style="color: var(--text-primary)">{{ t('preferences.updates.autoCheck') }}</div>
+                <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">{{ t('preferences.updates.autoCheckDesc') }}</div>
               </div>
               <label class="relative inline-flex items-center cursor-pointer shrink-0">
                 <input type="checkbox" v-model="autoCheckUpdate" @change="saveAutoCheckUpdate" class="sr-only peer">
@@ -119,16 +119,18 @@
                 <div class="flex items-center justify-between flex-wrap gap-2">
                   <div class="flex items-center gap-2">
                     <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                    <span class="text-xs font-bold text-emerald-700 dark:text-emerald-300">发现新版本发布: {{ updateResult.latest_version }}</span>
+                    <span class="text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                      {{ t('preferences.updates.newVersionTitle', { version: updateResult.latest_version }) }}
+                    </span>
                     <span class="text-[11px] ui-num" style="color: var(--text-muted)">({{ updateResult.published_at.substring(0, 10) }})</span>
                   </div>
                   <div class="flex items-center gap-2">
                     <button @click="openLink(updateResult.download_url)" class="ui-btn-primary px-3 py-1.5 rounded-xl font-bold text-xs">
                       <AppIcon name="download" :size="12" />
-                      <span>下载更新包</span>
+                      <span>{{ t('preferences.updates.downloadPackage') }}</span>
                     </button>
                     <button @click="openLink(updateResult.html_url)" class="ui-btn-secondary px-3 py-1.5 rounded-xl text-xs font-semibold">
-                      查看 Release
+                      {{ t('preferences.updates.viewRelease') }}
                     </button>
                   </div>
                 </div>
@@ -142,9 +144,9 @@
               <div v-else class="flex items-center justify-between text-xs" style="color: var(--text-secondary)">
                 <div class="flex items-center gap-2">
                   <AppIcon name="check" :size="14" class="text-emerald-600 dark:text-emerald-400" />
-                  <span>当前已是最新版本 ({{ updateResult.current_version }})。</span>
+                  <span>{{ t('preferences.updates.latestVersionDesc', { version: updateResult.current_version }) }}</span>
                 </div>
-                <span class="text-[11px] ui-num" style="color: var(--text-muted)">已同步 GitHub Releases</span>
+                <span class="text-[11px] ui-num" style="color: var(--text-muted)">GitHub Releases</span>
               </div>
             </div>
           </div>
@@ -152,28 +154,28 @@
           <!-- 3. 视觉与桌面布局偏好 -->
           <div v-show="activeTab === 'appearance'" class="space-y-4">
             <div class="border-b pb-2" style="border-color: var(--border-subtle)">
-              <h4 class="text-xs font-bold" style="color: var(--text-primary)">视觉质感与工作区空间布局</h4>
-              <p class="text-[11px] mt-0.5" style="color: var(--text-muted)">切换明暗语义外观与主菜单栏折叠形态</p>
+              <h4 class="text-xs font-bold" style="color: var(--text-primary)">{{ t('preferences.appearance.title') }}</h4>
+              <p class="text-[11px] mt-0.5" style="color: var(--text-muted)">{{ t('preferences.appearance.subtitle') }}</p>
             </div>
 
             <div class="p-3.5 ui-sub-card flex items-center justify-between gap-4">
               <div>
-                <div class="text-xs font-bold" style="color: var(--text-primary)">系统外观模式</div>
-                <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">在冰晶浅色模式与深空夜色模式之间自由切换。</div>
+                <div class="text-xs font-bold" style="color: var(--text-primary)">{{ t('preferences.appearance.themeMode') }}</div>
+                <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">{{ t('preferences.appearance.themeModeDesc') }}</div>
               </div>
               <button @click="$emit('toggleTheme')" class="ui-btn-secondary px-3.5 py-1.5 rounded-xl text-xs font-semibold shrink-0">
                 <AppIcon :name="isLight ? 'sun' : 'moon'" :size="14" />
-                <span>{{ isLight ? '当前: 冰晶浅色模式' : '当前: 深空夜色模式' }}</span>
+                <span>{{ isLight ? t('preferences.appearance.themeLight') : t('preferences.appearance.themeDark') }}</span>
               </button>
             </div>
 
             <div class="p-3.5 ui-sub-card flex items-center justify-between gap-4">
               <div>
-                <div class="text-xs font-bold" style="color: var(--text-primary)">左侧导航栏形态</div>
-                <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">展开为全名面板，或收缩为 64px 紧凑图标栏。</div>
+                <div class="text-xs font-bold" style="color: var(--text-primary)">{{ t('preferences.appearance.sidebarLayout') }}</div>
+                <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">{{ t('preferences.appearance.sidebarLayoutDesc') }}</div>
               </div>
               <button @click="$emit('toggleDock')" class="ui-btn-secondary px-3.5 py-1.5 rounded-xl text-xs font-semibold shrink-0">
-                <span>{{ isDockExpanded ? '已展开 (点击收起)' : '已收起 (点击展开)' }}</span>
+                <span>{{ isDockExpanded ? t('preferences.appearance.sidebarExpanded') : t('preferences.appearance.sidebarCollapsed') }}</span>
               </button>
             </div>
           </div>
@@ -181,17 +183,17 @@
           <!-- 4. 存储与数据引擎 -->
           <div v-show="activeTab === 'storage'" class="space-y-4">
             <div class="border-b pb-2" style="border-color: var(--border-subtle)">
-              <h4 class="text-xs font-bold" style="color: var(--text-primary)">司法电子存证与本地数据策略</h4>
-              <p class="text-[11px] mt-0.5" style="color: var(--text-muted)">管理 SHA-256 完整性封条周期与本地抓包缓存</p>
+              <h4 class="text-xs font-bold" style="color: var(--text-primary)">{{ t('preferences.storage.title') }}</h4>
+              <p class="text-[11px] mt-0.5" style="color: var(--text-muted)">{{ t('preferences.storage.subtitle') }}</p>
             </div>
 
             <div class="p-3.5 ui-sub-card flex items-center justify-between gap-4">
               <div>
-                <div class="text-xs font-bold" style="color: var(--text-primary)">司法级哈希封条存证周期</div>
-                <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">按周期对采集证据文件自动生成 SHA-256 签名，保障防篡改证据链。</div>
+                <div class="text-xs font-bold" style="color: var(--text-primary)">{{ t('preferences.storage.sealPeriod') }}</div>
+                <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">{{ t('preferences.storage.sealPeriodDesc') }}</div>
               </div>
               <span class="text-xs ui-num font-bold text-sky-700 dark:text-sky-300 bg-sky-500/12 px-2.5 py-1 rounded-xl border border-sky-500/25 shrink-0">
-                60 秒 (默认基线)
+                {{ t('preferences.storage.sealPeriodValue') }}
               </span>
             </div>
 
@@ -199,42 +201,41 @@
             <div class="p-3.5 ui-sub-card space-y-2.5">
               <div class="flex items-center justify-between gap-3">
                 <div>
-                  <div class="text-xs font-bold" style="color: var(--text-primary)">链路抓包截断策略 (Snaplen)</div>
-                  <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">控制持续落盘写入的单个报文最大截取长度，平衡取证完整性与磁盘 I/O</div>
+                  <div class="text-xs font-bold" style="color: var(--text-primary)">{{ t('preferences.storage.snaplenTitle') }}</div>
+                  <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">{{ t('preferences.storage.snaplenDesc') }}</div>
                 </div>
-                <div class="flex items-center gap-1.5 text-xs">
-                  <button
-                    @click="saveSnaplenMode('full')"
-                    :class="['px-2.5 py-1 rounded-lg font-semibold cursor-pointer', snaplenMode === 'full' ? 'bg-sky-600 text-white' : 'ui-btn-secondary']"
-                  >
-                    全帧保全 (Full)
+                <div class="flex items-center gap-1.5 p-1 rounded-xl bg-black/5 dark:bg-white/5 border border-[var(--border-subtle)] shrink-0 text-xs">
+                  <button @click="saveSnaplenMode('full')"
+                    class="px-3 py-1 rounded-lg font-semibold transition-colors cursor-pointer"
+                    :class="snaplenMode === 'full' ? 'bg-sky-500 text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'">
+                    全量完整包 (Full)
                   </button>
-                  <button
-                    @click="saveSnaplenMode('header_only')"
-                    :class="['px-2.5 py-1 rounded-lg font-semibold cursor-pointer', snaplenMode === 'header_only' ? 'bg-sky-600 text-white' : 'ui-btn-secondary']"
-                  >
-                    仅包头 (96B)
+                  <button @click="saveSnaplenMode('header_only')"
+                    class="px-3 py-1 rounded-lg font-semibold transition-colors cursor-pointer"
+                    :class="snaplenMode === 'header_only' ? 'bg-sky-500 text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'">
+                    仅抓头 (96B)
                   </button>
                 </div>
               </div>
             </div>
 
-            <!-- 持续滚动 PCAP 分卷落盘引擎设置 -->
-            <div class="p-3.5 ui-sub-card space-y-3 text-xs">
-              <div class="flex items-center justify-between gap-2">
+            <!-- 滚动切卷落盘配置 -->
+            <div class="p-4 ui-sub-card space-y-3">
+              <div class="flex items-center justify-between gap-3">
                 <div>
-                  <div class="font-bold" style="color: var(--text-primary)">持续滚动 PCAP 分卷落盘引擎</div>
-                  <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">自动按文件体积切割滚动 PCAP，并在超出配额时 FIFO 清理历史分片</div>
+                  <div class="text-xs font-bold" style="color: var(--text-primary)">自动切卷与磁盘配额 (Rolling PCAP)</div>
+                  <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">按单卷体积与总磁盘容量配额自动轮转落盘。</div>
                 </div>
-                <label class="flex items-center gap-1.5 cursor-pointer font-semibold" style="color: var(--text-primary)">
-                  <input type="checkbox" v-model="rollingCfg.enabled" class="accent-sky-600" />
-                  <span>{{ rollingCfg.enabled ? '已启用' : '未启用' }}</span>
+                <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input type="checkbox" v-model="rollingCfg.enabled" class="sr-only peer">
+                  <div class="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500"></div>
                 </label>
               </div>
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 ui-num">
+
+              <div v-if="rollingCfg.enabled" class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
                 <div>
-                  <div class="text-[10px] mb-1" style="color: var(--text-muted)">输出目录</div>
-                  <input v-model="rollingCfg.output_dir" class="ui-input w-full px-2 py-1 text-xs" placeholder="./captures" />
+                  <div class="text-[10px] mb-1" style="color: var(--text-muted)">输出存储目录</div>
+                  <input v-model.trim="rollingCfg.output_dir" type="text" class="ui-input w-full px-2 py-1 text-xs" />
                 </div>
                 <div>
                   <div class="text-[10px] mb-1" style="color: var(--text-muted)">单卷上限 (MB)</div>
@@ -247,7 +248,7 @@
               </div>
               <div class="flex justify-end">
                 <button @click="saveRollingPcapConfig" class="ui-btn-primary px-3 py-1 rounded-xl text-xs font-semibold">
-                  应用落盘策略
+                  {{ t('common.save') }}
                 </button>
               </div>
             </div>
@@ -258,8 +259,58 @@
                 <div class="text-[11px] mt-0.5" style="color: var(--text-secondary)">释放内存中已解码报文与日志缓存，不影响磁盘持久化 PCAP。</div>
               </div>
               <button @click="$emit('clearData')" class="ui-btn-danger px-3.5 py-1.5 rounded-xl font-bold text-xs shrink-0">
-                一键重置缓冲池
+                {{ t('common.clear') }}
               </button>
+            </div>
+          </div>
+
+          <!-- 5. 语言偏好设置中心 (i18n Multi-Language) -->
+          <div v-show="activeTab === 'language'" class="space-y-4">
+            <div class="border-b pb-2" style="border-color: var(--border-subtle)">
+              <h4 class="text-xs font-bold" style="color: var(--text-primary)">{{ t('preferences.language.title') }}</h4>
+              <p class="text-[11px] mt-0.5" style="color: var(--text-muted)">{{ t('preferences.language.subtitle') }}</p>
+            </div>
+
+            <div class="p-4 ui-sub-card space-y-3">
+              <div>
+                <div class="text-xs font-bold" style="color: var(--text-primary)">{{ t('preferences.language.currentLanguage') }}</div>
+                <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">{{ t('preferences.language.currentLanguageDesc') }}</div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <button
+                  type="button"
+                  @click="setLocale('zh-CN')"
+                  class="p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between"
+                  :class="locale === 'zh-CN' ? 'bg-sky-500/15 border-sky-500/50 shadow-xs' : 'ui-sub-card hover:bg-black/5 dark:hover:bg-white/5'">
+                  <div class="space-y-1">
+                    <div class="text-xs font-bold" :class="locale === 'zh-CN' ? 'text-sky-700 dark:text-sky-300' : 'text-[var(--text-primary)]'">
+                      {{ t('preferences.language.zhCN') }}
+                    </div>
+                    <div class="text-[11px]" style="color: var(--text-muted)">工业级标准技术词汇 · 符合公文规约</div>
+                  </div>
+                  <span v-if="locale === 'zh-CN'" class="w-2.5 h-2.5 rounded-full bg-sky-500 shrink-0"></span>
+                </button>
+
+                <button
+                  type="button"
+                  @click="setLocale('en-US')"
+                  class="p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between"
+                  :class="locale === 'en-US' ? 'bg-sky-500/15 border-sky-500/50 shadow-xs' : 'ui-sub-card hover:bg-black/5 dark:hover:bg-white/5'">
+                  <div class="space-y-1">
+                    <div class="text-xs font-bold" :class="locale === 'en-US' ? 'text-sky-700 dark:text-sky-300' : 'text-[var(--text-primary)]'">
+                      {{ t('preferences.language.enUS') }}
+                    </div>
+                    <div class="text-[11px]" style="color: var(--text-muted)">RFC / IEEE / ISO Standardized Terminology</div>
+                  </div>
+                  <span v-if="locale === 'en-US'" class="w-2.5 h-2.5 rounded-full bg-sky-500 shrink-0"></span>
+                </button>
+              </div>
+
+              <div class="text-[11px] flex items-center gap-1.5 pt-1 text-emerald-600 dark:text-emerald-400">
+                <AppIcon name="check" :size="12" />
+                <span>{{ t('preferences.language.effectiveImmediately') }}</span>
+              </div>
             </div>
           </div>
 
@@ -269,9 +320,9 @@
 
       <!-- 底栏 -->
       <footer class="px-6 py-3 border-t flex items-center justify-between shrink-0 text-xs ui-num" style="background: var(--surface-content-alt); border-color: var(--border-subtle); color: var(--text-muted)">
-        <span>快捷键 Ctrl+, 随时呼出偏好设置</span>
+        <span>Ctrl+, 随时呼出偏好设置</span>
         <button @click="$emit('close')" class="ui-btn-primary px-4 py-1.5 rounded-xl font-semibold">
-          完成并关闭
+          {{ t('common.close') }}
         </button>
       </footer>
 
@@ -280,11 +331,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { notifySuccess, notifyError, notifyInfo } from '../composables/useNotification';
 import { APP_VERSION } from '../constants/appVersion';
+import { useI18n } from '../i18n';
 import AppIcon from './AppIcon.vue';
 
 const props = defineProps<{
@@ -295,7 +347,9 @@ const props = defineProps<{
 
 defineEmits(['close', 'toggleTheme', 'toggleDock', 'openDiagnostic', 'clearData']);
 
-type TabId = 'environment' | 'updates' | 'appearance' | 'storage';
+const { t, locale, setLocale } = useI18n();
+
+type TabId = 'environment' | 'updates' | 'appearance' | 'storage' | 'language';
 
 interface PreferenceTab {
   id: TabId;
@@ -303,12 +357,13 @@ interface PreferenceTab {
   icon: string;
 }
 
-const preferenceTabs: PreferenceTab[] = [
-  { id: 'environment', label: '运行环境与自愈', icon: 'shield' },
-  { id: 'updates', label: '版本检查与更新', icon: 'refresh' },
-  { id: 'appearance', label: '视觉质感与布局', icon: 'sliders' },
-  { id: 'storage', label: '存证与数据引擎', icon: 'database' },
-];
+const preferenceTabs = computed<PreferenceTab[]>(() => [
+  { id: 'environment', label: t('preferences.tabs.environment'), icon: 'shield' },
+  { id: 'updates', label: t('preferences.tabs.updates'), icon: 'refresh' },
+  { id: 'appearance', label: t('preferences.tabs.appearance'), icon: 'sliders' },
+  { id: 'storage', label: t('preferences.tabs.storage'), icon: 'database' },
+  { id: 'language', label: t('preferences.tabs.language'), icon: 'globe' },
+]);
 
 const activeTab = ref<TabId>('environment');
 

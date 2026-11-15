@@ -63,9 +63,9 @@
         <!-- 仅在真正检出高危告警时浮出阻断/处置微胶囊，待命零红绿灯噪点 -->
         <button v-if="threatCount > 0" @click="triggerEmergencyCutoff"
           class="flex items-center gap-1.5 px-3 h-8 rounded-full text-[11px] font-semibold ui-num text-[var(--accent-red)] bg-[var(--accent-red-soft)] border border-rose-500/40 cursor-pointer transition-colors backdrop-blur-md shadow-sm"
-          :title="`已拦截告警 ${threatCount} 起，点击执行应急停止`">
+          :title="t('topbar.threatTooltip', { count: threatCount })">
           <span class="w-1.5 h-1.5 rounded-full" style="background: var(--accent-red);"></span>
-          <span>{{ threatCount }} 告警 · 切断</span>
+          <span>{{ t('topbar.threatCutting', { count: threatCount }) }}</span>
         </button>
       </div>
 
@@ -80,10 +80,10 @@
             class="h-7 flex items-center gap-1.5 px-2.5 rounded-full hover:bg-[var(--surface-glass-pill-hover)] text-[12px] max-w-[155px] 2xl:max-w-[205px] whitespace-nowrap cursor-pointer transition-colors"
             :aria-expanded="isIfaceMenuOpen"
             aria-haspopup="listbox"
-            :title="`当前物理接口: ${selectedIface || '自动识别网卡'}`">
+            :title="`当前物理接口: ${selectedIface || t('topbar.autoNic')}`">
             <span class="w-2 h-2 rounded-full shrink-0"
               :style="{ background: isRunning ? (isPaused ? 'var(--accent-amber)' : 'var(--accent-green)') : 'var(--text-muted)' }"></span>
-            <span class="font-medium text-[var(--text-primary)] truncate">{{ selectedIface || '自动物理网卡' }}</span>
+            <span class="font-medium text-[var(--text-primary)] truncate">{{ selectedIface || t('topbar.autoNic') }}</span>
             <AppIcon name="chevron-down" :size="12" class="text-[var(--text-muted)] shrink-0" />
           </button>
 
@@ -92,13 +92,13 @@
               role="listbox"
               class="absolute left-0 top-full mt-2 w-72 ui-modal-surface rounded-2xl p-1.5 z-50 text-[12px]">
               <div class="text-[11px] text-[var(--text-muted)] px-2.5 py-1.5 font-semibold border-b border-[var(--border-subtle)] mb-1">
-                可监听物理网络接口 (NIC)
+                {{ t('topbar.nicPlaceholder') }}
               </div>
               <div class="max-h-60 overflow-y-auto custom-scrollbar space-y-0.5">
                 <button type="button" @click="selectInterface('')"
                   class="w-full text-left px-2.5 py-1.5 rounded-[10px] cursor-pointer transition-colors flex items-center justify-between hover:bg-[var(--surface-hover)]"
                   :class="!selectedIface ? 'bg-[var(--accent-primary-soft)] text-[var(--accent-primary-text)] font-semibold' : 'text-[var(--text-primary)]'">
-                  <span>自动推荐物理网卡</span>
+                  <span>{{ t('topbar.autoNic') }}</span>
                   <AppIcon v-if="!selectedIface" name="check" :size="13" />
                 </button>
                 <button v-for="iface in interfaces" :key="iface" type="button" @click="selectInterface(iface)"
@@ -118,7 +118,7 @@
         <!-- 融合表达式搜索框 -->
         <div class="flex items-center gap-1.5 px-2.5 h-7 rounded-full flex-1 min-w-[140px] focus-within:bg-[var(--surface-glass-pill)] transition-colors">
           <AppIcon name="search" :size="13" class="text-[var(--text-muted)] shrink-0" />
-          <input ref="bpfInputRef" v-model="bpfFilter" type="text" placeholder="BPF / 协议过滤 (如 s7comm, 502)"
+          <input ref="bpfInputRef" v-model="bpfFilter" type="text" :placeholder="t('topbar.bpfPlaceholder')"
             class="bg-transparent text-[var(--text-primary)] text-[12px] outline-none w-full min-w-0 placeholder:text-[var(--text-muted)] font-mono-code">
           <span class="text-[11px] font-mono-code text-[var(--text-muted)] shrink-0 hidden 2xl:inline-block opacity-75">⌘K</span>
         </div>
@@ -127,20 +127,20 @@
         <template v-if="!isRunning">
           <button @click="startCapture" class="ui-btn-primary rounded-full h-7 px-3.5 text-[12px] shrink-0">
             <AppIcon name="play" :size="12" />
-            <span>启动嗅探</span>
+            <span>{{ t('topbar.startCapture') }}</span>
           </button>
         </template>
         <template v-else>
           <div class="flex items-center gap-1 shrink-0">
             <button v-if="!isPaused" @click="pauseCapture" class="ui-btn-secondary rounded-full h-7 px-3 text-[12px] shrink-0">
               <AppIcon name="pause" :size="12" />
-              <span>暂停</span>
+              <span>{{ t('topbar.pauseCapture') }}</span>
             </button>
             <button v-else @click="resumeCapture" class="ui-btn-primary rounded-full h-7 px-3 text-[12px] shrink-0">
               <AppIcon name="play" :size="12" />
-              <span>继续</span>
+              <span>{{ t('topbar.resumeCapture') }}</span>
             </button>
-            <button @click="stopCapture" title="停止主引擎" aria-label="停止主引擎"
+            <button @click="stopCapture" :title="t('topbar.stopCapture')" :aria-label="t('topbar.stopCapture')"
               class="ui-btn-danger rounded-full h-7 w-7 p-0 justify-center shrink-0">
               <AppIcon name="stop" :size="12" />
             </button>
@@ -259,7 +259,7 @@
               捕获与总线
             </div>
             <button v-for="tab in domainCaptureTabs" :key="tab.id" @click="activeWorkbench = tab.id"
-              :title="tab.label"
+              :title="t(tab.labelKey || tab.label)"
               :class="[
                 'h-9 rounded-[9px] flex items-center transition-all cursor-pointer border',
                 isDockExpanded ? 'w-full px-2.5 gap-2.5' : 'w-9 justify-center px-0 mx-auto',
@@ -269,7 +269,7 @@
               ]">
               <AppIcon :name="tab.icon" :size="16" class="shrink-0" />
               <div v-show="isDockExpanded" class="flex items-center justify-between flex-1 min-w-0">
-                <span class="text-[12.5px] truncate whitespace-nowrap">{{ tab.label }}</span>
+                <span class="text-[12.5px] truncate whitespace-nowrap">{{ t(tab.labelKey || tab.label) }}</span>
                 <span v-if="tab.id === 'hardware' && (usbDevices.length + serialPorts.length) > 0" class="badge-subtle ui-num ml-1">{{ usbDevices.length + serialPorts.length }}</span>
                 <span v-else-if="tab.badge" class="badge-subtle ml-1">{{ tab.badge }}</span>
               </div>
@@ -282,7 +282,7 @@
               资产与空间
             </div>
             <button v-for="tab in domainAssetTabs" :key="tab.id" @click="activeWorkbench = tab.id"
-              :title="tab.label"
+              :title="t(tab.labelKey || tab.label)"
               :class="[
                 'h-9 rounded-[9px] flex items-center transition-all cursor-pointer border',
                 isDockExpanded ? 'w-full px-2.5 gap-2.5' : 'w-9 justify-center px-0 mx-auto',
@@ -292,7 +292,7 @@
               ]">
               <AppIcon :name="tab.icon" :size="16" class="shrink-0" />
               <div v-show="isDockExpanded" class="flex items-center justify-between flex-1 min-w-0">
-                <span class="text-[12.5px] truncate whitespace-nowrap">{{ tab.label }}</span>
+                <span class="text-[12.5px] truncate whitespace-nowrap">{{ t(tab.labelKey || tab.label) }}</span>
               </div>
             </button>
           </div>
@@ -303,7 +303,7 @@
               等保与合规
             </div>
             <button v-for="tab in domainComplianceTabs" :key="tab.id" @click="activeWorkbench = tab.id"
-              :title="tab.label"
+              :title="t(tab.labelKey || tab.label)"
               :class="[
                 'h-9 rounded-[9px] flex items-center transition-all cursor-pointer border',
                 isDockExpanded ? 'w-full px-2.5 gap-2.5' : 'w-9 justify-center px-0 mx-auto',
@@ -313,7 +313,7 @@
               ]">
               <AppIcon :name="tab.icon" :size="16" class="shrink-0" />
               <div v-show="isDockExpanded" class="flex items-center justify-between flex-1 min-w-0">
-                <span class="text-[12.5px] truncate whitespace-nowrap">{{ tab.label }}</span>
+                <span class="text-[12.5px] truncate whitespace-nowrap">{{ t(tab.labelKey || tab.label) }}</span>
                 <span v-if="tab.id === 'hardware' && (usbDevices.length + serialPorts.length) > 0" class="badge-subtle ui-num ml-1">{{ usbDevices.length + serialPorts.length }}</span>
                 <span v-else-if="tab.badge" class="badge-subtle ml-1">{{ tab.badge }}</span>
               </div>
@@ -326,7 +326,7 @@
               解密与司法
             </div>
             <button v-for="tab in domainForensicsTabs" :key="tab.id" @click="activeWorkbench = tab.id"
-              :title="tab.label"
+              :title="t(tab.labelKey || tab.label)"
               :class="[
                 'h-9 rounded-[9px] flex items-center transition-all cursor-pointer border',
                 isDockExpanded ? 'w-full px-2.5 gap-2.5' : 'w-9 justify-center px-0 mx-auto',
@@ -336,7 +336,7 @@
               ]">
               <AppIcon :name="tab.icon" :size="16" class="shrink-0" />
               <div v-show="isDockExpanded" class="flex items-center justify-between flex-1 min-w-0">
-                <span class="text-[12.5px] truncate whitespace-nowrap">{{ tab.label }}</span>
+                <span class="text-[12.5px] truncate whitespace-nowrap">{{ t(tab.labelKey || tab.label) }}</span>
               </div>
             </button>
           </div>
@@ -655,9 +655,12 @@ import { useEnvironmentInspector } from './composables/useEnvironmentInspector';
 import GlobalNotificationToast from './components/GlobalNotificationToast.vue';
 import { notifySuccess, notifyInfo, notifyWarning, notifyError } from './composables/useNotification';
 import { APP_VERSION } from './constants/appVersion';
+import { useI18n } from './i18n';
 
 // 首屏工作台同步直载以保障 0ms 启动瞬间响应；其余 9 个专业工作台与重型模态框采用按需异步拆包
 import TrafficAnalyzerView from './views/TrafficAnalyzerView.vue';
+
+const { t } = useI18n();
 
 const PacketDeepModal = defineAsyncComponent(() => import('./components/PacketDeepModal.vue'));
 const HoneypotWorkbenchModal = defineAsyncComponent(() => import('./components/HoneypotWorkbenchModal.vue'));
@@ -682,32 +685,33 @@ export type WorkbenchId = 'traffic' | 'assets' | 'hardware' | 'audit' | 'web_aud
 export interface WorkbenchTab {
   id: WorkbenchId;
   label: string;
+  labelKey?: string;
   badge?: string;
   icon: string;
 }
 
 const domainCaptureTabs: WorkbenchTab[] = [
-  { id: 'traffic', label: '全息流量分析', badge: 'CORE', icon: 'traffic' },
-  { id: 'hardware', label: '物理外设总线', icon: 'cpu' },
-  { id: 'net_assist', label: '网络调试助手', icon: 'terminal' },
+  { id: 'traffic', label: '全息流量分析', labelKey: 'nav.traffic', badge: 'CORE', icon: 'traffic' },
+  { id: 'hardware', label: '物理外设总线', labelKey: 'nav.hardware', icon: 'cpu' },
+  { id: 'net_assist', label: '网络调试助手', labelKey: 'nav.net_assist', icon: 'terminal' },
 ];
 
 const domainAssetTabs: WorkbenchTab[] = [
-  { id: 'assets', label: '资产情报态势', icon: 'radar' },
-  { id: 'geo_map', label: '全球网络地图', icon: 'globe' },
+  { id: 'assets', label: '资产情报态势', labelKey: 'nav.assets', icon: 'radar' },
+  { id: 'geo_map', label: '全球网络地图', labelKey: 'nav.geo_map', icon: 'globe' },
 ];
 
 const auditComplianceBadge = ref('待检');
 
 const domainComplianceTabs = computed<WorkbenchTab[]>(() => [
-  { id: 'audit', label: '等保基线审计', badge: auditComplianceBadge.value, icon: 'shield' },
-  { id: 'web_audit', label: '上网行为审计', icon: 'eye' },
-  { id: 'security_review', label: '四维安全审查', icon: 'layers' },
+  { id: 'audit', label: '等保基线审计', labelKey: 'nav.audit', badge: auditComplianceBadge.value, icon: 'shield' },
+  { id: 'web_audit', label: '上网行为审计', labelKey: 'nav.web_audit', icon: 'eye' },
+  { id: 'security_review', label: '四维安全审查', labelKey: 'nav.security_review', icon: 'layers' },
 ]);
 
 const domainForensicsTabs: WorkbenchTab[] = [
-  { id: 'decryption', label: '流量解密过滤', icon: 'key' },
-  { id: 'forensics', label: '司法电子取证', icon: 'archive' },
+  { id: 'decryption', label: '流量解密过滤', labelKey: 'nav.decryption', icon: 'key' },
+  { id: 'forensics', label: '司法电子取证', labelKey: 'nav.forensics', icon: 'archive' },
 ];
 
 const isIfaceMenuOpen = ref(false);
