@@ -6,10 +6,10 @@
       <div class="flex items-center gap-3 min-w-0 shrink-0">
         <h2 class="text-[13px] font-semibold flex items-center gap-2 whitespace-nowrap" style="color: var(--text-primary);">
           <AppIcon name="radar" :size="15" class="text-[var(--accent-primary)] shrink-0" />
-          <span>资产感知与拓扑</span>
+          <span>{{ locale === 'en-US' ? 'Asset Intelligence & Topology' : '资产感知与拓扑' }}</span>
         </h2>
         <span class="ui-pill px-2 py-0.5 rounded-full text-[11px] ui-num shrink-0 whitespace-nowrap">
-          <strong class="font-semibold" style="color: var(--text-primary);">{{ assets.length }}</strong> 节点
+          <strong class="font-semibold" style="color: var(--text-primary);">{{ assets.length }}</strong> {{ locale === 'en-US' ? 'Nodes' : '节点' }}
         </span>
 
         <!-- 视口布局模式分段选择器 -->
@@ -20,10 +20,10 @@
               'px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap',
               viewLayout === 'split' ? 'bg-[var(--accent-primary)] text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             ]"
-            title="左右均衡对照 (清单 + 拓扑)"
+            :title="locale === 'en-US' ? 'Split View (Ledger + Topology)' : '左右均衡对照 (清单 + 拓扑)'"
           >
             <AppIcon name="scale" :size="13" />
-            <span>分屏</span>
+            <span>{{ locale === 'en-US' ? 'Split' : '分屏' }}</span>
           </button>
           <button
             @click="viewLayout = 'topology'"
@@ -31,10 +31,10 @@
               'px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap',
               viewLayout === 'topology' ? 'bg-[var(--accent-primary)] text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             ]"
-            title="全景工业拓扑图"
+            :title="locale === 'en-US' ? 'Panoramic Industrial Topology' : '全景工业拓扑图'"
           >
             <AppIcon name="radar" :size="13" />
-            <span>拓扑</span>
+            <span>{{ locale === 'en-US' ? 'Topology' : '拓扑' }}</span>
           </button>
           <button
             @click="viewLayout = 'table'"
@@ -42,10 +42,10 @@
               'px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap',
               viewLayout === 'table' ? 'bg-[var(--accent-primary)] text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             ]"
-            title="全屏资产数据台账"
+            :title="locale === 'en-US' ? 'Fullscreen Asset Ledger' : '全屏资产数据台账'"
           >
             <AppIcon name="document" :size="13" />
-            <span>台账</span>
+            <span>{{ locale === 'en-US' ? 'Ledger' : '台账' }}</span>
           </button>
           <button
             @click="switchToHierarchyLayout"
@@ -53,10 +53,10 @@
               'px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap',
               viewLayout === 'hierarchy' ? 'bg-[var(--accent-primary)] text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             ]"
-            title="SNMP/CIDR 万级资产层次化钻取聚合拓扑"
+            :title="locale === 'en-US' ? 'Hierarchical Aggregation Topology' : 'SNMP/CIDR 万级资产层次化钻取聚合拓扑'"
           >
             <AppIcon name="layers" :size="13" />
-            <span>分层</span>
+            <span>{{ locale === 'en-US' ? 'Hierarchy' : '分层' }}</span>
           </button>
         </div>
       </div>
@@ -64,18 +64,18 @@
       <div class="flex items-center gap-1.5 flex-1 justify-end min-w-0 flex-wrap text-xs">
         <input
           v-model="searchQuery"
-          placeholder="过滤 IP / MAC / 厂商 / 端口..."
+          :placeholder="locale === 'en-US' ? 'Filter IP / MAC / Vendor / Port...' : '过滤 IP / MAC / 厂商 / 端口...'"
           class="ui-input flex-1 min-w-[140px] max-w-[230px] px-2.5 py-1 text-xs"
         />
 
         <button @click="$emit('refreshAssets')" class="ui-btn-secondary px-2.5 py-1 text-xs">
           <AppIcon name="refresh" :size="13" />
-          <span class="hidden 2xl:inline">刷新</span>
+          <span class="hidden 2xl:inline">{{ locale === 'en-US' ? 'Refresh' : '刷新' }}</span>
         </button>
 
         <button @click="$emit('scanAssets')" :disabled="scanning" class="ui-btn-primary px-3 py-1 text-xs">
           <AppIcon name="radar" :size="13" :class="{ 'animate-spin': scanning }" />
-          <span>全网扫描</span>
+          <span>{{ locale === 'en-US' ? 'Scan Network' : '全网扫描' }}</span>
         </button>
 
         <button @click="$emit('probeAllPorts')" :disabled="probingAll" class="ui-btn-secondary px-2.5 py-1 text-xs">
@@ -804,6 +804,9 @@ import GeodesicTracerouteModal from '../components/GeodesicTracerouteModal.vue';
 import AppIcon from '../components/AppIcon.vue';
 import EmptyState from '../components/EmptyState.vue';
 import { useUniversalDiff } from '../composables/useUniversalDiff';
+import { useI18n } from '../i18n';
+
+const { locale } = useI18n();
 
 const TargetProbeModal = defineAsyncComponent(() => import('../components/TargetProbeModal.vue'));
 

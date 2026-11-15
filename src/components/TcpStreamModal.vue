@@ -10,13 +10,13 @@
           </div>
           <div class="min-w-0">
             <h3 class="text-sm font-bold text-(--text-primary) flex flex-wrap items-center gap-2">
-              <span>双向会话流重组与追踪 (Follow TCP Stream)</span>
+              <span>{{ t('tcpStream.title') }}</span>
               <span class="text-xs ui-num font-mono-code px-2 py-0.5 rounded-lg bg-sky-500/12 text-sky-700 dark:text-sky-300 border border-sky-500/30 select-text">
                 {{ srcIp }}:{{ srcPort }} ⇄ {{ dstIp }}:{{ dstPort }}
               </span>
             </h3>
             <p class="text-xs text-(--text-muted) font-mono-code mt-0.5">
-              基于 TCP 序列号顺序重组，双色区分客户端请求 (C -> S) 与服务端响应 (S -> C)
+              {{ t('tcpStream.subtitle') }}
             </p>
           </div>
         </div>
@@ -26,17 +26,17 @@
           <div class="ui-sub-card flex p-0.5 rounded-xl text-xs font-semibold">
             <button @click="displayMode = 'ascii'"
               :class="['px-3 py-1 rounded-lg transition-all cursor-pointer', displayMode === 'ascii' ? 'bg-sky-500/15 text-sky-700 dark:text-sky-300 font-bold border border-sky-500/30' : 'text-(--text-secondary) hover:text-(--text-primary) border border-transparent']">
-              ASCII 文本
+              {{ t('tcpStream.asciiText') }}
             </button>
             <button @click="displayMode = 'hex'"
               :class="['px-3 py-1 rounded-lg transition-all cursor-pointer', displayMode === 'hex' ? 'bg-sky-500/15 text-sky-700 dark:text-sky-300 font-bold border border-sky-500/30' : 'text-(--text-secondary) hover:text-(--text-primary) border border-transparent']">
-              十六进制 (Hex)
+              {{ t('tcpStream.hexText') }}
             </button>
           </div>
 
           <button @click="$emit('close')"
             class="ui-btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center cursor-pointer ml-1"
-            aria-label="关闭弹窗">
+            :aria-label="t('tcpStream.closeTip')">
             <AppIcon name="close" class="w-4 h-4" />
           </button>
         </div>
@@ -45,20 +45,20 @@
       <!-- 2. 会话重组统计与过滤栏 -->
       <div class="px-6 py-2.5 bg-(--surface-content-alt) border-b border-(--border-subtle) flex flex-wrap items-center justify-between gap-2 text-xs font-mono-code shrink-0">
         <div class="flex flex-wrap items-center gap-4 text-(--text-secondary) ui-num">
-          <div>重组分段: <strong class="text-(--text-primary)">{{ chunks.length }}</strong> 块</div>
-          <div>客户端发往: <strong class="text-sky-600 dark:text-sky-400">{{ clientBytes }}</strong> 字节</div>
-          <div>服务端回包: <strong class="text-rose-600 dark:text-rose-400">{{ serverBytes }}</strong> 字节</div>
-          <div>总流经: <strong class="text-(--text-primary)">{{ clientBytes + serverBytes }}</strong> 字节</div>
+          <div>{{ t('tcpStream.reassembledChunks') }}: <strong class="text-(--text-primary)">{{ chunks.length }}</strong> {{ t('tcpStream.chunksUnit') }}</div>
+          <div>{{ t('tcpStream.clientSent') }}: <strong class="text-sky-600 dark:text-sky-400">{{ clientBytes }}</strong> {{ t('tcpStream.bytesUnit') }}</div>
+          <div>{{ t('tcpStream.serverReplied') }}: <strong class="text-rose-600 dark:text-rose-400">{{ serverBytes }}</strong> {{ t('tcpStream.bytesUnit') }}</div>
+          <div>{{ t('tcpStream.totalFlow') }}: <strong class="text-(--text-primary)">{{ clientBytes + serverBytes }}</strong> {{ t('tcpStream.bytesUnit') }}</div>
         </div>
 
         <div class="flex items-center gap-2">
           <button @click="copyFullStream" class="ui-btn-secondary inline-flex items-center gap-1.5 px-3 py-1 text-xs cursor-pointer font-semibold">
             <AppIcon name="code" class="w-3.5 h-3.5" />
-            <span>复制全部会话</span>
+            <span>{{ t('tcpStream.copyAll') }}</span>
           </button>
           <button @click="saveStreamAsFile" class="ui-btn-primary inline-flex items-center gap-1.5 px-3 py-1 text-xs cursor-pointer font-bold">
             <AppIcon name="download" class="w-3.5 h-3.5" />
-            <span>导出会话文本</span>
+            <span>{{ t('tcpStream.exportFile') }}</span>
           </button>
         </div>
       </div>
@@ -67,14 +67,14 @@
       <div class="flex-1 overflow-auto custom-scrollbar p-4 bg-(--surface-window) font-mono-code text-xs leading-relaxed select-text space-y-3">
         <div v-if="loading" class="flex items-center justify-center h-48 text-(--text-secondary) gap-2">
           <AppIcon name="refresh" class="w-4 h-4 animate-spin text-sky-600 dark:text-sky-400" />
-          <span>正在对 TCP 序列号进行多重乱序重组与流追踪...</span>
+          <span>{{ t('tcpStream.reconstructing') }}</span>
         </div>
 
         <EmptyState
           v-else-if="chunks.length === 0"
           icon="traffic"
-          title="未提取到有效的会话载荷数据"
-          description="该连接可能仅包含 TCP 握手/挥手控制标志或载荷数据为空。"
+          :title="t('tcpStream.emptyTitle')"
+          :description="t('tcpStream.emptyDesc')"
         />
 
         <div v-else v-for="(chunk, idx) in chunks" :key="idx"
@@ -88,10 +88,10 @@
             <span class="font-bold flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full" :class="chunk.direction === 'client' ? 'bg-sky-500' : 'bg-rose-500'"></span>
               <span :class="chunk.direction === 'client' ? 'text-sky-700 dark:text-sky-300' : 'text-rose-700 dark:text-rose-300'">
-                {{ chunk.direction === 'client' ? `客户端 [${srcIp}:${srcPort}] -> 服务端` : `服务端 [${dstIp}:${dstPort}] -> 客户端` }}
+                {{ chunk.direction === 'client' ? t('tcpStream.clientToService', { endpoint: `${srcIp}:${srcPort}` }) : t('tcpStream.serverToClient', { endpoint: `${dstIp}:${dstPort}` }) }}
               </span>
             </span>
-            <span class="text-(--text-muted) ui-num">{{ chunk.timestamp }} • {{ chunk.length }} 字节</span>
+            <span class="text-(--text-muted) ui-num">{{ chunk.timestamp }} • {{ chunk.length }} {{ t('tcpStream.bytesUnit') }}</span>
           </div>
 
           <div class="whitespace-pre-wrap break-all font-mono-code">
@@ -102,9 +102,9 @@
 
       <!-- 4. 底栏操作提示 -->
       <div class="px-6 py-3 border-t border-(--border-subtle) bg-(--surface-content-alt) flex items-center justify-between shrink-0 text-xs text-(--text-muted) font-mono-code">
-        <span>提示: 玫瑰红卡片代表服务端响应，海天蓝卡片代表客户端请求</span>
+        <span>{{ locale === 'en-US' ? 'Hint: Rose cards represent server responses, sky-blue cards represent client requests' : '提示: 玫瑰红卡片代表服务端响应，海天蓝卡片代表客户端请求' }}</span>
         <button @click="$emit('close')" class="ui-btn-secondary px-4 py-1.5 font-semibold cursor-pointer">
-          关闭
+          {{ locale === 'en-US' ? 'Close' : '关闭' }}
         </button>
       </div>
 
@@ -118,6 +118,9 @@ import { invoke } from '@tauri-apps/api/core';
 import AppIcon from './AppIcon.vue';
 import EmptyState from './EmptyState.vue';
 import { saveTextViaNativeDesktop } from '../composables/useDesktopSave';
+import { useI18n } from '../i18n';
+
+const { t, locale } = useI18n();
 
 interface StreamChunk {
   direction: string;

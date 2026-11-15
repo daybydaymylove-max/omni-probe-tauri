@@ -9,11 +9,11 @@
             <AppIcon name="upload" class="w-4 h-4" />
           </div>
           <div>
-            <h3 class="text-sm font-bold text-(--text-primary)">离线 PCAP 流量导入与回放 (Offline Ingestion)</h3>
-            <p class="text-xs text-(--text-muted) font-mono-code">载入本地 .pcap 文件，执行协议解码与二次离线解剖</p>
+            <h3 class="text-sm font-bold text-(--text-primary)">{{ t('importModal.title') }}</h3>
+            <p class="text-xs text-(--text-muted) font-mono-code">{{ t('importModal.subtitle') }}</p>
           </div>
         </div>
-        <button @click="$emit('close')" class="ui-btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center cursor-pointer" aria-label="关闭弹窗">
+        <button @click="$emit('close')" class="ui-btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center cursor-pointer" :aria-label="t('importModal.closeTip')">
           <AppIcon name="close" class="w-4 h-4" />
         </button>
       </div>
@@ -21,10 +21,10 @@
       <!-- 2. 内容区 -->
       <div class="p-6 space-y-4 text-xs">
         <div>
-          <label class="block font-bold text-(--text-primary) mb-1.5">PCAP 文件绝对路径 (File Path):</label>
-          <input v-model="filePath" placeholder="请输入 .pcap 文件的绝对路径 (如 E:\captures\sample.pcap)"
+          <label class="block font-bold text-(--text-primary) mb-1.5">{{ t('importModal.pathLabel') }}</label>
+          <input v-model="filePath" :placeholder="t('importModal.pathPlaceholder')"
             class="ui-input w-full px-3 py-2 text-xs font-mono-code select-text">
-          <p class="text-[11px] text-(--text-muted) mt-1.5">支持由 Wireshark、tcpdump 等工业工具生成的标准以太网 PCAP 格式</p>
+          <p class="text-[11px] text-(--text-muted) mt-1.5">{{ t('importModal.pathDesc') }}</p>
         </div>
 
         <!-- 结果反馈 -->
@@ -35,15 +35,15 @@
 
       <!-- 3. 底栏操作 -->
       <div class="px-6 py-3 border-t border-(--border-subtle) bg-(--surface-content-alt) flex items-center justify-between shrink-0">
-        <span class="text-xs text-(--text-muted) font-mono-code">解析后将无缝载入主表格</span>
+        <span class="text-xs text-(--text-muted) font-mono-code">{{ t('importModal.hint') }}</span>
         <div class="flex items-center gap-2">
           <button @click="$emit('close')" class="ui-btn-secondary px-4 py-1.5 text-xs font-semibold cursor-pointer">
-            取消
+            {{ t('importModal.cancel') }}
           </button>
           <button @click="doImport" :disabled="isImporting || !filePath.trim()"
             class="ui-btn-primary text-xs px-5 py-1.5 font-bold cursor-pointer disabled:opacity-40">
-            <span v-if="isImporting">解析中...</span>
-            <span v-else>载入回放</span>
+            <span v-if="isImporting">{{ t('importModal.parsing') }}</span>
+            <span v-else>{{ t('importModal.loadReplay') }}</span>
           </button>
         </div>
       </div>
@@ -56,6 +56,9 @@
 import { ref } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import AppIcon from './AppIcon.vue';
+import { useI18n } from '../i18n';
+
+const { t } = useI18n();
 
 defineProps<{
   isOpen: boolean;

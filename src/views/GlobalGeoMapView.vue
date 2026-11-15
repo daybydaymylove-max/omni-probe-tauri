@@ -14,31 +14,31 @@
         <div>
           <div class="flex items-center gap-2 flex-wrap">
             <h2 class="text-[13px] font-bold tracking-tight" style="color: var(--text-primary)">
-              全球网络空间测绘与双向路由追踪
+              {{ locale === 'en-US' ? 'Global Cyberspace Mapping & Geodesic Traceroute' : '全球网络空间测绘与双向路由追踪' }}
             </h2>
             <!-- 数据真实来源指示徽章 -->
             <span v-if="dataSource === 'LIVE_SNIFFER'" class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              真实网卡双向嗅探驱动
+              {{ locale === 'en-US' ? 'Live NIC Dual-Track Sniffer' : '真实网卡双向嗅探驱动' }}
             </span>
             <span v-else-if="dataSource === 'OS_SOCKETS'" class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-sky-500/12 text-sky-700 dark:text-sky-300 border border-sky-500/30 flex items-center gap-1.5">
               <span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
-              OS 实时外联 Socket 快照
+              {{ locale === 'en-US' ? 'Live OS External Sockets' : 'OS 实时外联 Socket 快照' }}
             </span>
             <span v-else class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-500/10 text-slate-600 dark:text-slate-300 border border-slate-500/20">
-              待机 (未捕获真实外联流)
+              {{ locale === 'en-US' ? 'Standby (No External Flow)' : '待机 (未捕获真实外联流)' }}
             </span>
           </div>
           <div class="text-[11px] ui-num mt-0.5 flex items-center gap-2 flex-wrap" style="color: var(--text-muted)">
-            <span>本机位置: <strong class="text-emerald-700 dark:text-emerald-400">{{ selfNode?.city || '定位中...' }}</strong></span>
+            <span>{{ locale === 'en-US' ? 'Local Geo:' : '本机位置:' }} <strong class="text-emerald-700 dark:text-emerald-400">{{ selfNode?.city || (locale === 'en-US' ? 'Locating...' : '定位中...') }}</strong></span>
             <span style="color: var(--border-strong)">|</span>
-            <span>通讯对端 IP: <strong class="text-sky-700 dark:text-cyan-300">{{ peerNodes.length }}</strong> 节点</span>
+            <span>{{ locale === 'en-US' ? 'Peers:' : '通讯对端 IP:' }} <strong class="text-sky-700 dark:text-cyan-300">{{ peerNodes.length }}</strong> {{ locale === 'en-US' ? 'nodes' : '节点' }}</span>
             <span style="color: var(--border-strong)">|</span>
-            <span>已定位公网节点: <strong class="text-indigo-700 dark:text-indigo-300">{{ mappedPeerCount }}</strong></span>
+            <span>{{ locale === 'en-US' ? 'Mapped Public Nodes:' : '已定位公网节点:' }} <strong class="text-indigo-700 dark:text-indigo-300">{{ mappedPeerCount }}</strong></span>
             <template v-if="tracerouteHops.length > 0">
               <span style="color: var(--border-strong)">|</span>
               <span class="text-amber-700 dark:text-amber-300 font-semibold">
-                路由中转追踪: {{ maxHopNumber }} 跳 ({{ tracerouteHops.filter(h => !h.is_timeout && h.hop > 0).length }} 有效响应)
+                {{ locale === 'en-US' ? `Route Hops: ${maxHopNumber} hops (${tracerouteHops.filter(h => !h.is_timeout && h.hop > 0).length} valid)` : `路由中转追踪: ${maxHopNumber} 跳 (${tracerouteHops.filter(h => !h.is_timeout && h.hop > 0).length} 有效响应)` }}
               </span>
             </template>
           </div>
@@ -51,10 +51,10 @@
           @click="probeOsSockets"
           :disabled="loadingOsSockets"
           class="ui-btn-secondary text-[11px] font-semibold py-1 px-2.5 rounded-xl"
-          title="直接扫描操作系统当前已建立连接的外部 TCP 服务器 IP（无需抓包驱动亦可探测）"
+          :title="locale === 'en-US' ? 'Scan external TCP connections established on the OS' : '直接扫描操作系统当前已建立连接的外部 TCP 服务器 IP（无需抓包驱动亦可探测）'"
         >
           <AppIcon name="search" :size="13" :class="loadingOsSockets ? 'animate-spin' : ''" />
-          <span>{{ loadingOsSockets ? '扫描中...' : '探测本机当前外联' }}</span>
+          <span>{{ loadingOsSockets ? (locale === 'en-US' ? 'Scanning...' : '扫描中...') : (locale === 'en-US' ? 'Probe Active Sockets' : '探测本机当前外联') }}</span>
         </button>
 
         <!-- 投影切换 -->
@@ -68,7 +68,7 @@
             :style="projectionMode !== '3d' ? { color: 'var(--text-secondary)' } : undefined"
           >
             <AppIcon name="globe" :size="13" />
-            <span>3D 地球</span>
+            <span>{{ locale === 'en-US' ? '3D Globe' : '3D 地球' }}</span>
           </button>
           <button
             @click="setProjection('2d')"
@@ -79,7 +79,7 @@
             :style="projectionMode !== '2d' ? { color: 'var(--text-secondary)' } : undefined"
           >
             <AppIcon name="layers" :size="13" />
-            <span>2D 全景</span>
+            <span>{{ locale === 'en-US' ? '2D Map' : '2D 全景' }}</span>
           </button>
         </div>
 
@@ -579,6 +579,9 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import AppIcon from '../components/AppIcon.vue';
 import EmptyState from '../components/EmptyState.vue';
 import { useUniversalDiff } from '../composables/useUniversalDiff';
+import { useI18n } from '../i18n';
+
+const { locale } = useI18n();
 
 const diffBus = useUniversalDiff();
 

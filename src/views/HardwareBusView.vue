@@ -12,7 +12,7 @@
             <AppIcon name="cpu" :size="15" />
           </div>
           <h2 class="text-[13px] font-semibold tracking-tight whitespace-nowrap" style="color: var(--text-primary);">
-            物理外设与端口出入中心
+            {{ t('hardwareView.title') }}
           </h2>
         </div>
 
@@ -25,20 +25,20 @@
             v-if="usbPcapHubs.length > 0"
             v-model="selectedUsbHub"
             class="ui-input w-auto max-w-[140px] px-2 py-0.5 text-[11px] font-mono cursor-pointer"
-            title="选择目标 USBPcap 根集线器控制器"
+            :title="locale === 'en-US' ? 'Select USBPcap Root Hub Controller' : '选择目标 USBPcap 根集线器控制器'"
           >
-            <option value="">自动探测 Hub</option>
+            <option value="">{{ locale === 'en-US' ? 'Auto Detect Hub' : '自动探测 Hub' }}</option>
             <option v-for="h in usbPcapHubs" :key="h.device_path" :value="h.device_path">
               {{ h.friendly_name }} ({{ h.attached_device_count }})
             </option>
           </select>
           <button v-if="!isUsbRunning" @click="$emit('startUsbCapture', selectedUsbHub || undefined)" class="ui-btn-primary px-2.5 py-1 text-[11px]">
             <AppIcon name="play" :size="11" />
-            <span>挂钩 USB</span>
+            <span>{{ locale === 'en-US' ? 'Hook USB' : '挂钩 USB' }}</span>
           </button>
           <button v-else @click="$emit('stopUsbCapture')" class="ui-btn-danger px-2.5 py-1 text-[11px]">
             <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
-            <span>停止 USB</span>
+            <span>{{ locale === 'en-US' ? 'Stop USB' : '停止 USB' }}</span>
           </button>
         </div>
 
@@ -151,17 +151,17 @@
 
         <button @click="isSerialBridgeOpen = true" class="ui-btn-secondary px-2.5 py-1 text-[11px] whitespace-nowrap shrink-0">
           <AppIcon name="link" :size="12" />
-          <span>串口中继</span>
+          <span>{{ locale === 'en-US' ? 'Serial Bridge' : '串口中继' }}</span>
         </button>
 
         <button @click="isUsbDescriptorTreeOpen = true" class="ui-btn-secondary px-2.5 py-1 text-[11px] whitespace-nowrap shrink-0">
           <AppIcon name="layers" :size="12" />
-          <span>描述符树</span>
+          <span>{{ locale === 'en-US' ? 'USB Tree' : '描述符树' }}</span>
         </button>
 
         <button @click="isCrossBusCausalityOpen = true" class="ui-btn-secondary px-2.5 py-1 text-[11px] whitespace-nowrap shrink-0">
           <AppIcon name="zap" :size="12" />
-          <span>跨总线因果</span>
+          <span>{{ locale === 'en-US' ? 'Cross-Bus' : '跨总线因果' }}</span>
         </button>
 
         <button
@@ -170,7 +170,7 @@
             showCanDiagnosticDrawer ? 'bg-[var(--accent-primary)] text-white border-transparent shadow-xs' : 'ui-btn-secondary']"
         >
           <AppIcon name="cpu" :size="12" />
-          <span>CAN 诊断</span>
+          <span>{{ locale === 'en-US' ? 'CAN Diagnostic' : 'CAN 诊断' }}</span>
         </button>
 
         <button
@@ -179,7 +179,7 @@
             showUartLogicDrawer ? 'bg-[var(--accent-primary)] text-white border-transparent shadow-xs' : 'ui-btn-secondary']"
         >
           <AppIcon name="activity" :size="12" />
-          <span>UART 解调</span>
+          <span>{{ locale === 'en-US' ? 'UART Demod' : 'UART 解调' }}</span>
         </button>
 
         <button
@@ -188,7 +188,7 @@
             showComplianceWorkbench ? 'bg-[var(--accent-primary)] text-white border-transparent shadow-xs' : 'ui-btn-secondary']"
         >
           <AppIcon name="shield" :size="12" />
-          <span>白名单审计</span>
+          <span>{{ locale === 'en-US' ? 'Whitelist Audit' : '白名单审计' }}</span>
           <span
             v-if="complianceReport"
             :class="['px-1.5 py-0.5 rounded-full text-[11px] ui-num font-semibold',
@@ -200,9 +200,9 @@
           </span>
         </button>
 
-        <button @click="refreshAllHardwareBuses" title="重新扫描系统物理 USB 外设与 COM 串口" class="ui-btn-secondary px-2.5 py-1 text-[11px] whitespace-nowrap shrink-0">
+        <button @click="refreshAllHardwareBuses" :title="locale === 'en-US' ? 'Rescan physical USB and serial COM ports' : '重新扫描系统物理 USB 外设与 COM 串口'" class="ui-btn-secondary px-2.5 py-1 text-[11px] whitespace-nowrap shrink-0">
           <AppIcon name="refresh" :size="12" />
-          <span>刷新外设</span>
+          <span>{{ locale === 'en-US' ? 'Refresh Buses' : '刷新外设' }}</span>
         </button>
       </div>
     </header>
@@ -212,12 +212,12 @@
       <div class="flex items-center justify-between border-b pb-2 gap-2 flex-wrap" style="border-color: var(--border-subtle);">
         <div class="flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-          <span class="font-semibold text-amber-700 dark:text-amber-300">CAN 2.0 / CAN-FD 现场总线深度诊断与健康评估</span>
+          <span class="font-semibold text-amber-700 dark:text-amber-300">{{ locale === 'en-US' ? 'CAN 2.0 / CAN-FD In-Depth Diagnostic & Health' : 'CAN 2.0 / CAN-FD 现场总线深度诊断与健康评估' }}</span>
         </div>
         <div class="flex items-center gap-2">
           <button @click="fetchCanDiagnostics" class="ui-btn-secondary px-2.5 py-1 text-[11px]">
             <AppIcon name="refresh" :size="11" />
-            <span>刷新快照</span>
+            <span>{{ locale === 'en-US' ? 'Refresh' : '刷新快照' }}</span>
           </button>
           <button @click="showCanDiagnosticDrawer = false" class="p-1 rounded-lg hover:bg-[var(--surface-hover)] cursor-pointer" style="color: var(--text-muted);">
             <AppIcon name="close" :size="13" />
@@ -229,15 +229,15 @@
         <div class="lg:col-span-5 space-y-2">
           <div class="grid grid-cols-3 gap-1.5 text-[11px]">
             <div class="ui-sub-card p-2">
-              <div style="color: var(--text-muted);">总线负载率</div>
+              <div style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Bus Load' : '总线负载率' }}</div>
               <div class="text-amber-600 dark:text-amber-300 font-semibold text-sm ui-num mt-0.5">{{ (canHealth?.bus_load_percentage ?? 0).toFixed(2) }}%</div>
             </div>
             <div class="ui-sub-card p-2">
-              <div style="color: var(--text-muted);">帧速率 / 错误帧</div>
+              <div style="color: var(--text-muted);">{{ locale === 'en-US' ? 'FPS / Errors' : '帧速率 / 错误帧' }}</div>
               <div class="font-semibold text-xs ui-num mt-0.5" style="color: var(--text-primary);">{{ (canHealth?.frames_per_second ?? 0).toFixed(1) }} fps / <span class="text-rose-600 dark:text-rose-400">{{ canHealth?.total_error_frames ?? 0 }}</span></div>
             </div>
             <div class="ui-sub-card p-2">
-              <div style="color: var(--text-muted);">总线健康等级</div>
+              <div style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Health Level' : '总线健康等级' }}</div>
               <div class="text-emerald-600 dark:text-emerald-400 font-semibold text-xs mt-0.5">{{ canHealth?.health_status ?? 'Idle (无总线帧)' }}</div>
             </div>
           </div>
@@ -1000,6 +1000,9 @@ import CrossBusCausalityModal from '../components/CrossBusCausalityModal.vue';
 import MultiSerialCompareModal from '../components/MultiSerialCompareModal.vue';
 import PhysicalBusOscilloscope, { type SmartWaveformComparisonResult } from '../components/PhysicalBusOscilloscope.vue';
 import BusDevAnalyticsPanel from '../components/BusDevAnalyticsPanel.vue';
+import { useI18n } from '../i18n';
+
+const { t, locale } = useI18n();
 
 const isMultiSerialCompareOpen = ref(false);
 const showOscilloscope = ref(true);

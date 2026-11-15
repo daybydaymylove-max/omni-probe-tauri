@@ -6,25 +6,25 @@
       <div class="flex items-center gap-3 flex-wrap">
         <h2 class="text-[13px] font-semibold flex items-center gap-2 whitespace-nowrap" style="color: var(--text-primary);">
           <AppIcon name="shield" :size="15" class="text-[var(--accent-primary)] shrink-0" />
-          <span>安全审计与等保合规引擎</span>
+          <span>{{ locale === 'en-US' ? 'Security Audit & Compliance Engine' : '安全审计与等保合规引擎' }}</span>
         </h2>
         <div class="h-4 w-[1px]" style="background: var(--border-strong);"></div>
 
         <!-- 当前三员分立身份标签与切换按钮 -->
         <div class="ui-pill rounded-xl flex items-center gap-2 px-2.5 py-1 text-xs whitespace-nowrap">
-          <span style="color: var(--text-muted);">操作员:</span>
+          <span style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Operator:' : '操作员:' }}</span>
           <span class="font-semibold ui-num" :class="roleBadgeColor">{{ currentUser.role_title }}</span>
           <button
             @click="openSwitchRoleModal"
             class="text-[11px] text-[var(--accent-primary-text)] hover:underline font-semibold cursor-pointer ml-1"
           >
-            切换身份
+            {{ locale === 'en-US' ? 'Switch Role' : '切换身份' }}
           </button>
           <button
             @click="openChangePwdModal"
             class="text-[11px] text-[var(--text-secondary)] hover:underline font-medium cursor-pointer ml-0.5"
           >
-            改口令
+            {{ locale === 'en-US' ? 'Change Pwd' : '改口令' }}
           </button>
         </div>
 
@@ -33,13 +33,13 @@
           <button @click="manualSeal" :disabled="sealing" class="ui-btn-secondary px-2.5 py-1 text-xs">
             <AppIcon v-if="sealing" name="refresh" :size="13" class="animate-spin" />
             <AppIcon v-else name="lock" :size="13" />
-            <span>司法封存</span>
+            <span>{{ locale === 'en-US' ? 'Legal Seal' : '司法封存' }}</span>
           </button>
 
           <button @click="verifyEvidenceChain" :disabled="verifying" class="ui-btn-secondary px-2.5 py-1 text-xs">
             <AppIcon v-if="verifying" name="refresh" :size="13" class="animate-spin" />
             <AppIcon v-else name="shield" :size="13" />
-            <span>链路验真</span>
+            <span>{{ locale === 'en-US' ? 'Verify Chain' : '链路验真' }}</span>
           </button>
         </div>
       </div>
@@ -1804,6 +1804,9 @@ import { uiConfirm } from '../composables/useConfirmDialog';
 import { ref, computed, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import AppIcon from '../components/AppIcon.vue';
+import { useI18n } from '../i18n';
+
+const { locale } = useI18n();
 import { useUniversalDiff } from '../composables/useUniversalDiff';
 import {
   useTargetComplianceAssessment,
@@ -2384,16 +2387,16 @@ function log(msg: string) {
 }
 
 // 8 大子选项卡 (等保 2/3 全量覆盖)
-const subTabs = [
-  { id: 'compliance', label: '等保合规总览' },
-  { id: 'rbac', label: '三员分立控制' },
-  { id: 'baseline', label: '工业基线白名单' },
-  { id: 'zones', label: '安全区域(CIDR)' },
-  { id: 'syslog', label: 'Syslog 集中外发' },
-  { id: 'honeypot', label: '蜜罐主动防御' },
-  { id: 'logs', label: '运行日志审计' },
-  { id: 'config', label: '引擎配置参数' },
-];
+const subTabs = computed(() => [
+  { id: 'compliance', label: locale.value === 'en-US' ? 'Compliance Overview' : '等保合规总览' },
+  { id: 'rbac', label: locale.value === 'en-US' ? 'RBAC Tri-Role' : '三员分立控制' },
+  { id: 'baseline', label: locale.value === 'en-US' ? 'OT Baseline Whitelist' : '工业基线白名单' },
+  { id: 'zones', label: locale.value === 'en-US' ? 'Security Zones (CIDR)' : '安全区域(CIDR)' },
+  { id: 'syslog', label: locale.value === 'en-US' ? 'Syslog Export' : 'Syslog 集中外发' },
+  { id: 'honeypot', label: locale.value === 'en-US' ? 'Deception / Honeypot' : '蜜罐主动防御' },
+  { id: 'logs', label: locale.value === 'en-US' ? 'Runtime Audit Logs' : '运行日志审计' },
+  { id: 'config', label: locale.value === 'en-US' ? 'Engine Config' : '引擎配置参数' },
+]);
 const currentTab = ref('compliance');
 
 function changeTab(tabId: string) {

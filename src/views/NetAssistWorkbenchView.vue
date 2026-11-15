@@ -11,7 +11,7 @@
         <div>
           <div class="flex items-center gap-2">
             <h2 class="text-[13px] font-bold tracking-tight" style="color: var(--text-primary)">
-              工业级全双工网络调试助手
+              {{ t('netAssist.title') }}
             </h2>
             <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold flex items-center gap-1.5 border ui-num"
               :class="isRunning
@@ -19,11 +19,11 @@
                 : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'">
               <span class="w-1.5 h-1.5 rounded-full shrink-0"
                 :class="isRunning ? 'bg-emerald-500' : 'bg-slate-400'"></span>
-              <span>{{ isRunning ? `会话运行中: ${sessionStatus}` : '会话待命 (IDLE)' }}</span>
+              <span>{{ isRunning ? t('netAssist.sessionRunning', { status: sessionStatus }) : t('netAssist.sessionIdle') }}</span>
             </span>
           </div>
           <p class="text-[11px] mt-0.5" style="color: var(--text-muted)">
-            全双工异步通信 · TCP 客户端/服务端 · UDP 单播/广播/组播 · 帧超时断包 · 工业规约双向校验
+            {{ t('netAssist.subtitle') }}
           </p>
         </div>
       </div>
@@ -39,13 +39,13 @@
           <span class="font-bold text-sky-700 dark:text-sky-400">{{ formatBytes(stats.txBytes) }} ({{ stats.txPackets }} 帧)</span>
         </div>
 
-        <button @click="resetStats" class="ui-pill p-1.5 rounded-xl cursor-pointer" title="复位收发统计">
+        <button @click="resetStats" class="ui-pill p-1.5 rounded-xl cursor-pointer" :title="t('netAssist.resetStats')">
           <AppIcon name="refresh" :size="14" />
         </button>
 
-        <button @click="$emit('switchWorkbench', 'traffic')" class="ui-pill px-2.5 py-1 rounded-xl text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer" style="color: var(--accent-primary-text)" title="前往流量分析看板">
+        <button @click="$emit('switchWorkbench', 'traffic')" class="ui-pill px-2.5 py-1 rounded-xl text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer" style="color: var(--accent-primary-text)" :title="t('netAssist.goToTraffic')">
           <AppIcon name="traffic" :size="13" />
-          <span>流量分析看板</span>
+          <span>{{ t('netAssist.trafficAnalyzer') }}</span>
           <AppIcon name="arrow-right" :size="11" />
         </button>
       </div>
@@ -59,7 +59,7 @@
         
         <!-- 协议模式切换胶囊 -->
         <div>
-          <label class="text-[11px] font-bold uppercase tracking-wider block mb-1.5" style="color: var(--text-secondary)">通信规约模式</label>
+          <label class="text-[11px] font-bold uppercase tracking-wider block mb-1.5" style="color: var(--text-secondary)">{{ t('netAssist.protocolMode') }}</label>
           <div class="grid grid-cols-3 gap-1 ui-pill p-0.5 rounded-xl">
             <button
               v-for="m in protocolModes"
@@ -84,7 +84,7 @@
           <template v-if="selectedMode === 'TCP_CLIENT'">
             <div>
               <div class="flex items-center justify-between mb-1">
-                <label class="text-[11px] font-semibold" style="color: var(--text-secondary)">目标远端 IP (Host)</label>
+                <label class="text-[11px] font-semibold" style="color: var(--text-secondary)">{{ t('netAssist.targetHost') }}</label>
                 <div class="flex items-center gap-1.5 text-[11px] ui-num cursor-pointer" style="color: var(--accent-primary-text)">
                   <span @click="targetIp = '127.0.0.1'" class="hover:underline">127.0.0.1</span>
                   <span style="color: var(--text-muted)">·</span>
@@ -96,8 +96,8 @@
 
             <div>
               <div class="flex items-center justify-between mb-1">
-                <label class="text-[11px] font-semibold" style="color: var(--text-secondary)">目标服务端口 (Port)</label>
-                <span class="text-[11px]" style="color: var(--text-muted)">标准工控/Web</span>
+                <label class="text-[11px] font-semibold" style="color: var(--text-secondary)">{{ t('netAssist.targetPort') }}</label>
+                <span class="text-[11px]" style="color: var(--text-muted)">{{ t('netAssist.quickPortIndustrialWeb') }}</span>
               </div>
               <input v-model.number="targetPort" :disabled="isRunning" type="number" placeholder="8080" class="ui-input ui-num mb-1.5" />
               <!-- 快捷端口一键填入微胶囊 -->
@@ -120,20 +120,20 @@
           <template v-else-if="selectedMode === 'TCP_SERVER'">
             <div>
               <div class="flex items-center justify-between mb-1">
-                <label class="text-[11px] font-semibold" style="color: var(--text-secondary);">本地监听网卡与 IP</label>
-                <button @click="loadLocalIpAddresses" class="text-[11px] text-blue-600 dark:text-sky-400 hover:underline cursor-pointer flex items-center gap-1" title="刷新本机网卡列表">
+                <label class="text-[11px] font-semibold" style="color: var(--text-secondary);">{{ t('netAssist.localBindIp') }}</label>
+                <button @click="loadLocalIpAddresses" class="text-[11px] text-blue-600 dark:text-sky-400 hover:underline cursor-pointer flex items-center gap-1" :title="t('netAssist.refreshNicsTip')">
                   <AppIcon name="refresh" :size="11" />
-                  <span>刷新网卡</span>
+                  <span>{{ t('netAssist.refreshNics') }}</span>
                 </button>
               </div>
               <select v-model="localBindIp" :disabled="isRunning" class="ui-input w-full px-2.5 py-1.5 font-mono mb-1.5 text-xs">
                 <option v-for="ipInfo in localIpList" :key="ipInfo.ip" :value="ipInfo.ip">{{ ipInfo.name }}</option>
               </select>
-              <input v-model="localBindIp" :disabled="isRunning" placeholder="0.0.0.0" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono" title="或自由手动编辑 IP" />
+              <input v-model="localBindIp" :disabled="isRunning" placeholder="0.0.0.0" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono" :title="t('netAssist.manualIpTip')" />
             </div>
 
             <div>
-              <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-secondary);">本地监听端口</label>
+              <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-secondary);">{{ t('netAssist.localBindPort') }}</label>
               <input v-model.number="localBindPort" :disabled="isRunning" type="number" placeholder="8080" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono ui-num mb-1.5" />
               <div class="flex flex-wrap gap-1">
                 <button
@@ -151,17 +151,17 @@
 
             <div class="pt-1.5 border-t" style="border-color: var(--border-subtle);">
               <div class="flex items-center justify-between mb-1">
-                <label class="text-[11px] font-semibold" style="color: var(--text-secondary);">活动客户端连接池</label>
+                <label class="text-[11px] font-semibold" style="color: var(--text-secondary);">{{ t('netAssist.clientPool') }}</label>
                 <span
                   class="text-[11px] font-semibold px-2 py-0.5 rounded-full ui-num"
                   :class="activeClients.length > 0 ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' : 'ui-pill'"
                 >
-                  {{ activeClients.length }} 在线
+                  {{ t('netAssist.onlineCount', { count: activeClients.length }) }}
                 </span>
               </div>
               <select v-model="selectedClientTarget" class="ui-input w-full px-2.5 py-1.5 font-mono text-xs">
-                <option value="">-- [广播群发] 全部在线客户端 --</option>
-                <option v-for="c in activeClients" :key="c" :value="c">指定端点: {{ c }}</option>
+                <option value="">{{ t('netAssist.broadcastAll') }}</option>
+                <option v-for="c in activeClients" :key="c" :value="c">{{ t('netAssist.specificClient', { endpoint: c }) }}</option>
               </select>
             </div>
           </template>
@@ -170,18 +170,18 @@
           <template v-else-if="selectedMode === 'UDP'">
             <div class="grid grid-cols-2 gap-1.5">
               <div>
-                <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-secondary);">本地绑定端口</label>
+                <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-secondary);">{{ t('netAssist.udpBindPort') }}</label>
                 <input v-model.number="localBindPort" :disabled="isRunning" type="number" placeholder="0 (随机)" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono ui-num" />
               </div>
               <div>
-                <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-secondary);">目标远端端口</label>
+                <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-secondary);">{{ t('netAssist.udpTargetPort') }}</label>
                 <input v-model.number="targetPort" placeholder="8080" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono ui-num" />
               </div>
             </div>
             <div>
               <div class="flex items-center justify-between mb-1">
-                <label class="text-[11px] font-semibold" style="color: var(--text-secondary);">目标主机 IP</label>
-                <span class="text-[11px] text-blue-600 dark:text-sky-400 cursor-pointer hover:underline" @click="targetIp = '255.255.255.255'">广播 255.255.255.255</span>
+                <label class="text-[11px] font-semibold" style="color: var(--text-secondary);">{{ t('netAssist.udpTargetHost') }}</label>
+                <span class="text-[11px] text-blue-600 dark:text-sky-400 cursor-pointer hover:underline" @click="targetIp = '255.255.255.255'">{{ t('netAssist.udpBroadcast') }}</span>
               </div>
               <input v-model="targetIp" placeholder="127.0.0.1 或 255.255.255.255" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono" />
             </div>
@@ -190,11 +190,11 @@
           <!-- 帧断包超时阈值 -->
           <div class="pt-1.5 border-t" style="border-color: var(--border-subtle);">
             <div class="flex items-center justify-between mb-1">
-              <label class="text-[11px] font-semibold" style="color: var(--text-secondary);">帧间隔断包切分阈值</label>
+              <label class="text-[11px] font-semibold" style="color: var(--text-secondary);">{{ t('netAssist.frameTimeout') }}</label>
               <span class="text-[11px] font-semibold text-blue-600 dark:text-sky-400 ui-num">{{ frameTimeoutMs }} ms</span>
             </div>
             <input v-model.number="frameTimeoutMs" :disabled="isRunning" type="range" min="5" max="200" step="5" class="w-full accent-blue-600 cursor-pointer" />
-            <p class="text-[11px] mt-0.5 leading-tight" style="color: var(--text-muted);">碎片数据接收间隔超过该时长，自动定界为完整规约帧上屏</p>
+            <p class="text-[11px] mt-0.5 leading-tight" style="color: var(--text-muted);">{{ t('netAssist.frameTimeoutDesc') }}</p>
           </div>
         </div>
 
@@ -206,7 +206,7 @@
               isRunning ? 'bg-rose-600 hover:bg-rose-500 text-white' : 'ui-btn-primary justify-center']"
           >
             <AppIcon :name="isRunning ? 'stop' : 'play'" :size="13" />
-            <span>{{ isRunning ? '停止会话并释放套接字' : '启动并建立通信套接字' }}</span>
+            <span>{{ isRunning ? t('netAssist.stopSession') : t('netAssist.startSession') }}</span>
           </button>
         </div>
       </aside>
@@ -219,7 +219,7 @@
             <div class="flex items-center gap-2.5">
               <span class="font-semibold flex items-center gap-1.5" style="color: var(--text-primary);">
                 <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span>数据接收终端 (RX)</span>
+                <span>{{ t('netAssist.rxTerminal') }}</span>
                 <span class="text-[11px] ui-num" style="color: var(--text-muted);">[{{ filteredPacketLog.length }} / {{ packetLog.length }} 帧]</span>
               </span>
               <div class="flex items-center glass-pill p-0.5 rounded-lg text-[11px] font-mono">
@@ -231,7 +231,7 @@
             <div class="flex items-center gap-2 text-[11px] flex-wrap" style="color: var(--text-secondary);">
               <div class="flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px]" style="background: var(--surface-input); border-color: var(--border-subtle);">
                 <AppIcon name="search" :size="11" style="color: var(--text-muted);" />
-                <input v-model="rxSearchQuery" placeholder="过滤关键字 / HEX..." class="bg-transparent outline-none w-24 text-[11px] font-mono" style="color: var(--text-primary);" />
+                <input v-model="rxSearchQuery" :placeholder="t('netAssist.rxSearchPlaceholder')" class="bg-transparent outline-none w-24 text-[11px] font-mono" style="color: var(--text-primary);" />
                 <button v-if="rxSearchQuery" @click="rxSearchQuery = ''" class="cursor-pointer" style="color: var(--text-muted);">
                   <AppIcon name="close" :size="11" />
                 </button>
@@ -239,12 +239,12 @@
 
               <label class="flex items-center gap-1 cursor-pointer select-none">
                 <input type="checkbox" v-model="showTimestamp" class="accent-blue-600 rounded" />
-                <span>时标</span>
+                <span>{{ t('netAssist.timestamp') }}</span>
               </label>
 
               <label class="flex items-center gap-1 cursor-pointer select-none">
                 <input type="checkbox" v-model="autoScroll" class="accent-blue-600 rounded" />
-                <span>滚屏</span>
+                <span>{{ t('netAssist.autoScroll') }}</span>
               </label>
 
               <button
@@ -253,15 +253,15 @@
                   isRxPaused ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30' : 'ui-pill']"
               >
                 <AppIcon :name="isRxPaused ? 'pause' : 'play'" :size="10" />
-                <span>{{ isRxPaused ? '已暂停' : '接收中' }}</span>
+                <span>{{ isRxPaused ? (locale === 'en-US' ? 'Paused' : '已暂停') : (locale === 'en-US' ? 'Receiving' : '接收中') }}</span>
               </button>
 
-              <button @click="packetLog = []" class="ui-btn-secondary px-2 py-0.5 text-[11px]">清屏</button>
+              <button @click="packetLog = []" class="ui-btn-secondary px-2 py-0.5 text-[11px]">{{ t('netAssist.clearRx') }}</button>
               <button @click="diffBus.openScratchpad()" class="ui-btn-secondary px-2 py-0.5 text-[11px] text-indigo-600 dark:text-indigo-300" title="打开自由数据差分工作台">
                 <AppIcon name="scale" :size="11" />
-                <span>比对</span>
+                <span>{{ locale === 'en-US' ? 'Diff' : '比对' }}</span>
               </button>
-              <button @click="exportLog" class="ui-btn-secondary px-2 py-0.5 text-[11px]">导出</button>
+              <button @click="exportLog" class="ui-btn-secondary px-2 py-0.5 text-[11px]">{{ t('netAssist.saveRx') }}</button>
             </div>
           </div>
 
@@ -311,8 +311,8 @@
             <EmptyState
               v-if="filteredPacketLog.length === 0"
               icon="radar"
-              title="暂无通信数据流水"
-              description="启动会话后收发报文将在此毫秒级实时显现，支持十六进制与 ASCII 双模解析。"
+              :title="t('netAssist.rxEmpty')"
+              :description="t('netAssist.rxEmptyDesc')"
             />
           </div>
         </div>
@@ -323,7 +323,7 @@
             <div class="flex items-center gap-2.5 shrink-0">
               <span class="font-semibold text-xs flex items-center gap-1.5 whitespace-nowrap" style="color: var(--text-primary);">
                 <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-                <span>数据发送终端 (TX)</span>
+                <span>{{ t('netAssist.txTerminal') }}</span>
               </span>
               <div class="flex items-center glass-pill p-0.5 rounded-lg text-[11px] font-mono shrink-0">
                 <button @click="txFormat = 'HEX'" :class="['px-2 py-0.5 rounded-md transition-all font-semibold cursor-pointer', txFormat === 'HEX' ? 'bg-blue-600 text-white' : 'text-[var(--text-secondary)]']">HEX</button>
@@ -333,7 +333,7 @@
 
             <div class="flex items-center gap-2 text-[11px] flex-wrap">
               <select v-model="appendChecksum" style="width: auto" class="ui-input px-2 py-1 text-[11px] font-semibold shrink-0">
-                <option value="NONE">无校验和</option>
+                <option value="NONE">{{ t('netAssist.checksumNone') }}</option>
                 <option value="MODBUS_CRC16">Modbus CRC-16 (低字节在前)</option>
                 <option value="CRC32">CRC-32 (IEEE 802.3)</option>
                 <option value="SUM8">8位累加和 (SumCheck)</option>
@@ -350,7 +350,7 @@
               <div class="flex items-center gap-1 pl-2 border-l shrink-0 whitespace-nowrap" style="border-color: var(--border-subtle);">
                 <label class="flex items-center gap-1 cursor-pointer select-none whitespace-nowrap" style="color: var(--text-secondary);">
                   <input type="checkbox" v-model="autoRepeat" @change="toggleAutoRepeat" class="accent-blue-600 rounded" />
-                  <span class="text-[11px] font-semibold">自动轮发</span>
+                  <span class="text-[11px] font-semibold">{{ locale === 'en-US' ? 'Auto Repeat' : '自动轮发' }}</span>
                 </label>
                 <input v-model.number="repeatIntervalMs" type="number" min="50" max="60000" style="width: 72px" class="ui-input px-1.5 py-0.5 text-[11px] ui-num text-center shrink-0" />
                 <span class="text-[11px]" style="color: var(--text-muted);">ms</span>
@@ -362,7 +362,7 @@
             <div class="flex-1 flex flex-col relative min-h-0">
               <textarea
                 v-model="txPayload"
-                :placeholder="txFormat === 'HEX' ? '输入待发送的十六进制字节流，如: 01 03 00 00 00 02' : '输入待发送的 ASCII 文本字符内容...'"
+                :placeholder="txFormat === 'HEX' ? (locale === 'en-US' ? 'Enter hexadecimal payload, e.g. 01 03 00 00 00 02' : '输入待发送的十六进制字节流，如: 01 03 00 00 00 02') : (locale === 'en-US' ? 'Enter ASCII payload...' : '输入待发送的 ASCII 文本字符内容...')"
                 class="ui-input flex-1 w-full p-2 font-mono text-xs resize-none"
                 :class="hexValidation.valid ? '' : 'border-rose-500'"
                 @keydown.ctrl.enter="sendPayload"
@@ -395,23 +395,23 @@
                 @click="compareTxWithLastRx"
                 :disabled="!txPayload.trim() || !lastRxItem"
                 class="ui-btn-secondary py-1 px-2 text-[11px] justify-center"
-                title="对比请求报文与最新响应帧"
+                :title="locale === 'en-US' ? 'Compare Request with Latest Response Frame' : '对比请求报文与最新响应帧'"
               >
                 <AppIcon name="scale" :size="11" />
-                <span>请求 vs 响应</span>
+                <span>{{ locale === 'en-US' ? 'Req vs Resp' : '请求 vs 响应' }}</span>
               </button>
               <button
                 @click="sendPayload"
                 :disabled="!isRunning || !txPayload.trim() || (txFormat === 'HEX' && !hexValidation.valid)"
                 class="ui-btn-primary flex-1 flex-col justify-center gap-0.5 text-xs"
               >
-                <span>立即发送</span>
+                <span>{{ locale === 'en-US' ? 'Send Now' : '立即发送' }}</span>
                 <span class="text-[11px] font-normal opacity-80">(Ctrl+Enter)</span>
               </button>
 
               <div class="grid grid-cols-2 gap-1">
-                <button v-if="txFormat === 'HEX'" @click="formatTxHex" class="ui-btn-secondary py-1 px-1 text-[11px] justify-center">整理</button>
-                <button @click="txPayload = ''" :class="txFormat === 'HEX' ? '' : 'col-span-2'" class="ui-btn-secondary py-1 px-1 text-[11px] justify-center">清空</button>
+                <button v-if="txFormat === 'HEX'" @click="formatTxHex" class="ui-btn-secondary py-1 px-1 text-[11px] justify-center">{{ locale === 'en-US' ? 'Format' : '整理' }}</button>
+                <button @click="txPayload = ''" :class="txFormat === 'HEX' ? '' : 'col-span-2'" class="ui-btn-secondary py-1 px-1 text-[11px] justify-center">{{ locale === 'en-US' ? 'Clear' : '清空' }}</button>
               </div>
             </div>
           </div>
@@ -421,9 +421,9 @@
       <!-- 3. 右栏：工控规约载荷模板与快捷多指令调度矩阵 -->
       <aside class="lg:col-span-3 ui-content-card p-3.5 flex flex-col gap-3 overflow-y-auto custom-scrollbar">
         <div>
-          <label class="text-[11px] font-semibold block mb-1.5" style="color: var(--text-secondary);">标准工控规约载荷模板</label>
+          <label class="text-[11px] font-semibold block mb-1.5" style="color: var(--text-secondary);">{{ t('netAssist.quickTemplates') }}</label>
           <select @change="applyProtocolPreset(($event.target as HTMLSelectElement).value); ($event.target as HTMLSelectElement).value = ''" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono">
-            <option value="">-- 一键填入工业标准载荷 --</option>
+            <option value="">{{ locale === 'en-US' ? '-- Load Standard Industrial Payload --' : '-- 一键填入工业标准载荷 --' }}</option>
             <option value="modbus_read">Modbus-TCP: 读保持寄存器 0-1 (Func 03)</option>
             <option value="modbus_write">Modbus-TCP: 写单个保持寄存器 (Func 06)</option>
             <option value="modbus_rtu">Modbus-RTU: 读寄存器 (含CRC16: 01 03 00 00 00 02 C4 0B)</option>
@@ -438,11 +438,11 @@
         <div class="flex-1 flex flex-col min-h-0 border-t pt-2.5" style="border-color: var(--border-subtle);">
           <div class="flex items-center justify-between mb-1.5">
             <div class="flex items-center gap-1.5">
-              <span class="text-[11px] font-semibold" style="color: var(--text-secondary);">多指令快捷调度矩阵</span>
+              <span class="text-[11px] font-semibold" style="color: var(--text-secondary);">{{ locale === 'en-US' ? 'Multi-Command Matrix' : '多指令快捷调度矩阵' }}</span>
               <span class="text-[11px] ui-num" style="color: var(--text-muted);">({{ presetCommands.length }})</span>
             </div>
             <button @click="addNewPreset" class="text-[11px] text-blue-600 dark:text-sky-400 font-semibold hover:underline cursor-pointer">
-              + 添加指令
+              {{ locale === 'en-US' ? '+ Add Command' : '+ 添加指令' }}
             </button>
           </div>
 
@@ -455,14 +455,14 @@
                 :disabled="!isRunning || presetCommands.length === 0"
               >
                 <AppIcon :name="isSequencePolling ? 'stop' : 'zap'" :size="11" />
-                <span>{{ isSequencePolling ? '停止轮发' : '序列轮发' }}</span>
+                <span>{{ isSequencePolling ? (locale === 'en-US' ? 'Stop Sequence' : '停止轮发') : (locale === 'en-US' ? 'Sequence Run' : '序列轮发') }}</span>
               </button>
-              <span class="text-[11px] whitespace-nowrap" style="color: var(--text-muted);">步长:</span>
+              <span class="text-[11px] whitespace-nowrap" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Step:' : '步长:' }}</span>
               <input v-model.number="sequenceIntervalMs" type="number" min="100" max="10000" style="width: 72px" class="ui-input px-1.5 py-0.5 text-[11px] ui-num text-center shrink-0" />
               <span class="text-[11px] whitespace-nowrap" style="color: var(--text-muted);">ms</span>
             </div>
             <span v-if="isSequencePolling" class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 ui-num">
-              发送中 #{{ activeSequenceIdx + 1 }}
+              {{ locale === 'en-US' ? `Sending #${activeSequenceIdx + 1}` : `发送中 #${activeSequenceIdx + 1}` }}
             </span>
           </div>
 
@@ -476,13 +476,13 @@
               <div class="flex items-center justify-between text-[11px]">
                 <input v-model="cmd.name" @change="savePresetsToStorage" class="font-semibold bg-transparent border-b border-transparent focus:border-blue-500 outline-none w-32" style="color: var(--text-primary);" />
                 <div class="flex items-center gap-1">
-                  <button @click="sendSpecificPreset(cmd)" :disabled="!isRunning" class="ui-btn-primary px-2 py-0.5 text-[11px]">发送</button>
-                  <button @click="deletePreset(idx)" class="p-1 cursor-pointer hover:text-rose-500" style="color: var(--text-muted);" title="删除该指令">
+                  <button @click="sendSpecificPreset(cmd)" :disabled="!isRunning" class="ui-btn-primary px-2 py-0.5 text-[11px]">{{ locale === 'en-US' ? 'Send' : '发送' }}</button>
+                  <button @click="deletePreset(idx)" class="p-1 cursor-pointer hover:text-rose-500" style="color: var(--text-muted);" :title="locale === 'en-US' ? 'Delete this command' : '删除该指令'">
                     <AppIcon name="close" :size="11" />
                   </button>
                 </div>
               </div>
-              <input v-model="cmd.payload" @change="savePresetsToStorage" placeholder="HEX 字节流" class="ui-input w-full px-2 py-1 text-[11px] font-mono" />
+              <input v-model="cmd.payload" @change="savePresetsToStorage" :placeholder="locale === 'en-US' ? 'HEX Byte Stream' : 'HEX 字节流'" class="ui-input w-full px-2 py-1 text-[11px] font-mono" />
             </div>
           </div>
         </div>
@@ -509,6 +509,9 @@ import {
 import { useUniversalDiff } from '../composables/useUniversalDiff';
 import PacketDetailModal from '../components/PacketDetailModal.vue';
 import { APP_VERSION_RAW } from '../constants/appVersion';
+import { useI18n } from '../i18n';
+
+const { t, locale } = useI18n();
 interface PacketRecord {
   id: number;
   timestamp: string;
@@ -538,11 +541,11 @@ interface ProtocolModeOption {
   label: string;
 }
 
-const protocolModes: ProtocolModeOption[] = [
-  { id: 'TCP_CLIENT', label: 'TCP 客户端' },
-  { id: 'TCP_SERVER', label: 'TCP 服务端' },
-  { id: 'UDP', label: 'UDP 模式' },
-];
+const protocolModes = computed<ProtocolModeOption[]>(() => [
+  { id: 'TCP_CLIENT', label: locale.value === 'en-US' ? 'TCP Client' : 'TCP 客户端' },
+  { id: 'TCP_SERVER', label: locale.value === 'en-US' ? 'TCP Server' : 'TCP 服务端' },
+  { id: 'UDP', label: locale.value === 'en-US' ? 'UDP Mode' : 'UDP 模式' },
+]);
 
 const quickPorts = [
   { port: 502, label: 'Modbus', desc: '工业 Modbus-TCP 标准通信端口' },

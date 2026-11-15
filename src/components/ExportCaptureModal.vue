@@ -9,11 +9,11 @@
             <AppIcon name="download" class="w-4 h-4" />
           </div>
           <div>
-            <h3 class="text-sm font-bold text-(--text-primary)">工业级流量与数据帧导出 (Export Pipeline)</h3>
-            <p class="text-xs text-(--text-muted) font-mono-code">支持 PCAPng 司法存证、PCAP、CSV、JSON 或 HAR 归档</p>
+            <h3 class="text-sm font-bold text-(--text-primary)">{{ t('exportModal.title') }}</h3>
+            <p class="text-xs text-(--text-muted) font-mono-code">{{ t('exportModal.subtitle') }}</p>
           </div>
         </div>
-        <button @click="$emit('close')" class="ui-btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center cursor-pointer" aria-label="关闭弹窗">
+        <button @click="$emit('close')" class="ui-btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center cursor-pointer" :aria-label="t('exportModal.closeTip')">
           <AppIcon name="close" class="w-4 h-4" />
         </button>
       </div>
@@ -22,39 +22,39 @@
       <div class="p-6 space-y-4 text-xs">
         <!-- 导出范围 -->
         <div>
-          <label class="block font-bold text-(--text-primary) mb-1.5">1. 选择导出报文范围 (Scope):</label>
+          <label class="block font-bold text-(--text-primary) mb-1.5">{{ t('exportModal.scopeLabel') }}</label>
           <div class="grid grid-cols-3 gap-2">
             <button @click="exportScope = 'all'"
               :class="['p-2.5 rounded-xl border text-center transition-all cursor-pointer', exportScope === 'all' ? 'border-teal-500 bg-teal-500/12 text-teal-700 dark:text-teal-300 font-bold' : 'ui-sub-card text-(--text-secondary) hover:border-(--border-strong)']">
-              <div>全部报文</div>
-              <div class="text-[11px] text-(--text-muted) ui-num font-mono-code mt-0.5">{{ allPackets.length }} 帧</div>
+              <div>{{ t('exportModal.scopeAll') }}</div>
+              <div class="text-[11px] text-(--text-muted) ui-num font-mono-code mt-0.5">{{ t('exportModal.framesCount', { count: allPackets.length }) }}</div>
             </button>
             <button @click="exportScope = 'filtered'"
               :class="['p-2.5 rounded-xl border text-center transition-all cursor-pointer', exportScope === 'filtered' ? 'border-teal-500 bg-teal-500/12 text-teal-700 dark:text-teal-300 font-bold' : 'ui-sub-card text-(--text-secondary) hover:border-(--border-strong)']">
-              <div>当前过滤匹配</div>
-              <div class="text-[11px] text-(--text-muted) ui-num font-mono-code mt-0.5">{{ filteredPackets.length }} 帧</div>
+              <div>{{ t('exportModal.scopeFiltered') }}</div>
+              <div class="text-[11px] text-(--text-muted) ui-num font-mono-code mt-0.5">{{ t('exportModal.framesCount', { count: filteredPackets.length }) }}</div>
             </button>
             <button @click="exportScope = 'critical'"
               :class="['p-2.5 rounded-xl border text-center transition-all cursor-pointer', exportScope === 'critical' ? 'border-teal-500 bg-teal-500/12 text-teal-700 dark:text-teal-300 font-bold' : 'ui-sub-card text-(--text-secondary) hover:border-(--border-strong)']">
-              <div>高熵/异常子集</div>
-              <div class="text-[11px] text-(--text-muted) ui-num font-mono-code mt-0.5">{{ criticalPackets.length }} 帧</div>
+              <div>{{ t('exportModal.scopeCritical') }}</div>
+              <div class="text-[11px] text-(--text-muted) ui-num font-mono-code mt-0.5">{{ t('exportModal.framesCount', { count: criticalPackets.length }) }}</div>
             </button>
           </div>
         </div>
 
         <!-- 导出格式 -->
         <div>
-          <label class="block font-bold text-(--text-primary) mb-1.5">2. 选择导出文件格式 (Format):</label>
+          <label class="block font-bold text-(--text-primary) mb-1.5">{{ t('exportModal.formatLabel') }}</label>
           <div class="grid grid-cols-2 gap-2">
             <button @click="exportFormat = 'pcapng'"
               :class="['p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2.5', exportFormat === 'pcapng' ? 'border-teal-500 bg-teal-500/12 text-teal-700 dark:text-teal-300 font-bold ring-1 ring-teal-500/25' : 'ui-sub-card text-(--text-secondary) hover:border-(--border-strong)']">
               <AppIcon name="shield" class="w-4 h-4 shrink-0" />
               <div class="min-w-0">
                 <div class="text-xs flex items-center gap-1.5">
-                  <span class="truncate">PCAPng 司法存证</span>
-                  <span class="text-[11px] bg-teal-600 text-white px-1.5 py-0.2 rounded font-medium shrink-0">推荐</span>
+                  <span class="truncate">{{ t('exportModal.pcapngTitle') }}</span>
+                  <span class="text-[11px] bg-teal-600 text-white px-1.5 py-0.2 rounded font-medium shrink-0">{{ t('exportModal.recommended') }}</span>
                 </div>
-                <div class="text-[11px] text-(--text-muted) font-normal truncate">含 SHB/IDB/EPB 与哈希存证</div>
+                <div class="text-[11px] text-(--text-muted) font-normal truncate">{{ t('exportModal.pcapngDesc') }}</div>
               </div>
             </button>
 
@@ -62,8 +62,8 @@
               :class="['p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2.5', exportFormat === 'pcap' ? 'border-sky-500 bg-sky-500/12 text-sky-700 dark:text-sky-300 font-bold' : 'ui-sub-card text-(--text-secondary) hover:border-(--border-strong)']">
               <AppIcon name="activity" class="w-4 h-4 shrink-0" />
               <div class="min-w-0">
-                <div class="text-xs truncate">标准 PCAP 二进制</div>
-                <div class="text-[11px] text-(--text-muted) font-normal truncate">Wireshark 经典 libpcap 格式</div>
+                <div class="text-xs truncate">{{ t('exportModal.pcapTitle') }}</div>
+                <div class="text-[11px] text-(--text-muted) font-normal truncate">{{ t('exportModal.pcapDesc') }}</div>
               </div>
             </button>
 
@@ -71,8 +71,8 @@
               :class="['p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2.5', exportFormat === 'csv' ? 'border-emerald-500 bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 font-bold' : 'ui-sub-card text-(--text-secondary) hover:border-(--border-strong)']">
               <AppIcon name="layers" class="w-4 h-4 shrink-0" />
               <div class="min-w-0">
-                <div class="text-xs truncate">结构化 CSV 流水</div>
-                <div class="text-[11px] text-(--text-muted) font-normal truncate">表格分析与科学数据统计</div>
+                <div class="text-xs truncate">{{ t('exportModal.csvTitle') }}</div>
+                <div class="text-[11px] text-(--text-muted) font-normal truncate">{{ t('exportModal.csvDesc') }}</div>
               </div>
             </button>
 
@@ -80,8 +80,8 @@
               :class="['p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2.5', exportFormat === 'json' ? 'border-amber-500 bg-amber-500/12 text-amber-700 dark:text-amber-300 font-bold' : 'ui-sub-card text-(--text-secondary) hover:border-(--border-strong)']">
               <AppIcon name="code" class="w-4 h-4 shrink-0" />
               <div class="min-w-0">
-                <div class="text-xs truncate">JSON 审计明细</div>
-                <div class="text-[11px] text-(--text-muted) font-normal truncate">SIEM / SOC 日志审计入库</div>
+                <div class="text-xs truncate">{{ t('exportModal.jsonTitle') }}</div>
+                <div class="text-[11px] text-(--text-muted) font-normal truncate">{{ t('exportModal.jsonDesc') }}</div>
               </div>
             </button>
 
@@ -89,8 +89,8 @@
               :class="['p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2.5 col-span-2', exportFormat === 'har' ? 'border-purple-500 bg-purple-500/12 text-purple-700 dark:text-purple-300 font-bold' : 'ui-sub-card text-(--text-secondary) hover:border-(--border-strong)']">
               <AppIcon name="globe" class="w-4 h-4 shrink-0" />
               <div class="min-w-0">
-                <div class="text-xs">HAR 1.2 归档格式</div>
-                <div class="text-[11px] text-(--text-muted) font-normal">HTTP 请求/响应浏览器标准会话归档</div>
+                <div class="text-xs">{{ t('exportModal.harTitle') }}</div>
+                <div class="text-[11px] text-(--text-muted) font-normal">{{ t('exportModal.harDesc') }}</div>
               </div>
             </button>
           </div>
@@ -123,15 +123,15 @@
 
       <!-- 3. 底栏操作 -->
       <div class="px-6 py-3 border-t border-(--border-subtle) bg-(--surface-content-alt) flex items-center justify-between shrink-0">
-        <span class="text-xs text-(--text-muted) font-mono-code ui-num">待导出: {{ selectedTargetPackets.length }} 帧</span>
+        <span class="text-xs text-(--text-muted) font-mono-code ui-num">{{ locale === 'en-US' ? `Ready: ${selectedTargetPackets.length} frames` : `待导出: ${selectedTargetPackets.length} 帧` }}</span>
         <div class="flex items-center gap-2">
           <button @click="$emit('close')" class="ui-btn-secondary px-4 py-1.5 text-xs font-semibold cursor-pointer">
-            取消
+            {{ locale === 'en-US' ? 'Cancel' : '取消' }}
           </button>
           <button @click="doExport" :disabled="isExporting || selectedTargetPackets.length === 0"
             class="ui-btn-primary text-xs px-5 py-1.5 font-bold cursor-pointer disabled:opacity-40">
-            <span v-if="isExporting">导出中...</span>
-            <span v-else>执行导出</span>
+            <span v-if="isExporting">{{ locale === 'en-US' ? 'Exporting...' : '导出中...' }}</span>
+            <span v-else>{{ t('exportModal.executeExport') }}</span>
           </button>
         </div>
       </div>
@@ -144,6 +144,9 @@
 import { ref, computed, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import AppIcon from './AppIcon.vue';
+import { useI18n } from '../i18n';
+
+const { t, locale } = useI18n();
 
 const props = defineProps<{
   isOpen: boolean;

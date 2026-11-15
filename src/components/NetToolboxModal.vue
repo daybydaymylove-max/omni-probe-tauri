@@ -14,14 +14,14 @@
           </div>
           <div>
             <h3 class="text-sm font-bold tracking-tight" style="color: var(--text-primary)">
-              网工高频原子工具箱 (Subnet / DNS / TCPing / TFTP / OUI)
+              {{ t('netToolbox.modalTitle') }}
             </h3>
             <p class="text-[11px]" style="color: var(--text-muted)">
-              快捷键 Ctrl + T 秒开 · 原生 Rust RFC 1035/1350/3021 引擎，零外挂依赖跨平台离线直跑
+              {{ t('netToolbox.modalSubtitle') }}
             </p>
           </div>
         </div>
-        <button @click="$emit('close')" class="ui-btn-secondary px-3 py-1 text-xs">关闭 (Esc)</button>
+        <button @click="$emit('close')" class="ui-btn-secondary px-3 py-1 text-xs">{{ t('netToolbox.closeEsc') }}</button>
       </div>
 
       <!-- 4 大功能分页栏 -->
@@ -31,42 +31,42 @@
           :class="activeTab === 'subnet' ? 'ui-btn-primary' : 'ui-btn-secondary'"
           class="px-3 py-1.5 text-xs"
         >
-          IPv4/IPv6 子网与 VLSM
+          {{ t('netToolbox.tabSubnet') }}
         </button>
         <button
           @click="activeTab = 'probe'"
           :class="activeTab === 'probe' ? 'ui-btn-primary' : 'ui-btn-secondary'"
           class="px-3 py-1.5 text-xs"
         >
-          原生 DNS / TCPing / HTTP 诊断
+          {{ t('netToolbox.tabProbe') }}
         </button>
         <button
           @click="activeTab = 'fileserver'; refreshFileServers()"
           :class="activeTab === 'fileserver' ? 'ui-btn-primary' : 'ui-btn-secondary'"
           class="px-3 py-1.5 text-xs"
         >
-          TFTP / HTTP 临时传包微服
+          {{ t('netToolbox.tabFileServer') }}
         </button>
         <button
           @click="activeTab = 'lookup'"
           :class="activeTab === 'lookup' ? 'ui-btn-primary' : 'ui-btn-secondary'"
           class="px-3 py-1.5 text-xs"
         >
-          OUI / 端口 / EtherType 离线速查
+          {{ t('netToolbox.tabLookup') }}
         </button>
         <button
           @click="activeTab = 'terminal'"
           :class="activeTab === 'terminal' ? 'ui-btn-primary' : 'ui-btn-secondary'"
           class="px-3 py-1.5 text-xs"
         >
-          管理终端 (Telnet/SSH)
+          {{ t('netToolbox.tabTerminal') }}
         </button>
         <button
           @click="activeTab = 'chinagov'; fetchChinaGovTelemetry()"
           :class="activeTab === 'chinagov' ? 'ui-btn-primary' : 'ui-btn-secondary'"
           class="px-3 py-1.5 text-xs"
         >
-          信创就绪度
+          {{ t('netToolbox.tabChinaGov') }}
         </button>
       </div>
 
@@ -84,14 +84,14 @@
               <input
                 v-model="subnetInput"
                 @keyup.enter="runSubnetCalc"
-                placeholder="输入 IPv4/IPv6 CIDR 或 IP 掩码，如 192.168.10.55/24 或 10.0.0.1 255.255.252.0"
+                :placeholder="t('netToolbox.subnetPlaceholder')"
                 class="ui-input px-3 py-1.5 text-xs flex-1 min-w-[260px] ui-num"
               />
-              <button @click="runSubnetCalc" class="ui-btn-primary px-3.5 py-1.5 text-xs">精确计算子网</button>
+              <button @click="runSubnetCalc" class="ui-btn-primary px-3.5 py-1.5 text-xs">{{ t('netToolbox.calcSubnet') }}</button>
               <div class="flex items-center gap-1.5">
-                <span class="text-xs" style="color: var(--text-muted)">VLSM 划分至 /</span>
+                <span class="text-xs" style="color: var(--text-muted)">{{ t('netToolbox.vlsmSplitTo') }}</span>
                 <input v-model.number="vlsmTargetPrefix" type="number" min="1" max="128" class="ui-input px-2 py-1.5 text-xs w-16 ui-num" />
-                <button @click="runVlsmSplit" class="ui-btn-secondary px-3 py-1.5 text-xs">切分子网表</button>
+                <button @click="runVlsmSplit" class="ui-btn-secondary px-3 py-1.5 text-xs">{{ t('netToolbox.splitSubnetTable') }}</button>
               </div>
             </div>
 
@@ -526,6 +526,9 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue';
 import { formatLatencyBadge, useNetToolbox } from '../composables/useNetToolbox';
+import { useI18n } from '../i18n';
+
+const { t } = useI18n();
 
 defineProps<{ show: boolean }>();
 const emit = defineEmits<{ (e: 'close'): void }>();

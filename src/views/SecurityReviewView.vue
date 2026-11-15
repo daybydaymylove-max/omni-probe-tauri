@@ -13,13 +13,13 @@
           </div>
           <div class="min-w-0">
             <div class="flex items-center gap-2 flex-wrap">
-              <h2 class="text-[13px] font-semibold tracking-tight" style="color: var(--text-primary);">四维合规安全审查与数据脱敏清洗工作台</h2>
+              <h2 class="text-[13px] font-semibold tracking-tight" style="color: var(--text-primary);">{{ locale === 'en-US' ? '4D Compliance Audit & Data De-identification Workspace' : '四维合规安全审查与数据脱敏清洗工作台' }}</h2>
               <span class="ui-pill px-2 py-0.5 rounded-full text-[11px] font-medium">
                 GB/T 22239 等保三级 · GB/T 43697 · 国家秘密法
               </span>
             </div>
             <p class="text-[11px] mt-0.5 truncate" style="color: var(--text-muted);">
-              工控越权写指令 · DNS/ICMP 隐蔽隧道 · PII 分类分级 · 涉密红头公文 · 闭环逆向零残余脱敏
+              {{ locale === 'en-US' ? 'OT Write Violations · DNS/ICMP Tunnels · PII Classification · Secrecy Files · Clean De-identification' : '工控越权写指令 · DNS/ICMP 隐蔽隧道 · PII 分类分级 · 涉密红头公文 · 闭环逆向零残余脱敏' }}
             </p>
           </div>
         </div>
@@ -27,22 +27,22 @@
         <div class="flex items-center gap-2 flex-wrap">
           <button @click="showVpnDetectorModal = true" class="ui-btn-secondary px-3 py-1.5 text-xs text-rose-700 dark:text-rose-300 border-rose-500/30">
             <AppIcon name="radar" :size="14" class="text-rose-500" />
-            <span>VPN/代理隧道侦测</span>
+            <span>{{ locale === 'en-US' ? 'VPN / Tunnel Detector' : 'VPN/代理隧道侦测' }}</span>
           </button>
 
           <button @click="generateComprehensiveReport" :disabled="isGeneratingReport" class="ui-btn-primary px-3 py-1.5 text-xs">
             <AppIcon name="document" :size="14" />
-            <span>{{ isGeneratingReport ? '生成报告中...' : '出具综合勘验报告' }}</span>
+            <span>{{ isGeneratingReport ? (locale === 'en-US' ? 'Generating Report...' : '生成报告中...') : (locale === 'en-US' ? 'Generate Audit Report' : '出具综合勘验报告') }}</span>
           </button>
 
           <button @click="refreshAllData" class="ui-btn-secondary px-3 py-1.5 text-xs">
             <AppIcon name="refresh" :size="14" />
-            <span>刷新底账</span>
+            <span>{{ locale === 'en-US' ? 'Refresh Ledger' : '刷新底账' }}</span>
           </button>
 
           <button @click="clearCurrentAuditRecords" class="ui-btn-danger px-3 py-1.5 text-xs">
             <AppIcon name="trash" :size="14" />
-            <span>清空记录</span>
+            <span>{{ locale === 'en-US' ? 'Clear Logs' : '清空记录' }}</span>
           </button>
         </div>
       </div>
@@ -59,20 +59,20 @@
           <div class="min-w-0">
             <div class="text-[11px] font-semibold flex items-center gap-1.5" style="color: var(--text-muted);">
               <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>
-              <span>1. 网络安全审查</span>
+              <span>{{ locale === 'en-US' ? '1. Network Security Audit' : '1. 网络安全审查' }}</span>
             </div>
             <div class="text-base ui-num font-bold mt-0.5" style="color: var(--text-primary);">
-              {{ (networkStats?.total_events ?? 0).toLocaleString() }} <span class="text-[11px] font-normal" style="color: var(--text-muted);">起违规事件</span>
+              {{ (networkStats?.total_events ?? 0).toLocaleString() }} <span class="text-[11px] font-normal" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Violations' : '起违规事件' }}</span>
             </div>
             <div class="text-[11px] ui-num truncate mt-0.5" style="color: var(--text-muted);">
-              工控越权 {{ networkStats?.industrial_write_violations ?? 0 }} · DNS隧道 {{ networkStats?.dns_tunnel_count ?? 0 }}
+              {{ locale === 'en-US' ? `ICS Writes: ${networkStats?.industrial_write_violations ?? 0} · DNS Tunnels: ${networkStats?.dns_tunnel_count ?? 0}` : `工控越权 ${networkStats?.industrial_write_violations ?? 0} · DNS隧道 ${networkStats?.dns_tunnel_count ?? 0}` }}
             </div>
           </div>
           <span
             class="px-2 py-0.5 rounded text-[11px] font-semibold shrink-0"
             :class="(networkStats?.total_events ?? 0) > 0 ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'"
           >
-            {{ (networkStats?.total_events ?? 0) > 0 ? '需核验' : '正常受控' }}
+            {{ (networkStats?.total_events ?? 0) > 0 ? (locale === 'en-US' ? 'Review Needed' : '需核验') : (locale === 'en-US' ? 'Controlled' : '正常受控') }}
           </span>
         </div>
 
@@ -86,20 +86,20 @@
           <div class="min-w-0">
             <div class="text-[11px] font-semibold flex items-center gap-1.5" style="color: var(--text-muted);">
               <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0"></span>
-              <span>2. 数据安全审查</span>
+              <span>{{ locale === 'en-US' ? '2. Data Security Audit' : '2. 数据安全审查' }}</span>
             </div>
             <div class="text-base ui-num font-bold mt-0.5" style="color: var(--text-primary);">
-              {{ (dataSecSummary?.total_sensitive_hits ?? 0).toLocaleString() }} <span class="text-[11px] font-normal" style="color: var(--text-muted);">笔敏感命中</span>
+              {{ (dataSecSummary?.total_sensitive_hits ?? 0).toLocaleString() }} <span class="text-[11px] font-normal" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Sensitive Hits' : '笔敏感命中' }}</span>
             </div>
             <div class="text-[11px] ui-num truncate mt-0.5" style="color: var(--text-muted);">
-              核心 {{ dataSecSummary?.core_data_hits ?? 0 }} · 重要 {{ dataSecSummary?.important_data_hits ?? 0 }} · PII {{ dataSecSummary?.pii_hits ?? 0 }}
+              {{ locale === 'en-US' ? `Core: ${dataSecSummary?.core_data_hits ?? 0} · Important: ${dataSecSummary?.important_data_hits ?? 0} · PII: ${dataSecSummary?.pii_hits ?? 0}` : `核心 ${dataSecSummary?.core_data_hits ?? 0} · 重要 ${dataSecSummary?.important_data_hits ?? 0} · PII ${dataSecSummary?.pii_hits ?? 0}` }}
             </div>
           </div>
           <span
             class="px-2 py-0.5 rounded text-[11px] font-semibold shrink-0"
             :class="(dataSecSummary?.total_sensitive_hits ?? 0) > 0 ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'"
           >
-            {{ (dataSecSummary?.total_sensitive_hits ?? 0) > 0 ? '检出泄露' : '未见明文' }}
+            {{ (dataSecSummary?.total_sensitive_hits ?? 0) > 0 ? (locale === 'en-US' ? 'Leak Detected' : '检出泄露') : (locale === 'en-US' ? 'Clean' : '未见明文') }}
           </span>
         </div>
 
@@ -113,20 +113,20 @@
           <div class="min-w-0">
             <div class="text-[11px] font-semibold flex items-center gap-1.5" style="color: var(--text-muted);">
               <span class="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
-              <span>3. 保密安全审查</span>
+              <span>{{ locale === 'en-US' ? '3. Secrecy Compliance Audit' : '3. 保密安全审查' }}</span>
             </div>
             <div class="text-base ui-num font-bold mt-0.5" style="color: var(--text-primary);">
-              {{ secrecyTotalFindingsCount.toLocaleString() }} <span class="text-[11px] font-normal" style="color: var(--text-muted);">项定密与取证异常</span>
+              {{ secrecyTotalFindingsCount.toLocaleString() }} <span class="text-[11px] font-normal" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Findings' : '项定密与取证异常' }}</span>
             </div>
             <div class="text-[11px] truncate mt-0.5" style="color: var(--text-muted);">
-              USB历史痕迹 · 公文解构 · 一机两用 · 标密外联
+              {{ locale === 'en-US' ? 'USB Traces · Document Dissection · Dual-Homed · Classification' : 'USB历史痕迹 · 公文解构 · 一机两用 · 标密外联' }}
             </div>
           </div>
           <span
             class="px-2 py-0.5 rounded text-[11px] font-semibold shrink-0"
             :class="secrecyVerdict.isVetoed ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'"
           >
-            {{ secrecyVerdict.isVetoed ? '触发一票否决' : secrecyTotalFindingsCount > 0 ? '密级预警' : '合规受控' }}
+            {{ secrecyVerdict.isVetoed ? (locale === 'en-US' ? 'Veto Triggered' : '触发一票否决') : secrecyTotalFindingsCount > 0 ? (locale === 'en-US' ? 'Warning' : '密级预警') : (locale === 'en-US' ? 'Compliant' : '合规受控') }}
           </span>
         </div>
 
@@ -140,10 +140,10 @@
           <div class="min-w-0">
             <div class="text-[11px] font-semibold flex items-center gap-1.5" style="color: var(--text-muted);">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-              <span>4. 脱敏清洗审查</span>
+              <span>{{ locale === 'en-US' ? '4. De-identification Audit' : '4. 脱敏清洗审查' }}</span>
             </div>
             <div class="text-base ui-num font-bold mt-0.5" style="color: var(--text-primary);">
-              {{ sanitizationPolicies.length }} <span class="text-[11px] font-normal" style="color: var(--text-muted);">套标准策略模板</span>
+              {{ sanitizationPolicies.length }} <span class="text-[11px] font-normal" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Policies' : '套标准策略模板' }}</span>
             </div>
             <div class="text-[11px] truncate mt-0.5" style="color: var(--text-muted);">
               闭环逆向复测 · 出具密码学防篡改凭单
@@ -2366,6 +2366,9 @@ import AppIcon from '../components/AppIcon.vue';
 import EmptyState from '../components/EmptyState.vue';
 import { useUniversalDiff } from '../composables/useUniversalDiff';
 import { saveTextViaNativeDesktop } from '../composables/useDesktopSave';
+import { useI18n } from '../i18n';
+
+const { locale } = useI18n();
 import {
   evaluateSecrecyBmbVerdict,
   buildCanonicalSecrecyDigest,
