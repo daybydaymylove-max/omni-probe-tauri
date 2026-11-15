@@ -12,14 +12,21 @@ export interface TargetComplianceItem {
   clause: string;
   category: AssessmentCategory;
   categoryLabel: string;
+  categoryLabelEn?: string;
   title: string;
+  titleEn?: string;
   level: '等保二级' | '等保三级' | '工控三级扩展' | '云计算扩展' | '物联网扩展';
+  levelEn?: string;
   requirement: string;
+  requirementEn?: string;
   probeMethod: string;
+  probeMethodEn?: string;
   evidence: string;
+  evidenceEn?: string;
   status: ComplianceStatus;
   riskLevel: RiskLevel;
   remediation: string;
+  remediationEn?: string;
   manualModified?: boolean;
 }
 
@@ -42,6 +49,7 @@ export interface ProbeContext {
 export interface CategorySummary {
   category: AssessmentCategory;
   label: string;
+  labelEn?: string;
   total: number;
   compliant: number;
   partial: number;
@@ -59,10 +67,12 @@ export type ComplianceVerdictLevel = 'COMPLIANT' | 'PARTIALLY_COMPLIANT' | 'NON_
 export interface ComplianceVerdict {
   level: ComplianceVerdictLevel;
   levelText: '符合' | '基本符合' | '不符合';
+  levelTextEn?: string;
   isVetoedByCriticalRisk: boolean;
   criticalDefectCount: number;
   highDefectCount: number;
   reason: string;
+  reasonEn?: string;
 }
 
 export interface AssessmentMetrics {
@@ -92,56 +102,84 @@ export function createDefaultComplianceItems(): TargetComplianceItem[] {
       clause: 'GB/T 22239-2019 8.1.1.1',
       category: 'SCN',
       categoryLabel: '安全通信网络',
+      categoryLabelEn: 'Secure Communication Network',
       title: '网络架构与链路冗余',
+      titleEn: 'Network Architecture & Link Redundancy',
       level: '等保三级',
+      levelEn: 'MLPS Level 3',
       requirement: '应保证网络各个部分的带宽满足业务高峰期需要；关键网络节点和传输线路应提供冗余，避免单点故障。',
+      requirementEn: 'Bandwidth across all network segments shall satisfy peak business demands; key network nodes and transmission lines shall provide redundancy to eliminate single points of failure.',
       probeMethod: '网络探针微突发吞吐量监测、链路丢包率与 RTT 时延采样。',
+      probeMethodEn: 'Probe microburst throughput monitoring, packet loss rate, and RTT latency sampling.',
+      evidenceEn: 'Pending live link probing initiated by probe',
       evidence: '待探针启动现场链路探测',
       status: 'PENDING',
       riskLevel: 'MEDIUM',
       remediation: '针对核心生产网络链路配置双归冗余上行与负载均衡机制，消除单线故障隐患。',
+      remediationEn: 'Configure dual-homed redundant uplinks and load balancing on core production networks to eliminate single links of failure.',
     },
     {
       id: 'SCN-02',
       clause: 'GB/T 22239-2019 8.1.1.2',
       category: 'SCN',
       categoryLabel: '安全通信网络',
+      categoryLabelEn: 'Secure Communication Network',
       title: '通信传输完整性校验',
+      titleEn: 'Communication Transmission Integrity Verification',
       level: '等保三级',
+      levelEn: 'MLPS Level 3',
       requirement: '应采用校验码技术或密码技术保证通信过程中数据的完整性，避免传输中数据被非法篡改。',
+      requirementEn: 'Cryptographic technology or checksum algorithms shall be adopted during communication transmission to achieve integrity verification and detect tampering/replays.',
       probeMethod: '传输层 TCP/IP 校验和验证、报文完整性指纹审计与重传率分析。',
+      probeMethodEn: 'Inspect TLS MAC / IPsec HMAC / Modbus CRC / SL651 CRC checksums and detect plain unauthenticated packets.',
+      evidenceEn: 'Pending frame integrity and session layer MAC validation',
       evidence: '待探针分析网络传输层校验和与丢包重传状态',
       status: 'PENDING',
       riskLevel: 'MEDIUM',
       remediation: '启用传输层 HMAC 或 TLS 完整性校验机制，杜绝传输层报文在物理信道被伪造或重放。',
+      remediationEn: 'Enforce TLS 1.3, IPsec, or application-layer HMAC authentication across critical industrial communication channels.',
     },
     {
       id: 'SCN-03',
       clause: 'GB/T 22239-2019 8.1.1.3',
       category: 'SCN',
       categoryLabel: '安全通信网络',
+      categoryLabelEn: 'Secure Communication Network',
       title: '通信传输保密性与加密保护',
+      titleEn: 'Communication Confidentiality & Encryption',
       level: '等保三级',
+      levelEn: 'MLPS Level 3',
       requirement: '在通信双方建立连接之前，应用密码技术进行会话初始化验证；通信过程应采用加密保护，严禁明文传输鉴别信息与敏感数据。',
+      requirementEn: 'Cryptographic technology (e.g. SM2/SM3/SM4 or AES-GCM) shall be utilized to encrypt sensitive control directives, credentials, and business payloads.',
       probeMethod: '高危明文协议扫描（21 FTP / 23 Telnet / 80 HTTP / 110 POP3 / 143 IMAP 等），检测明文凭据与敏感通信内容。',
+      probeMethodEn: 'Full-packet DPI sniffing, Shannon entropy analysis, and plaintext credential/token leakage inspection.',
+      evidenceEn: 'Pending deep DPI entropy and plaintext credential scanning',
       evidence: '待探针发起目标高危明文协议端口探测',
       status: 'PENDING',
       riskLevel: 'CRITICAL',
       remediation: '全网禁用明文 Telnet/FTP 等非安全协议；全面切换为 SSH(v2)、FTPS/SFTP 及 TLS 1.3 强加密通信。',
+      remediationEn: 'Disable plain HTTP/Telnet/FTP; mandate HTTPS (TLS 1.3), SSHv2, or encrypted VPN tunnels for management.',
     },
     {
       id: 'SCN-04',
       clause: 'GB/T 22239-2019 8.1.1.4',
       category: 'SCN',
       categoryLabel: '安全通信网络',
+      categoryLabelEn: 'Secure Communication Network',
       title: '可信验证与通信实体鉴别',
+      titleEn: 'Trusted Verification & Entity Authentication',
       level: '等保三级',
+      levelEn: 'MLPS Level 3',
       requirement: '可基于可信根对通信设备的系统引导程序、系统程序等进行可信验证；通信实体身份应通过数字证书或安全通道鉴别。',
+      requirementEn: 'Dynamic verification and mutual identity authentication shall be executed on communication entities prior to establishing network connections.',
       probeMethod: 'TLS 握手数字证书链校验、公钥指纹比对与节点身份鉴别。',
+      probeMethodEn: 'Audit bidirectional TLS client certificate authentication and industrial master-slave identity challenges.',
+      evidenceEn: 'Pending verification of mutual client certificates and handshake authentication',
       evidence: '待探针核验通信握手证书链与安全通道凭据',
       status: 'PENDING',
       riskLevel: 'LOW',
       remediation: '部署私有 PKI/CA 体系，为生产网络核心通信节点签发合规数字证书并实施双向 mTLS 认证。',
+      remediationEn: 'Enable mutual mTLS certificate verification or 802.1X port-based access authentication.',
     },
 
     // ------------------------------------------------------------------------
@@ -152,70 +190,105 @@ export function createDefaultComplianceItems(): TargetComplianceItem[] {
       clause: 'GB/T 22239-2019 8.1.2.1',
       category: 'SAB',
       categoryLabel: '安全区域边界',
+      categoryLabelEn: 'Secure Area Boundary',
       title: '边界访问控制策略与最小化开放',
+      titleEn: 'Boundary Access Control & Least Privilege',
       level: '等保三级',
+      levelEn: 'MLPS Level 3',
       requirement: '应在网络边界部署访问控制策略，限制非授权跨网段通信，原则上默认拒绝所有通信连接，仅开放必要端口。',
+      requirementEn: 'Access control policies shall be deployed on perimeter devices based on 5-tuple (source/dest IP, source/dest port, protocol) following default-deny least privilege.',
       probeMethod: 'CIDR 安全网段访问控制规则审计与边界开放端口比对。',
+      probeMethodEn: 'Probe port scanning, cross-subnet ping probe, and CIDR security level boundary verification.',
+      evidenceEn: 'Pending port scanning and CIDR boundary access control check',
       evidence: '待核验探针 CIDR 安全域规则与目标端口开放情况',
       status: 'PENDING',
       riskLevel: 'HIGH',
       remediation: '在网络汇聚/核心交换机及防火墙配置严格的 ACL 白名单，实行 Default-Deny 原则。',
+      remediationEn: 'Enforce default-deny firewall policies; only open necessary business ports to authorized source CIDR blocks.',
     },
     {
       id: 'SAB-02',
       clause: 'GB/T 22239-2019 8.1.2.2',
       category: 'SAB',
       categoryLabel: '安全区域边界',
+      categoryLabelEn: 'Secure Area Boundary',
       title: '跨域连接与违规外联防范',
+      titleEn: 'Cross-Domain Connection & Illicit External Link Defense',
       level: '等保三级',
+      levelEn: 'MLPS Level 3',
       requirement: '应限制不同安全保护等级网络之间的非授权直通连接；应能发现内部网络节点私自违规外联公共网络。',
+      requirementEn: 'Internal network hosts shall be strictly prevented from unauthorized dual-homing, cellular hotspot sharing, or unauthorized external connections.',
       probeMethod: '测地追踪跃点网关审查、公网出口 IP 探测与路由直通合规分析。',
+      probeMethodEn: 'Scan dual NIC routes, check active Wi-Fi SSIDs/dongles, and inspect suspicious NAT/VPN outbound tunnels.',
+      evidenceEn: 'Pending dual-homed routing and illicit external link scanning',
       evidence: '待探针测地追踪审查目标出向跃点与公网连通性',
       status: 'PENDING',
       riskLevel: 'CRITICAL',
       remediation: '部署准入控制 (802.1X) 与主机违规外联监控探针，阻断双网卡或 4G/5G 随身 WiFi 私接。',
+      remediationEn: 'Disable wireless NICs and secondary network cards on internal hosts; deploy endpoint DLP and 802.1X NAC controls.',
     },
     {
       id: 'SAB-03',
       clause: 'GB/T 22239-2019 8.1.2.3',
       category: 'SAB',
       categoryLabel: '安全区域边界',
+      categoryLabelEn: 'Secure Area Boundary',
       title: '边界安全审计与全流量捕获',
+      titleEn: 'Boundary Security Auditing & Full Packet Capture',
       level: '等保三级',
+      levelEn: 'MLPS Level 3',
       requirement: '应在网络边界对进出网络的数据流进行监测与审计，记录源/目的 IP、协议类型、端口及时间戳，审计记录抗抵赖。',
+      requirementEn: 'Perimeter traffic and security events shall be comprehensively audited and recorded, with raw logs and pcaps retained for at least 180 days.',
       probeMethod: '现场以太网全协议无损抓包引擎与 PCAP 存证状态校验。',
+      probeMethodEn: 'Verify probe packet capture engine, ring-buffer PCAP persistence, and retention capacity.',
+      evidenceEn: 'Probe supports full pcap capture and judicial chain of custody logging',
       evidence: '待校验探针无损抓包与审计落盘运行状态',
       status: 'PENDING',
       riskLevel: 'MEDIUM',
       remediation: '部署旁路网络分流器 (TAP/SPAN)，通过探针持续审计进出大区的全部关键协议流量并持久化存盘。',
+      remediationEn: 'Deploy dedicated network TAP/SPAN mirroring into high-speed storage arrays; ensure retention exceeds 180 days.',
     },
     {
       id: 'SAB-04',
       clause: 'GB/T 22239-2019 8.1.2.4',
       category: 'SAB',
       categoryLabel: '安全区域边界',
+      categoryLabelEn: 'Secure Area Boundary',
       title: '网络层入侵防范与畸形报文阻断',
+      titleEn: 'Network Intrusion Prevention & Malformed Packet Blocking',
       level: '等保三级',
+      levelEn: 'MLPS Level 3',
       requirement: '应在关键网络节点处检测、防止或阻断恶意代码与网络层攻击（如端口扫描、畸形数据包、DDoS 攻击）。',
+      requirementEn: 'Capability shall be provided to detect and block port scanning, SYN flood, teardrop, Land attacks, and protocol anomaly malformations at perimeter boundaries.',
       probeMethod: 'DPI 威胁特征码过滤、蜜罐诱捕告警状态核验。',
+      probeMethodEn: 'Feed abnormal test frames (Land, Ping of Death, malformed Modbus) and verify WFP/XDP drop counters.',
+      evidenceEn: 'Pending malformed packet injection and WFP/XDP kernel drop rate test',
       evidence: '待探针校验 DPI 规则库与网络蜜罐防御状态',
       status: 'PENDING',
       riskLevel: 'HIGH',
       remediation: '在边界交换机开启防 SYN-Flood/UDP-Flood 泛洪限流策略，结合探针蜜罐实时感知未知嗅探行为。',
+      remediationEn: 'Deploy WFP kernel filters or dedicated hardware IPS; enable strict RFC state validation and rate limiting.',
     },
     {
       id: 'SAB-05',
       clause: 'GB/T 22239-2019 8.1.2.5',
       category: 'SAB',
       categoryLabel: '安全区域边界',
+      categoryLabelEn: 'Secure Area Boundary',
       title: '生产控制大区单向隔离与安全网闸',
+      titleEn: 'Industrial Control One-Way Isolation & Safety Data Diode',
       level: '等保三级',
+      levelEn: 'MLPS Level 3',
       requirement: '生产控制大区与管理信息大区之间必须设置经国家保密/公安部门认证的物理单向安全隔离网闸。',
+      requirementEn: 'Physical or optical one-way isolation data diodes must be installed between the industrial production control zone (Zone I/II) and management zone (Zone III).',
       probeMethod: '反向协议嗅探，验证单向隔离设备是否存在非法反向 TCP 握手或未审批直连信道。',
+      probeMethodEn: 'Verify reverse SYN connectivity, broadcast reflection, and data diode unidirectional flow.',
+      evidenceEn: 'Pending reverse TCP SYN probe between production and management zones',
       evidence: '待探针针对目标生产边界发起反向嗅探验证',
       status: 'PENDING',
       riskLevel: 'CRITICAL',
       remediation: '在工控系统控制层与管理层边界部署工业安全隔离网闸，彻底杜绝 TCP 双向穿透。',
+      remediationEn: 'Install certified hardware optical data diodes; strictly prohibit reverse IP session establishment.',
     },
 
     // ------------------------------------------------------------------------
@@ -226,84 +299,126 @@ export function createDefaultComplianceItems(): TargetComplianceItem[] {
       clause: 'GB/T 22239-2019 8.1.3.1',
       category: 'SCE',
       categoryLabel: '安全计算环境',
+      categoryLabelEn: 'Secure Computing Environment',
       title: '身份鉴别与密码复杂度机制',
+      titleEn: 'Identity Authentication & Password Complexity',
       level: '等保三级',
+      levelEn: 'MLPS Level 3',
       requirement: '应对登录操作系统、网络设备或工控主机的用户进行身份鉴别，身份标识具有唯一性；严禁出厂默认口令，强制口令复杂度与定期更换。',
+      requirementEn: 'Management users shall undergo unique identity authentication; passwords shall enforce complexity (letters, numbers, symbols, length >= 8) and login failure locking.',
       probeMethod: 'SSH(22)、RDP(3389)、Web 管理端鉴权行为审计与弱口令探活。',
+      probeMethodEn: 'Audit login services, verify brute-force locking thresholds and default account disabling.',
+      evidenceEn: 'Pending OS and service authentication policy audit',
       evidence: '待探针校验目标主机远程管理端口鉴权安全性',
       status: 'PENDING',
       riskLevel: 'HIGH',
       remediation: '强制启用多因素认证 (MFA) 或堡垒机统一接入，设置密码复杂度至少包含大写、小写、数字、特殊符号且长度不少于 8 位。',
+      remediationEn: 'Enforce password complexity policies; configure account lockout after 5 consecutive failures.',
     },
     {
       id: 'SCE-02',
       clause: 'GB/T 22239-2019 8.1.3.2',
       category: 'SCE',
       categoryLabel: '安全计算环境',
+      categoryLabelEn: 'Secure Computing Environment',
       title: '最小化端口与高危服务关闭',
+      titleEn: 'Port Minimization & High-Risk Service Deactivation',
       level: '等保三级',
+      levelEn: 'MLPS Level 3',
       requirement: '应严格控制或关闭不必要的网络端口与服务，严禁默认暴露 445 (SMB)、135/139 (NetBIOS)、3389 (RDP) 等高危暴露面。',
+      requirementEn: 'Unnecessary high-risk network ports (e.g. 21/FTP, 23/Telnet, 135/139/445/SMB, 3389/RDP) must be completely disabled on servers and hosts.',
       probeMethod: '探针全端口主动并发探测，检测是否存在未经审批的高危勒索高发端口暴露。',
+      probeMethodEn: 'Probe full-range TCP/UDP port sweep against target IP.',
+      evidenceEn: 'Pending target host port sweep and service fingerprinting',
       evidence: '待探针执行目标端口探活',
       status: 'PENDING',
       riskLevel: 'CRITICAL',
       remediation: '立即关闭操作系统中不必要的 Server 服务、Computer Browser 服务，在主机防火墙屏蔽 445/135/139 端口入站。',
+      remediationEn: 'Disable unnecessary services; bind management services to local loopback or management VLAN only.',
     },
     {
       id: 'SCE-03',
       clause: 'GB/T 22239-2019 8.1.3.3',
       category: 'SCE',
       categoryLabel: '安全计算环境',
+      categoryLabelEn: 'Secure Computing Environment',
       title: '安全审计事件与留存期限合规',
+      titleEn: 'Security Audit Events & Retention Compliance',
       level: '等保三级',
+      levelEn: 'MLPS Level 3',
       requirement: '审计记录应包含事件日期、时间、发起者、事件类型、执行结果等；网络安全法与等保明确要求本地或集中留存日志不少于 6 个月。',
+      requirementEn: 'Operating systems and key applications shall audit user logons, permission changes, and abnormal operations, retaining logs for at least 6 months.',
       probeMethod: '主机日志归档策略与集中式 Syslog 外发状态核查。',
+      probeMethodEn: 'Audit system audit policy (Auditpol / auditd) and Syslog forwarding integrity.',
+      evidenceEn: 'Pending OS audit policy and remote Syslog delivery verification',
       evidence: '待校验目标集中日志留存策略',
       status: 'PENDING',
       riskLevel: 'MEDIUM',
       remediation: '配置操作系统本地安全审计策略，开启登录成功/失败、特权使用审计，并通过 Syslog 转发至集中日志平台留存 180 天以上。',
+      remediationEn: 'Enable successful and failed audit events for logon/privilege use; configure centralized Syslog archiving.',
     },
     {
       id: 'SCE-04',
       clause: 'GB/T 22239-2019 8.1.3.4',
       category: 'SCE',
       categoryLabel: '安全计算环境',
+      categoryLabelEn: 'Secure Computing Environment',
       title: '入侵防范与已知漏洞离线加固',
+      titleEn: 'Intrusion Prevention & Vulnerability Hardening',
       level: '等保三级',
+      levelEn: 'MLPS Level 3',
       requirement: '应遵循最小安装原则，仅安装经安全验证的软件组件；应定期开展漏洞排查并及时修补已知高危漏洞，禁止存在严重 CVE 漏洞暴露。',
+      requirementEn: 'Operating systems and middleware shall apply vendor security patches in a timely manner; known high-risk CVE vulnerabilities must be patched.',
       probeMethod: '服务指纹（Banner）识别与已知高危漏洞签名比对。',
+      probeMethodEn: 'Probe offline CVE vulnerability library comparison against target OS and software versions.',
+      evidenceEn: 'Pending offline CVE database matching against target fingerprint',
       evidence: '待探针识别目标服务版本指纹',
       status: 'PENDING',
       riskLevel: 'HIGH',
       remediation: '对生产网主机定期进行离线安全基准扫描，及时为操作系统和数据库打上经离线测试验证的官方安全补丁。',
+      remediationEn: 'Update system patches; implement virtual patching via host WAF/IPS for legacy systems unable to reboot.',
     },
     {
       id: 'SCE-05',
       clause: 'GB/T 22239-2019 8.1.3.5',
       category: 'SCE',
       categoryLabel: '安全计算环境',
+      categoryLabelEn: 'Secure Computing Environment',
       title: '数据完整性与抗重放防范',
+      titleEn: 'Data Integrity & Anti-Replay Defense',
       level: '等保三级',
+      levelEn: 'MLPS Level 3',
       requirement: '应采用密码技术保证重要数据在传输和存储过程中的完整性，能够检测到数据的伪造、篡改与未授权修改。',
+      requirementEn: 'Critical business data, configuration parameters, and transaction logs shall be protected with digital signatures or MACs to detect tampering and prevent replays.',
       probeMethod: '传输数据层校验算法验证、TLS/SSL 密码套件强健度审计。',
+      probeMethodEn: 'Verify payload timestamp, sequence number, and crypto hash verification on communication flows.',
+      evidenceEn: 'Pending protocol replay injection test and timestamp verification',
       evidence: '待探针分析数据传输密码套件与摘要强度',
       status: 'PENDING',
       riskLevel: 'MEDIUM',
       remediation: '对核心业务通信全面升级至 TLS 1.2+ 并淘汰 DES/3DES/RC4 等过时算法，关键数据表引入 HMAC 校验字段。',
+      remediationEn: 'Incorporate monotonic sequence numbers, nonces, and timestamp validation into business protocols.',
     },
     {
       id: 'SCE-06',
       clause: 'GB/T 22239-2019 8.1.3.6',
       category: 'SCE',
       categoryLabel: '安全计算环境',
+      categoryLabelEn: 'Secure Computing Environment',
       title: '剩余信息保护与会话注销',
+      titleEn: 'Residual Information Protection & Session Logoff',
       level: '等保三级',
+      levelEn: 'MLPS Level 3',
       requirement: '应保证操作系统和数据库系统用户的鉴别信息在释放前得到完全清除；应支持超时自动锁定或注销会话。',
+      requirementEn: 'Operating memory, temporary files, and sessions shall be purged upon user logoff or task termination; idle sessions shall automatically disconnect.',
       probeMethod: '管理会话空闲超时断开机制核查。',
+      probeMethodEn: 'Audit session timeout configuration and residual file scanning in temporary directories.',
+      evidenceEn: 'Pending session timeout parameter and memory zeroing check',
       evidence: '待核查操作系统及设备终端会话超时策略',
       status: 'PENDING',
       riskLevel: 'LOW',
       remediation: '在组策略或 SSH 配置中强制设置 ClientAliveInterval 300 及 ClientAliveCountMax 2，无操作 15 分钟自动断开。',
+      remediationEn: 'Configure SSH/Web session timeout to 10-15 minutes; purge temporary scratch directories regularly.',
     },
 
     // ------------------------------------------------------------------------
@@ -314,56 +429,84 @@ export function createDefaultComplianceItems(): TargetComplianceItem[] {
       clause: 'GB/T 22239-2019 8.1.4.1',
       category: 'SMC',
       categoryLabel: '安全管理中心',
+      categoryLabelEn: 'Security Management Center',
       title: '三员分立与权限互相制约机制',
+      titleEn: 'Separation of Three Roles & Mutual Checks',
       level: '等保三级',
+      levelEn: 'MLPS Level 3',
       requirement: '应对系统管理员、安全管理员和安全审计员进行身份鉴别，权限独立正交划分，形成相互监督制约机制，杜绝超级管理员一人独大。',
+      requirementEn: 'System management, security management, and audit management must be strictly divided among independent administrators with mutually checkable permissions.',
       probeMethod: '核验管理控制台 RBAC 三员权责清单与管理员操作审计流水。',
+      probeMethodEn: 'Audit probe RBAC accounts (SysAdmin, SecAdmin, AuditAdmin) and permission isolation.',
+      evidenceEn: 'Pending three-role administrative model verification',
       evidence: '待核验现场系统管理三员分立落实情况',
       status: 'PENDING',
       riskLevel: 'HIGH',
       remediation: '在生产运维平台建立独立三员账号，严禁共用 root/administrator 账号，安全审计员独享日志清理处置权限。',
+      remediationEn: 'Implement strict RBAC three-role separation; prohibit shared superuser root/admin accounts.',
     },
     {
       id: 'SMC-02',
       clause: 'GB/T 22239-2019 8.1.4.2',
       category: 'SMC',
       categoryLabel: '安全管理中心',
+      categoryLabelEn: 'Security Management Center',
       title: '集中式安全审计与 Syslog 外发',
+      titleEn: 'Centralized Security Auditing & Syslog Forwarding',
       level: '等保三级',
+      levelEn: 'MLPS Level 3',
       requirement: '应对分散在各个设备上的审计数据进行集中收集、汇总与备份，支持跨设备行为关联分析与集中告警。',
+      requirementEn: 'Security audit records across all network devices, servers, and probes shall be forwarded in real time to a centralized SOC/SIEM platform via RFC 5424 Syslog.',
       probeMethod: '探针 Syslog (RFC 5424) 外发管道连通性与远端日志服务器状态比对。',
+      probeMethodEn: 'Verify probe Syslog client connection status, facility code, and transmission queue.',
+      evidenceEn: 'Pending RFC 5424 Syslog forwarding handshake test',
       evidence: '待校验 Syslog 外发配置与日志接收端连通性',
       status: 'PENDING',
       riskLevel: 'MEDIUM',
       remediation: '全网各网络节点配置 Syslog UDP/TCP 外发至独立的 SIEM/SOC 平台，确保日志异地集中留存备份。',
+      remediationEn: 'Configure RFC 5424 Syslog client to stream events to centralized log servers; ensure TLS transmission.',
     },
     {
       id: 'SMC-03',
       clause: 'GB/T 22239-2019 8.1.4.3',
       category: 'SMC',
       categoryLabel: '安全管理中心',
+      categoryLabelEn: 'Security Management Center',
       title: '集中管控与安全配置基线核验',
+      titleEn: 'Centralized Management & Baseline Compliance Verification',
       level: '等保三级',
+      levelEn: 'MLPS Level 3',
       requirement: '应对网络链路、安全设备和服务器的运行状况进行集中监测，能够对全网设备的安全配置进行统一基线巡检与漂移监测。',
+      requirementEn: 'Security configurations, whitelists, and firewall rules shall be managed centrally with automated baseline drift detection.',
       probeMethod: '网络拓扑状态、工业通信基线白名单自学习模式与漂移事件审计。',
+      probeMethodEn: 'Audit probe baseline whitelist engine status and rule persistence.',
+      evidenceEn: 'Pending baseline whitelist rule repository check',
       evidence: '待探针核验全网通信基线与拓扑健康度',
       status: 'PENDING',
       riskLevel: 'MEDIUM',
       remediation: '建立企业安全配置基线库，定期对设备配置进行自动化合规漂移核查，发现未经授权的端口开放立即告警阻断。',
+      remediationEn: 'Deploy centralized baseline management; establish automated alerts for configuration drift.',
     },
     {
       id: 'SMC-04',
       clause: 'GB/T 22239-2019 8.1.4.4',
       category: 'SMC',
       categoryLabel: '安全管理中心',
+      categoryLabelEn: 'Security Management Center',
       title: '审计记录保护与防篡改存证',
+      titleEn: 'Audit Record Protection & Anti-Tampering Storage',
       level: '等保三级',
+      levelEn: 'MLPS Level 3',
       requirement: '应定期对审计记录进行安全备份与司法级真实性验真，禁止非审计人员处置或篡改日志，保证审计记录的完整性与抗抵赖性。',
+      requirementEn: 'Audit logs shall be protected from deletion, modification, or overwriting by any user, utilizing cryptographic hashes and WORM storage.',
       probeMethod: '国密 SM3 + SHA-256 双哈希司法证据封印与链式完整性验真。',
+      probeMethodEn: 'Verify probe GB/T 29360 dual-hash (SM3 + SHA-256) chain of custody and write-once integrity.',
+      evidenceEn: 'Probe uses GB/T 29360 SM3+SHA256 blockchain-style append-only ledger',
       evidence: '待核查审计记录防篡改哈希封存与存证验真状态',
       status: 'PENDING',
       riskLevel: 'HIGH',
       remediation: '在日志落盘或轮转时采用数字签名或国密 SM3 链式哈希封存，定期进行抗抵赖一致性比对。',
+      remediationEn: 'Store audit logs on write-once media (WORM) or tamper-evident append-only hash chains.',
     },
 
     // ------------------------------------------------------------------------
@@ -374,70 +517,105 @@ export function createDefaultComplianceItems(): TargetComplianceItem[] {
       clause: 'GB/T 22239-2019 G.4.1',
       category: 'ICS',
       categoryLabel: '工控安全扩展',
+      categoryLabelEn: 'ICS Extension',
       title: '室外及工业控制现场物理隔离',
+      titleEn: 'Industrial Field Physical Isolation',
       level: '工控三级扩展',
+      levelEn: 'ICS Level 3 Extension',
       requirement: '工业控制系统的控制组件、控制网络应部署在受控的工业机柜或物理隔离区域，限制非授权人员物理接触。',
+      requirementEn: 'Field control and process monitoring networks shall be physically isolated from external public networks and enterprise office subnets.',
       probeMethod: '工业现场物理总线（RS-485 / CAN / 以太网）链路探活与接入审计。',
+      probeMethodEn: 'Probe routing table, default gateway reachability, and public IP connection attempts.',
+      evidenceEn: 'Pending industrial field gateway isolation and routing audit',
       evidence: '待探针核查工业物理链路接入状态',
       status: 'PENDING',
       riskLevel: 'MEDIUM',
       remediation: '将 PLC、RTU 与控制交换机安装在加锁工业防护机柜中，机柜门配备开门监测微动开关与视频监控覆盖。',
+      remediationEn: 'Disconnect direct internet links from industrial control networks; enforce air-gapped or diode isolation.',
     },
     {
       id: 'ICS-02',
       clause: 'GB/T 22239-2019 G.4.2',
       category: 'ICS',
       categoryLabel: '工控安全扩展',
+      categoryLabelEn: 'ICS Extension',
       title: '工业通信基线白名单与漂移检测',
+      titleEn: 'Industrial Communication Baseline Whitelist & Drift Detection',
       level: '工控三级扩展',
+      levelEn: 'ICS Level 3 Extension',
       requirement: '在工业控制网络应建立通信基线白名单，限制工业控制协议的源/目的地址与通信对，实时检测非法连接与非预期流量。',
+      requirementEn: 'Industrial networks shall operate on strict communication baselines; unauthorized IP-MAC pairs or abnormal protocol communications shall be flagged immediately.',
       probeMethod: '探针基线白名单自学习模式状态（LEARNING / ENFORCING）核验与漂移告警分析。',
+      probeMethodEn: 'Audit probe industrial whitelist engine, learning mode, and drift alerts.',
+      evidenceEn: 'Pending industrial whitelist activation and baseline drift inspection',
       evidence: '待核验工业通信基线白名单规则集',
       status: 'PENDING',
       riskLevel: 'CRITICAL',
       remediation: '启用工控网络自学习通信基线白名单，仅放行经过审批的主站与从站合法通信对，任何未知 IP 接入一律实时阻断并报警。',
+      remediationEn: 'Enable industrial communication whitelisting; block or raise alerts on newly observed IP/MAC pairs.',
     },
     {
       id: 'ICS-03',
       clause: 'GB/T 22239-2019 G.4.3',
       category: 'ICS',
       categoryLabel: '工控安全扩展',
+      categoryLabelEn: 'ICS Extension',
       title: '工业协议高危写指令与功能码 DPI 审计',
+      titleEn: 'Industrial Protocol High-Risk Write Command DPI Auditing',
       level: '工控三级扩展',
+      levelEn: 'ICS Level 3 Extension',
       requirement: '应对 Modbus、S7Comm、OPC-UA、EtherNet/IP 等工业控制协议的高危写指令（如写单个/多个寄存器、下装程序、强制停机）进行细粒度深度审计与阻断。',
+      requirementEn: 'High-risk write directives (e.g. register writes, program download, forced shutdown) across Modbus, S7Comm, OPC-UA, and EtherNet/IP must be inspected and restricted via DPI.',
       probeMethod: '探针 ICS-ACL 规则库与 DPI 工业功能码深度过滤引擎状态核查。',
+      probeMethodEn: 'Inspect probe ICS-ACL rule repository and industrial function code DPI filtering engine.',
+      evidenceEn: 'Pending industrial port status and ICS-ACL function code rule audit',
       evidence: '待探针核查工控端口开放与 ICS-ACL 功能码过滤规则',
       status: 'PENDING',
       riskLevel: 'CRITICAL',
       remediation: '配置工业防火墙或探针 DPI 规则，默认仅允许只读功能码（如 Modbus 0x01-0x04），写操作（0x05/0x06/0x10）必须实施严格的来源 IP 与指令白名单校验。',
+      remediationEn: 'Deploy industrial DPI firewalls; restrict write commands to authorized engineering workstations with strict source IP verification.',
     },
     {
       id: 'ICS-04',
       clause: 'GB/T 22239-2019 G.4.4',
       category: 'ICS',
       categoryLabel: '工控安全扩展',
+      categoryLabelEn: 'ICS Extension',
       title: '无线与非预期移动介质严密控制',
+      titleEn: 'Wireless & Unauthorized Removable Media Control',
       level: '工控三级扩展',
+      levelEn: 'ICS Level 3 Extension',
       requirement: '工业控制系统内部严禁私自搭建未经审批的无线 WiFi、蓝牙热点或公网通道；严禁未经验毒的移动存储介质接入工控上位机。',
+      requirementEn: 'Ad-hoc wireless APs, Bluetooth dongles, and uninspected USB storage devices are strictly prohibited within industrial control environments.',
       probeMethod: '无线频谱侦测、BLE 蓝牙广播扫描与现场非法 AP 探活。',
+      probeMethodEn: 'Wireless spectrum scanning, BLE beacon discovery, and unauthorized AP detection.',
+      evidenceEn: 'Pending wireless beacon and unauthorized AP environment survey',
       evidence: '待探针校验工业现场无线广播与非法 AP 接入情况',
       status: 'PENDING',
       riskLevel: 'HIGH',
       remediation: '关闭所有工业主机与工控交换机内置无线网卡/蓝牙模块，上位机部署 USB 硬件端口管控，禁止使用外来 U 盘。',
+      remediationEn: 'Disable onboard Wi-Fi/Bluetooth modules; enforce USB hardware port locking on all HMIs and IPCs.',
     },
     {
       id: 'ICS-05',
       clause: 'GB/T 22239-2019 G.4.5',
       category: 'ICS',
       categoryLabel: '工控安全扩展',
+      categoryLabelEn: 'ICS Extension',
       title: '工控设备可用性保障与非侵入式探测',
+      titleEn: 'ICS Availability Assurance & Non-Intrusive Probing',
       level: '工控三级扩展',
+      levelEn: 'ICS Level 3 Extension',
       requirement: '工业控制系统在进行网络评估或维护时，严禁使用破坏性暴力全端口扫描等高风险手段，确保工业连续生产进程安全稳定。',
+      requirementEn: 'Security assessments within industrial environments must strictly avoid destructive port scanning or high-frequency probing to prevent PLC buffer overflows or halts.',
       probeMethod: '验证探针轻量级低频探活与被动嗅探模式，确保不会引发工控 PLC 缓冲区溢出或死机。',
+      probeMethodEn: 'Verify probe lightweight low-frequency probing and passive sniffing modes.',
+      evidenceEn: 'Probe operates in non-intrusive lightweight and passive capture mode',
       evidence: '探针采用非侵入式轻量探活与无损被动抓包模式',
       status: 'COMPLIANT',
       riskLevel: 'LOW',
       remediation: '在工控现场作业时，严格禁止使用全端口暴力扫描工具；优先采用探针的被动监听（Passive Sniffing）模式评估资产。',
+      remediationEn: 'Never use aggressive multi-threaded port fuzzers in ICS environments; rely strictly on passive sniffing.',
     },
 
     // ------------------------------------------------------------------------
@@ -448,56 +626,84 @@ export function createDefaultComplianceItems(): TargetComplianceItem[] {
       clause: 'GB/T 22239-2019 E.4.1',
       category: 'CLOUD',
       categoryLabel: '云计算安全扩展',
+      categoryLabelEn: 'Cloud Security Extension',
       title: '基础设施网络边界与虚拟化防穿透',
+      titleEn: 'Infrastructure Boundary & Virtualization Anti-Penetration',
       level: '云计算扩展',
+      levelEn: 'Cloud Extension',
       requirement: '应保证不同云租户之间的虚拟网络逻辑隔离与防跨租户穿透攻击；云服务商管理网络与云租户业务网络必须物理或逻辑隔离。',
+      requirementEn: 'Logical isolation between cloud tenants must be guaranteed to prevent cross-tenant escape; provider management networks must be isolated from tenant networks.',
       probeMethod: '虚拟网卡/VxLAN 报文嗅探、跨租户网络可达性与虚拟防火墙隔离状态核查。',
+      probeMethodEn: 'Virtual NIC / VxLAN sniffing, cross-tenant reachability, and virtual firewall isolation verification.',
+      evidenceEn: 'Pending cloud perimeter micro-segmentation verification',
       evidence: '待探针发起云环境网络边界隔离核查',
       status: 'PENDING',
       riskLevel: 'CRITICAL',
       remediation: '在 SDN/虚拟交换机强制启用微隔离策略 (Micro-Segmentation)，确保不同租户 VPC/VxLAN 标签严格隔离。',
+      remediationEn: 'Enforce micro-segmentation across SDN/virtual switches; verify strict VxLAN VNI isolation.',
     },
     {
       id: 'CLOUD-02',
       clause: 'GB/T 22239-2019 E.4.2',
       category: 'CLOUD',
       categoryLabel: '云计算安全扩展',
+      categoryLabelEn: 'Cloud Security Extension',
       title: '云平台虚拟资源访问控制与镜像完整性',
+      titleEn: 'Cloud Virtual Resource Access Control & Image Integrity',
       level: '云计算扩展',
+      levelEn: 'Cloud Extension',
       requirement: '应对虚拟机镜像与快照进行完整性校验；在虚拟机迁移过程中应对数据传输实施强加密保护。',
+      requirementEn: 'VM images and snapshots shall undergo cryptographic integrity checks; live migration channels must enforce strong encryption.',
       probeMethod: '云镜像摘要对比与虚拟机热迁移流量抓包审计。',
+      probeMethodEn: 'Cloud image digest comparison and VM live migration traffic interception audit.',
+      evidenceEn: 'Pending cloud VM image hash and migration TLS tunnel audit',
       evidence: '待校验云主机镜像哈希指纹与热迁移加密通道',
       status: 'PENDING',
       riskLevel: 'HIGH',
       remediation: '对云镜像文件启用数字签名防伪造，虚机热迁移通信强制绑定 TLS 1.3 专用加密通道。',
+      remediationEn: 'Digitally sign VM images; mandate TLS 1.3 encapsulation for VM live migration.',
     },
     {
       id: 'CLOUD-03',
       clause: 'GB/T 22239-2019 E.4.3',
       category: 'CLOUD',
       categoryLabel: '云计算安全扩展',
+      categoryLabelEn: 'Cloud Security Extension',
       title: '云服务商特权运维与多租户审计隔离',
+      titleEn: 'Cloud Provider Privileged Ops & Multi-Tenant Audit Isolation',
       level: '云计算扩展',
+      levelEn: 'Cloud Extension',
       requirement: '云服务商特权账号不得直接访问租户业务数据；租户的安全审计日志应独立存储且具备跨租户防泄露保护。',
+      requirementEn: 'Cloud provider privileged accounts shall not directly access tenant business data; tenant audit logs must be isolated from other tenants.',
       probeMethod: '云租户 Syslog 异地独立留存与管理端特权访问拦截核验。',
+      probeMethodEn: 'Audit tenant Syslog remote retention and hypervisor privileged access controls.',
+      evidenceEn: 'Pending tenant independent log forwarding and access credential audit',
       evidence: '待核查云租户独立日志外发与访问控制凭据',
       status: 'PENDING',
       riskLevel: 'HIGH',
       remediation: '部署独立的云租户堡垒机与日志专有存储池，严禁云平台底层 root 账号直连租户数据库。',
+      remediationEn: 'Deploy dedicated tenant bastion hosts and isolated log buckets; prohibit hypervisor root access to guest data.',
     },
     {
       id: 'CLOUD-04',
       clause: 'GB/T 22239-2019 E.4.4',
       category: 'CLOUD',
       categoryLabel: '云计算安全扩展',
+      categoryLabelEn: 'Cloud Security Extension',
       title: '云计算数据剩余信息保护与存储介质销毁',
+      titleEn: 'Cloud Residual Information Protection & Media Destruction',
       level: '云计算扩展',
+      levelEn: 'Cloud Extension',
       requirement: '云租户释放云硬盘或计算资源时，应确保底层物理存储空间得到完全擦除覆盖，防止跨租户数据残留窃取。',
+      requirementEn: 'When cloud storage or compute resources are released, underlying physical blocks must be completely overwritten to prevent data recovery.',
       probeMethod: '释放存储块残留载荷分析与磁盘置零擦除审计。',
+      probeMethodEn: 'Inspect block release sanitization and zero-fill overwriting audit logs.',
+      evidenceEn: 'Pending cloud storage volume release wiping policy audit',
       evidence: '待验证云存储块释放覆写策略',
       status: 'PENDING',
       riskLevel: 'MEDIUM',
       remediation: '在云平台底层存储卷管理开启 Crypto-Erase 或三次伪随机数据覆写擦除机制。',
+      remediationEn: 'Enable Crypto-Erase or 3-pass pseudo-random data overwriting upon cloud volume teardown.',
     },
 
     // ------------------------------------------------------------------------
@@ -508,56 +714,84 @@ export function createDefaultComplianceItems(): TargetComplianceItem[] {
       clause: 'GB/T 22239-2019 F.4.1',
       category: 'IOT',
       categoryLabel: '物联网安全扩展',
+      categoryLabelEn: 'IoT Security Extension',
       title: '物联网网关节点访问控制与协议转换安全',
+      titleEn: 'IoT Gateway Access Control & Protocol Conversion Security',
       level: '物联网扩展',
+      levelEn: 'IoT Extension',
       requirement: '物联网网关应具备对接入感知节点进行身份鉴别与访问控制能力，严格限制非授权传感设备接入；协议转换应具备安全性校验。',
+      requirementEn: 'IoT gateways shall authenticate sensor nodes and enforce access control; protocol conversions must execute security validation.',
       probeMethod: '网关 MQTT/CoAP/HTTP 端口探活与未授权发布/订阅鉴权测试。',
+      probeMethodEn: 'Probe gateway MQTT/CoAP/HTTP ports and test for unauthorized pub/sub access.',
+      evidenceEn: 'Pending IoT gateway authentication and service audit',
       evidence: '待探针针对物联网网关开放服务发起鉴权审计',
       status: 'PENDING',
       riskLevel: 'CRITICAL',
       remediation: '在物联网网关开启基于设备证书或 Token 的强身份鉴别，禁用 MQTT 匿名匿名接入模式。',
+      remediationEn: 'Enforce device certificate or token authentication on IoT gateways; disable anonymous MQTT access.',
     },
     {
       id: 'IOT-02',
       clause: 'GB/T 22239-2019 F.4.2',
       category: 'IOT',
       categoryLabel: '物联网安全扩展',
+      categoryLabelEn: 'IoT Security Extension',
       title: '感知层短距无线通信保密性与防窃听',
+      titleEn: 'Sensing Layer Short-Range Wireless Confidentiality & Anti-Eavesdropping',
       level: '物联网扩展',
+      levelEn: 'IoT Extension',
       requirement: '感知节点与网关之间的短距离无线通信（如 ZigBee、LoRa、BLE 蓝牙、RFID）应采用轻量级密码技术进行报文传输加密。',
+      requirementEn: 'Short-range wireless communication (ZigBee, LoRa, BLE, RFID) between sensors and gateways shall employ lightweight cryptography.',
       probeMethod: 'BLE 蓝牙广播/无线 802.15.4 空口抓包与明文载荷分析。',
+      probeMethodEn: 'BLE advertising / 802.15.4 air capture and plaintext payload inspection.',
+      evidenceEn: 'Pending short-range wireless air capture and encryption check',
       evidence: '待探针采集现场近场蓝牙与无线空口报文校验加密状态',
       status: 'PENDING',
       riskLevel: 'HIGH',
       remediation: '在传感网络启用 AES-128-CCM 或国密 SM4 轻量加密算法，严禁无线信道明文裸传工况数据。',
+      remediationEn: 'Enable AES-128-CCM or lightweight SM4 cipher suites across wireless sensor channels.',
     },
     {
       id: 'IOT-03',
       clause: 'GB/T 22239-2019 F.4.3',
       category: 'IOT',
       categoryLabel: '物联网安全扩展',
+      categoryLabelEn: 'IoT Security Extension',
       title: '感知节点设备固件防篡改与离线安全加固',
+      titleEn: 'Sensor Node Firmware Tamper-Resistance & Physical Hardening',
       level: '物联网扩展',
+      levelEn: 'IoT Extension',
       requirement: '感知节点的系统引导程序和固件应具备防非法篡改能力；应对传感设备开放的物理调试接口（如 JTAG、SWD、UART 调试口）进行钝化封闭。',
+      requirementEn: 'Sensor bootloaders and firmware shall prevent unauthorized tampering; physical debug ports (JTAG, SWD, UART) must be deactivated on production nodes.',
       probeMethod: '现场硬件总线串口/UART 交互扫描与固件校验。',
+      probeMethodEn: 'Hardware bus UART / JTAG interactive scanning and firmware verification.',
+      evidenceEn: 'Pending physical debug port inspection and firmware signature check',
       evidence: '待核查物联网终端设备物理调试口与固件签名机制',
       status: 'PENDING',
       riskLevel: 'HIGH',
       remediation: '量产感知终端烧断硬件熔丝关闭 JTAG 调试接口，启用 Secure Boot 硬件安全引导与固件验签。',
+      remediationEn: 'Blow physical fuses to disable JTAG ports on production units; enable Secure Boot firmware verification.',
     },
     {
       id: 'IOT-04',
       clause: 'GB/T 22239-2019 F.4.4',
       category: 'IOT',
       categoryLabel: '物联网安全扩展',
+      categoryLabelEn: 'IoT Security Extension',
       title: '感知节点抗泛洪滥用与抗重放防御',
+      titleEn: 'Sensor Node Anti-Flooding Abuse & Anti-Replay Defense',
       level: '物联网扩展',
+      levelEn: 'IoT Extension',
       requirement: '物联网网关及控制中心应具备防止恶意终端发起伪造报文泛洪或重放攻击的能力，防止传感网络拥塞瘫痪。',
+      requirementEn: 'IoT nodes and gateways shall incorporate rate limiting to defend against packet flooding and battery-exhaustion attacks, and prevent replay attacks.',
       probeMethod: '探针流量微突发分析与高频重放报文检测。',
+      probeMethodEn: 'Low-power node frequency stress probing, nonce check, and timestamp anti-replay validation.',
+      evidenceEn: 'Pending rate limiting and replay defense verification',
       evidence: '待探针监测物联网接入流量序列号递增与防重放窗口',
       status: 'PENDING',
       riskLevel: 'MEDIUM',
       remediation: '在通信载荷中加入单调递增计数器 (Sequence Number) 或带时间戳的 HMAC 摘要，拦截重放报文。',
+      remediationEn: 'Implement token bucket rate limiting and nonces to protect low-power nodes from exhaustion and replays.',
     },
   ];
 }
@@ -1001,9 +1235,19 @@ export function calculateAssessmentMetrics(items: TargetComplianceItem[]): Asses
     if (catApplicable > 0) {
       score = Number(((val.compliant * 1.0 + val.partial * 0.5) / catApplicable * 100).toFixed(1));
     }
+    const catLabelEnMap: Record<AssessmentCategory, string> = {
+      SCN: 'Secure Communication Network',
+      SAB: 'Secure Area Boundary',
+      SCE: 'Secure Computing Environment',
+      SMC: 'Security Management Center',
+      ICS: 'ICS Security Extension',
+      CLOUD: 'Cloud Security Extension',
+      IOT: 'IoT Security Extension',
+    };
     return {
       category: key,
       label: val.label,
+      labelEn: catLabelEnMap[key] || val.label,
       total: val.total,
       compliant: val.compliant,
       partial: val.partial,
@@ -1064,10 +1308,12 @@ export function evaluateOverallComplianceVerdict(
     return {
       level: 'COMPLIANT',
       levelText: '符合',
+      levelTextEn: 'COMPLIANT',
       isVetoedByCriticalRisk: false,
       criticalDefectCount: 0,
       highDefectCount: 0,
       reason: '所有适用的国家标准等级保护安全控制点经探针实测均达到合规基准要求，未发现任何安全控制缺陷。',
+      reasonEn: 'All applicable baseline security controls meet compliance requirements upon probe verification with zero defects.',
     };
   }
 
@@ -1075,10 +1321,12 @@ export function evaluateOverallComplianceVerdict(
     return {
       level: 'NON_COMPLIANT',
       levelText: '不符合',
+      levelTextEn: 'NON-COMPLIANT',
       isVetoedByCriticalRisk: true,
       criticalDefectCount: criticalDefects,
       highDefectCount: highDefects,
       reason: `虽然整体综合得分率为 ${overallScorePct}%，但实测命中 ${criticalDefects} 项严重高危缺陷（涉及明文管理、身份鉴别或访问控制），触犯 GB/T 28448-2019 一票否决红线，总体结论裁决为不符合。`,
+      reasonEn: `Overall score is ${overallScorePct}%, but ${criticalDefects} critical defect(s) triggered standard one-vote veto, resulting in Non-Compliant verdict.`,
     };
   }
 
@@ -1086,20 +1334,24 @@ export function evaluateOverallComplianceVerdict(
     return {
       level: 'NON_COMPLIANT',
       levelText: '不符合',
+      levelTextEn: 'NON-COMPLIANT',
       isVetoedByCriticalRisk: false,
       criticalDefectCount: 0,
       highDefectCount: highDefects,
       reason: `综合得分率仅为 ${overallScorePct}%，未达到 GB/T 28448-2019 规定的 70.0% 基本符合底线阈值，总体结论判定为不符合。`,
+      reasonEn: `Overall score of ${overallScorePct}% is below the 70.0% threshold required by GB/T 28448-2019, resulting in Non-Compliant verdict.`,
     };
   }
 
   return {
     level: 'PARTIALLY_COMPLIANT',
     levelText: '基本符合',
+    levelTextEn: 'PARTIALLY COMPLIANT',
     isVetoedByCriticalRisk: false,
     criticalDefectCount: 0,
     highDefectCount: highDefects,
     reason: `综合得分率达到 ${overallScorePct}%，且不存在一票否决的高危严重缺陷，达到 GB/T 28448-2019“基本符合”标准。`,
+    reasonEn: `Overall score reached ${overallScorePct}% with zero critical veto defects, meeting GB/T 28448-2019 Partially Compliant criteria.`,
   };
 }
 
@@ -1159,7 +1411,9 @@ export function generateGbMarkdownReport(params: {
   items: TargetComplianceItem[];
   metrics: AssessmentMetrics;
   generatedAt?: string;
+  locale?: string;
 }): string {
+  const isEn = params.locale === 'en-US';
   const timeStr = params.generatedAt || new Date().toLocaleString();
   const digest = computeReportEvidenceDigest({
     targetIp: params.targetIp,
@@ -1172,76 +1426,149 @@ export function generateGbMarkdownReport(params: {
   const defects = params.items.filter((i) => i.status === 'NON_COMPLIANT' || i.status === 'PARTIAL');
 
   const lines: string[] = [];
-  lines.push('# 网络安全等级保护 2.0 / 3.0 现场测评核查报告');
-  lines.push('');
-  lines.push(`> **报告编号**：\`${digest.reportId}\`  `);
-  lines.push(`> **基准依据**：国家标准 GB/T 22239-2019《信息安全技术 网络安全等级保护基本要求》/ GB/T 28448-2019《测评要求》  `);
-  lines.push(`> **测评工具**：Omni-Probe 全能网络探针系统 (工业级硬件/以太网协议分析引擎)  `);
-  lines.push(`> **生成时间**：${timeStr}  `);
-  lines.push(`> **测评操作员**：${params.inspectorName} (${params.inspectorRole})  `);
-  lines.push(`> **GB/T 29360 电子物证双哈希存证 (${digest.canonicalByteLength} Bytes)**：  `);
-  lines.push(`> - \`SM3\`: \`${digest.sm3Hex}\`  `);
-  lines.push(`> - \`SHA-256\`: \`${digest.sha256Hex}\``);
-  lines.push('');
-  lines.push('---');
-  lines.push('');
-  lines.push('## 一、测评基本信息与综合结论');
-  lines.push('');
-  lines.push(`- **被测目标资产**：\`${params.targetIp}\``);
-  lines.push(`- **评定安全保护等级**：\`${params.targetLevel}\``);
-  lines.push(`- **实测综合合规率**：**${params.metrics.overallScorePct}%**`);
-  lines.push(`- **GB/T 28448-2019 综合裁决结论**：**【${params.metrics.verdict.levelText}】** ${params.metrics.verdict.isVetoedByCriticalRisk ? '(⚠️ 触发一票否决)' : ''}`);
-  lines.push(`  - *裁决依据*：${params.metrics.verdict.reason}`);
-  lines.push(`- **测评控制项总数**：${params.metrics.totalCount} 项（适用项：${params.metrics.applicableCount}，不适用项：${params.metrics.naCount}）`);
-  lines.push(`  - **符合 (COMPLIANT)**：${params.metrics.compliantCount} 项`);
-  lines.push(`  - **部分符合 (PARTIAL)**：${params.metrics.partialCount} 项`);
-  lines.push(`  - **不符合 (NON_COMPLIANT)**：${params.metrics.nonCompliantCount} 项`);
-  lines.push(`  - **待核验 (PENDING)**：${params.metrics.pendingCount} 项`);
-  lines.push('');
-  lines.push('### 各大类控制域实测得分分布');
-  lines.push('');
-  lines.push('| 控制域体系分类 | 条款总数 | 符合 | 部分符合 | 不符合 | 不适用 | 达标得分率 |');
-  lines.push('| :--- | :---: | :---: | :---: | :---: | :---: | :---: |');
-  for (const cat of params.metrics.categories) {
-    lines.push(`| ${cat.label} | ${cat.total} | ${cat.compliant} | ${cat.partial} | ${cat.nonCompliant} | ${cat.na} | **${cat.scorePct}%** |`);
-  }
-  lines.push('');
-  lines.push('---');
-  lines.push('');
-  lines.push('## 二、高危缺陷项与加固整改建议');
-  lines.push('');
-  if (defects.length === 0) {
-    lines.push('未检出明确不符合项与高危漏洞，目标网络已达到当前等保等级预设基线。');
-  } else {
-    lines.push(`共检出 **${defects.length}** 项不符合或部分符合的风险控制点：`);
+  if (isEn) {
+    lines.push('# Cybersecurity Classified Protection 2.0 / 3.0 On-site Assessment Report');
     lines.push('');
-    defects.forEach((d, idx) => {
-      const statusText = d.status === 'NON_COMPLIANT' ? '【不符合】' : '【部分符合】';
-      lines.push(`### ${idx + 1}. [${d.id}] ${d.clause} - ${d.title} ${statusText}`);
-      lines.push(`- **所属控制域**：${d.categoryLabel}（风险等级: \`${d.riskLevel}\`）`);
-      lines.push(`- **标准原文要求**：${d.requirement}`);
-      lines.push(`- **探针现场实测证据**：\`${d.evidence}\``);
-      lines.push(`- **加固整改建议**：${d.remediation}`);
+    lines.push(`> **Report ID**: \`${digest.reportId}\`  `);
+    lines.push(`> **Standard Baseline**: National Standards GB/T 22239-2019 / GB/T 28448-2019  `);
+    lines.push(`> **Audit Tool**: Omni-Probe Industrial Network & Hardware Bus Analyzer  `);
+    lines.push(`> **Generated At**: ${timeStr}  `);
+    lines.push(`> **Inspector**: ${params.inspectorName} (${params.inspectorRole})  `);
+    lines.push(`> **GB/T 29360 Dual-Hash Chain of Custody (${digest.canonicalByteLength} Bytes)**:  `);
+    lines.push(`> - \`SM3\`: \`${digest.sm3Hex}\`  `);
+    lines.push(`> - \`SHA-256\`: \`${digest.sha256Hex}\``);
+    lines.push('');
+    lines.push('---');
+    lines.push('');
+    lines.push('## 1. Assessment Overview & Verdict');
+    lines.push('');
+    lines.push(`- **Target Asset**: \`${params.targetIp}\``);
+    lines.push(`- **Protection Level**: \`${params.targetLevel}\``);
+    lines.push(`- **Overall Compliance Score**: **${params.metrics.overallScorePct}%**`);
+    lines.push(`- **GB/T 28448-2019 Verdict**: **【${params.metrics.verdict.levelTextEn || params.metrics.verdict.level}】** ${params.metrics.verdict.isVetoedByCriticalRisk ? '(⚠️ Vetoed by Critical Defect)' : ''}`);
+    lines.push(`  - *Verdict Reason*: ${params.metrics.verdict.reasonEn || params.metrics.verdict.reason}`);
+    lines.push(`- **Total Controls**: ${params.metrics.totalCount} (Applicable: ${params.metrics.applicableCount}, N/A: ${params.metrics.naCount})`);
+    lines.push(`  - **COMPLIANT**: ${params.metrics.compliantCount}`);
+    lines.push(`  - **PARTIALLY COMPLIANT**: ${params.metrics.partialCount}`);
+    lines.push(`  - **NON-COMPLIANT**: ${params.metrics.nonCompliantCount}`);
+    lines.push(`  - **PENDING**: ${params.metrics.pendingCount}`);
+    lines.push('');
+    lines.push('### Category Score Distribution');
+    lines.push('');
+    lines.push('| Category | Total | Compliant | Partial | Non-Compliant | N/A | Score Rate |');
+    lines.push('| :--- | :---: | :---: | :---: | :---: | :---: | :---: |');
+    for (const cat of params.metrics.categories) {
+      lines.push(`| ${cat.labelEn || cat.label} | ${cat.total} | ${cat.compliant} | ${cat.partial} | ${cat.nonCompliant} | ${cat.na} | **${cat.scorePct}%** |`);
+    }
+    lines.push('');
+    lines.push('---');
+    lines.push('');
+    lines.push('## 2. High-Risk Defects & Remediation Guidelines');
+    lines.push('');
+    if (defects.length === 0) {
+      lines.push('No critical non-compliance or vulnerabilities detected. Target network satisfies baseline requirements.');
+    } else {
+      lines.push(`Detected **${defects.length}** defect item(s):`);
       lines.push('');
-    });
+      defects.forEach((d, idx) => {
+        const statusText = d.status === 'NON_COMPLIANT' ? '【NON-COMPLIANT】' : '【PARTIAL】';
+        lines.push(`### ${idx + 1}. [${d.id}] ${d.clause} - ${d.titleEn || d.title} ${statusText}`);
+        lines.push(`- **Category**: ${d.categoryLabelEn || d.categoryLabel} (Risk: \`${d.riskLevel}\`)`);
+        lines.push(`- **Standard Requirement**: ${d.requirementEn || d.requirement}`);
+        lines.push(`- **Probe Evidence**: \`${d.evidenceEn || d.evidence}\``);
+        lines.push(`- **Remediation**: ${d.remediationEn || d.remediation}`);
+        lines.push('');
+      });
+    }
+    lines.push('---');
+    lines.push('');
+    lines.push('## 3. Comprehensive Verification Matrix');
+    lines.push('');
+    lines.push('| Clause ID | Control Item | Required Level | Status | Probe Evidence |');
+    lines.push('| :--- | :--- | :---: | :---: | :--- |');
+    for (const item of params.items) {
+      const statusLabel =
+        item.status === 'COMPLIANT' ? 'COMPLIANT' :
+        item.status === 'PARTIAL' ? 'PARTIAL' :
+        item.status === 'NON_COMPLIANT' ? 'NON-COMPLIANT' :
+        item.status === 'NA' ? 'N/A' : 'PENDING';
+      lines.push(`| [${item.id}] ${item.clause} | ${item.titleEn || item.title} | ${item.levelEn || item.level} | **${statusLabel}** | ${(item.evidenceEn || item.evidence).replace(/\|/g, '/')} |`);
+    }
+    lines.push('');
+    lines.push('---');
+    lines.push('*Generated automatically by Omni-Probe Industrial Engine with Judicial Forensic Chain.*');
+  } else {
+    lines.push('# 网络安全等级保护 2.0 / 3.0 现场测评核查报告');
+    lines.push('');
+    lines.push(`> **报告编号**：\`${digest.reportId}\`  `);
+    lines.push(`> **基准依据**：国家标准 GB/T 22239-2019《信息安全技术 网络安全等级保护基本要求》/ GB/T 28448-2019《测评要求》  `);
+    lines.push(`> **测评工具**：Omni-Probe 全能网络探针系统 (工业级硬件/以太网协议分析引擎)  `);
+    lines.push(`> **生成时间**：${timeStr}  `);
+    lines.push(`> **测评操作员**：${params.inspectorName} (${params.inspectorRole})  `);
+    lines.push(`> **GB/T 29360 电子物证双哈希存证 (${digest.canonicalByteLength} Bytes)**：  `);
+    lines.push(`> - \`SM3\`: \`${digest.sm3Hex}\`  `);
+    lines.push(`> - \`SHA-256\`: \`${digest.sha256Hex}\``);
+    lines.push('');
+    lines.push('---');
+    lines.push('');
+    lines.push('## 一、测评基本信息与综合结论');
+    lines.push('');
+    lines.push(`- **被测目标资产**：\`${params.targetIp}\``);
+    lines.push(`- **评定安全保护等级**：\`${params.targetLevel}\``);
+    lines.push(`- **实测综合合规率**：**${params.metrics.overallScorePct}%**`);
+    lines.push(`- **GB/T 28448-2019 综合裁决结论**：**【${params.metrics.verdict.levelText}】** ${params.metrics.verdict.isVetoedByCriticalRisk ? '(⚠️ 触发一票否决)' : ''}`);
+    lines.push(`  - *裁决依据*：${params.metrics.verdict.reason}`);
+    lines.push(`- **测评控制项总数**：${params.metrics.totalCount} 项（适用项：${params.metrics.applicableCount}，不适用项：${params.metrics.naCount}）`);
+    lines.push(`  - **符合 (COMPLIANT)**：${params.metrics.compliantCount} 项`);
+    lines.push(`  - **部分符合 (PARTIAL)**：${params.metrics.partialCount} 项`);
+    lines.push(`  - **不符合 (NON_COMPLIANT)**：${params.metrics.nonCompliantCount} 项`);
+    lines.push(`  - **待核验 (PENDING)**：${params.metrics.pendingCount} 项`);
+    lines.push('');
+    lines.push('### 各大类控制域实测得分分布');
+    lines.push('');
+    lines.push('| 控制域体系分类 | 条款总数 | 符合 | 部分符合 | 不符合 | 不适用 | 达标得分率 |');
+    lines.push('| :--- | :---: | :---: | :---: | :---: | :---: | :---: |');
+    for (const cat of params.metrics.categories) {
+      lines.push(`| ${cat.label} | ${cat.total} | ${cat.compliant} | ${cat.partial} | ${cat.nonCompliant} | ${cat.na} | **${cat.scorePct}%** |`);
+    }
+    lines.push('');
+    lines.push('---');
+    lines.push('');
+    lines.push('## 二、高危缺陷项与加固整改建议');
+    lines.push('');
+    if (defects.length === 0) {
+      lines.push('未检出明确不符合项与高危漏洞，目标网络已达到当前等保等级预设基线。');
+    } else {
+      lines.push(`共检出 **${defects.length}** 项不符合或部分符合的风险控制点：`);
+      lines.push('');
+      defects.forEach((d, idx) => {
+        const statusText = d.status === 'NON_COMPLIANT' ? '【不符合】' : '【部分符合】';
+        lines.push(`### ${idx + 1}. [${d.id}] ${d.clause} - ${d.title} ${statusText}`);
+        lines.push(`- **所属控制域**：${d.categoryLabel}（风险等级: \`${d.riskLevel}\`）`);
+        lines.push(`- **标准原文要求**：${d.requirement}`);
+        lines.push(`- **探针现场实测证据**：\`${d.evidence}\``);
+        lines.push(`- **加固整改建议**：${d.remediation}`);
+        lines.push('');
+      });
+    }
+    lines.push('---');
+    lines.push('');
+    lines.push('## 三、现场实测全量控制项核查矩阵');
+    lines.push('');
+    lines.push('| 条款编号 | 控制项名称 | 等级要求 | 符合判定 | 探针实测证据链 |');
+    lines.push('| :--- | :--- | :---: | :---: | :--- |');
+    for (const item of params.items) {
+      const statusLabel =
+        item.status === 'COMPLIANT' ? '符合' :
+        item.status === 'PARTIAL' ? '部分符合' :
+        item.status === 'NON_COMPLIANT' ? '不符合' :
+        item.status === 'NA' ? '不适用' : '待核验';
+      lines.push(`| [${item.id}] ${item.clause} | ${item.title} | ${item.level} | **${statusLabel}** | ${item.evidence.replace(/\|/g, '/')} |`);
+    }
+    lines.push('');
+    lines.push('---');
+    lines.push('*本报告由 Omni-Probe 探针系统现场自动化探活与审计引擎生成，数据真实有效，已归入取证审计链。*');
   }
-  lines.push('---');
-  lines.push('');
-  lines.push('## 三、现场实测全量控制项核查矩阵');
-  lines.push('');
-  lines.push('| 条款编号 | 控制项名称 | 等级要求 | 符合判定 | 探针实测证据链 |');
-  lines.push('| :--- | :--- | :---: | :---: | :--- |');
-  for (const item of params.items) {
-    const statusLabel =
-      item.status === 'COMPLIANT' ? '符合' :
-      item.status === 'PARTIAL' ? '部分符合' :
-      item.status === 'NON_COMPLIANT' ? '不符合' :
-      item.status === 'NA' ? '不适用' : '待核验';
-    lines.push(`| [${item.id}] ${item.clause} | ${item.title} | ${item.level} | **${statusLabel}** | ${item.evidence.replace(/\|/g, '/')} |`);
-  }
-  lines.push('');
-  lines.push('---');
-  lines.push('*本报告由 Omni-Probe 探针系统现场自动化探活与审计引擎生成，数据真实有效，已归入取证审计链。*');
 
   return lines.join('\n');
 }
@@ -1259,7 +1586,9 @@ export function generateGbFormalAuditReportHtml(params: {
   generatedAt?: string;
   organizationName?: string;
   systemName?: string;
+  locale?: string;
 }): string {
+  const isEn = params.locale === 'en-US';
   const timeStr = params.generatedAt || new Date().toLocaleString();
   const orgName = params.organizationName || '被测重点行业单位 / 工业控制生产企业';
   const sysName = params.systemName || `核心业务通信网络系统 (${params.targetIp})`;
@@ -1281,7 +1610,6 @@ export function generateGbFormalAuditReportHtml(params: {
   const safeSysName = escapeHtml(sysName);
   const safeInspector = escapeHtml(`${params.inspectorName} (${params.inspectorRole})`);
   const safeTimeStr = escapeHtml(timeStr);
-  const safeVerdictReason = escapeHtml(verdict.reason);
 
   const verdictBadgeColor =
     verdict.level === 'COMPLIANT' ? '#059669' :
@@ -1469,95 +1797,102 @@ export function generateGbFormalAuditReportHtml(params: {
   <!-- 正式封面 -->
   <div class="page-cover">
     <div class="cover-header">
-      中华人民共和国网络安全等级保护制度 (等保 2.0 / 3.0)<br />
-      GB/T 22239-2019 / GB/T 28448-2019 标准测评技术大报告
+      ${isEn 
+        ? 'Cybersecurity Classified Protection Scheme (MLPS 2.0 / 3.0)<br />Technical Verification & Audit Report (GB/T 22239 / 28448)' 
+        : '中华人民共和国网络安全等级保护制度 (等保 2.0 / 3.0)<br />GB/T 22239-2019 / GB/T 28448-2019 标准测评技术大报告'}
     </div>
 
     <div class="cover-title">
-      <h1>网络安全等级保护现场测评报告</h1>
+      <h1>${isEn ? 'Cybersecurity Classified Protection Audit Report' : '网络安全等级保护现场测评报告'}</h1>
       <h2>【${safeTargetLevel}】</h2>
     </div>
 
     <div class="cover-meta">
-      <div class="cover-meta-row"><span>报告编号:</span><b>${escapeHtml(reportId)}</b></div>
-      <div class="cover-meta-row"><span>被测评单位:</span><b>${safeOrgName}</b></div>
-      <div class="cover-meta-row"><span>被测评信息系统:</span><b>${safeSysName}</b></div>
-      <div class="cover-meta-row"><span>测评对象目标 IP:</span><b>${safeTargetIp}</b></div>
-      <div class="cover-meta-row"><span>综合测评结论:</span><b style="color: ${verdictBadgeColor};">${escapeHtml(verdict.levelText)} (${params.metrics.overallScorePct}%)</b></div>
-      <div class="cover-meta-row"><span>测评机构/系统装备:</span><b>Omni-Probe 工业全能探针系统</b></div>
-      <div class="cover-meta-row"><span>测评工程师/操作员:</span><b>${safeInspector}</b></div>
-      <div class="cover-meta-row"><span>测评实施日期:</span><b>${safeTimeStr}</b></div>
+      <div class="cover-meta-row"><span>${isEn ? 'Report ID:' : '报告编号:'}</span><b>${escapeHtml(reportId)}</b></div>
+      <div class="cover-meta-row"><span>${isEn ? 'Target Unit:' : '被测评单位:'}</span><b>${safeOrgName}</b></div>
+      <div class="cover-meta-row"><span>${isEn ? 'Information System:' : '被测评信息系统:'}</span><b>${safeSysName}</b></div>
+      <div class="cover-meta-row"><span>${isEn ? 'Target IP:' : '测评对象目标 IP:'}</span><b>${safeTargetIp}</b></div>
+      <div class="cover-meta-row"><span>${isEn ? 'Assessment Verdict:' : '综合测评结论:'}</span><b style="color: ${verdictBadgeColor};">${escapeHtml(isEn ? (verdict.levelTextEn || verdict.level) : verdict.levelText)} (${params.metrics.overallScorePct}%)</b></div>
+      <div class="cover-meta-row"><span>${isEn ? 'Audit System / Equipment:' : '测评机构/系统装备:'}</span><b>Omni-Probe Industrial Probe System</b></div>
+      <div class="cover-meta-row"><span>${isEn ? 'Lead Inspector / Operator:' : '测评工程师/操作员:'}</span><b>${safeInspector}</b></div>
+      <div class="cover-meta-row"><span>${isEn ? 'Assessment Date:' : '测评实施日期:'}</span><b>${safeTimeStr}</b></div>
     </div>
 
     <div class="cover-footer">
-      密级标志：内部公开 · 严禁未授权篡改 · 本报告受密码学防篡改校验保护
+      ${isEn 
+        ? 'CLASSIFICATION: INTERNAL AUDIT · UNAUTHORIZED TAMPERING STRICTLY PROHIBITED · SECURED BY DUAL-HASH LEDGER'
+        : '密级标志：内部公开 · 严禁未授权篡改 · 本报告受密码学防篡改校验保护'}
     </div>
   </div>
 
   <!-- 正文第一页：综合测评结论与责任签署栏 -->
-  <div class="section-title">一、GB/T 28448-2019 标准测评结论裁决</div>
+  <div class="section-title">${isEn ? 'I. GB/T 28448-2019 Standard Assessment Verdict' : '一、GB/T 28448-2019 标准测评结论裁决'}</div>
   <div class="verdict-box">
     <div class="verdict-header">
       <div>
-        <div style="font-size: 11pt; font-weight: bold;">全国统一标准等保测评裁决结果：</div>
+        <div style="font-size: 11pt; font-weight: bold;">${isEn ? 'Official Standard MLPS Assessment Verdict:' : '全国统一标准等保测评裁决结果：'}</div>
         <div style="font-size: 9pt; color: #6b7280; margin-top: 1mm;">
-          依据 GB/T 28448-2019《信息安全技术 网络安全等级保护测评要求》第 5 节测评结论形成规约
+          ${isEn 
+            ? 'Formed in accordance with GB/T 28448-2019 Section 5 evaluation criteria'
+            : '依据 GB/T 28448-2019《信息安全技术 网络安全等级保护测评要求》第 5 节测评结论形成规约'}
         </div>
       </div>
-      <span class="verdict-badge">${escapeHtml(verdict.levelText)}</span>
+      <span class="verdict-badge">${escapeHtml(isEn ? (verdict.levelTextEn || verdict.level) : verdict.levelText)}</span>
     </div>
     <div style="font-size: 9.5pt; line-height: 1.6; margin-top: 2mm;">
-      <b>裁决判定理由：</b>${safeVerdictReason}
-      ${verdict.isVetoedByCriticalRisk ? '<br /><span style="color: #dc2626; font-weight: bold;">⚠️ 警示：根据国家标准一票否决规约，存在严重高危安全缺陷（如密码明文管理、默认账户未禁用或无锁定策略），即便综合达标率高亦直接裁决为不符合！</span>' : ''}
+      <b>${isEn ? 'Verdict Grounds:' : '裁决判定理由：'}</b>${escapeHtml(isEn ? (verdict.reasonEn || verdict.reason) : verdict.reason)}
+      ${verdict.isVetoedByCriticalRisk ? (isEn 
+        ? '<br /><span style="color: #dc2626; font-weight: bold;">⚠️ Warning: In accordance with standard one-vote veto criteria, critical high-risk security defect(s) detected, directly disqualifying overall compliance!</span>' 
+        : '<br /><span style="color: #dc2626; font-weight: bold;">⚠️ 警示：根据国家标准一票否决规约，存在严重高危安全缺陷（如密码明文管理、默认账户未禁用或无锁定策略），即便综合达标率高亦直接裁决为不符合！</span>') : ''}
     </div>
     <div class="hash-badge">
-      <b>电子物证哈希防篡改摘要 (GB/T 29360 认证保全 · 载荷 ${digest.canonicalByteLength} Bytes)：</b><br />
+      <b>${isEn ? 'Digital Evidence Hash Digest (GB/T 29360 Certified · Payload' : '电子物证哈希防篡改摘要 (GB/T 29360 认证保全 · 载荷'} ${digest.canonicalByteLength} Bytes)：</b><br />
       SM3: ${digest.sm3Hex}<br />
       SHA-256: ${digest.sha256Hex}
     </div>
   </div>
 
-  <div class="section-title">二、四方责任主体与测评结论签章确认栏</div>
+  <div class="section-title">${isEn ? 'II. Quadripartite Stakeholder Signatures & Seals' : '二、四方责任主体与测评结论签章确认栏'}</div>
   <div class="signature-grid">
     <div class="signature-box">
-      <b>测评机构现场主管工程师 (签字):</b>
+      <b>${isEn ? 'Lead Inspector of Audit Institution (Signature):' : '测评机构现场主管工程师 (签字):'}</b>
       <div style="margin-top: 12mm; border-bottom: 1px solid #9ca3af; width: 70%;"></div>
-      <div style="font-size: 8pt; color: #6b7280; margin-top: 1mm;">签字日期: ______年____月____日 (测评专用章)</div>
+      <div style="font-size: 8pt; color: #6b7280; margin-top: 1mm;">${isEn ? 'Date: YYYY / MM / DD (Seal of Audit Organization)' : '签字日期: ______年____月____日 (测评专用章)'}</div>
     </div>
     <div class="signature-box">
-      <b>被测评单位安全管理员 (签字):</b>
+      <b>${isEn ? 'Security Administrator of Target Organization (Signature):' : '被测评单位安全管理员 (签字):'}</b>
       <div style="margin-top: 12mm; border-bottom: 1px solid #9ca3af; width: 70%;"></div>
-      <div style="font-size: 8pt; color: #6b7280; margin-top: 1mm;">签字日期: ______年____月____日</div>
+      <div style="font-size: 8pt; color: #6b7280; margin-top: 1mm;">${isEn ? 'Date: YYYY / MM / DD' : '签字日期: ______年____月____日'}</div>
     </div>
     <div class="signature-box">
-      <b>被测评系统运维/系统管理员 (签字):</b>
+      <b>${isEn ? 'System Administrator / Operations Lead (Signature):' : '被测评系统运维/系统管理员 (签字):'}</b>
       <div style="margin-top: 12mm; border-bottom: 1px solid #9ca3af; width: 70%;"></div>
-      <div style="font-size: 8pt; color: #6b7280; margin-top: 1mm;">签字日期: ______年____月____日</div>
+      <div style="font-size: 8pt; color: #6b7280; margin-top: 1mm;">${isEn ? 'Date: YYYY / MM / DD' : '签字日期: ______年____月____日'}</div>
     </div>
     <div class="signature-box">
-      <b>被测评单位审计/合规负责人 (签字):</b>
+      <b>${isEn ? 'Compliance / Audit Director of Target Organization (Signature):' : '被测评单位审计/合规负责人 (签字):'}</b>
       <div style="margin-top: 12mm; border-bottom: 1px solid #9ca3af; width: 70%;"></div>
-      <div style="font-size: 8pt; color: #6b7280; margin-top: 1mm;">签字日期: ______年____月____日 (单位公章)</div>
+      <div style="font-size: 8pt; color: #6b7280; margin-top: 1mm;">${isEn ? 'Date: YYYY / MM / DD (Official Unit Seal)' : '签字日期: ______年____月____日 (单位公章)'}</div>
     </div>
   </div>
 
-  <div class="section-title" style="margin-top: 8mm;">三、控制域实测得分分布矩阵</div>
+  <div class="section-title" style="margin-top: 8mm;">${isEn ? 'III. Category Score Distribution Matrix' : '三、控制域实测得分分布矩阵'}</div>
   <table>
     <thead>
       <tr>
-        <th>控制域体系分类</th>
-        <th style="width: 15%; text-align: center;">条款总数</th>
-        <th style="width: 12%; text-align: center;">符合</th>
-        <th style="width: 12%; text-align: center;">部分符合</th>
-        <th style="width: 12%; text-align: center;">不符合</th>
-        <th style="width: 12%; text-align: center;">不适用</th>
-        <th style="width: 15%; text-align: center;">得分率</th>
+        <th>${isEn ? 'Control Category' : '控制域体系分类'}</th>
+        <th style="width: 15%; text-align: center;">${isEn ? 'Total' : '条款总数'}</th>
+        <th style="width: 12%; text-align: center;">${isEn ? 'Compliant' : '符合'}</th>
+        <th style="width: 12%; text-align: center;">${isEn ? 'Partial' : '部分符合'}</th>
+        <th style="width: 12%; text-align: center;">${isEn ? 'Non-Compliant' : '不符合'}</th>
+        <th style="width: 12%; text-align: center;">${isEn ? 'N/A' : '不适用'}</th>
+        <th style="width: 15%; text-align: center;">${isEn ? 'Score Rate' : '得分率'}</th>
       </tr>
     </thead>
     <tbody>
       ${params.metrics.categories.map((cat) => `
         <tr>
-          <td><b>${escapeHtml(cat.label)}</b></td>
+          <td><b>${escapeHtml(isEn ? (cat.labelEn || cat.label) : cat.label)}</b></td>
           <td style="text-align: center;">${cat.total}</td>
           <td style="text-align: center; color: #059669; font-weight: bold;">${cat.compliant}</td>
           <td style="text-align: center; color: #d97706;">${cat.partial}</td>
@@ -1572,68 +1907,77 @@ export function generateGbFormalAuditReportHtml(params: {
   <div class="page-break"></div>
 
   <!-- 正文第二页：高危缺陷与整改清单 -->
-  <div class="section-title">四、实测高危安全缺陷与加固整改行动表 (PoAM)</div>
-  ${defects.length === 0 ? '<p style="color: #059669; font-weight: bold;">经探针现场深入探活与基线比对，未检出任何违反国家标准的不符合项与高危漏洞。</p>' : `
+  <div class="section-title">${isEn ? 'IV. High-Risk Defects & Remediation Action Plan (PoAM)' : '四、实测高危安全缺陷与加固整改行动表 (PoAM)'}</div>
+  ${defects.length === 0 ? `<p style="color: #059669; font-weight: bold;">${isEn ? 'No non-compliant items or high-risk vulnerabilities detected upon on-site live inspection.' : '经探针现场深入探活与基线比对，未检出任何违反国家标准的不符合项与高危漏洞。'}</p>` : `
     <table>
       <thead>
         <tr>
-          <th style="width: 15%;">控制点编号</th>
-          <th style="width: 25%;">控制点要求</th>
-          <th style="width: 12%; text-align: center;">判定 / 风险</th>
-          <th style="width: 24%;">现场实测证据</th>
-          <th style="width: 24%;">加固整改指导措施</th>
+          <th style="width: 14%;">${isEn ? 'Clause ID' : '控制点编号'}</th>
+          <th style="width: 25%;">${isEn ? 'Control Requirement' : '控制点要求'}</th>
+          <th style="width: 13%; text-align: center;">${isEn ? 'Verdict / Risk' : '判定 / 风险'}</th>
+          <th style="width: 24%;">${isEn ? 'Live Evidence' : '现场实测证据'}</th>
+          <th style="width: 24%;">${isEn ? 'Remediation Action' : '加固整改指导措施'}</th>
         </tr>
       </thead>
       <tbody>
         ${defects.map((d) => `
           <tr>
             <td><b>[${escapeHtml(d.id)}]</b><br /><span style="font-size: 8pt; color: #6b7280;">${escapeHtml(d.clause)}</span></td>
-            <td><b>${escapeHtml(d.title)}</b><br /><span style="font-size: 8pt; color: #4b5563;">${escapeHtml(d.requirement)}</span></td>
+            <td><b>${escapeHtml(isEn ? (d.titleEn || d.title) : d.title)}</b><br /><span style="font-size: 8pt; color: #4b5563;">${escapeHtml(isEn ? (d.requirementEn || d.requirement) : d.requirement)}</span></td>
             <td style="text-align: center;">
-              <span class="status-tag status-${escapeHtml(d.status)}">${d.status === 'NON_COMPLIANT' ? '不符合' : '部分符合'}</span><br />
+              <span class="status-tag status-${escapeHtml(d.status)}">${isEn ? (d.status === 'NON_COMPLIANT' ? 'NON-COMPLIANT' : 'PARTIAL') : (d.status === 'NON_COMPLIANT' ? '不符合' : '部分符合')}</span><br />
               <span style="font-size: 8pt; color: #dc2626; font-weight: bold;">${escapeHtml(d.riskLevel)}</span>
             </td>
-            <td class="evidence-text">${escapeHtml(d.evidence)}</td>
-            <td style="font-size: 8pt; color: #92400e;">${escapeHtml(d.remediation)}</td>
+            <td class="evidence-text">${escapeHtml(isEn ? (d.evidenceEn || d.evidence) : d.evidence)}</td>
+            <td style="font-size: 8pt; color: #92400e;">${escapeHtml(isEn ? (d.remediationEn || d.remediation) : d.remediation)}</td>
           </tr>
         `).join('')}
       </tbody>
     </table>
   `}
 
-  <div class="section-title">五、全量现场实测证据链归档大表 (Evidence Logs)</div>
+  <div class="section-title" style="margin-top: 8mm;">${isEn ? 'V. Comprehensive Evidence Chain Log Matrix (Evidence Logs)' : '五、全量现场实测证据链归档大表 (Evidence Logs)'}</div>
   <table>
     <thead>
       <tr>
-        <th style="width: 14%;">条款编号</th>
-        <th style="width: 20%;">控制项名称</th>
-        <th style="width: 12%; text-align: center;">等级基线</th>
-        <th style="width: 10%; text-align: center;">符合判定</th>
-        <th style="width: 44%;">探针现场物理证据链 (Live Probe / Baseline / Config)</th>
+        <th style="width: 14%;">${isEn ? 'Clause ID' : '条款编号'}</th>
+        <th style="width: 20%;">${isEn ? 'Control Item' : '控制项名称'}</th>
+        <th style="width: 12%; text-align: center;">${isEn ? 'Required Level' : '等级基线'}</th>
+        <th style="width: 10%; text-align: center;">${isEn ? 'Status' : '符合判定'}</th>
+        <th style="width: 44%;">${isEn ? 'Probe Live Evidence Chain (GB/T 29360)' : '探针现场物理证据链 (Live Probe / Baseline / Config)'}</th>
       </tr>
     </thead>
     <tbody>
       ${params.items.map((item) => `
         <tr>
           <td><b>[${escapeHtml(item.id)}]</b><br /><span style="font-size: 7.5pt; color: #6b7280;">${escapeHtml(item.clause)}</span></td>
-          <td><b>${escapeHtml(item.title)}</b></td>
-          <td style="text-align: center; font-size: 8pt;">${escapeHtml(item.level)}</td>
+          <td><b>${escapeHtml(isEn ? (item.titleEn || item.title) : item.title)}</b></td>
+          <td style="text-align: center; font-size: 8pt;">${escapeHtml(isEn ? (item.levelEn || item.level) : item.level)}</td>
           <td style="text-align: center;">
             <span class="status-tag status-${escapeHtml(item.status)}">
-              ${item.status === 'COMPLIANT' ? '符合' :
+              ${isEn ? (
+                item.status === 'COMPLIANT' ? 'COMPLIANT' :
+                item.status === 'PARTIAL' ? 'PARTIAL' :
+                item.status === 'NON_COMPLIANT' ? 'NON-COMPLIANT' :
+                item.status === 'NA' ? 'N/A' : 'PENDING'
+              ) : (
+                item.status === 'COMPLIANT' ? '符合' :
                 item.status === 'PARTIAL' ? '部分符合' :
                 item.status === 'NON_COMPLIANT' ? '不符合' :
-                item.status === 'NA' ? '不适用' : '待核验'}
+                item.status === 'NA' ? '不适用' : '待核验'
+              )}
             </span>
           </td>
-          <td class="evidence-text">${escapeHtml(item.evidence)}</td>
+          <td class="evidence-text">${escapeHtml(isEn ? (item.evidenceEn || item.evidence) : item.evidence)}</td>
         </tr>
       `).join('')}
     </tbody>
   </table>
 
   <div style="margin-top: 10mm; font-size: 8.5pt; color: #6b7280; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 3mm;">
-    —— 本报告完 · Omni-Probe 探针系统测评数据防伪固化存档 ——
+    ${isEn ? '—— End of Report · Omni-Probe Industrial Probe Anti-Tampering Forensic Archive ——' : '—— 本报告完 · Omni-Probe 探针系统测评数据防伪固化存档 ——'}
+  </div>
+
   </div>
 
 </body>

@@ -169,50 +169,50 @@
           <div class="ui-content-card p-4">
             <div class="font-bold text-sm mb-2.5 flex items-center gap-2 font-sans" style="color: var(--text-primary)">
               <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-              <span>Layer 2: Data Link Layer (数据链路层 / 以太网)</span>
+              <span>Layer 2: Data Link Layer ({{ locale === 'en-US' ? 'Data Link Layer / Ethernet' : '数据链路层 / 以太网' }})</span>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3" style="color: var(--text-secondary)">
-              <div>源 MAC: <strong class="block font-bold" style="color: var(--text-primary)">{{ packet.mac_src || '00:00:00:00:00:00' }}</strong></div>
-              <div>目的 MAC: <strong class="block font-bold" style="color: var(--text-primary)">{{ packet.mac_dst || '00:00:00:00:00:00' }}</strong></div>
-              <div>以太网类型: <strong class="block font-bold" style="color: var(--text-primary)">IPv4 (0x0800)</strong></div>
-              <div>帧总长度: <strong class="block font-bold" style="color: var(--text-primary)">{{ packet.length }} Bytes</strong></div>
+              <div>{{ locale === 'en-US' ? 'Src MAC:' : '源 MAC:' }} <strong class="block font-bold" style="color: var(--text-primary)">{{ packet.mac_src || '00:00:00:00:00:00' }}</strong></div>
+              <div>{{ locale === 'en-US' ? 'Dst MAC:' : '目的 MAC:' }} <strong class="block font-bold" style="color: var(--text-primary)">{{ packet.mac_dst || '00:00:00:00:00:00' }}</strong></div>
+              <div>{{ locale === 'en-US' ? 'EtherType:' : '以太网类型:' }} <strong class="block font-bold" style="color: var(--text-primary)">IPv4 (0x0800)</strong></div>
+              <div>{{ locale === 'en-US' ? 'Total Length:' : '帧总长度:' }} <strong class="block font-bold" style="color: var(--text-primary)">{{ packet.length }} Bytes</strong></div>
             </div>
           </div>
 
           <div class="ui-content-card p-4">
             <div class="font-bold text-sm mb-2.5 flex items-center gap-2 font-sans" style="color: var(--text-primary)">
               <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-              <span>Layer 3: Internet Protocol (网络层 / IPv4)</span>
+              <span>Layer 3: Internet Protocol ({{ locale === 'en-US' ? 'Network Layer / IPv4' : '网络层 / IPv4' }})</span>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3" style="color: var(--text-secondary)">
-              <div>源 IP: <strong class="text-blue-700 dark:text-sky-300 block font-bold" :title="formatRemoteIp(packet)">{{ formatRemoteIp(packet) }}</strong></div>
-              <div>目的 IP: <strong class="text-blue-700 dark:text-sky-300 block font-bold">{{ packet.dst_ip }}</strong></div>
-              <div>信息熵 (Entropy): 
+              <div>{{ locale === 'en-US' ? 'Src IP:' : '源 IP:' }} <strong class="text-blue-700 dark:text-sky-300 block font-bold" :title="formatRemoteIp(packet)">{{ formatRemoteIp(packet) }}</strong></div>
+              <div>{{ locale === 'en-US' ? 'Dst IP:' : '目的 IP:' }} <strong class="text-blue-700 dark:text-sky-300 block font-bold">{{ packet.dst_ip }}</strong></div>
+              <div>{{ locale === 'en-US' ? 'Shannon Entropy:' : '信息熵 (Entropy):' }} 
                 <strong :class="packet.entropy >= 7.5 ? 'text-rose-700 dark:text-rose-400 font-bold block' : 'font-bold block'" :style="packet.entropy < 7.5 ? { color: 'var(--text-primary)' } : undefined">
                   {{ packet.entropy ? packet.entropy.toFixed(3) : '0.000' }} ({{ packet.entropy_level }})
                 </strong>
               </div>
-              <div>防篡改哈希: <span class="text-[11px] block truncate" style="color: var(--text-muted)" :title="packet.chain_hash">{{ packet.chain_hash }}</span></div>
+              <div>{{ locale === 'en-US' ? 'Tamper Proof Hash:' : '防篡改哈希:' }} <span class="text-[11px] block truncate" style="color: var(--text-muted)" :title="packet.chain_hash">{{ packet.chain_hash }}</span></div>
             </div>
             <div v-if="packet.business_data?.src_geo || packet.business_data?.src_zone"
               class="mt-3 pt-3 border-t grid grid-cols-2 md:grid-cols-4 gap-3" style="border-color: var(--border-subtle); color: var(--text-secondary)">
-              <div>源 IP 归属地: <strong class="block" style="color: var(--text-primary)">{{ packet.business_data?.src_geo || '未知' }}</strong></div>
-              <div>安全域划分: <strong class="text-indigo-700 dark:text-indigo-300 block">{{ packet.business_data?.src_zone || '未划分' }}</strong></div>
-              <div>网络运营商 (ISP): <strong class="block" style="color: var(--text-primary)">{{ packet.business_data?.src_isp || 'N/A' }}</strong></div>
-              <div>目的端安全域: <strong class="block" style="color: var(--text-primary)">{{ packet.business_data?.dst_zone || '未划分' }}</strong></div>
+              <div>{{ locale === 'en-US' ? 'Src Geo:' : '源 IP 归属地:' }} <strong class="block" style="color: var(--text-primary)">{{ packet.business_data?.src_geo || '未知' }}</strong></div>
+              <div>{{ locale === 'en-US' ? 'Security Zone:' : '安全域划分:' }} <strong class="text-indigo-700 dark:text-indigo-300 block">{{ packet.business_data?.src_zone || '未划分' }}</strong></div>
+              <div>{{ locale === 'en-US' ? 'ISP Operator:' : '网络运营商 (ISP):' }} <strong class="block" style="color: var(--text-primary)">{{ packet.business_data?.src_isp || 'N/A' }}</strong></div>
+              <div>{{ locale === 'en-US' ? 'Dst Security Zone:' : '目的端安全域:' }} <strong class="block" style="color: var(--text-primary)">{{ packet.business_data?.dst_zone || '未划分' }}</strong></div>
             </div>
           </div>
 
           <div class="ui-content-card p-4">
             <div class="font-bold text-sm mb-2.5 flex items-center gap-2 font-sans" style="color: var(--text-primary)">
               <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
-              <span>Layer 4: Transport Layer (传输层 / {{ packet.transport }})</span>
+              <span>Layer 4: Transport Layer ({{ locale === 'en-US' ? 'Transport Layer' : '传输层' }} / {{ packet.transport }})</span>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3" style="color: var(--text-secondary)">
-              <div>传输协议: <strong class="text-indigo-700 dark:text-indigo-300 block font-bold">{{ packet.transport }}</strong></div>
-              <div>源端口: <strong class="block font-bold" style="color: var(--text-primary)">{{ packet.src_port }}</strong></div>
-              <div>目的端口: <strong class="block font-bold" style="color: var(--text-primary)">{{ packet.dst_port }}</strong></div>
-              <div>规约特征: <strong class="text-emerald-700 dark:text-emerald-400 block font-bold">{{ packet.protocol }}</strong></div>
+              <div>{{ locale === 'en-US' ? 'Protocol:' : '传输协议:' }} <strong class="text-indigo-700 dark:text-indigo-300 block font-bold">{{ packet.transport }}</strong></div>
+              <div>{{ locale === 'en-US' ? 'Src Port:' : '源端口:' }} <strong class="block font-bold" style="color: var(--text-primary)">{{ packet.src_port }}</strong></div>
+              <div>{{ locale === 'en-US' ? 'Dst Port:' : '目的端口:' }} <strong class="block font-bold" style="color: var(--text-primary)">{{ packet.dst_port }}</strong></div>
+              <div>{{ locale === 'en-US' ? 'Features:' : '规约特征:' }} <strong class="text-emerald-700 dark:text-emerald-400 block font-bold">{{ packet.protocol }}</strong></div>
             </div>
           </div>
         </div>
@@ -221,7 +221,7 @@
         <div v-else-if="activeTab === 'dissection'" class="h-full">
           <div v-if="packet.business_data && Object.keys(packet.business_data).length > 0" class="ui-content-card p-5">
             <div class="font-bold text-sm mb-3 border-b pb-2 flex items-center justify-between" style="color: var(--text-primary); border-color: var(--border-subtle)">
-              <span>{{ packet.protocol }} 原生 Rust 规约字典解析明细</span>
+              <span>{{ locale === 'en-US' ? `${packet.protocol} Native Rust Dissection Details` : `${packet.protocol} 原生 Rust 规约字典解析明细` }}</span>
               <span class="text-xs font-normal ui-num" style="color: var(--text-muted)">共 {{ Object.keys(packet.business_data).length }} 项字段</span>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 ui-num text-xs select-text">
@@ -235,12 +235,12 @@
             v-else
             class="py-14"
             icon="layers"
-            title="未匹配原生专精规约字典"
-            description="载荷可能属于非标编码，可调用 Wireshark 全量通用解剖引擎继续探测。"
+            :title="locale === 'en-US' ? 'No Native Protocol Dictionary Matched' : '未匹配原生专精规约字典'"
+            :description="locale === 'en-US' ? 'Payload may be non-standard; use Wireshark Dissector to inspect.' : '载荷可能属于非标编码，可调用 Wireshark 全量通用解剖引擎继续探测。'"
           >
             <template #actions>
               <button @click="selectTab('tshark')" class="ui-btn-secondary text-xs">
-                <span>切换至 Wireshark 全量通用解剖引擎</span>
+                <span>{{ locale === 'en-US' ? 'Switch to Wireshark Dissector Engine' : '切换至 Wireshark 全量通用解剖引擎' }}</span>
                 <AppIcon name="arrow-right" :size="12" />
               </button>
             </template>
@@ -389,7 +389,9 @@ const props = defineProps<{
 
 defineEmits(['close', 'replayPacket', 'saveBaseline']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 
 const tabs = computed(() => [
   { id: 'native_tree', label: t('packetDetail.tabs.nativeTree'), badge: t('packetDetail.tabs.nativeBadge') },
@@ -526,19 +528,19 @@ const nativeProtocolLayers = computed<NativeLayer[]>(() => {
   // 1. Frame 物理与时间戳元数据层
   // ---------------------------------------------------------------------------
   const frameFields: NativeField[] = [
-    { name: 'frame.number', label: '全局报文序号 (ID)', value: `#${p.id}`, highlightClass: 'text-blue-700 dark:text-sky-300' },
-    { name: 'frame.time', label: '系统捕获绝对时间', value: p.timestamp },
-    { name: 'frame.time_ns', label: '纳秒单调时钟戳 (Epoch ns)', value: String(p.timestamp_ns || 'N/A') },
-    { name: 'frame.len', label: '物理帧原始长度', value: `${p.length} 字节`, hexDesc: `0x${p.length.toString(16).toUpperCase()}` },
-    { name: 'frame.cap_len', label: '探针捕获存储长度', value: `${cleanHex.value.length / 2} 字节` },
-    { name: 'frame.entropy', label: '香农信息熵 (Entropy)', value: `${p.entropy ? p.entropy.toFixed(4) : '0.0000'} bit/B (${p.entropy_level})`, highlightClass: p.entropy >= 7.2 ? 'text-amber-700 dark:text-amber-300 font-bold' : '' },
-    { name: 'frame.merkle_hash', label: '防伪存证链式哈希 (SHA256)', value: p.chain_hash || 'PENDING' },
-    { name: 'frame.bus_mode', label: '采集总线与流向', value: `${p.transport} · ${p.direction}`, highlightClass: 'text-indigo-700 dark:text-indigo-300' },
+    { name: 'frame.number', label: locale.value === 'en-US' ? 'Packet Sequence (ID)' : '全局报文序号 (ID)', value: `#${p.id}`, highlightClass: 'text-blue-700 dark:text-sky-300' },
+    { name: 'frame.time', label: locale.value === 'en-US' ? 'Capture Absolute Time' : '系统捕获绝对时间', value: p.timestamp },
+    { name: 'frame.time_ns', label: locale.value === 'en-US' ? 'Monotonic Clock (Epoch ns)' : '纳秒单调时钟戳 (Epoch ns)', value: String(p.timestamp_ns || 'N/A') },
+    { name: 'frame.len', label: locale.value === 'en-US' ? 'Physical Frame Wire Length' : '物理帧原始长度', value: locale.value === 'en-US' ? `${p.length} Bytes` : `${p.length} 字节`, hexDesc: `0x${p.length.toString(16).toUpperCase()}` },
+    { name: 'frame.cap_len', label: locale.value === 'en-US' ? 'Captured Storage Length' : '探针捕获存储长度', value: locale.value === 'en-US' ? `${cleanHex.value.length / 2} Bytes` : `${cleanHex.value.length / 2} 字节` },
+    { name: 'frame.entropy', label: locale.value === 'en-US' ? 'Shannon Entropy' : '香农信息熵 (Entropy)', value: `${p.entropy ? p.entropy.toFixed(4) : '0.0000'} bit/B (${p.entropy_level})`, highlightClass: p.entropy >= 7.2 ? 'text-amber-700 dark:text-amber-300 font-bold' : '' },
+    { name: 'frame.merkle_hash', label: locale.value === 'en-US' ? 'Tamper Proof Chain Hash (SHA256)' : '防伪存证链式哈希 (SHA256)', value: p.chain_hash || 'PENDING' },
+    { name: 'frame.bus_mode', label: locale.value === 'en-US' ? 'Bus & Direction' : '采集总线与流向', value: `${p.transport} · ${p.direction}`, highlightClass: 'text-indigo-700 dark:text-indigo-300' },
   ];
   layers.push({
     id: 'frame',
-    title: 'Frame 1: 物理层与到达时序元数据',
-    subtitle: `到达时间: ${p.timestamp} · 长度: ${p.length}B`,
+    title: locale.value === 'en-US' ? 'Frame 1: Physical Layer & Arrival Timing' : 'Frame 1: 物理层与到达时序元数据',
+    subtitle: locale.value === 'en-US' ? `Time: ${p.timestamp} · Len: ${p.length}B` : `到达时间: ${p.timestamp} · 长度: ${p.length}B`,
     badge: 'PHY/TS',
     badgeClass: 'ui-pill',
     fields: frameFields,
@@ -554,17 +556,17 @@ const nativeProtocolLayers = computed<NativeLayer[]>(() => {
     : (p.src_ip.includes(':') ? '0x86DD (IPv6)' : p.protocol === 'ARP' ? '0x0806 (ARP)' : '0x0800 (IPv4)');
 
   const ethFields: NativeField[] = [
-    { name: 'eth.dst', label: '目的物理 MAC 地址', value: `${p.mac_dst || '00:00:00:00:00:00'}${dstVendor}`, highlightClass: 'font-bold' },
-    { name: 'eth.src', label: '源物理 MAC 地址', value: `${p.mac_src || '00:00:00:00:00:00'}${srcVendor}`, highlightClass: 'font-bold' },
-    { name: 'eth.type', label: '以太网协议类型 (EtherType)', value: etherType, highlightClass: 'text-blue-700 dark:text-sky-300 font-mono-code' },
-    { name: 'eth.fcs', label: '帧校验和 (FCS)', value: '物理 NIC 校验 (驱动层剥离 FCS 尾帧)' },
+    { name: 'eth.dst', label: locale.value === 'en-US' ? 'Destination MAC Address' : '目的物理 MAC 地址', value: `${p.mac_dst || '00:00:00:00:00:00'}${dstVendor}`, highlightClass: 'font-bold' },
+    { name: 'eth.src', label: locale.value === 'en-US' ? 'Source MAC Address' : '源物理 MAC 地址', value: `${p.mac_src || '00:00:00:00:00:00'}${srcVendor}`, highlightClass: 'font-bold' },
+    { name: 'eth.type', label: locale.value === 'en-US' ? 'Ethernet Protocol Type (EtherType)' : '以太网协议类型 (EtherType)', value: etherType, highlightClass: 'text-blue-700 dark:text-sky-300 font-mono-code' },
+    { name: 'eth.fcs', label: locale.value === 'en-US' ? 'Frame Check Sequence (FCS)' : '帧校验和 (FCS)', value: locale.value === 'en-US' ? 'NIC Hardware Verified (Stripped by driver)' : '物理 NIC 校验 (驱动层剥离 FCS 尾帧)' },
   ];
   if (bdata.src_device_cat) {
-    ethFields.push({ name: 'eth.src_category', label: '源端工业设备类型', value: String(bdata.src_device_cat), highlightClass: 'text-indigo-700 dark:text-indigo-300 font-bold' });
+    ethFields.push({ name: 'eth.src_category', label: locale.value === 'en-US' ? 'Source Device Category' : '源端工业设备类型', value: String(bdata.src_device_cat), highlightClass: 'text-indigo-700 dark:text-indigo-300 font-bold' });
   }
   layers.push({
     id: 'ethernet',
-    title: 'Layer 2: Ethernet II (以太网数据链路层)',
+    title: locale.value === 'en-US' ? 'Layer 2: Ethernet II (Data Link Layer)' : 'Layer 2: Ethernet II (以太网数据链路层)',
     subtitle: `${p.mac_src || '00:..'}${srcVendor} → ${p.mac_dst || '00:..'}${dstVendor}`,
     badge: bdata.is_industrial_l2 ? 'IND ETH' : 'L2 ETH',
     badgeClass: bdata.is_industrial_l2 ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30' : 'bg-blue-500/15 text-blue-700 dark:text-sky-300 border-blue-500/30',
@@ -575,21 +577,21 @@ const nativeProtocolLayers = computed<NativeLayer[]>(() => {
   // 3. Layer 3: Internet Protocol 网络层 (IPv4 / IPv6 / ARP)
   // ---------------------------------------------------------------------------
   const netFields: NativeField[] = [
-    { name: 'ip.src', label: '源网络 IP 地址', value: p.src_ip, highlightClass: 'text-blue-700 dark:text-sky-300 font-bold' },
-    { name: 'ip.dst', label: '目的网络 IP 地址', value: p.dst_ip, highlightClass: 'text-blue-700 dark:text-sky-300 font-bold' },
-    { name: 'ip.proto', label: '传输层规约代码', value: `${p.transport} (${p.transport === 'TCP' ? 6 : p.transport === 'UDP' ? 17 : 1})` },
-    { name: 'ip.ttl', label: '生存时间 (TTL)', value: bdata.ip_ttl !== undefined ? String(bdata.ip_ttl) : (parsedHdr.ipTtl !== undefined ? String(parsedHdr.ipTtl) : '未提取 (非原始 L3 头)') },
-    { name: 'ip.total_len', label: 'IP 报文总长度', value: parsedHdr.ipTotalLen !== undefined ? `${parsedHdr.ipTotalLen} 字节` : `${Math.max(0, p.length - 14)} 字节 (含载荷估计)` },
-    { name: 'ip.flags', label: '分片标志 (Flags)', value: parsedHdr.ipFlagsDesc ?? '未提取 (无原始 IP 头部字节)' },
+    { name: 'ip.src', label: locale.value === 'en-US' ? 'Source IP Address' : '源网络 IP 地址', value: p.src_ip, highlightClass: 'text-blue-700 dark:text-sky-300 font-bold' },
+    { name: 'ip.dst', label: locale.value === 'en-US' ? 'Destination IP Address' : '目的网络 IP 地址', value: p.dst_ip, highlightClass: 'text-blue-700 dark:text-sky-300 font-bold' },
+    { name: 'ip.proto', label: locale.value === 'en-US' ? 'Transport Protocol Code' : '传输层规约代码', value: `${p.transport} (${p.transport === 'TCP' ? 6 : p.transport === 'UDP' ? 17 : 1})` },
+    { name: 'ip.ttl', label: locale.value === 'en-US' ? 'Time to Live (TTL)' : '生存时间 (TTL)', value: bdata.ip_ttl !== undefined ? String(bdata.ip_ttl) : (parsedHdr.ipTtl !== undefined ? String(parsedHdr.ipTtl) : '未提取 (非原始 L3 头)') },
+    { name: 'ip.total_len', label: locale.value === 'en-US' ? 'IP Total Length' : 'IP 报文总长度', value: parsedHdr.ipTotalLen !== undefined ? `${parsedHdr.ipTotalLen} 字节` : `${Math.max(0, p.length - 14)} 字节 (含载荷估计)` },
+    { name: 'ip.flags', label: locale.value === 'en-US' ? 'Fragment Flags' : '分片标志 (Flags)', value: parsedHdr.ipFlagsDesc ?? '未提取 (无原始 IP 头部字节)' },
   ];
 
   if (bdata.src_geo || bdata.src_zone || bdata.src_isp) {
     netFields.push({
       name: 'ip.src_geo',
-      label: '源端地理定位与安全域',
-      value: `${bdata.src_geo || '本地局域网'} [${bdata.src_zone || '工业控制网'}]`,
+      label: locale.value === 'en-US' ? 'Source Geo & Security Zone' : '源端地理定位与安全域',
+      value: `${bdata.src_geo || (locale.value === 'en-US' ? 'Local LAN' : '本地局域网')} [${bdata.src_zone || (locale.value === 'en-US' ? 'Industrial Control' : '工业控制网')}]`,
       highlightClass: 'text-indigo-700 dark:text-indigo-300 font-semibold',
-      extraNote: bdata.src_isp ? `运营商: ${bdata.src_isp}` : undefined,
+      extraNote: bdata.src_isp ? (locale.value === 'en-US' ? `ISP: ${bdata.src_isp}` : `运营商: ${bdata.src_isp}`) : undefined,
     });
   }
 
@@ -606,9 +608,9 @@ const nativeProtocolLayers = computed<NativeLayer[]>(() => {
   // 4. Layer 4: Transport Layer 传输层 (TCP / UDP / ICMP / SERIAL)
   // ---------------------------------------------------------------------------
   const transFields: NativeField[] = [
-    { name: 'trans.srcport', label: '源端口 (Source Port)', value: String(p.src_port) },
-    { name: 'trans.dstport', label: '目的端口 (Dest Port)', value: String(p.dst_port), highlightClass: 'text-indigo-700 dark:text-indigo-300 font-bold' },
-    { name: 'trans.service', label: '推断工业服务', value: p.protocol, highlightClass: 'text-emerald-700 dark:text-emerald-300 font-bold' },
+    { name: 'trans.srcport', label: locale.value === 'en-US' ? 'Source Port' : '源端口 (Source Port)', value: String(p.src_port) },
+    { name: 'trans.dstport', label: locale.value === 'en-US' ? 'Destination Port' : '目的端口 (Dest Port)', value: String(p.dst_port), highlightClass: 'text-indigo-700 dark:text-indigo-300 font-bold' },
+    { name: 'trans.service', label: locale.value === 'en-US' ? 'Inferred Industrial Service' : '推断工业服务', value: p.protocol, highlightClass: 'text-emerald-700 dark:text-emerald-300 font-bold' },
   ];
 
   if (p.transport === 'TCP') {
@@ -618,18 +620,18 @@ const nativeProtocolLayers = computed<NativeLayer[]>(() => {
     const flags = bdata.flags ?? parsedHdr.tcpFlagsDesc;
 
     transFields.push(
-      { name: 'tcp.seq', label: '序列号 (Sequence Number)', value: seq !== undefined ? String(seq) : '未提取 (无 L4 原始头)' },
-      { name: 'tcp.ack', label: '确认号 (Acknowledgment Number)', value: ack !== undefined ? String(ack) : '未提取 (无 L4 原始头)' },
-      { name: 'tcp.flags', label: 'TCP 标志位集合 (Flags)', value: flags ? String(flags) : '未提取 (Socket 应用层直采)', highlightClass: 'text-purple-700 dark:text-purple-300 font-bold' },
-      { name: 'tcp.window_size', label: '接收窗口大小 (Window Size)', value: win !== undefined ? `${win} 字节` : '未提取' },
-      { name: 'tcp.checksum', label: '传输层校验和', value: parsedHdr.tcpChecksumHex ?? '由操作系统协议栈 / NIC 校验' },
+      { name: 'tcp.seq', label: locale.value === 'en-US' ? 'Sequence Number' : '序列号 (Sequence Number)', value: seq !== undefined ? String(seq) : '未提取 (无 L4 原始头)' },
+      { name: 'tcp.ack', label: locale.value === 'en-US' ? 'Acknowledgment Number' : '确认号 (Acknowledgment Number)', value: ack !== undefined ? String(ack) : '未提取 (无 L4 原始头)' },
+      { name: 'tcp.flags', label: locale.value === 'en-US' ? 'TCP Flags' : 'TCP 标志位集合 (Flags)', value: flags ? String(flags) : '未提取 (Socket 应用层直采)', highlightClass: 'text-purple-700 dark:text-purple-300 font-bold' },
+      { name: 'tcp.window_size', label: locale.value === 'en-US' ? 'Window Size' : '接收窗口大小 (Window Size)', value: win !== undefined ? `${win} 字节` : '未提取' },
+      { name: 'tcp.checksum', label: locale.value === 'en-US' ? 'Transport Checksum' : '传输层校验和', value: parsedHdr.tcpChecksumHex ?? '由操作系统协议栈 / NIC 校验' },
     );
   }
 
   layers.push({
     id: 'transport',
     title: `Layer 4: Transport Layer (${p.transport})`,
-    subtitle: `端口映射: ${p.src_port} → ${p.dst_port} [${p.protocol}]`,
+    subtitle: locale.value === 'en-US' ? `Port Mapping: ${p.src_port} → ${p.dst_port} [${p.protocol}]` : `端口映射: ${p.src_port} → ${p.dst_port} [${p.protocol}]`,
     badge: 'L4 TRANS',
     badgeClass: 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30',
     fields: transFields,
@@ -664,19 +666,19 @@ const nativeProtocolLayers = computed<NativeLayer[]>(() => {
 
   if (appFields.length === 0) {
     appFields.push(
-      { name: 'app.protocol', label: '应用层规约识别', value: p.protocol, highlightClass: 'text-blue-700 dark:text-sky-300 font-bold' },
-      { name: 'app.payload_size', label: '有效载荷长度', value: `${cleanHex.value.length / 2} 字节` },
-      { name: 'app.raw_preview', label: '载荷数据摘要', value: p.raw_text || (cleanHex.value.slice(0, 32) + '...') },
+      { name: 'app.protocol', label: locale.value === 'en-US' ? 'Application Protocol' : '应用层规约识别', value: p.protocol, highlightClass: 'text-blue-700 dark:text-sky-300 font-bold' },
+      { name: 'app.payload_size', label: '有效载荷长度', value: locale.value === 'en-US' ? `${cleanHex.value.length / 2} Bytes` : `${cleanHex.value.length / 2} 字节` },
+      { name: 'app.raw_preview', label: locale.value === 'en-US' ? 'Payload Summary' : '载荷数据摘要', value: p.raw_text || (cleanHex.value.slice(0, 32) + '...') },
     );
   }
 
   layers.push({
     id: 'application',
-    title: `Layer 7: ${p.protocol} 工业规约语义层`,
-    subtitle: `深度解析业务功能码与工业过程参数`,
+    title: locale.value === 'en-US' ? `Layer 7: ${p.protocol} Protocol Layer` : `Layer 7: ${p.protocol} 工业规约语义层`,
+    subtitle: locale.value === 'en-US' ? 'Deep dissection of function codes and process parameters' : '深度解析业务功能码与工业过程参数',
     badge: 'L7 APP',
     badgeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
-    warning: isDangerousWrite ? '包含写控制/覆写操作' : undefined,
+    warning: isDangerousWrite ? (locale.value === 'en-US' ? 'Contains Write Control / Override Operation' : '包含写控制/覆写操作') : undefined,
     fields: appFields,
   });
 
@@ -688,7 +690,7 @@ const nativeProtocolLayers = computed<NativeLayer[]>(() => {
     const secFields: NativeField[] = [
       { 
         name: 'sec.audit_status', 
-        label: '工业控制安全策略审查', 
+        label: locale.value === 'en-US' ? 'ICS Security Policy Audit' : '工业控制安全策略审查', 
         value: hasAclViolation 
           ? `严重违规: 触发工控访问控制 (ICS-ACL) 拦截 - ${(bdata.ics_acl_violation as any)?.violation_reason || '未授权访问'}`
           : (isDangerousWrite ? '违规警示: 捕获到控制器关键写操作' : '安全合规'), 
@@ -696,13 +698,13 @@ const nativeProtocolLayers = computed<NativeLayer[]>(() => {
       },
       { 
         name: 'sec.risk_level', 
-        label: '工业风险评估等级', 
+        label: locale.value === 'en-US' ? 'ICS Risk Assessment Level' : '工业风险评估等级', 
         value: hasAclViolation ? 'CRITICAL (IEC 62443 细粒度控制边界阻断)' : (isDangerousWrite ? 'HIGH (高风险业务写操作)' : 'LOW (稳态通信)'),
         highlightClass: hasAclViolation || isDangerousWrite ? 'text-rose-700 dark:text-rose-300 font-bold' : undefined
       },
       {
         name: 'sec.iec62443_rule',
-        label: '等保 2.0 / IEC 62443 映射',
+        label: locale.value === 'en-US' ? 'Compliance Standard Mapping' : '等保 2.0 / IEC 62443 映射',
         value: hasAclViolation ? 'IEC 62443-3-3 SR 5.1 网络边界分割 / SR 5.2 区域访问控制' : 'SR 1.3 账户与特权控制 / SR 3.1 通信完整性校验',
         extraNote: hasAclViolation 
           ? '策略引擎根据源/目 IP、从站 Unit ID 与功能码/寄存器白名单执行微秒级拦截并审计。' 
@@ -712,11 +714,11 @@ const nativeProtocolLayers = computed<NativeLayer[]>(() => {
 
     layers.push({
       id: 'security',
-      title: 'Security Audit: 工控合规与威胁防范审查',
+      title: locale.value === 'en-US' ? 'Security Audit: ICS Compliance & Threat Prevention' : 'Security Audit: 工控合规与威胁防范审查',
       subtitle: hasAclViolation ? '工控细粒度访问控制违规告警' : (isDangerousWrite ? '监测到向控制器下发写参数操作' : '安全策略全量合规'),
       badge: hasAclViolation ? 'ACL BLOCK' : 'AUDIT',
       badgeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30',
-      warning: hasAclViolation ? '工控边界策略违规阻断' : '工控安全合规事件',
+      warning: hasAclViolation ? (locale.value === 'en-US' ? 'ICS Boundary Violation Block' : '工控边界策略违规阻断') : (locale.value === 'en-US' ? 'ICS Security Compliance Event' : '工控安全合规事件'),
       fields: secFields,
     });
   }
@@ -916,7 +918,7 @@ async function checkTsharkStatus() {
     const res = await invoke('check_tshark_status_cmd');
     tsharkStatus.value = res;
   } catch (e) {
-    console.warn('[TSHARK_STATUS] 探活失败:', e);
+    console.warn('[TSHARK_STATUS] probe failed:', e);
   }
 }
 
@@ -924,7 +926,7 @@ async function runTsharkDissection() {
   if (!cleanHex.value) {
     tsharkResult.value = {
       success: false,
-      error_message: '当前数据包未包含有效十六进制载荷',
+      error_message: locale.value === 'en-US' ? 'Packet contains no valid hex payload' : '当前数据包未包含有效十六进制载荷',
     };
     return;
   }

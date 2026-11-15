@@ -247,7 +247,9 @@ const props = defineProps<{
 
 const emit = defineEmits(['close', 'clearHoneypotData', 'statusChanged', 'log', 'filterTraffic', 'openDossier']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 
 const isRunning = ref(props.isRunning || false);
 const isOperating = ref(false);
@@ -342,9 +344,9 @@ async function startHoneypotEngine() {
     isRunning.value = true;
     emit('statusChanged', true);
     emit('log', res);
-    notifySuccess('蜜罐诱捕引擎已启动', '已监听仿真工控与网络高危服务端口，实时捕获未授权扫描');
+    notifySuccess(locale.value === 'en-US' ? 'Honeypot Engine Started' : '蜜罐诱捕引擎已启动', locale.value === 'en-US' ? 'Simulated ports active, capturing unauthorized scans' : '已监听仿真工控与网络高危服务端口，实时捕获未授权扫描');
   } catch (err: any) {
-    notifyError('启动蜜罐诱捕受阻', err);
+    notifyError(locale.value === 'en-US' ? 'Failed to Start Honeypot' : '启动蜜罐诱捕受阻', err);
   } finally {
     isOperating.value = false;
   }
@@ -358,9 +360,9 @@ async function stopHoneypotEngine() {
     isRunning.value = false;
     emit('statusChanged', false);
     emit('log', res);
-    notifyInfo('蜜罐诱捕已停止', '所有虚拟诱捕端口已安全关闭并释放');
+    notifyInfo(locale.value === 'en-US' ? 'Honeypot Stopped' : '蜜罐诱捕已停止', locale.value === 'en-US' ? 'Virtual decoy ports closed and released' : '所有虚拟诱捕端口已安全关闭并释放');
   } catch (err: any) {
-    notifyError('停止蜜罐诱捕受阻', err);
+    notifyError(locale.value === 'en-US' ? 'Failed to Stop Honeypot' : '停止蜜罐诱捕受阻', err);
   } finally {
     isOperating.value = false;
   }

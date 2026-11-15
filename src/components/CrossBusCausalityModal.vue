@@ -28,19 +28,19 @@
             </div>
           </div>
           <div class="ui-content-card p-3.5 rounded-2xl">
-            <div class="text-[11px] text-sky-600 dark:text-sky-400 font-bold uppercase">平均网关转发时延 (Avg Δt)</div>
+            <div class="text-[11px] text-sky-600 dark:text-sky-400 font-bold uppercase">{{ locale === 'en-US' ? 'Avg Gateway Latency (Avg Δt)' : '平均网关转发时延 (Avg Δt)' }}</div>
             <div class="text-base font-bold text-(--text-primary) ui-num font-mono-code mt-0.5 select-text">
               {{ avgLatency.toFixed(2) }} ms
             </div>
           </div>
           <div class="ui-content-card p-3.5 rounded-2xl">
-            <div class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold uppercase">最小时延 (Min Δt)</div>
+            <div class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold uppercase">{{ locale === 'en-US' ? 'Min Latency (Min Δt)' : '最小时延 (Min Δt)' }}</div>
             <div class="text-base font-bold text-(--text-primary) ui-num font-mono-code mt-0.5 select-text">
               {{ minLatency.toFixed(2) }} ms
             </div>
           </div>
           <div class="ui-content-card p-3.5 rounded-2xl">
-            <div class="text-[11px] text-purple-600 dark:text-purple-400 font-bold uppercase">最大时延 (Max Δt)</div>
+            <div class="text-[11px] text-purple-600 dark:text-purple-400 font-bold uppercase">{{ locale === 'en-US' ? 'Max Latency (Max Δt)' : '最大时延 (Max Δt)' }}</div>
             <div class="text-base font-bold ui-num font-mono-code mt-0.5 select-text" :class="maxLatency > 100 ? 'text-rose-600 dark:text-rose-400' : 'text-(--text-primary)'">
               {{ maxLatency.toFixed(2) }} ms
             </div>
@@ -50,14 +50,14 @@
         <!-- 列表工具栏 -->
         <div class="flex items-center justify-between text-xs pt-1">
           <div class="flex items-center gap-2">
-            <span class="font-bold text-(--text-primary)">因果关联事件明细流水 (<span class="ui-num">{{ correlations.length }}</span>)</span>
+            <span class="font-bold text-(--text-primary)">{{ locale === 'en-US' ? 'Causality Event Stream' : '因果关联事件明细流水' }} (<span class="ui-num">{{ correlations.length }}</span>)</span>
             <span class="text-[11px] text-(--text-muted) font-mono-code">Δt = (t_serial - t_eth) / 10⁶ ms</span>
           </div>
           <div class="flex items-center gap-2">
             <button @click="fetchCorrelations" :disabled="isLoading"
               class="ui-btn-secondary inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold cursor-pointer disabled:opacity-40">
               <AppIcon name="refresh" class="w-3.5 h-3.5" :class="{ 'animate-spin': isLoading }" />
-              <span>即时刷新</span>
+              <span>{{ locale === 'en-US' ? 'Refresh' : '即时刷新' }}</span>
             </button>
           </div>
         </div>
@@ -67,12 +67,12 @@
           <table class="w-full text-left text-xs border-collapse table-fixed">
             <thead class="ui-table-head text-[11px] uppercase font-bold">
               <tr>
-                <th class="p-2.5 w-[20%]">关联 ID</th>
-                <th class="p-2.5 w-[14%]">以太网帧 #ID</th>
-                <th class="p-2.5 w-[14%]">串口帧 #ID</th>
-                <th class="p-2.5 w-[18%]">规约/从机/功能码</th>
-                <th class="p-2.5 w-[18%]">网关转换时延 (Δt)</th>
-                <th class="p-2.5 w-[16%] text-center">状态评估</th>
+                <th class="p-2.5 w-[20%]">{{ locale === 'en-US' ? 'Correlation ID' : '关联 ID' }}</th>
+                <th class="p-2.5 w-[14%]">{{ locale === 'en-US' ? 'Ethernet Frame #ID' : '以太网帧 #ID' }}</th>
+                <th class="p-2.5 w-[14%]">{{ locale === 'en-US' ? 'Serial Frame #ID' : '串口帧 #ID' }}</th>
+                <th class="p-2.5 w-[18%]">{{ locale === 'en-US' ? 'Protocol/Slave/FC' : '规约/从机/功能码' }}</th>
+                <th class="p-2.5 w-[18%]">{{ locale === 'en-US' ? 'Gateway Delay (Δt)' : '网关转换时延 (Δt)' }}</th>
+                <th class="p-2.5 w-[16%] text-center">{{ locale === 'en-US' ? 'Verdict' : '状态评估' }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-(--border-subtle) text-xs">
@@ -81,21 +81,21 @@
                   {{ item.correlation_id }}
                 </td>
                 <td class="p-2.5 text-sky-600 dark:text-sky-400 font-bold ui-num font-mono-code select-text">
-                  以太网 #{{ item.eth_packet_id }}
+                  {{ locale === 'en-US' ? 'ETH #' : '以太网 #' }}{{ item.eth_packet_id }}
                 </td>
                 <td class="p-2.5 text-indigo-600 dark:text-indigo-400 font-bold ui-num font-mono-code select-text">
-                  串口 #{{ item.serial_packet_id }}
+                  {{ locale === 'en-US' ? 'COM #' : '串口 #' }}{{ item.serial_packet_id }}
                 </td>
                 <td class="p-2.5 text-(--text-secondary) select-text">
                   <span class="font-semibold text-(--text-primary)">{{ item.protocol }}</span>
-                  <span class="text-(--text-muted) text-[11px] font-mono-code ui-num block">从机: {{ item.slave_addr }} | 功能: 0x{{ item.function_code.toString(16).padStart(2, '0').toUpperCase() }}</span>
+                  <span class="text-(--text-muted) text-[11px] font-mono-code ui-num block">{{ locale === 'en-US' ? 'Slave:' : '从机:' }} {{ item.slave_addr }} | {{ locale === 'en-US' ? 'FC:' : '功能:' }} 0x{{ item.function_code.toString(16).padStart(2, '0').toUpperCase() }}</span>
                 </td>
                 <td class="p-2.5 font-bold ui-num font-mono-code select-text" :class="getLatencyClass(item.latency_ms)">
                   {{ item.latency_ms.toFixed(3) }} ms
                 </td>
                 <td class="p-2.5 text-center">
                   <span :class="['px-2 py-0.5 rounded text-[11px] font-bold border', getStatusBadge(item.latency_ms)]">
-                    {{ item.latency_ms < 20 ? '优异' : item.latency_ms < 100 ? '正常' : '高抖动' }}
+                    {{ item.latency_ms < 20 ? (locale === 'en-US' ? 'Optimal' : '优异') : item.latency_ms < 100 ? (locale === 'en-US' ? 'Normal' : '正常') : (locale === 'en-US' ? 'High Jitter' : '高抖动') }}
                   </span>
                 </td>
               </tr>
@@ -103,8 +103,8 @@
                 <td colspan="6" class="p-4">
                   <EmptyState
                     icon="zap"
-                    title="暂未检测到跨总线因果关联对"
-                    description="当以太网接收 Modbus-TCP 且串口捕获到对应的 Modbus-RTU 转换帧时，将在此自动关联。"
+                    :title="locale === 'en-US' ? 'No cross-bus causality pairs detected' : '暂未检测到跨总线因果关联对'"
+                    :description="locale === 'en-US' ? 'When Ethernet receives Modbus-TCP and Serial captures corresponding Modbus-RTU frames, they will be automatically correlated here.' : '当以太网接收 Modbus-TCP 且串口捕获到对应的 Modbus-RTU 转换帧时，将在此自动关联。'"
                   />
                 </td>
               </tr>
@@ -115,17 +115,17 @@
         <!-- 全总线纳秒级时钟对齐与级联故障根因诊断 (接入 cross_bus_diagnostic.rs) -->
         <div class="ui-sub-card border-indigo-500/30 rounded-2xl p-4 space-y-3">
           <div class="flex items-center justify-between flex-wrap gap-2">
-            <div class="text-xs font-bold text-(--text-primary)">纳秒级全总线级联故障根因诊断 (Ethernet ⇄ Serial / USB)</div>
+            <div class="text-xs font-bold text-(--text-primary)">{{ locale === 'en-US' ? 'Nanosecond Cross-Bus Cascade Root-Cause Diagnosis (Ethernet ⇄ Serial / USB)' : '纳秒级全总线级联故障根因诊断 (Ethernet ⇄ Serial / USB)' }}</div>
             <div class="flex flex-wrap items-center gap-3 text-[11px] font-mono-code ui-num text-(--text-secondary)">
-              <span>追踪事务: <b class="text-indigo-600 dark:text-indigo-400">{{ cascadeMetrics.total_cascades_tracked }}</b></span>
-              <span>网关瓶颈: <b class="text-amber-600 dark:text-amber-400">{{ cascadeMetrics.gateway_bottleneck_count }}</b></span>
-              <span>从站超时: <b class="text-rose-600 dark:text-rose-400">{{ cascadeMetrics.slave_timeout_count }}</b></span>
-              <span>物理CRC错: <b class="text-rose-600 dark:text-rose-400">{{ cascadeMetrics.crc_mismatch_error_count }}</b></span>
-              <span>网关均耗时: <b class="text-(--text-primary)">{{ cascadeMetrics.avg_gateway_latency_ms.toFixed(2) }} ms</b></span>
+              <span>{{ locale === 'en-US' ? 'Tracked Tx:' : '追踪事务:' }} <b class="text-indigo-600 dark:text-indigo-400">{{ cascadeMetrics.total_cascades_tracked }}</b></span>
+              <span>{{ locale === 'en-US' ? 'Gateway Bottleneck:' : '网关瓶颈:' }} <b class="text-amber-600 dark:text-amber-400">{{ cascadeMetrics.gateway_bottleneck_count }}</b></span>
+              <span>{{ locale === 'en-US' ? 'Slave Timeout:' : '从站超时:' }} <b class="text-rose-600 dark:text-rose-400">{{ cascadeMetrics.slave_timeout_count }}</b></span>
+              <span>{{ locale === 'en-US' ? 'CRC Error:' : '物理CRC错:' }} <b class="text-rose-600 dark:text-rose-400">{{ cascadeMetrics.crc_mismatch_error_count }}</b></span>
+              <span>{{ locale === 'en-US' ? 'Avg Latency:' : '网关均耗时:' }} <b class="text-(--text-primary)">{{ cascadeMetrics.avg_gateway_latency_ms.toFixed(2) }} ms</b></span>
             </div>
           </div>
           <div v-if="cascadeRecords.length === 0" class="text-xs text-(--text-muted) font-mono-code">
-            当前跨总线级联故障诊断队列为空（正常通信转发时延或待采集级联样本）。
+            {{ locale === 'en-US' ? 'Cross-bus cascade fault queue is empty (normal forward latency or awaiting samples).' : '当前跨总线级联故障诊断队列为空（正常通信转发时延或待采集级联样本）。' }}
           </div>
           <div v-else class="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar text-xs font-mono-code">
             <div v-for="rec in cascadeRecords" :key="rec.transaction_id"
@@ -146,7 +146,7 @@
       <!-- 底部关闭 -->
       <div class="px-6 py-3 border-t border-(--border-subtle) bg-(--surface-content-alt) flex items-center justify-end shrink-0">
         <button @click="$emit('close')" class="ui-btn-secondary px-4 py-1.5 text-xs font-semibold cursor-pointer">
-          关闭
+          {{ locale === 'en-US' ? 'Close' : '关闭' }}
         </button>
       </div>
     </div>
@@ -178,7 +178,9 @@ defineProps<{
 
 defineEmits(['close']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 
 export interface CascadeMetricsSnapshot {
   total_cascades_tracked: number;

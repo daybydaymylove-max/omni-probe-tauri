@@ -21,7 +21,7 @@
               </span>
             </div>
             <p class="text-[11px] ui-num mt-0.5" style="color: var(--text-muted)">
-              目标 IP 深度活动追踪、数据出入侦测与全维档案中心
+              {{ locale === 'en-US' ? 'Target IP Deep Activity Tracking & Holographic Dossier' : '目标 IP 深度活动追踪、数据出入侦测与全维档案中心' }}
             </p>
           </div>
         </div>
@@ -30,7 +30,7 @@
           <div class="relative">
             <button @click="showExportMenu = !showExportMenu" class="ui-btn-secondary text-xs px-3 py-1.5 rounded-xl">
               <AppIcon name="document" :size="13" />
-              <span>导出报告/PCAP</span>
+              <span>{{ locale === 'en-US' ? 'Export Report/PCAP' : '导出报告/PCAP' }}</span>
               <AppIcon name="chevron-down" :size="11" />
             </button>
             <div v-if="showExportMenu"
@@ -38,18 +38,18 @@
               <button @click="exportReport('markdown')"
                 class="w-full text-left px-3 py-1.5 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2 cursor-pointer" style="color: var(--text-primary)">
                 <AppIcon name="document" :size="13" />
-                <span>Markdown 审计报告 (.md)</span>
+                <span>{{ locale === 'en-US' ? 'Markdown Audit Report (.md)' : 'Markdown 审计报告 (.md)' }}</span>
               </button>
               <button @click="exportReport('json')"
                 class="w-full text-left px-3 py-1.5 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2 cursor-pointer" style="color: var(--text-primary)">
                 <AppIcon name="code" :size="13" />
-                <span>JSON 全维数据包 (.json)</span>
+                <span>{{ locale === 'en-US' ? 'JSON Digital Dossier (.json)' : 'JSON 全维数据包 (.json)' }}</span>
               </button>
               <div class="border-t my-1" style="border-color: var(--border-subtle)"></div>
               <button @click="exportPcapForTargetIp"
                 class="w-full text-left px-3 py-1.5 hover:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 flex items-center gap-2 cursor-pointer font-medium">
                 <AppIcon name="download" :size="13" />
-                <span>该 IP 独立抓包切片 (.pcap)</span>
+                <span>{{ locale === 'en-US' ? 'IP Isolated Packet Slice (.pcap)' : '该 IP 独立抓包切片 (.pcap)' }}</span>
               </button>
             </div>
           </div>
@@ -58,13 +58,13 @@
             class="px-3 py-1.5 rounded-xl bg-sky-500/12 hover:bg-sky-500/20 text-sky-700 dark:text-cyan-300 border border-sky-500/30 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
             title="启动测地线可视路由追踪，绘制该 IP 在地球上的大圆物理路由">
             <AppIcon name="globe" :size="13" />
-            <span>测地追踪</span>
+            <span>{{ locale === 'en-US' ? 'Geodesic Trace' : '测地追踪' }}</span>
           </button>
           <button @click="filterInTrafficList"
             class="ui-btn-primary text-xs px-3 py-1.5 rounded-xl"
             title="在主流量分析列表中即时过滤以该 IP 为源或目的的全部会话">
             <AppIcon name="search" :size="13" />
-            <span>流量穿透</span>
+            <span>{{ locale === 'en-US' ? 'Filter Flow' : '流量穿透' }}</span>
           </button>
           <button @click="$emit('close')" class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer" title="关闭">
             <AppIcon name="close" :size="15" />
@@ -81,7 +81,7 @@
               activeTab === 'dossier' ? 'bg-sky-500 text-white shadow-xs font-bold' : 'ui-pill']"
           >
             <AppIcon name="info" :size="13" />
-            <span>全维身份与情报画像</span>
+            <span>{{ locale === 'en-US' ? 'Identity & Intelligence' : '全维身份与情报画像' }}</span>
           </button>
           <button
             @click="activeTab = 'stream'"
@@ -89,7 +89,7 @@
               activeTab === 'stream' ? 'bg-sky-500 text-white shadow-xs font-bold' : 'ui-pill']"
           >
             <AppIcon name="activity" :size="13" />
-            <span>实时活动追踪与数据出入</span>
+            <span>{{ locale === 'en-US' ? 'Live Activity & Traffic Flow' : '实时活动追踪与数据出入' }}</span>
             <span class="px-1.5 py-0.5 rounded-full text-[11px] ui-num font-bold"
               :class="activeTab === 'stream' ? 'bg-white/20 text-white' : 'bg-sky-500/15 text-sky-700 dark:text-sky-300'">
               {{ targetPackets.length }} 帧
@@ -101,7 +101,7 @@
               activeTab === 'security' ? 'bg-sky-500 text-white shadow-xs font-bold' : 'ui-pill']"
           >
             <AppIcon name="shield" :size="13" />
-            <span>等保合规与威胁研判</span>
+            <span>{{ locale === 'en-US' ? 'Compliance & Threat Verdict' : '等保合规与威胁研判' }}</span>
             <span :class="['px-1.5 py-0.5 rounded-full text-[11px] font-bold ui-num border', riskAssessment.badgeClass]">
               {{ riskAssessment.score }}分
             </span>
@@ -109,10 +109,10 @@
         </div>
 
         <div class="text-[11px] ui-num" style="color: var(--text-muted)">
-          <span>累计出入: </span>
+          <span>{{ locale === 'en-US' ? 'Total Packets: ' : '累计出入: ' }}</span>
           <strong style="color: var(--text-primary)">{{ stats.rxPackets + stats.txPackets }} 帧</strong>
           <span class="mx-1">|</span>
-          <span>总吞吐: </span>
+          <span>{{ locale === 'en-US' ? 'Total Volume: ' : '总吞吐: ' }}</span>
           <strong style="color: var(--text-primary)">{{ formatBytes(stats.rxBytes + stats.txBytes) }}</strong>
         </div>
       </div>
@@ -126,19 +126,19 @@
             <div>
               <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">地理与运营商 (ISP)</span>
               <div class="font-semibold truncate" style="color: var(--text-primary)" :title="intel?.geo_summary || '本地局域网私网网段'">
-                {{ intel?.geo_summary || '本地局域网私网网段' }}
+                {{ intel?.geo_summary || (locale === 'en-US' ? 'Local Private Subnet' : '本地局域网私网网段') }}
               </div>
             </div>
             <div>
               <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">物理 MAC / 链路地址</span>
               <div class="font-semibold truncate" style="color: var(--text-primary)" :title="matchedAsset?.mac || '跨三层路由未知'">
-                {{ matchedAsset?.mac || '跨三层路由未知' }}
+                {{ matchedAsset?.mac || (locale === 'en-US' ? 'L3 Routed Unknown' : '跨三层路由未知') }}
               </div>
             </div>
             <div>
               <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">设备厂商画像 (OUI)</span>
               <div class="font-semibold truncate" style="color: var(--text-primary)" :title="matchedAsset?.vendor || '通用网络节点'">
-                {{ matchedAsset?.vendor || '通用网络节点' }}
+                {{ matchedAsset?.vendor || (locale === 'en-US' ? 'Generic Network Host' : '通用网络节点') }}
               </div>
             </div>
             <div>
@@ -163,7 +163,7 @@
                 <span v-if="osFingerprint.hopCount !== null" class="text-emerald-700 dark:text-emerald-400 font-bold">
                   约 {{ osFingerprint.hopCount }} 跳
                 </span>
-                <span v-else style="color: var(--text-muted)">本地直连或未捕获出向</span>
+                <span v-else style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Direct link or no egress captured' : '本地直连或未捕获出向' }}</span>
               </div>
             </div>
             <div>
@@ -179,7 +179,7 @@
             <div>
               <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">反向 PTR 域名 (RFC 1035)</span>
               <div class="font-semibold truncate" style="color: var(--text-primary)" :title="hostnameInfo?.reverse_ptr || '无 PTR 记录'">
-                {{ hostnameInfo?.reverse_ptr || '无 PTR 记录' }}
+                {{ hostnameInfo?.reverse_ptr || (locale === 'en-US' ? 'No PTR Record' : '无 PTR 记录') }}
               </div>
             </div>
           </div>
@@ -227,7 +227,7 @@
                 <span class="text-[11px] px-1.5 py-0.5 rounded-md ui-num" style="background: var(--surface-content); color: var(--text-secondary)">{{ cnt }} 帧</span>
               </div>
               <div v-if="Object.keys(stats.protocolCounts).length === 0" class="text-xs py-1" style="color: var(--text-muted)">
-                暂未沉淀规约数据
+                {{ locale === 'en-US' ? 'No protocol data recorded yet' : '暂未沉淀规约数据' }}
               </div>
             </div>
           </div>
@@ -257,21 +257,21 @@
                 </div>
               </div>
               <div v-if="topPeers.length === 0" class="text-xs py-3 text-center" style="color: var(--text-muted)">
-                暂无已记录的对端通信会话
+                {{ locale === 'en-US' ? 'No recorded peer communication sessions' : '暂无已记录的对端通信会话' }}
               </div>
             </div>
           </div>
 
           <div class="ui-content-card p-3.5 space-y-3">
             <div class="flex items-center justify-between flex-wrap gap-2">
-              <span class="text-[11px] uppercase font-bold" style="color: var(--text-muted)">合规连通性探活与端口审计 (Compliance Probing)</span>
+              <span class="text-[11px] uppercase font-bold" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Active Connectivity & Port Compliance Audit' : '合规连通性探活与端口审计' }} (Compliance Probing)</span>
               <span class="text-[11px]" style="color: var(--text-muted)">基于 RFC 792 ICMP Echo 与 RFC 793 TCP Connect</span>
             </div>
 
             <div class="flex items-center gap-3 flex-wrap">
               <button @click="doIcmpPing" :disabled="isPinging" class="ui-btn-primary text-xs px-3 py-1.5 rounded-xl">
                 <AppIcon :name="isPinging ? 'refresh' : 'zap'" :size="13" :class="isPinging ? 'animate-spin' : ''" />
-                <span>ICMP 连通性测试 (Ping)</span>
+                <span>{{ locale === 'en-US' ? 'ICMP Connectivity Test (Ping)' : 'ICMP 连通性测试 (Ping)' }}</span>
               </button>
 
               <button @click="doPortProbe" :disabled="isProbingPorts" class="ui-btn-secondary text-xs px-3 py-1.5 rounded-xl">
@@ -472,7 +472,9 @@ import { ref, computed, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import AppIcon from './AppIcon.vue';
 import { useI18n } from '../i18n';
-const { t } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 void t;
 import EmptyState from './EmptyState.vue';
 import GeodesicTracerouteModal from './GeodesicTracerouteModal.vue';
@@ -663,13 +665,13 @@ const osFingerprint = computed(() => {
   }
 
   if (observedTtl === null) {
-    return { osName: '未捕获出向报文', hopCount: null, observedTtl: null, details: '尚未捕获到该 IP 发出的三层报文' };
+    return { osName: locale.value === 'en-US' ? 'No Egress Captured' : '未捕获出向报文', hopCount: null, observedTtl: null, details: '尚未捕获到该 IP 发出的三层报文' };
   }
 
   if (observedTtl <= 64) {
     const hop = 64 - observedTtl;
     return {
-      osName: 'Linux / Unix / macOS / 嵌入式RTOS',
+      osName: locale.value === 'en-US' ? 'Linux / Unix / macOS / Embedded RTOS' : 'Linux / Unix / macOS / 嵌入式RTOS',
       hopCount: hop,
       observedTtl,
       details: `推导初始 TTL=64, 观测 TTL=${observedTtl}, 经历约 ${hop} 跳路由`
@@ -685,7 +687,7 @@ const osFingerprint = computed(() => {
   } else {
     const hop = 255 - observedTtl;
     return {
-      osName: '网络设备 / Cisco IOS / 工业交换机',
+      osName: locale.value === 'en-US' ? 'Network Device / Cisco IOS / Industrial Switch' : '网络设备 / Cisco IOS / 工业交换机',
       hopCount: hop,
       observedTtl,
       details: `推导初始 TTL=255, 观测 TTL=${observedTtl}, 经历约 ${hop} 跳路由`
@@ -724,7 +726,7 @@ const riskAssessment = computed(() => {
   if (targetPorts.size >= 6) {
     score -= 25;
     items.push({
-      title: '高频多端口探测嫌疑 (Port Probing)',
+      title: locale.value === 'en-US' ? 'Port Probing Suspected' : '高频多端口探测嫌疑 (Port Probing)',
       desc: `该节点在监测周期内向 ${targetPorts.size} 个不同端口发起连接请求，疑似正在执行资产遍历或服务发现`,
       severity: 'high',
       scoreText: '-25 分'
@@ -734,7 +736,7 @@ const riskAssessment = computed(() => {
   if (hasHighEntropy) {
     score -= 20;
     items.push({
-      title: '非标准端口高熵载荷 (High-Entropy Egress)',
+      title: locale.value === 'en-US' ? 'High-Entropy Egress on Non-Standard Port' : '非标准端口高熵载荷 (High-Entropy Egress)',
       desc: '观测到在非 443 端口上载荷信息熵 ≥ 7.2，疑似存在隐蔽加密通道、勒索数据外发或打包压缩流量',
       severity: 'high',
       scoreText: '-20 分'
@@ -744,7 +746,7 @@ const riskAssessment = computed(() => {
   if (hasCleartext) {
     score -= 15;
     items.push({
-      title: '非安全明文规约通信 (Cleartext Transmission)',
+      title: locale.value === 'en-US' ? 'Insecure Cleartext Transmission' : '非安全明文规约通信 (Cleartext Transmission)',
       desc: '检测到 HTTP / Telnet / FTP 明文规约通信，不符合等保 2.0 通信传输机密性与完整性审计要求',
       severity: 'medium',
       scoreText: '-15 分'
@@ -754,7 +756,7 @@ const riskAssessment = computed(() => {
   if (txCount > 50 && stats.value.rxPackets === 0) {
     score -= 15;
     items.push({
-      title: '单向报文无应答倾斜 (Traffic Asymmetry)',
+      title: locale.value === 'en-US' ? 'Traffic Asymmetry (Unidirectional Flood)' : '单向报文无应答倾斜 (Traffic Asymmetry)',
       desc: '发包数量较多但未收到任何对端回包，疑似存在单向泛洪或未建立连接的半开探测',
       severity: 'medium',
       scoreText: '-15 分'
@@ -763,7 +765,7 @@ const riskAssessment = computed(() => {
 
   if (items.length === 0) {
     items.push({
-      title: '未发现异常威胁与违规行为 (Clean & Compliant)',
+      title: locale.value === 'en-US' ? 'Clean & Compliant' : '未发现异常威胁与违规行为 (Clean & Compliant)',
       desc: '网络行为特征平稳，未检测到端口扫描、隐蔽高熵通道或异常明文泄露',
       severity: 'low',
       scoreText: '合规基线达标'
@@ -771,13 +773,13 @@ const riskAssessment = computed(() => {
   }
 
   score = Math.max(0, score);
-  let levelText = '基线正常';
+  let levelText = locale.value === 'en-US' ? 'Normal Baseline' : '基线正常';
   let badgeClass = 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/30';
   if (score < 70) {
-    levelText = '高危威胁';
+    levelText = locale.value === 'en-US' ? 'Critical Threat' : '高危威胁';
     badgeClass = 'bg-rose-500/12 text-rose-700 dark:text-rose-300 border-rose-500/30';
   } else if (score < 90) {
-    levelText = '中危关注';
+    levelText = locale.value === 'en-US' ? 'Medium Risk' : '中危关注';
     badgeClass = 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/30';
   }
 
@@ -932,9 +934,9 @@ async function exportPcapForTargetIp() {
       packets: packetsToExport,
       filePath: filename,
     });
-    notifySuccess('PCAP 数据包导出成功', `成功将目标 IP ${ip} 的 ${count} 帧报文导出至文件: ${filename}`);
+    notifySuccess(locale.value === 'en-US' ? 'PCAP Exported Successfully' : 'PCAP 数据包导出成功', locale.value === 'en-US' ? `Successfully exported ${count} packets for IP ${ip} to: ${filename}` : `成功将目标 IP ${ip} 的 ${count} 帧报文导出至文件: ${filename}`);
   } catch (e: any) {
-    notifyError('导出 PCAP 文件受阻', e);
+    notifyError(locale.value === 'en-US' ? 'PCAP Export Blocked' : '导出 PCAP 文件受阻', e);
   }
 }
 

@@ -38,8 +38,8 @@
       <!-- 1. 输入引脚状态 (Input Pins / Status from Device) -->
       <div class="ui-sub-card rounded-xl p-3 flex flex-col gap-2">
         <div class="text-xs font-bold text-(--text-primary) uppercase flex items-center justify-between gap-2">
-          <span>设备输入引脚状态 (Inputs)</span>
-          <span class="text-[11px] text-(--text-muted) font-normal">绿: 有效高电平 | 灰: 低电平</span>
+          <span>{{ locale === 'en-US' ? 'Device Input Pin States (Inputs)' : '设备输入引脚状态 (Inputs)' }}</span>
+          <span class="text-[11px] text-(--text-muted) font-normal">{{ locale === 'en-US' ? 'Green: High (Asserted) | Gray: Low (Deasserted)' : '绿: 有效高电平 | 灰: 低电平' }}</span>
         </div>
 
         <div class="grid grid-cols-2 gap-2 text-xs font-mono-code">
@@ -47,7 +47,7 @@
           <div class="ui-content-card p-2.5 rounded-lg flex items-center justify-between">
             <div>
               <div class="font-bold text-(--text-primary)">CTS (Clear To Send)</div>
-              <div class="text-[11px] text-(--text-muted) font-sans">允许发送信号</div>
+              <div class="text-[11px] text-(--text-muted) font-sans">{{ locale === 'en-US' ? 'Clear to Send (CTS)' : '允许发送信号' }}</div>
             </div>
             <div class="flex items-center gap-1.5">
               <span class="w-2.5 h-2.5 rounded-full transition-colors"
@@ -62,7 +62,7 @@
           <div class="ui-content-card p-2.5 rounded-lg flex items-center justify-between">
             <div>
               <div class="font-bold text-(--text-primary)">DSR (Data Set Ready)</div>
-              <div class="text-[11px] text-(--text-muted) font-sans">数据设备就绪</div>
+              <div class="text-[11px] text-(--text-muted) font-sans">{{ locale === 'en-US' ? 'Data Set Ready (DSR)' : '数据设备就绪' }}</div>
             </div>
             <div class="flex items-center gap-1.5">
               <span class="w-2.5 h-2.5 rounded-full transition-colors"
@@ -165,7 +165,9 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import AppIcon from './AppIcon.vue';
 import { useI18n } from '../i18n';
-const { t } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 
 export interface SerialModemStatus {
   port_name: string;

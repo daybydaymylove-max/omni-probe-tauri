@@ -77,7 +77,7 @@
                   <option value="iec104_test">{{ t('portTransceiver.presetIec') }}</option>
                 </select>
               </div>
-              <textarea v-model="netPayload" rows="2" placeholder="输入待发送的 Hex 字节流，如: 00 01 00 00 00 06 01 03 00 00 00 02"
+              <textarea v-model="netPayload" rows="2" :placeholder="locale === 'en-US' ? 'Enter Hex bytes to transmit (e.g. 00 01 00 00 00 06 01 03 00 00 00 02)' : '输入待发送的 Hex 字节流，如: 00 01 00 00 00 06 01 03 00 00 00 02'"
                 class="w-full ui-input font-mono-code p-2 text-xs"></textarea>
             </div>
 
@@ -126,7 +126,7 @@
                   <option value="at_cmd">{{ t('portTransceiver.presetAtCmd') }}</option>
                 </select>
               </div>
-              <textarea v-model="serialPayload" rows="2" placeholder="输入待写出到串口的数据 (HEX 如: 01 03 00 00 00 02 C4 0B)"
+              <textarea v-model="serialPayload" rows="2" :placeholder="locale === 'en-US' ? 'Enter serial Hex bytes (e.g. 01 03 00 00 00 02 C4 0B)' : '输入待写出到串口的数据 (HEX 如: 01 03 00 00 00 02 C4 0B)'"
                 class="w-full ui-input font-mono-code p-2 text-xs"></textarea>
             </div>
 
@@ -204,7 +204,9 @@ defineProps<{
 
 defineEmits(['close']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 
 interface TransceiveHistoryItem {
   id: number;
@@ -287,7 +289,7 @@ async function executeTransceive() {
       history.value.unshift({
         id: Date.now(),
         time: ts,
-        channel: `网络 ${netTransport.value}`,
+        channel: locale.value === 'en-US' ? `Network ${netTransport.value}` : `网络 ${netTransport.value}`,
         target: `${netIp.value}:${netPort.value}`,
         transport: netTransport.value,
         status: res.success ? 'SUCCESS' : 'ERROR',
@@ -313,7 +315,7 @@ async function executeTransceive() {
       history.value.unshift({
         id: Date.now(),
         time: ts,
-        channel: '物理串口',
+        channel: locale.value === 'en-US' ? 'Serial COM' : '物理串口',
         target: `${selectedSerialPort.value} @ ${serialBaud.value} bps`,
         transport: 'SERIAL',
         status: 'SUCCESS',
@@ -331,7 +333,7 @@ async function executeTransceive() {
     history.value.unshift({
       id: Date.now(),
       time: ts,
-      channel: channel.value === 'network' ? '网络端口' : '物理串口',
+      channel: channel.value === 'network' ? (locale.value === 'en-US' ? 'Network Port' : '网络端口') : (locale.value === 'en-US' ? 'Serial COM' : '物理串口'),
       target: channel.value === 'network' ? `${netIp.value}:${netPort.value}` : selectedSerialPort.value,
       transport: 'N/A',
       status: 'ERROR',

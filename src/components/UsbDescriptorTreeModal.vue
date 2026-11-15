@@ -36,19 +36,19 @@
               </button>
             </div>
           </div>
-          <textarea v-model="rawHex" rows="2" placeholder="输入 USB 标准描述符连续十六进制字节流 (包含 0x12 长度 Device 描述符与 0x09 长度 Config 描述符)"
+          <textarea v-model="rawHex" rows="2" :placeholder="locale === 'en-US' ? 'Enter USB continuous hex bytes (starts with 0x12 Device descriptor or 0x09 Config descriptor)' : '输入 USB 标准描述符连续十六进制字节流 (包含 0x12 长度 Device 描述符与 0x09 长度 Config 描述符)'"
             class="ui-input w-full p-2.5 text-xs font-mono-code select-text"></textarea>
           <div class="flex items-center gap-2 flex-wrap">
             <button @click="doParseTree" :disabled="isParsing || !rawHex.trim()"
               class="ui-btn-primary text-xs py-1.5 px-4 font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40">
               <AppIcon v-if="isParsing" name="refresh" class="w-3.5 h-3.5 animate-spin" />
-              <span>执行递归描述符树剖析</span>
+              <span>{{ locale === 'en-US' ? 'Dissect USB Descriptor Tree' : '执行递归描述符树剖析' }}</span>
             </button>
             <button @click="addDescriptorToDiffQueue" :disabled="!rawHex.trim()"
               class="ui-btn-secondary text-xs py-1.5 px-3 font-semibold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
-              title="将当前 USB 描述符原始 HEX 送入全局多组比对队列（支持与其他 USB 设备进行 Center-Star 对齐比对）">
+              :title="locale === 'en-US' ? 'Queue USB descriptor hex into diff workbench (supports Center-Star alignment)' : '将当前 USB 描述符原始 HEX 送入全局多组比对队列（支持与其他 USB 设备进行 Center-Star 对齐比对）'">
               <AppIcon name="scale" class="w-3.5 h-3.5" />
-              <span>+ 加入全局比对队列</span>
+              <span>{{ locale === 'en-US' ? '+ Add to Diff Queue' : '+ 加入全局比对队列' }}</span>
             </button>
           </div>
         </div>
@@ -230,7 +230,9 @@ const props = defineProps<{
 
 defineEmits(['close']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 
 const rawHex = ref(props.initialHex || '12 01 00 02 00 00 00 40 86 80 20 08 00 01 01 02 00 01 09 02 22 00 01 01 00 A0 32 09 04 00 00 01 03 01 02 00 07 05 81 03 08 00 0A');
 const isParsing = ref(false);

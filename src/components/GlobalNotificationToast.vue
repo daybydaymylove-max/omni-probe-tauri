@@ -2,7 +2,7 @@
   <div
     class="fixed top-14 right-6 z-50 flex flex-col gap-2.5 max-w-md w-[92vw] sm:w-[420px] pointer-events-none"
     role="region"
-    aria-label="系统运行提示通知"
+    :aria-label="locale === 'en-US' ? 'System Notification' : '系统运行提示通知'"
   >
     <TransitionGroup
       enter-active-class="transition duration-300 ease-out transform"
@@ -108,7 +108,7 @@
           <button
             @click="removeNotification(item.id)"
             class="ui-btn-secondary flex-shrink-0 p-1 rounded-lg cursor-pointer"
-            aria-label="关闭当前提示"
+            :aria-label="locale === 'en-US' ? 'Dismiss notification' : '关闭当前提示'"
           >
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M6 18L18 6M6 6l12 12" />
@@ -130,6 +130,10 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from '../i18n';
+const { locale, t } = useI18n();
+void t;
+void locale;
 import { ref, onMounted, onUnmounted } from 'vue';
 import {
   useNotification,

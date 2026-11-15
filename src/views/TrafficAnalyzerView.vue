@@ -49,14 +49,14 @@
                 @click="triggerStartSerial(selectedSerial, serialBaudRate)"
                 class="text-indigo-600 dark:text-indigo-300 hover:underline text-[11px] px-1.5 py-0.5 rounded border border-indigo-500/30 cursor-pointer"
               >
-                {{ isSerialRunning ? '重置' : '监听' }}
+                {{ isSerialRunning ? (locale === 'en-US' ? 'Reset' : '重置') : (locale === 'en-US' ? 'Listen' : '监听') }}
               </button>
               <button
                 @click="triggerSendProbeFrame"
                 :disabled="!selectedSerial || isSendingProbe"
                 class="text-amber-600 dark:text-amber-300 hover:underline text-[11px] px-1.5 py-0.5 rounded border border-amber-500/30 cursor-pointer"
               >
-                探活
+                {{ locale === 'en-US' ? 'Probe' : '探活' }}
               </button>
             </div>
 
@@ -67,21 +67,21 @@
                 @click="triggerStartUsb"
                 class="text-purple-600 dark:text-purple-300 hover:underline text-[11px] px-1.5 py-0.5 rounded border border-purple-500/30 cursor-pointer"
               >
-                {{ isUsbRunning ? '重启' : '挂钩' }}
+                {{ isUsbRunning ? (locale === 'en-US' ? 'Restart' : '重启') : (locale === 'en-US' ? 'Hook' : '挂钩') }}
               </button>
             </div>
 
             <div class="hidden xl:flex items-center gap-2.5 text-[11px]" style="color: var(--text-muted);">
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span>安全告警</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Modbus 节点</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span>S7 PLC 节点</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-cyan-400"></span>源端节点</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-400"></span>目的节点</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span>{{ locale === 'en-US' ? 'Security Alert' : '安全告警' }}</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>{{ locale === 'en-US' ? 'Modbus Node' : 'Modbus 节点' }}</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span>{{ locale === 'en-US' ? 'S7 PLC Node' : 'S7 PLC 节点' }}</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-cyan-400"></span>{{ locale === 'en-US' ? 'Source Node' : '源端节点' }}</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-400"></span>{{ locale === 'en-US' ? 'Target Node' : '目的节点' }}</span>
             </div>
 
             <button
               @click="isHorizonExpanded = false"
-              title="收起拓扑面板，最大化报文流水线"
+              :title="locale === 'en-US' ? 'Collapse topology panel to maximize packet stream' : '收起拓扑面板，最大化报文流水线'"
               class="w-6 h-6 rounded-lg glass-pill hover:bg-[var(--surface-hover)] flex items-center justify-center transition-all cursor-pointer"
               style="color: var(--text-secondary);"
             >
@@ -162,7 +162,7 @@
             <span class="flex items-center gap-1 truncate"><span class="w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0"></span>Modbus {{ protocolStats.modbus }}%</span>
             <span class="flex items-center gap-1 truncate"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>S7 {{ protocolStats.s7 }}%</span>
             <span class="flex items-center gap-1 truncate"><span class="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0"></span>EtherCAT {{ protocolStats.ethercat }}%</span>
-            <span class="flex items-center gap-1 truncate"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>其他 {{ protocolStats.iec104 }}%</span>
+            <span class="flex items-center gap-1 truncate"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>{{ locale === 'en-US' ? 'Other' : '其他' }} {{ protocolStats.iec104 }}%</span>
           </div>
         </div>
 
@@ -201,15 +201,15 @@
           <div class="flex items-center gap-1.5 shrink-0">
             <span class="live-pulse-dot shrink-0"></span>
             <span class="text-xs font-semibold tracking-tight shrink-0 whitespace-nowrap" style="color: var(--text-primary);">
-              <span class="hidden 2xl:inline">实时报文全景流</span>
-              <span class="2xl:hidden">报文流</span>
+              <span class="hidden 2xl:inline">{{ locale === 'en-US' ? 'Live Packet Panoramic Stream' : '实时报文全景流' }}</span>
+              <span class="2xl:hidden">{{ locale === 'en-US' ? 'Packets' : '报文流' }}</span>
             </span>
             <span
               v-if="isRunning && captureCapability && captureCapability.external_ready && captureCapability.targets.length > 0"
               class="hidden xl:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 ui-num shrink-0"
-              :title="`外网并发挂载接口: ${captureCapability.targets.join(', ')}`"
+              :title="locale === 'en-US' ? `Attached Interfaces: ${captureCapability.targets.join(', ')}` : `外网并发挂载接口: ${captureCapability.targets.join(', ')}`"
             >
-              全网 {{ captureCapability.targets.length }} 口
+              {{ locale === 'en-US' ? `${captureCapability.targets.length} Ports` : `全网 ${captureCapability.targets.length} 口` }}
             </span>
 
             <!-- 协议快速微胶囊群 -->
@@ -229,7 +229,7 @@
                 {{ tag.label }}
               </button>
               <select v-model="filterProtocol" class="bg-transparent text-[11px] rounded-lg px-1 py-0.5 focus:outline-none border-l cursor-pointer max-w-[78px]" style="color: var(--text-primary); border-color: var(--border-subtle);">
-                <option value="">更多</option>
+                <option value="">{{ locale === 'en-US' ? 'More' : '更多' }}</option>
                 <option v-for="p in protocolList" :key="p" :value="p">{{ p }}</option>
               </select>
             </div>
@@ -237,12 +237,12 @@
             <!-- 多总线拓扑面板展开/折叠胶囊 (包含 NIC / COM 串口 / USB 快速切换) -->
             <button
               @click="isHorizonExpanded = !isHorizonExpanded"
-              title="展开/收起多总线控制与实时通信拓扑 (NIC / COM 串口 / USB)"
+              :title="locale === 'en-US' ? 'Expand/Collapse multi-bus control and topology (NIC / COM / USB)' : '展开/收起多总线控制与实时通信拓扑 (NIC / COM 串口 / USB)'"
               :class="['text-[11px] font-medium px-2 py-0.5 rounded-xl transition-all cursor-pointer flex items-center gap-1 glass-pill whitespace-nowrap shrink-0',
                 isHorizonExpanded ? 'text-blue-600 dark:text-sky-400 border-blue-500/40 bg-blue-500/12' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']"
             >
               <AppIcon :name="isHorizonExpanded ? 'chevron-up' : 'chevron-down'" :size="12" />
-              <span>{{ isHorizonExpanded ? '收起总线' : '总线拓扑' }}</span>
+              <span>{{ isHorizonExpanded ? (locale === 'en-US' ? 'Collapse Bus' : '收起总线') : (locale === 'en-US' ? 'Bus Topology' : '总线拓扑') }}</span>
             </button>
           </div>
 
@@ -253,15 +253,15 @@
               v-model="filterInput"
               @keydown.enter="applyDisplayFilter"
               @input="onFilterInputDebounced"
-              placeholder="过滤 (s7comm)..."
+              :placeholder="locale === 'en-US' ? 'Filter (e.g. s7comm)...' : '过滤 (s7comm)...'"
               class="bg-transparent text-[11px] outline-none w-full min-w-0 font-mono"
               style="color: var(--text-primary);"
             />
-            <button v-if="filterInput" @click="clearDisplayFilter" class="cursor-pointer p-0.5 shrink-0" style="color: var(--text-muted);" title="清空过滤">
+            <button v-if="filterInput" @click="clearDisplayFilter" class="cursor-pointer p-0.5 shrink-0" style="color: var(--text-muted);" :title="locale === 'en-US' ? 'Clear filter' : '清空过滤'">
               <AppIcon name="close" :size="11" />
             </button>
             <button v-if="filterInput" @click="applyDisplayFilter" class="text-[11px] font-semibold text-blue-600 dark:text-sky-400 px-1.5 py-0.5 rounded bg-blue-500/12 cursor-pointer shrink-0">
-              过滤
+              {{ locale === 'en-US' ? 'Filter' : '过滤' }}
             </button>
           </div>
 
@@ -275,7 +275,7 @@
                   activeDropdown === 'analyze' ? 'border-blue-500/50 text-blue-600 dark:text-sky-300' : 'text-[var(--text-primary)]']"
               >
                 <AppIcon name="activity" :size="12" class="text-blue-500" />
-                <span>分析</span>
+                <span>{{ locale === 'en-US' ? 'Analyze' : '分析' }}</span>
                 <AppIcon name="chevron-down" :size="11" />
               </button>
               <div
@@ -285,43 +285,43 @@
               >
                 <button @click="openWaveTab(); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
                   <AppIcon name="activity" :size="13" class="text-blue-500" />
-                  <span>示波波形追踪</span>
+                  <span>{{ locale === 'en-US' ? 'Oscilloscope Waveform Trace' : '示波波形追踪' }}</span>
                 </button>
                 <button @click="openIoGraphsTab(); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
                   <AppIcon name="traffic" :size="13" class="text-indigo-500" />
-                  <span>IO Graphs 点阵</span>
+                  <span>{{ locale === 'en-US' ? 'IO Graphs Matrix' : 'IO Graphs 点阵' }}</span>
                 </button>
                 <button @click="diffBus.compareSlots(); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
                   <AppIcon name="scale" :size="13" class="text-emerald-500" />
-                  <span>双组/多组精密差分</span>
+                  <span>{{ locale === 'en-US' ? 'Precision Packet Diff' : '双组/多组精密差分' }}</span>
                 </button>
                 <button @click="openGlobalMultiDiffWithSelected(); closeAllDropdowns()" :disabled="selectedPackets.size < 2" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer disabled:opacity-40" style="color: var(--text-primary);">
                   <AppIcon name="git-branch" :size="13" class="text-indigo-500" />
-                  <span>送入 Center-Star 多组对齐</span>
+                  <span>{{ locale === 'en-US' ? 'Send to Center-Star Multi-Align' : '送入 Center-Star 多组对齐' }}</span>
                 </button>
                 <button @click="isMultiCompareOpen = true; closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
                   <AppIcon name="usb" :size="13" class="text-cyan-500" />
-                  <span>多串口实时交叉对比 (2-4路)</span>
+                  <span>{{ locale === 'en-US' ? 'Multi-Serial Real-time Compare (2-4 Ports)' : '多串口实时交叉对比 (2-4路)' }}</span>
                 </button>
                 <button @click="openMatrixTab(); closeAllDropdowns()" :disabled="selectedPackets.size < 2" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer disabled:opacity-40" style="color: var(--text-primary);">
                   <AppIcon name="layers" :size="13" class="text-purple-500" />
-                  <span>多报文矩阵</span>
+                  <span>{{ locale === 'en-US' ? 'Multi-Packet Matrix' : '多报文矩阵' }}</span>
                 </button>
                 <button @click="openTraceroute(''); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
                   <AppIcon name="globe" :size="13" class="text-sky-500" />
-                  <span>可视路由追踪</span>
+                  <span>{{ locale === 'en-US' ? 'Visual Route Traceroute' : '可视路由追踪' }}</span>
                 </button>
                 <button @click="toggleIndustrialTxPanel(); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
                   <AppIcon name="cpu" :size="13" class="text-amber-500" />
-                  <span>工控主从事务时延</span>
+                  <span>{{ locale === 'en-US' ? 'ICS Master-Slave Transaction Latency' : '工控主从事务时延' }}</span>
                 </button>
                 <button @click="toggleTimeseriesHeatmapPanel(); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
                   <AppIcon name="radar" :size="13" class="text-indigo-500" />
-                  <span>时序聚合与热力矩阵</span>
+                  <span>{{ locale === 'en-US' ? 'Temporal Heatmap Matrix' : '时序聚合与热力矩阵' }}</span>
                 </button>
                 <button @click="isVpnDetectorOpen = true; closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs font-semibold cursor-pointer" style="color: var(--text-primary);">
                   <AppIcon name="shield" :size="13" class="text-rose-500" />
-                  <span>VPN / 加密代理四维侦测</span>
+                  <span>{{ locale === 'en-US' ? 'VPN / Encrypted Proxy Detection' : 'VPN / 加密代理四维侦测' }}</span>
                 </button>
               </div>
             </div>
@@ -334,7 +334,7 @@
                   activeDropdown === 'control' ? 'border-amber-500/50 text-amber-600 dark:text-amber-300' : 'text-[var(--text-primary)]']"
               >
                 <AppIcon name="zap" :size="12" class="text-amber-500" />
-                <span>控制</span>
+                <span>{{ locale === 'en-US' ? 'Control' : '控制' }}</span>
                 <AppIcon name="chevron-down" :size="11" />
               </button>
               <div
@@ -344,27 +344,27 @@
               >
                 <button @click="$emit('switchWorkbench', 'net_assist'); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs font-semibold cursor-pointer" style="color: var(--text-primary);">
                   <AppIcon name="terminal" :size="13" class="text-sky-500" />
-                  <span>网络通信调试</span>
+                  <span>{{ locale === 'en-US' ? 'Network Assistant Workbench' : '网络通信调试' }}</span>
                 </button>
                 <button @click="isTargetProbeOpen = true; closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
                   <AppIcon name="radar" :size="13" class="text-amber-500" />
-                  <span>靶向主动反探</span>
+                  <span>{{ locale === 'en-US' ? 'Targeted Active Probe' : '靶向主动反探' }}</span>
                 </button>
                 <button @click="openInjectModal(selectedPacket?.payload_hex); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
                   <AppIcon name="zap" :size="13" class="text-rose-500" />
-                  <span>链路层帧注入</span>
+                  <span>{{ locale === 'en-US' ? 'L2 Frame Injection' : '链路层帧注入' }}</span>
                 </button>
                 <button @click="toggleReplayConsole(); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
                   <AppIcon name="play" :size="13" class="text-emerald-500" />
-                  <span>PCAP 线速重放控制台</span>
+                  <span>{{ locale === 'en-US' ? 'PCAP Line-rate Replay Console' : 'PCAP 线速重放控制台' }}</span>
                 </button>
                 <button @click="isColumnSettingsOpen = true; closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
                   <AppIcon name="sliders" :size="13" class="text-slate-500" />
-                  <span>调整字段列宽</span>
+                  <span>{{ locale === 'en-US' ? 'Adjust Column Widths' : '调整字段列宽' }}</span>
                 </button>
                 <button @click="resetAllColWidths(); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-muted);">
                   <AppIcon name="refresh" :size="13" />
-                  <span>重置默认列宽</span>
+                  <span>{{ locale === 'en-US' ? 'Reset Column Widths' : '重置默认列宽' }}</span>
                 </button>
               </div>
             </div>
@@ -377,7 +377,7 @@
                   activeDropdown === 'archive' ? 'border-emerald-500/50 text-emerald-600 dark:text-emerald-300' : 'text-[var(--text-primary)]']"
               >
                 <AppIcon name="archive" :size="12" class="text-emerald-500" />
-                <span>归档</span>
+                <span>{{ locale === 'en-US' ? 'Archive' : '归档' }}</span>
                 <AppIcon name="chevron-down" :size="11" />
               </button>
               <div
@@ -387,35 +387,35 @@
               >
                 <button @click="saveSelectedAsBaseline(); closeAllDropdowns()" :disabled="!selectedPacket" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer disabled:opacity-40" style="color: var(--text-primary);">
                   <AppIcon name="archive" :size="13" class="text-emerald-500" />
-                  <span>存为历史基线</span>
+                  <span>{{ locale === 'en-US' ? 'Save as Historical Baseline' : '存为历史基线' }}</span>
                 </button>
                 <button @click="runJointBaselineCompare(); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
                   <AppIcon name="scale" :size="13" class="text-indigo-500" />
-                  <span>联合基线比对</span>
+                  <span>{{ locale === 'en-US' ? 'Joint Baseline Comparison' : '联合基线比对' }}</span>
                 </button>
                 <button @click="loadHistoricalBaseline(); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
                   <AppIcon name="folder" :size="13" class="text-amber-500" />
-                  <span>载入历史基线库</span>
+                  <span>{{ locale === 'en-US' ? 'Load Historical Baseline Library' : '载入历史基线库' }}</span>
                 </button>
                 <button @click="isExportOpen = true; closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
                   <AppIcon name="download" :size="13" class="text-blue-500" />
-                  <span>导出 PCAP/CSV</span>
+                  <span>{{ locale === 'en-US' ? 'Export PCAP/CSV' : '导出 PCAP/CSV' }}</span>
                 </button>
                 <button @click="isImportOpen = true; closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-[var(--surface-hover)] flex items-center gap-2 transition-colors text-xs cursor-pointer" style="color: var(--text-primary);">
                   <AppIcon name="upload" :size="13" class="text-sky-500" />
-                  <span>导入离线 PCAP</span>
+                  <span>{{ locale === 'en-US' ? 'Import Offline PCAP' : '导入离线 PCAP' }}</span>
                 </button>
                 <button @click="$emit('clearData'); closeAllDropdowns()" class="w-full text-left px-2.5 py-1.5 rounded-xl hover:bg-rose-500/12 text-rose-600 dark:text-rose-400 flex items-center gap-2 transition-colors text-xs cursor-pointer">
                   <AppIcon name="trash" :size="13" />
-                  <span>清空捕获缓冲池</span>
+                  <span>{{ locale === 'en-US' ? 'Clear Capture Buffer Pool' : '清空捕获缓冲池' }}</span>
                 </button>
               </div>
             </div>
 
             <!-- 吞吐与包率微指标 -->
             <div class="hidden 2xl:flex items-center gap-1.5 ui-num text-[11px] glass-pill px-2.5 py-1 rounded-xl" style="color: var(--text-muted);">
-              <span>吞吐: <b style="color: var(--text-primary);">{{ formatBytes(totalBytes) }}</b></span>
-              <span v-if="criticalCount > 0" class="text-rose-600 dark:text-rose-400 font-semibold bg-rose-500/15 px-1.5 rounded text-[11px]">高熵: {{ criticalCount }}</span>
+              <span>{{ locale === 'en-US' ? 'Volume: ' : '吞吐: ' }}<b style="color: var(--text-primary);">{{ formatBytes(totalBytes) }}</b></span>
+              <span v-if="criticalCount > 0" class="text-rose-600 dark:text-rose-400 font-semibold bg-rose-500/15 px-1.5 rounded text-[11px]">{{ locale === 'en-US' ? 'High Entropy' : '高熵' }}: {{ criticalCount }}</span>
             </div>
 
             <!-- 随行解构抽屉开关 -->
@@ -425,7 +425,7 @@
                 isInspectorOpen ? 'bg-[var(--accent-primary)] text-white border-transparent shadow-xs' : 'text-[var(--text-primary)] hover:bg-[var(--surface-hover)]']"
             >
               <AppIcon name="code" :size="12" />
-              <span>{{ isInspectorOpen ? '收起解构' : '随行解构' }}</span>
+              <span>{{ isInspectorOpen ? (locale === 'en-US' ? 'Hide Dissect' : '收起解构') : (locale === 'en-US' ? 'Side Dissect' : '随行解构') }}</span>
               <span class="kbd-badge hidden 2xl:inline-block">R</span>
             </button>
           </div>
@@ -438,24 +438,24 @@
           <div class="flex items-center gap-1.5 flex-1 min-w-[260px]">
             <span class="text-blue-600 dark:text-sky-400 font-semibold shrink-0 flex items-center gap-1">
               <AppIcon name="play" :size="12" />
-              <span>线速重放</span>
+              <span>{{ locale === 'en-US' ? 'Line-rate Replay' : '线速重放' }}</span>
             </span>
             <input
               v-model="replayFilePath"
-              placeholder="输入本地 .pcap / .pcapng 文件绝对路径..."
+              :placeholder="locale === 'en-US' ? 'Enter absolute path of .pcap / .pcapng file...' : '输入本地 .pcap / .pcapng 文件绝对路径...'"
               class="ui-input flex-1 min-w-[160px] px-2.5 py-1 text-[11px] font-mono"
             />
             <button @click="loadReplayFile" :disabled="replayLoading || !replayFilePath.trim()" class="ui-btn-primary px-2.5 py-1 text-[11px] shrink-0">
               <AppIcon name="folder" :size="12" />
-              <span>载入文件</span>
+              <span>{{ locale === 'en-US' ? 'Load File' : '载入文件' }}</span>
             </button>
           </div>
 
           <div class="flex items-center gap-1.5 shrink-0">
             <select v-model="replayMode" class="ui-input px-2 py-1 text-[11px]">
-              <option value="paced">原速/倍速 (Paced)</option>
-              <option value="top_speed">全速突发 (TopSpeed)</option>
-              <option value="step">单步精确 (Step)</option>
+              <option value="paced">{{ locale === 'en-US' ? 'Paced Speed' : '原速/倍速 (Paced)' }}</option>
+              <option value="top_speed">{{ locale === 'en-US' ? 'Top Speed Burst' : '全速突发 (TopSpeed)' }}</option>
+              <option value="step">{{ locale === 'en-US' ? 'Step by Step' : '单步精确 (Step)' }}</option>
             </select>
             <input
               v-if="replayMode === 'paced'"
@@ -464,7 +464,7 @@
               step="0.5"
               min="0.1"
               max="100"
-              title="重放倍速 (如 1.0 表示原时间戳)"
+              :title="locale === 'en-US' ? 'Replay speed (1.0 = realtime)' : '重放倍速 (如 1.0 表示原时间戳)'"
               class="ui-input w-14 px-1.5 py-1 text-[11px] text-center ui-num"
             />
             <input
@@ -472,22 +472,22 @@
               type="number"
               min="1"
               max="9999"
-              title="循环次数"
+              :title="locale === 'en-US' ? 'Loop Count' : '循环次数'"
               class="ui-input w-12 px-1.5 py-1 text-[11px] text-center ui-num"
             />
 
-            <button @click="startReplay" :disabled="!replayFileInfo && replayTelemetry.total_packets === 0" class="ui-btn-primary bg-emerald-600 hover:bg-emerald-500 px-2.5 py-1 text-[11px]">开始</button>
-            <button v-if="replayTelemetry.state === 'Playing'" @click="pauseReplay" class="ui-btn-primary bg-amber-600 hover:bg-amber-500 px-2.5 py-1 text-[11px]">暂停</button>
-            <button v-if="replayTelemetry.state === 'Paused'" @click="resumeReplay" class="ui-btn-primary px-2.5 py-1 text-[11px]">恢复</button>
-            <button v-if="replayMode === 'step' || replayTelemetry.state === 'Paused'" @click="stepReplay" class="ui-btn-primary bg-indigo-600 hover:bg-indigo-500 px-2.5 py-1 text-[11px]">单步</button>
-            <button @click="stopReplay" class="ui-btn-danger px-2.5 py-1 text-[11px]">停止</button>
+            <button @click="startReplay" :disabled="!replayFileInfo && replayTelemetry.total_packets === 0" class="ui-btn-primary bg-emerald-600 hover:bg-emerald-500 px-2.5 py-1 text-[11px]">{{ locale === 'en-US' ? 'Start' : '开始' }}</button>
+            <button v-if="replayTelemetry.state === 'Playing'" @click="pauseReplay" class="ui-btn-primary bg-amber-600 hover:bg-amber-500 px-2.5 py-1 text-[11px]">{{ locale === 'en-US' ? 'Pause' : '暂停' }}</button>
+            <button v-if="replayTelemetry.state === 'Paused'" @click="resumeReplay" class="ui-btn-primary px-2.5 py-1 text-[11px]">{{ locale === 'en-US' ? 'Resume' : '恢复' }}</button>
+            <button v-if="replayMode === 'step' || replayTelemetry.state === 'Paused'" @click="stepReplay" class="ui-btn-primary bg-indigo-600 hover:bg-indigo-500 px-2.5 py-1 text-[11px]">{{ locale === 'en-US' ? 'Step' : '单步' }}</button>
+            <button @click="stopReplay" class="ui-btn-danger px-2.5 py-1 text-[11px]">{{ locale === 'en-US' ? 'Stop' : '停止' }}</button>
           </div>
 
           <div class="flex items-center gap-2 text-[11px] ui-num shrink-0" style="color: var(--text-secondary);">
             <span class="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-sky-300 font-semibold">{{ replayTelemetry.state }}</span>
             <span>{{ replayTelemetry.current_index }}/{{ replayTelemetry.total_packets }} ({{ replayTelemetry.progress_percent.toFixed(1) }}%)</span>
             <span class="text-emerald-600 dark:text-emerald-400">{{ replayTelemetry.current_pps.toFixed(0) }} pps · {{ replayTelemetry.current_mbps.toFixed(2) }} Mbps</span>
-            <button @click="isReplayPanelOpen = false" class="p-1 cursor-pointer hover:opacity-75" style="color: var(--text-muted);" title="折叠重放面板">
+            <button @click="isReplayPanelOpen = false" class="p-1 cursor-pointer hover:opacity-75" style="color: var(--text-muted);" :title="locale === 'en-US' ? 'Collapse Replay Panel' : '折叠重放面板'">
               <AppIcon name="close" :size="12" />
             </button>
           </div>
@@ -499,17 +499,17 @@
             <div class="flex items-center gap-3 flex-wrap ui-num">
               <span class="text-amber-600 dark:text-amber-300 font-semibold flex items-center gap-1">
                 <AppIcon name="cpu" :size="13" />
-                <span>工控主从事务与往返时延追踪</span>
+                <span>{{ locale === 'en-US' ? 'ICS Master-Slave Transaction & RTT Latency Tracking' : '工控主从事务与往返时延追踪' }}</span>
               </span>
-              <span>总事务: <b>{{ txStats?.total_transactions_recorded ?? 0 }}</b></span>
-              <span>成功: <b class="text-emerald-600 dark:text-emerald-400">{{ txStats?.successful_transactions ?? 0 }}</b></span>
-              <span>异常/超时: <b class="text-rose-600 dark:text-rose-400">{{ txStats?.exception_transactions ?? 0 }} / {{ txStats?.timeout_transactions ?? 0 }}</b></span>
-              <span>平均/最大时延: <b class="text-blue-600 dark:text-sky-300">{{ (txStats?.avg_plc_latency_ms ?? 0).toFixed(2) }} / {{ (txStats?.max_plc_latency_ms ?? 0).toFixed(2) }} ms</b></span>
+              <span>{{ locale === 'en-US' ? 'Total: ' : '总事务: ' }}<b>{{ txStats?.total_transactions_recorded ?? 0 }}</b></span>
+              <span>{{ locale === 'en-US' ? 'Success: ' : '成功: ' }}<b class="text-emerald-600 dark:text-emerald-400">{{ txStats?.successful_transactions ?? 0 }}</b></span>
+              <span>{{ locale === 'en-US' ? 'Exception/Timeout: ' : '异常/超时: ' }}<b class="text-rose-600 dark:text-rose-400">{{ txStats?.exception_transactions ?? 0 }} / {{ txStats?.timeout_transactions ?? 0 }}</b></span>
+              <span>{{ locale === 'en-US' ? 'Avg/Max Latency: ' : '平均/最大时延: ' }}<b class="text-blue-600 dark:text-sky-300">{{ (txStats?.avg_plc_latency_ms ?? 0).toFixed(2) }} / {{ (txStats?.max_plc_latency_ms ?? 0).toFixed(2) }} ms</b></span>
             </div>
             <div class="flex items-center gap-1.5">
               <button @click="fetchIndustrialTxData" class="ui-btn-secondary px-2 py-0.5 text-[11px]">
                 <AppIcon name="refresh" :size="11" />
-                <span>刷新</span>
+                <span>{{ locale === 'en-US' ? 'Refresh' : '刷新' }}</span>
               </button>
               <button @click="isIndustrialTxOpen = false" class="p-1 cursor-pointer" style="color: var(--text-muted);">
                 <AppIcon name="close" :size="12" />
@@ -518,7 +518,7 @@
           </div>
           <div class="overflow-y-auto custom-scrollbar max-h-36 border rounded-lg p-1.5 space-y-1" style="background: var(--surface-content); border-color: var(--border-subtle);">
             <div v-if="recentIndustrialTxs.length === 0" class="text-center py-3 text-[11px]" style="color: var(--text-muted);">
-              暂无完整配对工控事务记录（捕获 Modbus / S7 等主从请求与响应包后将自动计算微秒级往返时延）。
+              {{ locale === 'en-US' ? 'No paired ICS transactions recorded yet (will calculate microsecond RTT upon Modbus/S7 request-response pairs).' : '暂无完整配对工控事务记录（捕获 Modbus / S7 等主从请求与响应包后将自动计算微秒级往返时延）。' }}
             </div>
             <div v-for="tx in recentIndustrialTxs" :key="tx.id" class="flex items-center justify-between px-2 py-1 rounded bg-[var(--surface-sub)] text-[11px] ui-num">
               <span class="text-blue-600 dark:text-sky-300">{{ tx.req_time }} | {{ tx.client_ip }} → {{ tx.server_ip }} [{{ tx.protocol }} FC:0x{{ tx.function_code.toString(16) }}]</span>
@@ -536,21 +536,21 @@
             <div class="flex items-center gap-3 flex-wrap ui-num">
               <span class="text-indigo-600 dark:text-indigo-300 font-semibold flex items-center gap-1">
                 <AppIcon name="radar" :size="13" />
-                <span>多分辨率时序与交互通信矩阵热力榜</span>
+                <span>{{ locale === 'en-US' ? 'Multi-Resolution Temporal & Communication Matrix Heatmap' : '多分辨率时序与交互通信矩阵热力榜' }}</span>
               </span>
               <select v-model="tsResolution" @change="fetchTimeseriesHeatmapData" class="ui-input px-2 py-0.5 text-[11px]">
-                <option value="1s">1 秒粒度桶</option>
-                <option value="10s">10 秒粒度桶</option>
-                <option value="60s">60 秒粒度桶</option>
-                <option value="1h">1 小时粒度桶</option>
+                <option value="1s">{{ locale === 'en-US' ? '1s Bucket' : '1 秒粒度桶' }}</option>
+                <option value="10s">{{ locale === 'en-US' ? '10s Bucket' : '10 秒粒度桶' }}</option>
+                <option value="60s">{{ locale === 'en-US' ? '60s Bucket' : '60 秒粒度桶' }}</option>
+                <option value="1h">{{ locale === 'en-US' ? '1h Bucket' : '1 小时粒度桶' }}</option>
               </select>
-              <span style="color: var(--text-muted);">活跃时间桶: <b style="color: var(--text-primary);">{{ tsBuckets.length }}</b> 个</span>
-              <span style="color: var(--text-muted);">热点通信对: <b class="text-blue-600 dark:text-sky-300">{{ heatmapCells.length }}</b> 组</span>
+              <span style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Active Buckets' : '活跃时间桶' }}: <b style="color: var(--text-primary);">{{ tsBuckets.length }}</b></span>
+              <span style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Hotspot Pairs' : '热点通信对' }}: <b class="text-blue-600 dark:text-sky-300">{{ heatmapCells.length }}</b></span>
             </div>
             <div class="flex items-center gap-1.5">
               <button @click="fetchTimeseriesHeatmapData" class="ui-btn-secondary px-2 py-0.5 text-[11px]">
                 <AppIcon name="refresh" :size="11" />
-                <span>刷新</span>
+                <span>{{ locale === 'en-US' ? 'Refresh' : '刷新' }}</span>
               </button>
               <button @click="isTimeseriesHeatmapOpen = false" class="p-1 cursor-pointer" style="color: var(--text-muted);">
                 <AppIcon name="close" :size="12" />
@@ -559,30 +559,30 @@
           </div>
           <div class="grid grid-cols-12 gap-2 overflow-hidden">
             <div class="col-span-7 overflow-y-auto custom-scrollbar max-h-36 border rounded-lg p-1.5 space-y-1" style="background: var(--surface-content); border-color: var(--border-subtle);">
-              <div v-if="heatmapCells.length === 0" class="text-center py-3 text-[11px]" style="color: var(--text-muted);">暂无统计窗口通信矩阵数据</div>
+              <div v-if="heatmapCells.length === 0" class="text-center py-3 text-[11px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'No traffic matrix in window' : '暂无统计窗口通信矩阵数据' }}</div>
               <div v-for="(c, idx) in heatmapCells" :key="idx" class="flex items-center justify-between px-2 py-1 rounded text-[11px] ui-num">
                 <span style="color: var(--text-primary);">{{ c.source_ip }} → {{ c.dest_ip }}</span>
-                <span style="color: var(--text-muted);">交互 {{ c.interaction_count }} 次 | {{ (c.total_bytes / 1024).toFixed(1) }} KB</span>
+                <span style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Interactions' : '交互' }} {{ c.interaction_count }} | {{ (c.total_bytes / 1024).toFixed(1) }} KB</span>
                 <span :class="c.error_count > 0 ? 'text-rose-600 dark:text-rose-400' : (c.is_industrial ? 'text-amber-600 dark:text-amber-300' : 'text-emerald-600 dark:text-emerald-400')">
-                  {{ c.is_industrial ? '工控流' : '通用流' }} (写:{{ c.write_operation_count }}/错:{{ c.error_count }})
+                  {{ c.is_industrial ? (locale === 'en-US' ? 'ICS Flow' : '工控流') : (locale === 'en-US' ? 'General' : '通用流') }} (写:{{ c.write_operation_count }}/错:{{ c.error_count }})
                 </span>
               </div>
             </div>
             <div class="col-span-5 flex flex-col gap-1 max-h-36 border rounded-lg p-1.5" style="background: var(--surface-content); border-color: var(--border-subtle);">
-              <div v-if="tsBuckets.length === 0" class="text-center py-6 text-[11px]" style="color: var(--text-muted);">暂无时序聚合桶记录</div>
+              <div v-if="tsBuckets.length === 0" class="text-center py-6 text-[11px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'No time-series buckets recorded' : '暂无时序聚合桶记录' }}</div>
               <template v-else>
                 <div class="h-14 rounded bg-slate-950/85 border border-white/10 px-1 py-0.5 shrink-0 flex items-center">
                   <svg v-if="tsBuckets.length >= 2" viewBox="0 0 320 48" class="w-full h-full">
                     <polyline :points="tsPktPolyline" fill="none" stroke="#38bdf8" stroke-width="1.6" stroke-linejoin="round" />
                     <polyline :points="tsIndPolyline" fill="none" stroke="#f59e0b" stroke-width="1.4" stroke-dasharray="3 2" stroke-linejoin="round" />
                   </svg>
-                  <div v-else class="w-full text-center text-[10px] text-slate-400">单时间桶等待延续...</div>
+                  <div v-else class="w-full text-center text-[10px] text-slate-400">{{ locale === 'en-US' ? 'Single bucket waiting for more...' : '单时间桶等待延续...' }}</div>
                 </div>
                 <div class="overflow-y-auto custom-scrollbar space-y-0.5 flex-1">
                   <div v-for="(b, idx) in tsBuckets.slice(-8).reverse()" :key="idx" class="flex items-center justify-between px-2 py-0.5 rounded text-[10px] ui-num">
                     <span style="color: var(--text-muted);">@{{ new Date(b.slot_timestamp_s * 1000).toLocaleTimeString() }}</span>
-                    <span class="text-blue-600 dark:text-sky-300">{{ b.packet_count }} 帧 / {{ b.byte_count }} B</span>
-                    <span class="text-amber-600 dark:text-amber-300">工控 {{ b.industrial_packet_count }}</span>
+                    <span class="text-blue-600 dark:text-sky-300">{{ b.packet_count }} {{ locale === 'en-US' ? 'Frames' : '帧' }} / {{ b.byte_count }} B</span>
+                    <span class="text-amber-600 dark:text-amber-300">{{ locale === 'en-US' ? 'ICS' : '工控' }} {{ b.industrial_packet_count }}</span>
                   </div>
                 </div>
               </template>
@@ -602,7 +602,7 @@
               <AppIcon name="alert" :size="15" class="text-amber-600 dark:text-amber-300 shrink-0 mt-0.5" />
               <div class="min-w-0 space-y-0.5">
                 <div class="font-bold text-amber-800 dark:text-amber-200">
-                  外网捕获通道受限（当前仅局域网多播/ARP 雷达运行中）
+                  {{ locale === 'en-US' ? 'External capture restricted (LAN Multicast/ARP active)' : '外网捕获通道受限（当前仅局域网多播/ARP 雷达运行中）' }}
                 </div>
                 <div class="text-[11px] leading-snug text-amber-900/85 dark:text-amber-100/85">
                   {{ captureCapability.reason }}
@@ -613,7 +613,7 @@
               @click="$emit('openEnvInspector')"
               class="ui-btn-primary px-3 py-1.5 rounded-xl text-[11px] font-semibold shrink-0 whitespace-nowrap"
             >
-              环境自检 / 安装 Npcap
+              {{ locale === 'en-US' ? 'Environment Self-Check / Install Npcap' : '环境自检 / 安装 Npcap' }}
             </button>
           </div>
 
@@ -666,7 +666,7 @@
                   ]"
                 >
                   <!-- 1. 序号 -->
-                  <div v-if="isColVisible('id')" class="font-semibold text-blue-600 dark:text-sky-400 ui-num min-w-0 truncate flex items-center gap-1.5" :title="`报文帧序号 #${pkt.id}`">
+                  <div v-if="isColVisible('id')" class="font-semibold text-blue-600 dark:text-sky-400 ui-num min-w-0 truncate flex items-center gap-1.5" :title="locale === 'en-US' ? `Frame #${pkt.id}` : `报文帧序号 #${pkt.id}`">
                     <input
                       type="checkbox"
                       :checked="selectedPackets.has(pkt.id)"
@@ -700,7 +700,7 @@
                         class="font-semibold truncate hover:text-blue-500 hover:underline cursor-pointer transition-colors"
                         style="color: var(--text-primary);"
                         @click.stop="openIpDossier(pkt.src_ip)"
-                        title="点击查阅该 IP 全息档案"
+                        :title="locale === 'en-US' ? 'Inspect IP Dossier' : '点击查阅该 IP 全息档案'"
                       >
                         {{ formatEndpoint(pkt.src_ip, pkt.src_port) }}
                       </span>
@@ -796,7 +796,7 @@
                   <!-- 高级扩展列 -->
                   <div v-if="isColVisible('direction')" class="min-w-0 truncate">
                     <span :class="['px-1.5 py-0.5 rounded text-[11px] font-semibold border inline-block truncate max-w-full', directionBadgeClass(pkt.direction)]">
-                      {{ pkt.direction === 'HONEYPOT_RECV' ? '诱捕' : pkt.direction }}
+                      {{ pkt.direction === 'HONEYPOT_RECV' ? (locale === 'en-US' ? 'HONEYPOT' : '诱捕') : pkt.direction }}
                     </span>
                   </div>
 
@@ -847,10 +847,10 @@
             </div>
             <div class="space-y-1">
               <h3 class="text-[15px] font-semibold tracking-tight" style="color: var(--text-primary);">
-                全总线工业网络分析引擎已就绪
+                {{ locale === 'en-US' ? 'All-Bus Industrial Analysis Engine Ready' : '全总线工业网络分析引擎已就绪' }}
               </h3>
               <p class="text-xs max-w-xl mx-auto leading-relaxed" style="color: var(--text-muted);">
-                同时支持物理网卡、COM 串口、USB 描述符/URB 及无线 Wi-Fi / 蓝牙四大物理通信通道，请选择下方任一总线入口直接启动：
+                {{ locale === 'en-US' ? 'Supports NICs, COM Serial, USB Descriptors/URB, and Wireless Wi-Fi/Bluetooth. Select any bus below to launch:' : '同时支持物理网卡、COM 串口、USB 描述符/URB 及无线 Wi-Fi / 蓝牙四大物理通信通道，请选择下方任一总线入口直接启动：' }}
               </p>
             </div>
 
@@ -863,15 +863,15 @@
                     <AppIcon name="play" :size="15" />
                   </div>
                   <span class="ui-pill text-[11px] ui-num px-2 py-0.5 rounded-full">
-                    {{ interfaces.length }} 网卡
+                    {{ locale === 'en-US' ? `${interfaces.length} NICs` : `${interfaces.length} 网卡` }}
                   </span>
                 </div>
                 <div>
                   <div class="text-xs font-semibold flex items-center justify-between" style="color: var(--text-primary);">
-                    <span>网卡捕获 (NIC)</span>
+                    <span>{{ locale === 'en-US' ? 'Network Interface (NIC)' : '网卡捕获 (NIC)' }}</span>
                     <AppIcon name="arrow-right" :size="12" class="opacity-50 group-hover:translate-x-0.5 transition-transform" />
                   </div>
-                  <p class="text-[11px] mt-1 leading-snug" style="color: var(--text-muted);">启用 Npcap / Raw Socket 实时抓取 L2–L7 流量</p>
+                  <p class="text-[11px] mt-1 leading-snug" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Capture L2-L7 traffic in real time via Npcap / Raw Socket' : '启用 Npcap / Raw Socket 实时抓取 L2–L7 流量' }}</p>
                 </div>
               </button>
 
@@ -883,16 +883,16 @@
                     <AppIcon name="serial" :size="15" />
                   </div>
                   <span class="ui-pill text-[11px] ui-num px-2 py-0.5 rounded-full">
-                    {{ serialPorts.length }} 串口
+                    {{ locale === 'en-US' ? `${serialPorts.length} COM Ports` : `${serialPorts.length} 串口` }}
                   </span>
                 </div>
                 <div>
                   <div class="text-xs font-semibold flex items-center justify-between" style="color: var(--text-primary);">
-                    <span>COM 串口总线</span>
+                    <span>{{ locale === 'en-US' ? 'COM Serial Bus' : 'COM 串口总线' }}</span>
                     <AppIcon name="arrow-right" :size="12" class="opacity-50 group-hover:translate-x-0.5 transition-transform" />
                   </div>
                   <p class="text-[11px] mt-1 leading-snug" style="color: var(--text-muted);">
-                    {{ serialPorts.length > 0 ? `已就绪 ${selectedSerial || serialPorts[0]}，支持 RS-232/485 监听与收发` : '查看物理串口清单、波特率配置与双向交互' }}
+                    {{ serialPorts.length > 0 ? (locale === 'en-US' ? `Ready: ${selectedSerial || serialPorts[0]}, supports RS-232/485 monitoring` : `已就绪 ${selectedSerial || serialPorts[0]}，支持 RS-232/485 监听与收发`) : (locale === 'en-US' ? 'Inspect COM list, baudrate & duplex interaction' : '查看物理串口清单、波特率配置与双向交互') }}
                   </p>
                 </div>
               </button>
@@ -905,15 +905,15 @@
                     <AppIcon name="usb" :size="15" />
                   </div>
                   <span class="ui-pill text-[11px] ui-num px-2 py-0.5 rounded-full">
-                    {{ usbDevices.length }} 设备
+                    {{ locale === 'en-US' ? `${usbDevices.length} USB Devices` : `${usbDevices.length} 设备` }}
                   </span>
                 </div>
                 <div>
                   <div class="text-xs font-semibold flex items-center justify-between" style="color: var(--text-primary);">
-                    <span>USB 外设总线</span>
+                    <span>{{ locale === 'en-US' ? 'USB Peripheral Bus' : 'USB 外设总线' }}</span>
                     <AppIcon name="arrow-right" :size="12" class="opacity-50 group-hover:translate-x-0.5 transition-transform" />
                   </div>
-                  <p class="text-[11px] mt-1 leading-snug" style="color: var(--text-muted);">物理 USB 设备画像、PnP 热插拔审计与 URB 解析</p>
+                  <p class="text-[11px] mt-1 leading-snug" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Physical USB profiling, PnP hotplug audit & URB parsing' : '物理 USB 设备画像、PnP 热插拔审计与 URB 解析' }}</p>
                 </div>
               </button>
 
@@ -930,10 +930,10 @@
                 </div>
                 <div>
                   <div class="text-xs font-semibold flex items-center justify-between" style="color: var(--text-primary);">
-                    <span>无线 Wi-Fi / 蓝牙</span>
+                    <span>{{ locale === 'en-US' ? 'Wireless Wi-Fi / BLE' : '无线 Wi-Fi / 蓝牙' }}</span>
                     <AppIcon name="arrow-right" :size="12" class="opacity-50 group-hover:translate-x-0.5 transition-transform" />
                   </div>
-                  <p class="text-[11px] mt-1 leading-snug" style="color: var(--text-muted);">802.11 频谱热力、BLE HCI 距离雷达与单帧解码</p>
+                  <p class="text-[11px] mt-1 leading-snug" style="color: var(--text-muted);">{{ locale === 'en-US' ? '802.11 Spectrum Heatmap, BLE Proximity Radar & Frame Decoding' : '802.11 频谱热力、BLE HCI 距离雷达与单帧解码' }}</p>
                 </div>
               </button>
             </div>
@@ -941,19 +941,19 @@
             <button @click="isImportOpen = true"
               class="ui-pill px-4 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 cursor-pointer hover:bg-[var(--surface-glass-pill-hover)]">
               <AppIcon name="upload" :size="13" />
-              <span>或导入本地 .pcap / .pcapng 离线数据包执行还原分析</span>
+              <span>{{ locale === 'en-US' ? 'Or import offline .pcap / .pcapng packet captures for reconstruction' : '或导入本地 .pcap / .pcapng 离线数据包执行还原分析' }}</span>
             </button>
           </div>
 
           <EmptyState
             v-else
             icon="search"
-            title="未找到匹配当前条件的报文"
-            description="已捕获的报文均不符合当前过滤条件，请调整关键词或切换协议范围。"
+            :title="locale === 'en-US' ? 'No matching packets found' : '未找到匹配当前条件的报文'"
+            :description="locale === 'en-US' ? 'No captured packets match current filter. Please adjust keywords or protocol scope.' : '已捕获的报文均不符合当前过滤条件，请调整关键词或切换协议范围。'"
           >
             <template #actions>
               <button @click="clearDisplayFilter(); filterProtocol = ''" class="ui-btn-secondary px-3 py-1 text-xs">
-                重置所有筛选条件
+                {{ locale === 'en-US' ? 'Reset All Filters' : '重置所有筛选条件' }}
               </button>
             </template>
           </EmptyState>
@@ -967,7 +967,7 @@
           <span class="lens-edge-lip" aria-hidden="true"></span>
           <div class="flex items-center gap-2 text-xs font-semibold text-indigo-600 dark:text-indigo-300 ui-num">
             <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
-            <span>已选定 <strong style="color: var(--text-primary);">{{ selectedPackets.size }}</strong> 帧报文</span>
+            <span>{{ locale === 'en-US' ? 'Selected' : '已选定' }} <strong style="color: var(--text-primary);">{{ selectedPackets.size }}</strong> {{ locale === 'en-US' ? 'Frames' : '帧报文' }}</span>
           </div>
 
           <div class="h-4 w-px" style="background: var(--border-strong);"></div>
@@ -975,23 +975,23 @@
           <div class="flex items-center gap-2 text-xs">
             <button v-if="selectedPackets.size === 2" @click="openDiffWithSelected2" class="ui-btn-primary px-3 py-1 text-xs">
               <AppIcon name="scale" :size="13" />
-              <span>双报文差分 (A vs B)</span>
+              <span>{{ locale === 'en-US' ? 'Diff (A vs B)' : '双报文差分 (A vs B)' }}</span>
             </button>
             <button @click="openGlobalMultiDiffWithSelected" class="ui-btn-primary px-3 py-1 text-xs">
               <AppIcon name="git-branch" :size="13" />
-              <span>送入全局多组精密比对 ({{ selectedPackets.size }})</span>
+              <span>{{ locale === 'en-US' ? `Send to Global Diff (${selectedPackets.size})` : `送入全局多组精密比对 (${selectedPackets.size})` }}</span>
             </button>
             <button @click="openMatrixTab" class="ui-btn-secondary px-2.5 py-1 text-xs">
               <AppIcon name="layers" :size="13" />
-              <span>侧栏矩阵</span>
+              <span>{{ locale === 'en-US' ? 'Sidebar Matrix' : '侧栏矩阵' }}</span>
             </button>
             <button @click="saveSelectedPacketsAsBaseline" class="ui-btn-secondary px-2.5 py-1 text-xs">
               <AppIcon name="archive" :size="13" />
-              <span>存为特征基线</span>
+              <span>{{ locale === 'en-US' ? 'Save Baseline' : '存为特征基线' }}</span>
             </button>
             <button @click="clearSelectedPackets" class="ui-btn-secondary px-2 py-1 text-xs">
               <AppIcon name="close" :size="12" />
-              <span>取消</span>
+              <span>{{ locale === 'en-US' ? 'Cancel' : '取消' }}</span>
             </button>
           </div>
         </div>
@@ -1076,7 +1076,7 @@
               <AppIcon name="code" :size="14" />
             </div>
             <div class="min-w-0">
-              <div class="text-xs font-semibold tracking-tight truncate" style="color: var(--text-primary);">随行协议解构 (Inspector)</div>
+              <div class="text-xs font-semibold tracking-tight truncate" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Companion Inspector' : '随行协议解构 (Inspector)' }}</div>
               <div class="text-[11px] ui-num truncate max-w-[180px]" style="color: var(--text-muted);" v-if="selectedPacket">
                 帧 #{{ selectedPacket.id }} · {{ selectedPacket.protocol }} · {{ selectedPacket.length }}B
               </div>
@@ -1086,20 +1086,20 @@
           <div class="flex items-center gap-1.5 shrink-0">
             <button v-if="selectedPacket" @click="queuePacketForDiff(selectedPacket)"
               class="px-2 py-1 rounded-lg bg-emerald-500/12 hover:bg-emerald-500 text-emerald-700 dark:text-emerald-300 hover:text-white border border-emerald-500/30 text-[11px] font-semibold cursor-pointer transition-colors"
-              title="加入全局多组比对队列">
-              + 入队比对
+              :title="locale === 'en-US' ? 'Add to global multi-diff queue' : '加入全局多组比对队列'">
+              {{ locale === 'en-US' ? '+ Enqueue Diff' : '+ 入队比对' }}
             </button>
             <div class="flex glass-pill p-0.5 rounded-xl text-[11px]">
               <button @click="activeBottomTab = 'hexdump'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer font-medium', activeBottomTab === 'hexdump' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">L7</button>
-              <button @click="activeBottomTab = 'tracemap'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer font-medium flex items-center gap-1', activeBottomTab === 'tracemap' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']" title="查看本地 IP 到目标 IP 的网络 Trace 与 MAP 态势图">
+              <button @click="activeBottomTab = 'tracemap'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer font-medium flex items-center gap-1', activeBottomTab === 'tracemap' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']" :title="locale === 'en-US' ? 'Trace route & Geo MAP from local IP to target IP' : '查看本地 IP 到目标 IP 的网络 Trace 与 MAP 态势图'">
                 <AppIcon name="globe" :size="11" />
                 <span>Trace/MAP</span>
               </button>
-              <button @click="activeBottomTab = 'dialogue'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer font-medium', activeBottomTab === 'dialogue' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">会话</button>
-              <button @click="activeBottomTab = 'iographs'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer font-medium', activeBottomTab === 'iographs' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">IO图</button>
-              <button @click="activeBottomTab = 'wave'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer font-medium', activeBottomTab === 'wave' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">示波</button>
+              <button @click="activeBottomTab = 'dialogue'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer font-medium', activeBottomTab === 'dialogue' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">{{ locale === 'en-US' ? 'Flow' : '会话' }}</button>
+              <button @click="activeBottomTab = 'iographs'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer font-medium', activeBottomTab === 'iographs' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">{{ locale === 'en-US' ? 'IO Graph' : 'IO图' }}</button>
+              <button @click="activeBottomTab = 'wave'" :class="['px-2 py-0.5 rounded-lg transition-all cursor-pointer font-medium', activeBottomTab === 'wave' ? 'bg-[var(--accent-primary)] text-white font-semibold shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']">{{ locale === 'en-US' ? 'Scope' : '示波' }}</button>
             </div>
-            <button @click="isInspectorOpen = false" class="drawer-close-btn" title="收起随行解构抽屉 (ESC 或 R)">
+            <button @click="isInspectorOpen = false" class="drawer-close-btn" :title="locale === 'en-US' ? 'Close Inspector Drawer (ESC / R)' : '收起随行解构抽屉 (ESC 或 R)'">
               <AppIcon name="close" :size="13" />
             </button>
           </div>
@@ -1110,13 +1110,13 @@
           <template v-if="selectedPacket">
             <div class="apple-group-card space-y-1.5">
               <div class="group-card-title">
-                <span>传输与网络层拓扑 (L2 - L4)</span>
+                <span>{{ locale === 'en-US' ? 'Transport & Network Layer (L2 - L4)' : '传输与网络层拓扑 (L2 - L4)' }}</span>
                 <span class="badge-subtle">{{ selectedPacket.transport || 'TCP' }}</span>
               </div>
               <div class="text-[11px] leading-relaxed ui-num space-y-0.5" style="color: var(--text-secondary);">
                 <div>Ethernet II · <span class="font-mono">{{ selectedPacket.mac_src || '--' }}</span> → <span class="font-mono">{{ selectedPacket.mac_dst || '--' }}</span></div>
                 <div>IP · <span class="font-semibold" style="color: var(--text-primary);">{{ selectedPacket.src_ip || '--' }}</span> → <span class="font-semibold" style="color: var(--text-primary);">{{ selectedPacket.dst_ip || '--' }}</span></div>
-                <div class="text-blue-600 dark:text-sky-300 font-medium">端口: <span>{{ selectedPacket.src_port || '-' }}</span> → <span>{{ selectedPacket.dst_port || '-' }}</span></div>
+                <div class="text-blue-600 dark:text-sky-300 font-medium">{{ locale === 'en-US' ? 'Port' : '端口' }}: <span>{{ selectedPacket.src_port || '-' }}</span> → <span>{{ selectedPacket.dst_port || '-' }}</span></div>
               </div>
             </div>
 
@@ -1152,16 +1152,16 @@
                     <button
                       @click.stop="quickApplyFieldFilter(item.fieldKey, item.fieldValue, '==')"
                       class="text-[11px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-sky-300 border border-blue-500/25 cursor-pointer"
-                      title="作为过滤条件应用 (==)"
+                      :title="locale === 'en-US' ? 'Apply as display filter (==)' : '作为过滤条件应用 (==)'"
                     >
-                      过滤
+                      {{ locale === 'en-US' ? 'Filter' : '过滤' }}
                     </button>
                     <button
                       @click.stop="quickApplyFieldFilter(item.fieldKey, item.fieldValue, '!=')"
                       class="text-[11px] px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/25 cursor-pointer"
-                      title="排除此字段 (!=)"
+                      :title="locale === 'en-US' ? 'Exclude this field (!=)' : '排除此字段 (!=)'"
                     >
-                      排除
+                      {{ locale === 'en-US' ? 'Exclude' : '排除' }}
                     </button>
                   </div>
                 </div>
@@ -1173,7 +1173,7 @@
                 <span>Raw Hex Payload ({{ selectedPacket.length }} Bytes)</span>
                 <button @click="copyHex(selectedPacket.payload_hex)" class="text-blue-600 dark:text-sky-400 hover:underline cursor-pointer text-[11px] flex items-center gap-1">
                   <AppIcon name="document" :size="12" />
-                  <span>复制 Hex</span>
+                  <span>{{ locale === 'en-US' ? 'Copy Hex' : '复制 Hex' }}</span>
                 </button>
               </div>
               <div class="hex-container max-h-52 overflow-y-auto custom-scrollbar select-text text-[11px]">
@@ -1183,7 +1183,7 @@
                   <span class="text-blue-600 dark:text-sky-300 font-semibold">{{ line.slice(54) }}</span>
                 </div>
                 <div v-if="!selectedPacket.payload_hex" class="text-[11px] py-1" style="color: var(--text-muted);">
-                  (无应用层载荷)
+                  {{ locale === 'en-US' ? '(No L7 Payload)' : '(无应用层载荷)' }}
                 </div>
               </div>
             </div>
@@ -1192,8 +1192,8 @@
           <EmptyState
             v-else
             icon="code"
-            title="报文深度语义解构视窗"
-            description="在左侧列表中点击任意报文，即可实时展开 L2-L7 深度解构与 Hex 对齐视窗。"
+            :title="locale === 'en-US' ? 'Packet Deep Semantic Dissection Viewport' : '报文深度语义解构视窗'"
+            :description="locale === 'en-US' ? 'Click any packet in list to expand L2-L7 deep dissection & Hex view.' : '在左侧列表中点击任意报文，即可实时展开 L2-L7 深度解构与 Hex 对齐视窗。'"
           />
         </div>
 
@@ -1212,8 +1212,8 @@
           <EmptyState
             v-else
             icon="globe"
-            title="本地 ➔ 目标网络 Trace & 地理 MAP 视窗"
-            description="请在左侧报文列表中点击选择任意数据帧，即可实时测算并呈现从本地主机到目标主机的端到端跳数追踪 (Trace) 与地理链路 (MAP) 态势。"
+            :title="locale === 'en-US' ? 'Local to Target Network Trace & Geographic MAP Viewport' : '本地 ➔ 目标网络 Trace & 地理 MAP 视窗'"
+            :description="locale === 'en-US' ? 'Click any frame in list to measure and render end-to-end hop trace and geographic MAP trajectory.' : '请在左侧报文列表中点击选择任意数据帧，即可实时测算并呈现从本地主机到目标主机的端到端跳数追踪 (Trace) 与地理链路 (MAP) 态势。'"
           />
         </div>
 
@@ -1236,55 +1236,55 @@
         <!-- 子视图 4: 实时示波波形追踪 -->
         <div v-else-if="activeBottomTab === 'wave'" class="flex-1 overflow-y-auto p-3 space-y-3 text-xs custom-scrollbar">
           <div class="flex items-center justify-between">
-            <span class="font-semibold" style="color: var(--text-primary);">载荷示波波形追踪</span>
+            <span class="font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Payload Scope Waveform Tracking' : '载荷示波波形追踪' }}</span>
             <div class="flex items-center gap-1.5">
               <button @click="startWave" :disabled="waveActive" class="ui-btn-primary bg-emerald-600 hover:bg-emerald-500 px-2.5 py-1 text-[11px]">
                 <AppIcon name="play" :size="11" />
-                <span>开始采样</span>
+                <span>{{ locale === 'en-US' ? 'Start Sampling' : '开始采样' }}</span>
               </button>
               <button @click="stopWave" :disabled="!waveActive" class="ui-btn-danger px-2.5 py-1 text-[11px]">
                 <AppIcon name="stop" :size="11" />
-                <span>停止</span>
+                <span>{{ locale === 'en-US' ? 'Stop' : '停止' }}</span>
               </button>
             </div>
           </div>
           <div class="h-44 rounded-xl border relative overflow-hidden flex items-center justify-center" style="background: var(--surface-input); border-color: var(--border-subtle);">
             <canvas ref="waveCanvasRef" class="w-full h-full"></canvas>
             <div v-if="wavePoints.length === 0" class="absolute text-[11px]" style="color: var(--text-muted);">
-              等待采样数据点流入...
+              {{ locale === 'en-US' ? 'Waiting for sample data stream...' : '等待采样数据点流入...' }}
             </div>
           </div>
           <div class="text-[11px] ui-num flex justify-between" style="color: var(--text-muted);">
-            <span>峰值: {{ waveMax }}</span>
-            <span>谷值: {{ waveMin }}</span>
-            <span>点数: {{ wavePoints.length }}</span>
+            <span>{{ locale === 'en-US' ? 'Peak' : '峰值' }}: {{ waveMax }}</span>
+            <span>{{ locale === 'en-US' ? 'Valley' : '谷值' }}: {{ waveMin }}</span>
+            <span>{{ locale === 'en-US' ? 'Points' : '点数' }}: {{ wavePoints.length }}</span>
           </div>
         </div>
 
-        <!-- 子视图 5: 多报文矩阵特征比对 -->
+        <!-- 子视图 5: {{ locale === 'en-US' ? 'Multi-Packet Matrix Feature Comparison' : '多报文矩阵特征比对' }} -->
         <div v-else-if="activeBottomTab === 'matrix'" class="flex-1 overflow-y-auto p-3 space-y-3 text-xs custom-scrollbar">
           <div class="flex items-center justify-between pb-2 border-b flex-wrap gap-2" style="border-color: var(--border-subtle);">
             <div class="flex items-center gap-2">
-              <span class="font-semibold" style="color: var(--text-primary);">多报文矩阵特征比对</span>
+              <span class="font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Multi-Packet Matrix Feature Comparison' : '多报文矩阵特征比对' }}</span>
               <span class="text-[11px] ui-num px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-semibold">
-                已载入 {{ matrixPayloads.length }} 组
+                {{ locale === 'en-US' ? 'Loaded' : '已载入' }} {{ matrixPayloads.length }} {{ locale === 'en-US' ? 'Sets' : '组' }}
               </span>
             </div>
             <div class="flex items-center gap-1.5">
-              <button @click="openGlobalMultiDiffWithSelected" :disabled="selectedPackets.size < 2" class="ui-btn-primary px-2 py-1 text-[11px]" title="将选中报文组送入全局 Center-Star 居中精密对齐工作台">
+              <button @click="openGlobalMultiDiffWithSelected" :disabled="selectedPackets.size < 2" class="ui-btn-primary px-2 py-1 text-[11px]" :title="locale === 'en-US' ? 'Send selected packets to Global Center-Star alignment workspace' : '将选中报文组送入全局 Center-Star 居中精密对齐工作台'">
                 <AppIcon name="git-branch" :size="11" />
-                <span>全局 Center-Star</span>
+                <span>{{ locale === 'en-US' ? 'Global Center-Star' : '全局 Center-Star' }}</span>
               </button>
               <button @click="runMatrixCompare" :disabled="selectedPackets.size < 2" class="ui-btn-secondary px-2 py-1 text-[11px]">
                 <AppIcon name="refresh" :size="11" />
-                <span>重算</span>
+                <span>{{ locale === 'en-US' ? 'Recalc' : '重算' }}</span>
               </button>
-              <button @click="runJointBaselineCompare" class="ui-btn-secondary px-2 py-1 text-[11px]" title="与已固化的历史基线联合比对">
-                <span>联合基线</span>
+              <button @click="runJointBaselineCompare" class="ui-btn-secondary px-2 py-1 text-[11px]" :title="locale === 'en-US' ? 'Joint comparison with persisted historical baseline' : '与已固化的历史基线联合比对'">
+                <span>{{ locale === 'en-US' ? 'Joint Baseline' : '联合基线' }}</span>
               </button>
-              <button @click="exportMatrixReport" :disabled="!matrixResult" class="ui-btn-secondary px-2 py-1 text-[11px]" title="导出矩阵特征分析报告">
+              <button @click="exportMatrixReport" :disabled="!matrixResult" class="ui-btn-secondary px-2 py-1 text-[11px]" :title="locale === 'en-US' ? 'Export matrix feature analysis report' : '导出矩阵特征分析报告'">
                 <AppIcon name="download" :size="11" />
-                <span>导出</span>
+                <span>{{ locale === 'en-US' ? 'Export' : '导出' }}</span>
               </button>
             </div>
           </div>
@@ -1450,7 +1450,7 @@
         <div class="px-6 py-3 border-t flex items-center justify-between shrink-0" style="border-color: var(--border-subtle);">
           <span class="text-[11px]" style="color: var(--text-muted);">请确保十六进制帧格式包含完整二/三层报头</span>
           <div class="flex items-center gap-2">
-            <button @click="isInjectModalOpen = false" class="ui-btn-secondary px-3.5 py-1.5 text-xs">取消</button>
+            <button @click="isInjectModalOpen = false" class="ui-btn-secondary px-3.5 py-1.5 text-xs">{{ locale === 'en-US' ? 'Cancel' : '取消' }}</button>
             <button @click="doInjectRawPacket" :disabled="isInjecting || !isInjectValid" class="ui-btn-danger bg-rose-600 text-white border-rose-600 hover:bg-rose-500 px-4 py-1.5 text-xs">
               <AppIcon v-if="isInjecting" name="refresh" :size="13" class="animate-spin" />
               <span>执行物理注入</span>
@@ -2708,6 +2708,7 @@ const protocolList = [
 interface ColumnDef {
   key: string;
   label: string;
+  labelEn?: string;
   defaultWidth: number;
   minWidth: number;
   width: number;
@@ -2716,19 +2717,19 @@ interface ColumnDef {
 }
 
 const DEFAULT_COLUMNS: ColumnDef[] = [
-  { key: 'id', label: '序号', defaultWidth: 56, minWidth: 46, width: 56, sortable: true, visible: true },
-  { key: 'timestamp', label: '精准时间', defaultWidth: 80, minWidth: 68, width: 80, sortable: true, visible: true },
-  { key: 'src_endpoint', label: '源端点 (Source)', defaultWidth: 134, minWidth: 100, width: 134, sortable: true, visible: true },
-  { key: 'dst_endpoint', label: '目标端点 (Target)', defaultWidth: 134, minWidth: 100, width: 134, sortable: true, visible: true },
-  { key: 'protocol', label: '规约协议', defaultWidth: 74, minWidth: 58, width: 74, sortable: true, visible: true },
-  { key: 'length', label: '载荷大小', defaultWidth: 58, minWidth: 44, width: 58, sortable: true, visible: true },
-  { key: 'l7_summary', label: '应用层解析摘要 (L7)', defaultWidth: 170, minWidth: 120, width: 170, sortable: false, visible: true },
+  { key: 'id', label: '序号', labelEn: 'No.', defaultWidth: 56, minWidth: 46, width: 56, sortable: true, visible: true },
+  { key: 'timestamp', label: '精准时间', labelEn: 'Time', defaultWidth: 80, minWidth: 68, width: 80, sortable: true, visible: true },
+  { key: 'src_endpoint', label: '源端点 (Source)', labelEn: 'Source Endpoint', defaultWidth: 134, minWidth: 100, width: 134, sortable: true, visible: true },
+  { key: 'dst_endpoint', label: '目标端点 (Target)', labelEn: 'Destination Endpoint', defaultWidth: 134, minWidth: 100, width: 134, sortable: true, visible: true },
+  { key: 'protocol', label: '规约协议', labelEn: 'Protocol', defaultWidth: 74, minWidth: 58, width: 74, sortable: true, visible: true },
+  { key: 'length', label: '载荷大小', labelEn: 'Length', defaultWidth: 58, minWidth: 44, width: 58, sortable: true, visible: true },
+  { key: 'l7_summary', label: '应用层解析摘要 (L7)', labelEn: 'L7 Info Summary', defaultWidth: 170, minWidth: 120, width: 170, sortable: false, visible: true },
   // 扩展列（默认隐藏，供高级审计自由开启）
-  { key: 'direction', label: '流向模式', defaultWidth: 70, minWidth: 50, width: 70, sortable: true, visible: false },
-  { key: 'transport', label: '传输总线', defaultWidth: 65, minWidth: 50, width: 65, sortable: true, visible: false },
-  { key: 'entropy', label: '信息熵', defaultWidth: 55, minWidth: 40, width: 55, sortable: true, visible: false },
-  { key: 'mac_src', label: '物理 MAC', defaultWidth: 110, minWidth: 70, width: 110, sortable: false, visible: false },
-  { key: 'payload', label: '十六进制载荷', defaultWidth: 200, minWidth: 100, width: 200, sortable: false, visible: false },
+  { key: 'direction', label: '流向模式', labelEn: 'Direction', defaultWidth: 70, minWidth: 50, width: 70, sortable: true, visible: false },
+  { key: 'transport', label: '传输总线', labelEn: 'Bus / Transport', defaultWidth: 65, minWidth: 50, width: 65, sortable: true, visible: false },
+  { key: 'entropy', label: '信息熵', labelEn: 'Entropy', defaultWidth: 55, minWidth: 40, width: 55, sortable: true, visible: false },
+  { key: 'mac_src', label: '物理 MAC', labelEn: 'Src MAC', defaultWidth: 110, minWidth: 70, width: 110, sortable: false, visible: false },
+  { key: 'payload', label: '十六进制载荷', labelEn: 'Hex Payload', defaultWidth: 200, minWidth: 100, width: 200, sortable: false, visible: false },
 ];
 
 const COLUMN_STORAGE_KEY = 'omni_probe_table_column_widths_v7_apple_hig';
@@ -3151,8 +3152,8 @@ const l7DecodedTree = computed<L7TreeResult>(() => {
   const pkt = selectedPacket.value;
   if (!pkt) {
     return {
-      protocolTitle: '未选定报文',
-      statusBadge: '待命',
+      protocolTitle: locale.value === 'en-US' ? 'No Packet Selected' : '未选定报文',
+      statusBadge: locale.value === 'en-US' ? 'Standby' : '待命',
       nodes: []
     };
   }
@@ -3213,7 +3214,7 @@ const l7DecodedTree = computed<L7TreeResult>(() => {
   // 2. 注入全部来自后端引擎的真实解析与审计字段 (DPI / GeoIP / TLS指纹 / QUIC / ACL / 威胁命中)
   const bdataEntries = Object.entries(bdata);
   if (bdataEntries.length > 0) {
-    nodes.push({ text: `▸ 后端引擎实时解构字段 (共 ${bdataEntries.length} 项)`, level: 1 });
+    nodes.push({ text: locale.value === 'en-US' ? `▸ Live Dissected Fields (${bdataEntries.length} items)` : `▸ 后端引擎实时解构字段 (共 ${bdataEntries.length} 项)`, level: 1 });
     for (const [k, v] of bdataEntries) {
       const formattedVal = typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v);
       nodes.push({
@@ -3227,21 +3228,21 @@ const l7DecodedTree = computed<L7TreeResult>(() => {
   if (nodes.length === 0) {
     const rawPreview = bytes.length > 0
       ? bytes.slice(0, 48).map((b) => (b >= 32 && b <= 126 ? String.fromCharCode(b) : '.')).join('')
-      : '无应用层载荷';
+      : (locale.value === 'en-US' ? 'No application payload' : '无应用层载荷');
     nodes.push(
-      { text: `▸ 帧长度: ${pkt.length} 字节 | 实测载荷: ${bytes.length} 字节 | 信息熵: ${pkt.entropy ? pkt.entropy.toFixed(2) : '0.00'}`, level: 1 },
-      { text: `• 物理 MAC: ${pkt.mac_src || '--'} ➔ ${pkt.mac_dst || '--'}`, level: 2 },
-      { text: `• 原始 ASCII 预览: ${pkt.raw_text || rawPreview}`, level: 3 },
+      { text: locale.value === 'en-US' ? `▸ Frame Length: ${pkt.length} B | Payload: ${bytes.length} B | Entropy: ${pkt.entropy ? pkt.entropy.toFixed(2) : '0.00'}` : `▸ 帧长度: ${pkt.length} 字节 | 实测载荷: ${bytes.length} 字节 | 信息熵: ${pkt.entropy ? pkt.entropy.toFixed(2) : '0.00'}`, level: 1 },
+      { text: locale.value === 'en-US' ? `• Physical MAC: ${pkt.mac_src || '--'} ➔ ${pkt.mac_dst || '--'}` : `• 物理 MAC: ${pkt.mac_src || '--'} ➔ ${pkt.mac_dst || '--'}`, level: 2 },
+      { text: locale.value === 'en-US' ? `• Raw ASCII Preview: ${pkt.raw_text || rawPreview}` : `• 原始 ASCII 预览: ${pkt.raw_text || rawPreview}`, level: 3 },
     );
   }
 
   const hasThreat = Boolean(bdata.ics_acl_violation) || (Array.isArray(bdata.threat_hits) && bdata.threat_hits.length > 0);
   const statusBadge = hasThreat
-    ? '安全威胁 / 策略命中'
-    : (bdataEntries.length > 0 ? `引擎解析 ${bdataEntries.length} 字段` : '原始载荷实测');
+    ? (locale.value === 'en-US' ? 'Threat / Policy Hit' : '安全威胁 / 策略命中')
+    : (bdataEntries.length > 0 ? (locale.value === 'en-US' ? `Engine Parsed ${bdataEntries.length} Fields` : `引擎解析 ${bdataEntries.length} 字段`) : (locale.value === 'en-US' ? 'Raw Payload Verified' : '原始载荷实测'));
 
   return {
-    protocolTitle: `${pkt.protocol || 'Ethernet II'} (${pkt.transport || 'L2'}) 实测解析`,
+    protocolTitle: `${pkt.protocol || 'Ethernet II'} (${pkt.transport || 'L2'}) ${locale.value === 'en-US' ? 'Dissection' : '实测解析'}`,
     statusBadge,
     nodes,
   };
@@ -3323,17 +3324,17 @@ function getColumnLabel(col: ColumnDef): string {
   }
 
   if (activeBus.value === 'serial') {
-    if (col.key === 'src_ip' || col.key === 'src_endpoint') return '物理串口 (COM)';
-    if (col.key === 'mac_src') return '通信端点';
-    if (col.key === 'src_port') return '串口状态';
-    if (col.key === 'dst_port') return '波特率';
-    if (col.key === 'transport') return '总线类型';
-    if (col.key === 'direction') return '串口流向';
+    if (col.key === 'src_ip' || col.key === 'src_endpoint') return locale.value === 'en-US' ? 'Serial Port (COM)' : '物理串口 (COM)';
+    if (col.key === 'mac_src') return locale.value === 'en-US' ? 'Endpoint' : '通信端点';
+    if (col.key === 'src_port') return locale.value === 'en-US' ? 'Port Status' : '串口状态';
+    if (col.key === 'dst_port') return locale.value === 'en-US' ? 'Baudrate' : '波特率';
+    if (col.key === 'transport') return locale.value === 'en-US' ? 'Bus Type' : '总线类型';
+    if (col.key === 'direction') return locale.value === 'en-US' ? 'Stream Dir' : '串口流向';
   } else if (activeBus.value === 'usb') {
-    if (col.key === 'src_ip' || col.key === 'src_endpoint') return 'USB 设备标识';
-    if (col.key === 'mac_src') return '传输类型';
-    if (col.key === 'src_port') return '端点号';
-    if (col.key === 'dst_port') return '通信状态';
+    if (col.key === 'src_ip' || col.key === 'src_endpoint') return locale.value === 'en-US' ? 'USB Identifier' : 'USB 设备标识';
+    if (col.key === 'mac_src') return locale.value === 'en-US' ? 'Transfer Type' : '传输类型';
+    if (col.key === 'src_port') return locale.value === 'en-US' ? 'Endpoint #' : '端点号';
+    if (col.key === 'dst_port') return locale.value === 'en-US' ? 'Comm Status' : '通信状态';
   }
   return col.label;
 }
@@ -3510,10 +3511,10 @@ async function saveSelectedPacketsAsBaseline() {
   try {
     const count = await invoke<number>('save_baseline_payloads_cmd', { payloads });
     emit('appendLog', `[BASELINE] ✓ 已批量保存 ${count} 条报文特征载荷至基线库`);
-    notifySuccess('基线固化成功', `已批量保存 ${count} 条特征报文至本地基线库`);
+    notifySuccess(locale.value === 'en-US' ? 'Baseline Saved' : '基线固化成功', locale.value === 'en-US' ? `Batch saved ${count} characteristic packets to local baseline` : `已批量保存 ${count} 条特征报文至本地基线库`);
   } catch (e: any) {
     emit('appendLog', `[ERROR] 批量保存基线失败: ${e}`);
-    notifyError('保存基线受阻', e);
+    notifyError(locale.value === 'en-US' ? 'Save Baseline Blocked' : '保存基线受阻', e);
   }
 }
 
@@ -3782,25 +3783,29 @@ async function exportMatrixReport() {
   if (!matrixResult.value) return;
   const res = matrixResult.value;
   const timeStr = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
-  let md = `# Omni-Probe 多报文矩阵特征比对分析报告\n\n`;
-  md += `- **生成时间**: ${timeStr}\n`;
-  md += `- **比对样本总数**: ${res.payloads.length} 组\n`;
-  md += `- **分析结论**: ${res.summary}\n\n`;
+  const isEn = locale.value === 'en-US';
+  let md = isEn ? `# Omni-Probe Multi-Packet Matrix Feature Comparison Report\n\n` : `# Omni-Probe {{ locale === 'en-US' ? 'Multi-Packet Matrix Feature Comparison' : '多报文矩阵特征比对' }}分析报告\n\n`;
+  md += isEn ? `- **Generated At**: ${timeStr}\n` : `- **生成时间**: ${timeStr}\n`;
+  md += isEn ? `- **Sample Count**: ${res.payloads.length}\n` : `- **比对样本总数**: ${res.payloads.length} 组\n`;
+  md += isEn ? `- **Analysis Conclusion**: ${res.summary}\n\n` : `- **分析结论**: ${res.summary}\n\n`;
 
   if (res.mutation_spectrum && res.mutation_spectrum.length > 0) {
-    md += `## 1. 各字节偏移变异波率与局部熵分布\n\n`;
-    md += `| 字节偏移 | 主导特征十六进制 | 变异波率 (%) | 局部信息熵 (bit) | 变异等级 |\n`;
-    md += `| :--- | :--- | :--- | :--- | :--- |\n`;
+    md += isEn ? `## 1. Byte Offset Mutation Rate & Local Entropy Distribution\n\n` : `## 1. 各字节偏移变异波率与局部熵分布\n\n`;
+    md += isEn 
+      ? `| Byte Offset | Dominant Hex | Mutation Rate (%) | Local Entropy (bit) | Mutation Level |\n| :--- | :--- | :--- | :--- | :--- |\n`
+      : `| 字节偏移 | 主导特征十六进制 | 变异波率 (%) | 局部信息熵 (bit) | 变异等级 |\n| :--- | :--- | :--- | :--- | :--- |\n`;
     res.mutation_spectrum.forEach(b => {
-      const level = b.mutation_rate === 0 ? '基准特征码' : b.mutation_rate <= 50 ? '低频抖动' : '**高频突变**';
+      const level = isEn 
+        ? (b.mutation_rate === 0 ? 'Baseline Invariant' : b.mutation_rate <= 50 ? 'Low Jitter' : '**High Mutation**')
+        : (b.mutation_rate === 0 ? '基准特征码' : b.mutation_rate <= 50 ? '低频抖动' : '**高频突变**');
       md += `| 0x${b.offset.toString(16).toUpperCase()} (#${b.offset}) | \`0x${b.dominant_hex}\` | ${b.mutation_rate.toFixed(1)}% | ${b.entropy.toFixed(3)} | ${level} |\n`;
     });
     md += `\n`;
   }
 
-  md += `## 2. 各样本特征对齐 Hex 矩阵\n\n`;
+  md += isEn ? `## 2. Sample Alignment Hex Matrix\n\n` : `## 2. 各样本特征对齐 Hex 矩阵\n\n`;
   res.payloads.forEach((p, idx) => {
-    md += `### 样本 ${idx + 1}: ${p.label} (${p.byte_length} 字节)\n\`\`\`\n`;
+    md += isEn ? `### Sample ${idx + 1}: ${p.label} (${p.byte_length} Bytes)\n\`\`\`\n` : `### 样本 ${idx + 1}: ${p.label} (${p.byte_length} 字节)\n\`\`\`\n`;
     p.hex_rows.forEach(r => {
       const hexStr = r.cells.map(c => c.hex).join(' ');
       md += `${r.offset}  ${hexStr.padEnd(48, ' ')}  |${r.ascii_repr}|\n`;
@@ -3810,9 +3815,9 @@ async function exportMatrixReport() {
   await saveTextViaNativeDesktop(
     `matrix_diff_report_${Date.now()}.md`,
     md,
-    'Markdown 分析报告 (*.md)',
+    isEn ? 'Markdown Report (*.md)' : 'Markdown 分析报告 (*.md)',
     '*.md',
-    '导出多报文特征矩阵报告'
+    isEn ? 'Export Matrix Diff Report' : '导出多报文特征矩阵报告'
   );
 }
 
@@ -3960,7 +3965,7 @@ function openInjectModal(prefillHex?: string) {
 
 async function doInjectRawPacket() {
   if (!isInjectValid.value) {
-    injectError.value = '请输入有效且偶数长度的十六进制载荷 (至少 14 字节 L2 以太网帧头)';
+    injectError.value = locale.value === 'en-US' ? 'Please enter valid even-length hex payload (>=14 bytes L2 header)' : '请输入有效且偶数长度的十六进制载荷 (至少 14 字节 L2 以太网帧头)';
     return;
   }
   isInjecting.value = true;
@@ -3975,7 +3980,7 @@ async function doInjectRawPacket() {
     injectResult.value = res;
     emit('appendLog', res);
   } catch (e: any) {
-    injectError.value = `注入失败: ${e}`;
+    injectError.value = locale.value === 'en-US' ? `Injection failed: ${e}` : `注入失败: ${e}`;
     emit('appendLog', `[ERROR] 原始帧注入失败: ${e}`);
   } finally {
     isInjecting.value = false;
@@ -4024,7 +4029,7 @@ function sendPayloadToNetAssist(pkt: PacketRecord | null) {
     }
   }
   emit('switchWorkbench', 'net_assist');
-  notifySuccess('已推送至网络调试助手', `报文 #${pkt.id} (${pkt.protocol}) 载荷已准备就绪`);
+  notifySuccess(locale.value === 'en-US' ? 'Pushed to Net Assistant' : '已推送至网络调试助手', locale.value === 'en-US' ? `Packet #${pkt.id} (${pkt.protocol}) payload ready` : `报文 #${pkt.id} (${pkt.protocol}) 载荷已准备就绪`);
 }
 
 function menuAction(action: 'inject' | 'detail' | 'baseline' | 'replay' | 'copy' | 'tcp_stream' | 'dossier_src' | 'dossier_dst' | 'traceroute_src' | 'traceroute_dst' | 'set_diff_a' | 'diff_with_a' | 'add_diff_queue' | 'save_sample') {
@@ -4037,25 +4042,25 @@ function menuAction(action: 'inject' | 'detail' | 'baseline' | 'replay' | 'copy'
   } else if (action === 'set_diff_a') {
     diffBus.setSlotA(pkt, `帧 #${pkt.id} (${pkt.protocol})`);
     emit('appendLog', `[DIFF] ✓ 已将报文 #${pkt.id} (${pkt.protocol}) 设为全局对比基准项 A`);
-    notifyInfo('已设定基准项 A', `报文 #${pkt.id} (${pkt.protocol}) 已作为参照基准`);
+    notifyInfo(locale.value === 'en-US' ? 'Slot A Set' : '已设定基准项 A', locale.value === 'en-US' ? `Frame #${pkt.id} (${pkt.protocol}) set as Slot A baseline` : `报文 #${pkt.id} (${pkt.protocol}) 已作为参照基准`);
   } else if (action === 'diff_with_a') {
     diffBus.setSlotB(pkt, `帧 #${pkt.id} (${pkt.protocol})`);
     diffBus.compareSlots();
   } else if (action === 'save_sample') {
-    const defaultName = `样本_#${pkt.id}_${pkt.protocol}`;
-    uiPrompt('请输入该报文特征样本归档名称:', defaultName, {
-      title: '存入报文特征样本库',
-      placeholder: '请输入归档样本名称',
-      confirmText: '保存样本',
+    const defaultName = locale.value === 'en-US' ? `Sample_#${pkt.id}_${pkt.protocol}` : `样本_#${pkt.id}_${pkt.protocol}`;
+    uiPrompt(locale.value === 'en-US' ? 'Enter sample archive name:' : '请输入该报文特征样本归档名称:', defaultName, {
+      title: locale.value === 'en-US' ? 'Save to Sample Repository' : '存入报文特征样本库',
+      placeholder: locale.value === 'en-US' ? 'Sample name...' : '请输入归档样本名称',
+      confirmText: locale.value === 'en-US' ? 'Save Sample' : '保存样本',
     }).then((name) => {
       if (name && name.trim()) {
         invoke('save_packet_sample_cmd', { name: name.trim(), packet: pkt })
           .then(() => {
             emit('appendLog', `[DIFF] 已将报文 #${pkt.id} 成功存入样本库: ${name.trim()}`);
-            notifySuccess('样本保存成功', `已将 #${pkt.id} 归档为: ${name.trim()}`);
+            notifySuccess(locale.value === 'en-US' ? 'Sample Saved Successfully' : '样本保存成功', locale.value === 'en-US' ? `Archived #${pkt.id} as: ${name.trim()}` : `已将 #${pkt.id} 归档为: ${name.trim()}`);
           })
           .catch((err) => {
-            notifyError('保存流量分析样本受阻', err);
+            notifyError(locale.value === 'en-US' ? 'Save Sample Blocked' : '保存流量分析样本受阻', err);
           });
       }
     });

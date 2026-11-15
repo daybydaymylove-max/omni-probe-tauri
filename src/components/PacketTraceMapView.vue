@@ -7,9 +7,9 @@
           <AppIcon :name="viewMode === '3d' ? 'globe' : 'compass'" :size="13" />
         </div>
         <div class="flex items-center gap-1.5 font-semibold" style="color: var(--text-primary)">
-          <span>网络 Trace 链路 & 地理 MAP</span>
+          <span>{{ locale === 'en-US' ? 'Network Trace Link & Geo MAP' : '网络 Trace 链路 & 地理 MAP' }}</span>
           <span class="text-[11px] px-1.5 py-0.2 rounded ui-pill font-mono">
-            {{ isLanScenario ? 'RFC 1918 局域网' : 'WAN 广域骨干跨域' }}
+            {{ isLanScenario ? (locale === 'en-US' ? 'RFC 1918 LAN' : 'RFC 1918 局域网') : (locale === 'en-US' ? 'WAN Backbone' : 'WAN 广域骨干跨域') }}
           </span>
           <span v-if="targetAccuracyLevel" class="text-[10px] px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-600 dark:text-cyan-300 border border-sky-500/20">
             {{ targetAccuracyLabel }}
@@ -25,20 +25,20 @@
             :class="['px-2 py-0.5 rounded transition-colors cursor-pointer flex items-center gap-1',
               viewMode === '3d' ? 'bg-sky-500 text-white font-bold' : 'hover:bg-black/5 dark:hover:bg-white/5']"
             :style="viewMode !== '3d' ? { color: 'var(--text-secondary)' } : undefined"
-            title="3D 数字地球视图"
+            :title="locale === 'en-US' ? '3D Digital Globe View' : '3D 数字地球视图'"
           >
             <AppIcon name="globe" :size="11" />
-            <span>3D 地球</span>
+            <span>{{ locale === 'en-US' ? '3D Globe' : '3D 地球' }}</span>
           </button>
           <button
             @click="viewMode = '2d'"
             :class="['px-2 py-0.5 rounded transition-colors cursor-pointer flex items-center gap-1',
               viewMode === '2d' ? 'bg-sky-500 text-white font-bold' : 'hover:bg-black/5 dark:hover:bg-white/5']"
             :style="viewMode !== '2d' ? { color: 'var(--text-secondary)' } : undefined"
-            title="2D 全景平面投影视图"
+            :title="locale === 'en-US' ? '2D Equirectangular Planar View' : '2D 全景平面投影视图'"
           >
             <AppIcon name="compass" :size="11" />
-            <span>2D 平面</span>
+            <span>{{ locale === 'en-US' ? '2D Map' : '2D 平面' }}</span>
           </button>
         </div>
 
@@ -49,10 +49,10 @@
           :disabled="isTracing"
           class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors flex items-center gap-1 cursor-pointer"
           :class="isTracing ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 animate-pulse' : 'ui-btn-secondary hover:text-sky-600 dark:hover:text-cyan-300'"
-          title="对当前目标 IP 启动真实逐跳路由追踪 (Traceroute)"
+          :title="locale === 'en-US' ? 'Start real hop-by-hop traceroute for target IP' : '对当前目标 IP 启动真实逐跳路由追踪 (Traceroute)'"
         >
           <AppIcon :name="isTracing ? 'refresh' : 'play'" :size="11" />
-          <span>{{ isTracing ? `探测中 Hop ${currentHop}...` : '实时追踪 (Trace)' }}</span>
+          <span>{{ isTracing ? (locale === 'en-US' ? `Tracing Hop ${currentHop}...` : `探测中 Hop ${currentHop}...`) : (locale === 'en-US' ? 'Live Trace' : '实时追踪 (Trace)') }}</span>
         </button>
 
         <!-- 全屏态势模态窗直通 -->
@@ -60,10 +60,10 @@
           v-if="targetIp"
           @click="$emit('openFullTraceroute', targetIp)"
           class="px-2.5 py-1 rounded-lg text-[11px] ui-btn-primary flex items-center gap-1 cursor-pointer font-bold shadow-xs"
-          title="在全屏 3D 数字地球 / 2D 全景投影中完整展示"
+          :title="locale === 'en-US' ? 'Open in full-screen 3D globe / 2D map' : '在全屏 3D 数字地球 / 2D 全景投影中完整展示'"
         >
           <AppIcon name="compass" :size="11" />
-          <span>全屏态势 ➔</span>
+          <span>{{ locale === 'en-US' ? 'Full Geo Map ➔' : '全屏态势 ➔' }}</span>
         </button>
       </div>
     </div>
@@ -81,13 +81,13 @@
         <div class="p-2.5 border-b flex items-center justify-between text-[11px] ui-num shrink-0" style="border-color: var(--border-subtle); background: var(--surface-content-alt)">
           <div class="flex items-center gap-1.5 truncate">
             <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
-            <span style="color: var(--text-muted)">线距:</span>
+            <span style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Dist:' : '线距:' }}</span>
             <strong class="text-emerald-700 dark:text-emerald-400 font-bold">
               {{ isLanScenario ? '< 50 m' : `${greatCircleDistanceKm.toFixed(0)} km` }}
             </strong>
           </div>
           <div class="flex items-center gap-1.5 truncate">
-            <span style="color: var(--text-muted)">理论最低 RTT:</span>
+            <span style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Min RTT:' : '理论最低 RTT:' }}</span>
             <strong class="text-sky-700 dark:text-cyan-400 font-bold">
               {{ isLanScenario ? '< 0.1 ms' : `~${theoreticalRttMs.toFixed(1)} ms` }}
             </strong>
@@ -143,8 +143,8 @@
 
         <!-- 左侧底部提示 -->
         <div class="px-2.5 py-1.5 border-t text-[10px] ui-num flex items-center justify-between shrink-0" style="border-color: var(--border-subtle); color: var(--text-muted)">
-          <span>已捕获 {{ displayHops.length }} 跃点</span>
-          <span>单击卡片对焦右侧地球</span>
+          <span>{{ locale === 'en-US' ? `Captured ${displayHops.length} hops` : `已捕获 ${displayHops.length} 跃点` }}</span>
+          <span>{{ locale === 'en-US' ? 'Click card to focus globe' : '单击卡片对焦右侧地球' }}</span>
         </div>
       </div>
 
@@ -247,10 +247,10 @@
 
         <!-- 3D 地球浮动操作提示 -->
         <div v-show="viewMode === '3d'" class="absolute bottom-2 left-2 text-[10px] ui-num liquid-panel px-2.5 py-1 rounded-xl select-none pointer-events-none shadow-xs" style="color: var(--text-secondary)">
-          按住拖拽 360° 旋转 · 滚轮缩放
+          {{ locale === 'en-US' ? 'Drag to rotate 360° · Scroll to zoom' : '按住拖拽 360° 旋转 · 滚轮缩放' }}
         </div>
         <div v-show="viewMode === '3d'" class="absolute top-2 right-2 text-[10px] ui-num liquid-panel px-2.5 py-1 rounded-xl select-none pointer-events-none shadow-xs text-sky-700 dark:text-cyan-400 font-bold">
-          3D 空间测地数字地球
+          {{ locale === 'en-US' ? '3D Geodesic Digital Globe' : '3D 空间测地数字地球' }}
         </div>
       </div>
     </div>
@@ -263,7 +263,9 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import AppIcon from './AppIcon.vue';
 import { useI18n } from '../i18n';
-const { t } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 void t;
 import {
   WORLD_LAND_POLYGONS,
@@ -394,8 +396,8 @@ const localHopInfo = ref<{
   ip: '127.0.0.1',
   lon: 114.05,
   lat: 22.55,
-  location: '本地基准锚点',
-  city: '本机'
+  location: locale.value === 'en-US' ? 'Local Base Anchor' : '本地基准锚点',
+  city: locale.value === 'en-US' ? 'Local Host' : '本机'
 });
 
 const targetHopInfo = ref<{
@@ -411,17 +413,17 @@ const targetHopInfo = ref<{
   ip: '',
   lon: -74.0,
   lat: 40.7,
-  location: '目标主机',
-  country: '公网目标',
-  city: '目标'
+  location: locale.value === 'en-US' ? 'Target Host' : '目标主机',
+  country: locale.value === 'en-US' ? 'Public Target' : '公网目标',
+  city: locale.value === 'en-US' ? 'Target' : '目标'
 });
 
 const targetAccuracyLevel = ref<string>('');
 const targetAccuracyLabel = computed(() => {
-  if (targetAccuracyLevel.value === 'city') return '地级市级定位';
-  if (targetAccuracyLevel.value === 'province') return '省级行政区定位';
-  if (targetAccuracyLevel.value === 'country') return '国家定位';
-  return '离线地理库定位';
+  if (targetAccuracyLevel.value === 'city') return locale.value === 'en-US' ? 'City-level Accuracy' : '地级市级定位';
+  if (targetAccuracyLevel.value === 'province') return locale.value === 'en-US' ? 'Province-level Accuracy' : '省级行政区定位';
+  if (targetAccuracyLevel.value === 'country') return locale.value === 'en-US' ? 'Country-level Accuracy' : '国家定位';
+  return locale.value === 'en-US' ? 'Offline Geo Database' : '离线地理库定位';
 });
 
 // 3. 实时 Traceroute 状态与流式侦测
@@ -463,18 +465,18 @@ const displayHops = computed<HopNode[]>(() => {
       hopNumber: 0,
       ip: localHopInfo.value.ip,
       rttMs: 0.1,
-      role: '本机网卡',
-      location: '本地主机终端',
+      role: locale.value === 'en-US' ? 'Local NIC' : '本机网卡',
+      location: locale.value === 'en-US' ? 'Local Host Terminal' : '本地主机终端',
       lon: startLon,
       lat: startLat,
       isSelf: true
     },
     {
       hopNumber: 1,
-      ip: isLanScenario.value ? '192.168.1.1' : '局域网默认网关',
+      ip: isLanScenario.value ? '192.168.1.1' : (locale.value === 'en-US' ? 'Default Gateway' : '局域网默认网关'),
       rttMs: 0.6,
-      role: '默认网关',
-      location: '接入路由设备',
+      role: locale.value === 'en-US' ? 'Default Gateway' : '默认网关',
+      location: locale.value === 'en-US' ? 'Access Router' : '接入路由设备',
       lon: interpolateGreatCirclePoint(startLon, startLat, endLon, endLat, 1 / (total - 1))[0],
       lat: interpolateGreatCirclePoint(startLon, startLat, endLon, endLat, 1 / (total - 1))[1]
     }
@@ -483,10 +485,10 @@ const displayHops = computed<HopNode[]>(() => {
   if (!isLanScenario.value) {
     hops.push({
       hopNumber: 2,
-      ip: '骨干网络中继',
+      ip: locale.value === 'en-US' ? 'Backbone Relay' : '骨干网络中继',
       rttMs: 14.0,
-      role: '运营商核心路由',
-      location: '广域网骨干节点',
+      role: locale.value === 'en-US' ? 'Core Backbone Router' : '运营商核心路由',
+      location: locale.value === 'en-US' ? 'WAN Backbone Node' : '广域网骨干节点',
       lon: interpolateGreatCirclePoint(startLon, startLat, endLon, endLat, 2 / (total - 1))[0],
       lat: interpolateGreatCirclePoint(startLon, startLat, endLon, endLat, 2 / (total - 1))[1]
     });
@@ -494,9 +496,9 @@ const displayHops = computed<HopNode[]>(() => {
 
   hops.push({
     hopNumber: isLanScenario.value ? 2 : 3,
-    ip: targetHopInfo.value.ip || '目标端点',
+    ip: targetHopInfo.value.ip || (locale.value === 'en-US' ? 'Target Endpoint' : '目标端点'),
     rttMs: isLanScenario.value ? 1.2 : Math.max(15, theoreticalRttMs.value * 2.2),
-    role: '目标服务器',
+    role: locale.value === 'en-US' ? 'Target Server' : '目标服务器',
     location: targetHopInfo.value.location,
     lon: endLon,
     lat: endLat,
@@ -873,7 +875,7 @@ async function setupEventListener() {
           lat: p.geo.latitude,
           location: p.geo.label || formatGeoLocation(p.country, p.province, p.city, p.is_lan),
           isp: p.isp,
-          city: p.city || '本机'
+          city: p.city || (locale.value === 'en-US' ? 'Localhost' : '本机')
         };
       }
 
@@ -882,7 +884,7 @@ async function setupEventListener() {
         hopNumber: hopNum,
         ip: p.ip,
         rttMs: p.is_timeout || p.rtt_ms === null || p.rtt_ms === undefined ? -1 : p.rtt_ms,
-        role: p.lan_role || (p.is_self ? '本地源' : (p.is_lan ? '局域网网关' : '骨干网络跃点')),
+        role: p.lan_role || (p.is_self ? (locale.value === 'en-US' ? 'Local Source' : '本地源') : (p.is_lan ? (locale.value === 'en-US' ? 'LAN Gateway' : '局域网网关') : (locale.value === 'en-US' ? 'Backbone Hop' : '骨干网络跃点'))),
         location: formatGeoLocation(p.country, p.province, p.city, p.is_lan),
         isp: p.isp,
         lon,
@@ -919,7 +921,7 @@ async function startLiveTraceroute() {
 
   try {
     await setupEventListener();
-    emit('appendLog', `[TRACE] 正在对目标 ${target} 启动逐跳路由追踪探测...`);
+    emit('appendLog', locale.value === 'en-US' ? `[TRACE] Starting hop-by-hop traceroute for target ${target}...` : `[TRACE] 正在对目标 ${target} 启动逐跳路由追踪探测...`);
     if (typeof (window as any).__TAURI_INTERNALS__ !== 'undefined') {
       await invoke('start_traceroute_cmd', {
         target,
@@ -930,7 +932,7 @@ async function startLiveTraceroute() {
       simulateWebTraceroute(target);
     }
   } catch (e: any) {
-    emit('appendLog', `[TRACE-ERR] 路由追踪探测异常: ${e}`);
+    emit('appendLog', locale.value === 'en-US' ? `[TRACE-ERR] Traceroute probe exception: ${e}` : `[TRACE-ERR] 路由追踪探测异常: ${e}`);
     simulateWebTraceroute(target);
   } finally {
     isTracing.value = false;
@@ -945,14 +947,14 @@ function simulateWebTraceroute(target: string) {
   const endLat = targetHopInfo.value.lat;
 
   const hopsMock: HopNode[] = [
-    { hopNumber: 0, ip: localHopInfo.value.ip, rttMs: 0.1, role: '本机网络适配器', location: '本地主机', lon: startLon, lat: startLat, isSelf: true },
-    { hopNumber: 1, ip: '192.168.1.1', rttMs: 0.8, role: '默认网关 (Gateway)', location: '企业主核心网关', lon: interpolateGreatCirclePoint(startLon, startLat, endLon, endLat, 0.25)[0], lat: interpolateGreatCirclePoint(startLon, startLat, endLon, endLat, 0.25)[1] },
+    { hopNumber: 0, ip: localHopInfo.value.ip, rttMs: 0.1, role: locale.value === 'en-US' ? 'Local Network Adapter' : '本机网络适配器', location: locale.value === 'en-US' ? 'Local Host' : '本地主机', lon: startLon, lat: startLat, isSelf: true },
+    { hopNumber: 1, ip: '192.168.1.1', rttMs: 0.8, role: locale.value === 'en-US' ? 'Default Gateway' : '默认网关 (Gateway)', location: locale.value === 'en-US' ? 'Core Subnet Gateway' : '企业主核心网关', lon: interpolateGreatCirclePoint(startLon, startLat, endLon, endLat, 0.25)[0], lat: interpolateGreatCirclePoint(startLon, startLat, endLon, endLat, 0.25)[1] },
     ...(isLan
-      ? [{ hopNumber: 2, ip: target, rttMs: 1.5, role: '目标主机 (Target)', location: '企业子网内网节点', lon: endLon, lat: endLat, isDestination: true }]
+      ? [{ hopNumber: 2, ip: target, rttMs: 1.5, role: locale.value === 'en-US' ? 'Target Host' : '目标主机 (Target)', location: locale.value === 'en-US' ? 'Subnet Internal Node' : '企业子网内网节点', lon: endLon, lat: endLat, isDestination: true }]
       : [
-          { hopNumber: 2, ip: '100.64.0.1', rttMs: 5.2, role: '城域网汇聚 (MAN)', location: '运营商汇聚节点', lon: interpolateGreatCirclePoint(startLon, startLat, endLon, endLat, 0.5)[0], lat: interpolateGreatCirclePoint(startLon, startLat, endLon, endLat, 0.5)[1] },
-          { hopNumber: 3, ip: '202.97.12.33', rttMs: 18.6, role: '骨干网络出口 (ChinaNet)', location: '国家级骨干网', lon: interpolateGreatCirclePoint(startLon, startLat, endLon, endLat, 0.75)[0], lat: interpolateGreatCirclePoint(startLon, startLat, endLon, endLat, 0.75)[1] },
-          { hopNumber: 4, ip: target, rttMs: 28.4, role: '目标主机 (Target)', location: targetHopInfo.value.location, lon: endLon, lat: endLat, isDestination: true }
+          { hopNumber: 2, ip: '100.64.0.1', rttMs: 5.2, role: locale.value === 'en-US' ? 'MAN Aggregation' : '城域网汇聚 (MAN)', location: locale.value === 'en-US' ? 'ISP Aggregation Node' : '运营商汇聚节点', lon: interpolateGreatCirclePoint(startLon, startLat, endLon, endLat, 0.5)[0], lat: interpolateGreatCirclePoint(startLon, startLat, endLon, endLat, 0.5)[1] },
+          { hopNumber: 3, ip: '202.97.12.33', rttMs: 18.6, role: locale.value === 'en-US' ? 'Backbone Egress' : '骨干网络出口 (ChinaNet)', location: locale.value === 'en-US' ? 'National Backbone' : '国家级骨干网', lon: interpolateGreatCirclePoint(startLon, startLat, endLon, endLat, 0.75)[0], lat: interpolateGreatCirclePoint(startLon, startLat, endLon, endLat, 0.75)[1] },
+          { hopNumber: 4, ip: target, rttMs: 28.4, role: locale.value === 'en-US' ? 'Target Host' : '目标主机 (Target)', location: targetHopInfo.value.location, lon: endLon, lat: endLat, isDestination: true }
         ])
   ];
   liveHops.value = hopsMock;

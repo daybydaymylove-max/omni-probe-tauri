@@ -11,22 +11,22 @@
           <div>
             <div class="flex items-center gap-2 flex-wrap">
               <h3 class="text-sm font-bold tracking-tight" style="color: var(--text-primary)">
-                测地线多跳路由溯源与空间态势看板
+                {{ locale === 'en-US' ? 'Geodesic Multi-Hop Traceroute & Cyberspace Mapping' : '测地线多跳路由溯源与空间态势看板' }}
               </h3>
               <span class="text-[11px] px-2.5 py-0.5 rounded-full bg-sky-500/12 text-sky-700 dark:text-cyan-300 border border-sky-500/25 font-semibold">
-                {{ isLanTarget ? '企业局域网微观架构分析' : '全球互联网骨干测地追踪' }}
+                {{ isLanTarget ? (locale === 'en-US' ? 'Enterprise LAN Microarchitecture Analysis' : '企业局域网微观架构分析') : (locale === 'en-US' ? 'Global Internet Backbone Geodesic Tracing' : '全球互联网骨干测地追踪') }}
               </span>
               <span v-if="isTracing" class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] ui-num bg-amber-500/12 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-semibold animate-pulse">
                 <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                正在流式探测第 {{ currentHop }} 跳...
+                {{ locale === 'en-US' ? `Streaming Hop #${currentHop}...` : `正在流式探测第 ${currentHop} 跳...` }}
               </span>
               <span v-else-if="hops.length > 0 && isFinished" class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] ui-num bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-semibold">
                 <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                路由溯源完成 · 累计跃迁 {{ hops.length }} 节点 (途经 {{ traversedStats.regionCount }} 地区)
+                {{ locale === 'en-US' ? `Traceroute Completed · ${hops.length} Hops (${traversedStats.regionCount} Regions)` : `路由溯源完成 · 累计跃迁 ${hops.length} 节点 (途经 ${traversedStats.regionCount} 地区)` }}
               </span>
             </div>
             <p class="text-[11px] mt-0.5" style="color: var(--text-muted)">
-              左侧实时监测路由路径与逐级地区流 · 右侧高保真三维数字地球航路飞线 · 纯离线高精经纬度基准
+              {{ locale === 'en-US' ? 'Real-time multi-hop path and region flow · High-fidelity 3D digital earth flight lines · Offline geodesic coordinates' : '左侧实时监测路由路径与逐级地区流 · 右侧高保真三维数字地球航路飞线 · 纯离线高精经纬度基准' }}
             </p>
           </div>
         </div>
@@ -40,32 +40,32 @@
               :class="['px-3 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5',
                 viewMode === '3d' ? 'bg-sky-500 text-white shadow-xs font-bold' : 'hover:bg-black/5 dark:hover:bg-white/5']"
               :style="viewMode !== '3d' ? { color: 'var(--text-secondary)' } : undefined"
-              title="切换至三维交互式数字地球"
+              :title="locale === 'en-US' ? 'Switch to 3D Digital Earth View' : '切换至三维交互式数字地球'"
             >
               <AppIcon name="globe" :size="13" />
-              <span>3D 数字地球</span>
+              <span>{{ locale === 'en-US' ? '3D Globe' : '3D 数字地球' }}</span>
             </button>
             <button
               @click="switchViewMode('2d')"
               :class="['px-3 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5',
                 viewMode === '2d' ? 'bg-sky-500 text-white shadow-xs font-bold' : 'hover:bg-black/5 dark:hover:bg-white/5']"
               :style="viewMode !== '2d' ? { color: 'var(--text-secondary)' } : undefined"
-              title="切换至二维高精度等角圆柱投影平面地图"
+              :title="locale === 'en-US' ? 'Switch to 2D Planar Projection Map' : '切换至二维高精度等角圆柱投影平面地图'"
             >
               <AppIcon name="compass" :size="13" />
-              <span>2D 全景地图</span>
+              <span>{{ locale === 'en-US' ? '2D Map' : '2D 全景地图' }}</span>
             </button>
             <button
               @click="switchViewMode('lan')"
               :class="['px-3 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5',
                 viewMode === 'lan' ? 'bg-sky-500 text-white shadow-xs font-bold' : 'hover:bg-black/5 dark:hover:bg-white/5']"
               :style="viewMode !== 'lan' ? { color: 'var(--text-secondary)' } : undefined"
-              title="切换至局域网企业架构逐级跃迁拓扑"
+              :title="locale === 'en-US' ? 'Switch to LAN Enterprise Virtual Topology' : '切换至局域网企业架构逐级跃迁拓扑'"
             >
               <AppIcon name="layers" :size="13" />
-              <span>局域网虚拟拓扑</span>
+              <span>{{ locale === 'en-US' ? 'LAN Topology' : '局域网虚拟拓扑' }}</span>
               <span v-if="isLanTarget" class="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 font-bold">
-                内网推荐
+                {{ locale === 'en-US' ? 'LAN Rec' : '内网推荐' }}
               </span>
             </button>
           </div>
@@ -77,20 +77,20 @@
               :class="['px-2.5 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5',
                 layoutMode === 'split' ? 'bg-sky-500 text-white shadow-xs font-bold' : 'hover:bg-black/5 dark:hover:bg-white/5']"
               :style="layoutMode !== 'split' ? { color: 'var(--text-secondary)' } : undefined"
-              title="左右分栏：左侧数据与地区流，右侧数字地球"
+              :title="locale === 'en-US' ? 'Split View: Data & Regional Flow on Left, Globe on Right' : '左右分栏：左侧数据与地区流，右侧数字地球'"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
-              <span>左右分栏</span>
+              <span>{{ locale === 'en-US' ? 'Split View' : '左右分栏' }}</span>
             </button>
             <button
               @click="layoutMode = 'stack'"
               :class="['px-2.5 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5',
                 layoutMode === 'stack' ? 'bg-sky-500 text-white shadow-xs font-bold' : 'hover:bg-black/5 dark:hover:bg-white/5']"
               :style="layoutMode !== 'stack' ? { color: 'var(--text-secondary)' } : undefined"
-              title="上下大盘：上方数字地球/拓扑，下方全宽 8 列全量指标表格"
+              :title="locale === 'en-US' ? 'Stacked View: Globe on Top, 8-Column Metrics Below' : '上下大盘：上方数字地球/拓扑，下方全宽 8 列全量指标表格'"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
-              <span>上下大盘</span>
+              <span>{{ locale === 'en-US' ? 'Stacked' : '上下大盘' }}</span>
             </button>
           </div>
 
@@ -100,26 +100,26 @@
               @click="toggleGlobeAutoRotate"
               :class="['px-2.5 py-1 rounded-xl border text-[11px] font-medium transition-colors flex items-center gap-1.5 cursor-pointer',
                 isAutoRotating ? 'bg-sky-500/15 text-sky-700 dark:text-cyan-300 border-sky-500/35' : 'ui-pill']"
-              :title="isAutoRotating ? '暂停数字地球平滑自转' : '开启数字地球平滑自转'"
+              :title="isAutoRotating ? (locale === 'en-US' ? 'Pause Earth Auto-Rotation' : '暂停数字地球平滑自转') : (locale === 'en-US' ? 'Start Earth Auto-Rotation' : '开启数字地球平滑自转')"
             >
               <AppIcon :name="isAutoRotating ? 'pause' : 'refresh'" :size="12" />
-              <span>{{ isAutoRotating ? '停止自转' : '开启自转' }}</span>
+              <span>{{ isAutoRotating ? (locale === 'en-US' ? 'Stop Rotation' : '停止自转') : (locale === 'en-US' ? 'Auto-Rotate' : '开启自转') }}</span>
             </button>
             <button
               @click="focusOnSelf"
               class="ui-btn-secondary text-[11px] py-1 px-2.5 rounded-xl"
-              title="视角平滑对焦至本机源端物理位置"
+              :title="locale === 'en-US' ? 'Focus camera smoothly to local host position' : '视角平滑对焦至本机源端物理位置'"
             >
               <AppIcon name="radar" :size="12" />
-              <span>对焦本机</span>
+              <span>{{ locale === 'en-US' ? 'Focus Self' : '对焦本机' }}</span>
             </button>
             <button
               @click="focusOnDestination"
               class="ui-btn-secondary text-[11px] py-1 px-2.5 rounded-xl text-amber-700 dark:text-amber-300"
-              title="视角平滑对焦至目标终点主机位置"
+              :title="locale === 'en-US' ? 'Focus camera smoothly to target destination' : '视角平滑对焦至目标终点主机位置'"
             >
               <AppIcon name="link" :size="12" />
-              <span>对焦终点</span>
+              <span>{{ locale === 'en-US' ? 'Focus Target' : '对焦终点' }}</span>
             </button>
           </template>
 
@@ -127,10 +127,10 @@
             v-if="hops.length > 0"
             @click="exportTracerouteReport"
             class="ui-btn-secondary text-[11px] py-1 px-3 rounded-xl"
-            title="导出测地线多跳溯源分析 Markdown 审计报告"
+            :title="locale === 'en-US' ? 'Export Geodesic Traceroute Markdown Report' : '导出测地线多跳溯源分析 Markdown 审计报告'"
           >
             <AppIcon name="document" :size="12" />
-            <span>导出报告</span>
+            <span>{{ locale === 'en-US' ? 'Export Report' : '导出报告' }}</span>
           </button>
 
           <button
@@ -148,12 +148,12 @@
         <div class="flex items-center gap-3 flex-wrap">
           <div class="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 font-bold bg-emerald-500/12 px-2.5 py-0.5 rounded-xl border border-emerald-500/25">
             <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>本机源端 IP:</span>
+            <span>{{ locale === 'en-US' ? 'Source IP:' : '本机源端 IP:' }}</span>
             <span class="ml-1 tracking-wider" style="color: var(--text-primary)">{{ selfHopInfo.ip }}</span>
           </div>
 
           <div class="flex items-center gap-1.5" style="color: var(--text-secondary)">
-            <span style="color: var(--text-muted)">真实物理归属:</span>
+            <span style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Physical Geo:' : '真实物理归属:' }}</span>
             <strong class="text-sky-700 dark:text-cyan-300 font-bold flex items-center gap-1">
               <AppIcon name="compass" :size="12" />
               <span>{{ selfHopInfo.location }}</span>
@@ -164,7 +164,7 @@
           </div>
 
           <div class="flex items-center gap-1.5" style="color: var(--text-secondary)">
-            <span style="color: var(--text-muted)">基准测地坐标:</span>
+            <span style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Geodesic Coords:' : '基准测地坐标:' }}</span>
             <strong class="text-emerald-700 dark:text-emerald-400">
               [{{ selfHopInfo.lon.toFixed(2) }}°E, {{ selfHopInfo.lat.toFixed(2) }}°N]
             </strong>
@@ -172,9 +172,9 @@
         </div>
 
         <div class="flex items-center gap-3 text-[11px]" style="color: var(--text-muted)">
-          <span>网络环境: <strong :class="isLanTarget ? 'text-amber-700 dark:text-amber-300' : 'text-sky-700 dark:text-cyan-300'">{{ isLanTarget ? 'RFC 1918 内部微观路由' : '全球互联网城域出口' }}</strong></span>
+          <span>{{ locale === 'en-US' ? 'Network Env:' : '网络环境:' }} <strong :class="isLanTarget ? 'text-amber-700 dark:text-amber-300' : 'text-sky-700 dark:text-cyan-300'">{{ isLanTarget ? 'RFC 1918 内部微观路由' : '全球互联网城域出口' }}</strong></span>
           <span>·</span>
-          <span>坐标状态: <strong class="text-emerald-700 dark:text-emerald-400 font-bold">{{ selfHopInfo.refineStatus }}</strong></span>
+          <span>{{ locale === 'en-US' ? 'Coords Status:' : '坐标状态:' }} <strong class="text-emerald-700 dark:text-emerald-400 font-bold">{{ selfHopInfo.refineStatus }}</strong></span>
         </div>
       </div>
 
@@ -212,13 +212,13 @@
               <div class="flex-1 min-w-[200px] flex items-center gap-2">
                 <label class="font-bold text-xs shrink-0 flex items-center gap-1" style="color: var(--text-secondary)">
                   <AppIcon name="radar" :size="13" />
-                  <span>目标主机:</span>
+                  <span>{{ locale === 'en-US' ? 'Target Host:' : '目标主机:' }}</span>
                 </label>
                 <input
                   v-model="inputTarget"
                   :disabled="isTracing"
                   type="text"
-                  placeholder="公网 IP/域名 或 局域网 IP (如 138.197.159.140)"
+                  :placeholder="locale === 'en-US' ? 'Public IP/Domain or LAN IP (e.g. 138.197.159.140)' : '公网 IP/域名 或 局域网 IP (如 138.197.159.140)'"
                   class="ui-input ui-num flex-1 py-1.5 px-3 text-xs"
                   @keyup.enter="startTrace"
                 />
@@ -231,7 +231,7 @@
                   class="ui-btn-primary text-xs py-1.5 px-4 rounded-xl flex items-center gap-1.5 font-bold cursor-pointer"
                 >
                   <AppIcon name="play" :size="12" />
-                  <span>启动溯源追踪</span>
+                  <span>{{ locale === 'en-US' ? 'Start Trace' : '启动溯源追踪' }}</span>
                 </button>
                 <button
                   v-else
@@ -239,7 +239,7 @@
                   class="ui-btn-danger text-xs py-1.5 px-4 rounded-xl flex items-center gap-1.5 font-bold cursor-pointer"
                 >
                   <AppIcon name="stop" :size="12" />
-                  <span>强制终止探测</span>
+                  <span>{{ locale === 'en-US' ? 'Stop Trace' : '强制终止探测' }}</span>
                 </button>
               </div>
             </div>
@@ -248,35 +248,35 @@
             <div class="flex items-center justify-between text-[11px] flex-wrap gap-2" style="color: var(--text-muted)">
               <div class="flex items-center gap-3">
                 <div class="flex items-center gap-1">
-                  <span>跳数上限:</span>
+                  <span>{{ locale === 'en-US' ? 'Max Hops:' : '跳数上限:' }}</span>
                   <select
                     v-model.number="maxHops"
                     :disabled="isTracing"
                     class="ui-input w-auto py-0.5 px-2 text-[11px] cursor-pointer"
                   >
-                    <option :value="15">15 跳 (局域网推荐)</option>
-                    <option :value="30">30 跳 (标准全网)</option>
-                    <option :value="45">45 跳 (深度跨洲)</option>
-                    <option :value="64">64 跳 (穷尽穷搜)</option>
+                    <option :value="15">{{ locale === 'en-US' ? '15 Hops (LAN Recommended)' : '15 跳 (局域网推荐)' }}</option>
+                    <option :value="30">{{ locale === 'en-US' ? '30 Hops (Standard)' : '30 跳 (标准全网)' }}</option>
+                    <option :value="45">{{ locale === 'en-US' ? '45 Hops (Cross-Continent)' : '45 跳 (深度跨洲)' }}</option>
+                    <option :value="64">{{ locale === 'en-US' ? '64 Hops (Exhaustive)' : '64 跳 (穷尽穷搜)' }}</option>
                   </select>
                 </div>
 
                 <div class="flex items-center gap-1">
-                  <span>单跳超时:</span>
+                  <span>{{ locale === 'en-US' ? 'Hop Timeout:' : '单跳超时:' }}</span>
                   <select
                     v-model.number="timeoutMs"
                     :disabled="isTracing"
                     class="ui-input w-auto py-0.5 px-2 text-[11px] cursor-pointer"
                   >
-                    <option :value="500">500 ms (高速网络)</option>
-                    <option :value="1000">1000 ms (推荐标准)</option>
-                    <option :value="2000">2000 ms (严密探测)</option>
+                    <option :value="500">{{ locale === 'en-US' ? '500 ms (High Speed)' : '500 ms (高速网络)' }}</option>
+                    <option :value="1000">{{ locale === 'en-US' ? '1000 ms (Standard)' : '1000 ms (推荐标准)' }}</option>
+                    <option :value="2000">{{ locale === 'en-US' ? '2000 ms (Strict)' : '2000 ms (严密探测)' }}</option>
                   </select>
                 </div>
               </div>
 
               <span class="text-sky-700 dark:text-cyan-400">
-                {{ isTracing ? '流式探测执行中 (Windows tracert -d)' : '就绪' }}
+                {{ isTracing ? (locale === 'en-US' ? 'Streaming Active (Windows tracert -d)' : '流式探测执行中 (Windows tracert -d)') : (locale === 'en-US' ? 'Ready' : '就绪') }}
               </span>
             </div>
           </div>
@@ -285,48 +285,48 @@
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 p-3 border-b shrink-0 text-xs ui-num" style="background: var(--surface-content-alt); border-color: var(--border-subtle)">
             <!-- KPI 1: 跃迁总跳数 -->
             <div class="ui-content-card p-2.5 flex flex-col justify-between">
-              <span class="text-[11px]" style="color: var(--text-muted)">累计跃点数</span>
+              <span class="text-[11px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Total Hops' : '累计跃点数' }}</span>
               <div class="text-base font-bold mt-1 flex items-baseline gap-1" style="color: var(--text-primary)">
                 <span>{{ hops.length }}</span>
-                <span class="text-[11px] font-normal" style="color: var(--text-secondary)">跳</span>
+                <span class="text-[11px] font-normal" style="color: var(--text-secondary)">{{ locale === 'en-US' ? 'hops' : '跳' }}</span>
               </div>
               <span class="text-[10px] mt-0.5" :class="isFinished ? 'text-emerald-700 dark:text-emerald-400 font-semibold' : 'text-sky-700 dark:text-cyan-400'">
-                {{ isFinished ? '已抵达目标终点' : (isTracing ? '正在逐跳推进' : '待启动') }}
+                {{ isFinished ? (locale === 'en-US' ? 'Arrived at Destination' : '已抵达目标终点') : (isTracing ? (locale === 'en-US' ? 'Stepping Hop by Hop...' : '正在逐跳推进') : (locale === 'en-US' ? 'Standby' : '待启动')) }}
               </span>
             </div>
 
             <!-- KPI 2: 途经国家/地区数 -->
             <div class="ui-content-card p-2.5 flex flex-col justify-between">
-              <span class="text-[11px]" style="color: var(--text-muted)">途经地区跨度</span>
+              <span class="text-[11px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Regions Traversed' : '途经地区跨度' }}</span>
               <div class="text-base font-bold mt-1 text-sky-700 dark:text-cyan-400 flex items-baseline gap-1">
                 <span>{{ traversedStats.regionCount }}</span>
-                <span class="text-[11px] font-normal" style="color: var(--text-secondary)">地级市/区</span>
+                <span class="text-[11px] font-normal" style="color: var(--text-secondary)">{{ locale === 'en-US' ? 'regions' : '地级市/区' }}</span>
               </div>
               <span class="text-[10px] mt-0.5 text-sky-700 dark:text-cyan-300 truncate" :title="traversedStats.countrySummary">
-                跨越 {{ traversedStats.countryCount }} 个国家/地区
+                {{ locale === 'en-US' ? `Across ${traversedStats.countryCount} Countries/Regions` : `跨越 ${traversedStats.countryCount} 个国家/地区` }}
               </span>
             </div>
 
             <!-- KPI 3: 实测 RTT vs 光速时延 -->
             <div class="ui-content-card p-2.5 flex flex-col justify-between">
-              <span class="text-[11px]" style="color: var(--text-muted)">终点实测往返 (RTT)</span>
+              <span class="text-[11px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Final Destination RTT' : '终点实测往返 (RTT)' }}</span>
               <div class="text-base font-bold mt-1 flex items-baseline gap-1" :class="actualFinalRttClass">
                 <span>{{ actualFinalRttText }}</span>
               </div>
               <span class="text-[10px] mt-0.5 text-emerald-700 dark:text-emerald-400">
-                光纤理论极限: {{ theoreticalMinRtt.toFixed(1) }} ms
+                {{ locale === 'en-US' ? `Fiber Theoretical Min: ${theoreticalMinRtt.toFixed(1)} ms` : `光纤理论极限: ${theoreticalMinRtt.toFixed(1)} ms` }}
               </span>
             </div>
 
             <!-- KPI 4: 累计物理大圆线缆距离 -->
             <div class="ui-content-card p-2.5 flex flex-col justify-between">
-              <span class="text-[11px]" style="color: var(--text-muted)">测地累计物理距</span>
+              <span class="text-[11px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Cumulative Geodesic Dist' : '测地累计物理距' }}</span>
               <div class="text-base font-bold mt-1 text-amber-700 dark:text-amber-400 flex items-baseline gap-1">
                 <span>{{ isLanTarget ? (totalGeodesicKm * 1000).toFixed(0) : totalGeodesicKm.toFixed(1) }}</span>
                 <span class="text-[11px] font-normal" style="color: var(--text-secondary)">{{ isLanTarget ? 'm' : 'km' }}</span>
               </div>
               <span class="text-[10px] mt-0.5" style="color: var(--text-muted)">
-                {{ isLanTarget ? 'Cat6 双绞机房跳线' : '球面大圆测地积分' }}
+                {{ isLanTarget ? (locale === 'en-US' ? 'Cat6 Twisted-pair Patch Cables' : 'Cat6 双绞机房跳线') : (locale === 'en-US' ? 'Great-Circle Spherical Integral' : '球面大圆测地积分') }}
               </span>
             </div>
           </div>
@@ -344,7 +344,7 @@
                     ]"
                   >
                     <AppIcon name="link" :size="12" />
-                    <span>地区跃迁流</span>
+                    <span>{{ locale === 'en-US' ? 'Regional Traversal Flow' : '地区跃迁流' }}</span>
                   </button>
                   <button
                     @click="leftViewMode = 'table'"
@@ -354,11 +354,11 @@
                     ]"
                   >
                     <AppIcon name="radar" :size="12" />
-                    <span>逐跳指标明细 (8列)</span>
+                    <span>{{ locale === 'en-US' ? 'Hop Metrics Detail (8 Columns)' : '逐跳指标明细 (8列)' }}</span>
                   </button>
                 </div>
                 <span class="text-[11px] px-2 py-0.5 rounded-full ui-pill font-normal ui-num hidden sm:inline-block">
-                  已探测 {{ hops.length }} 节点
+                  {{ locale === 'en-US' ? `Probed ${hops.length} Nodes` : `已探测 ${hops.length} 节点` }}
                 </span>
               </div>
               <div class="text-[11px]" style="color: var(--text-muted)">
@@ -497,11 +497,11 @@
               <table class="w-full text-left text-xs border-collapse min-w-[740px]">
                 <thead class="ui-table-head sticky top-0 z-10 text-[11px]">
                   <tr>
-                    <th class="py-2 px-3 w-20 text-center">跳数</th>
-                    <th class="py-2 px-3 w-44">路由器 / 主机 IP</th>
-                    <th class="py-2 px-3 w-32">RTT 时延</th>
-                    <th class="py-2 px-3 w-48">网络角色 / 拓扑层级</th>
-                    <th class="py-2 px-3 w-44">地理归属 (国家/省/市)</th>
+                    <th class="py-2 px-3 w-20 text-center">{{ locale === 'en-US' ? 'Hop' : '跳数' }}</th>
+                    <th class="py-2 px-3 w-44">{{ locale === 'en-US' ? 'Router / Host IP' : '路由器 / 主机 IP' }}</th>
+                    <th class="py-2 px-3 w-32">{{ locale === 'en-US' ? 'RTT Latency' : 'RTT 时延' }}</th>
+                    <th class="py-2 px-3 w-48">{{ locale === 'en-US' ? 'Role / Topology Tier' : '网络角色 / 拓扑层级' }}</th>
+                    <th class="py-2 px-3 w-44">{{ locale === 'en-US' ? 'Geo Location (Country/Province/City)' : '地理归属 (国家/省/市)' }}</th>
                     <th class="py-2 px-3 w-32">子网 (CIDR)</th>
                     <th class="py-2 px-3 w-28">物理线缆距</th>
                     <th class="py-2 px-3 text-right">缓冲排队剖析</th>
@@ -920,7 +920,9 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import AppIcon from './AppIcon.vue';
 import { useI18n } from '../i18n';
-const { t } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 void t;
 import EmptyState from './EmptyState.vue';
 import { saveTextViaNativeDesktop } from '../composables/useDesktopSave';

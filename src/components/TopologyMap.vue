@@ -15,10 +15,10 @@
               ? 'bg-blue-600 text-white shadow-xs'
               : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
           ]"
-          title="多层次网状拓扑：核心网关 -> 工业控制与服务器 -> 现场终端 -> 外部公网"
+          :title="locale === 'en-US' ? 'Hierarchical Mesh Topology: Core Gateway -> Industrial/Servers -> Field Endpoints -> WAN' : '多层次网状拓扑：核心网关 -> 工业控制与服务器 -> 现场终端 -> 外部公网'"
         >
           <AppIcon name="layers" :size="13" />
-          <span>网状层次</span>
+          <span>{{ locale === 'en-US' ? 'Hierarchical' : '网状层次' }}</span>
         </button>
 
         <button
@@ -29,10 +29,10 @@
               ? 'bg-indigo-600 text-white shadow-xs'
               : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
           ]"
-          title="同心圆雷达拓扑：以核心网关为圆心，多圈同心环结构分布"
+          :title="locale === 'en-US' ? 'Concentric Radar Topology: Core gateway as center with multi-circle concentric rings' : '同心圆雷达拓扑：以核心网关为圆心，多圈同心环结构分布'"
         >
           <AppIcon name="radar" :size="13" />
-          <span>同心雷达</span>
+          <span>{{ locale === 'en-US' ? 'Concentric' : '同心雷达' }}</span>
         </button>
 
         <button
@@ -43,10 +43,10 @@
               ? 'bg-emerald-600 text-white shadow-xs'
               : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
           ]"
-          title="物理网状力导向拓扑：引力与排斥力动态物理演化"
+          :title="locale === 'en-US' ? 'Force-Directed Topology: Dynamic physical simulation of attraction and repulsion' : '物理网状力导向拓扑：引力与排斥力动态物理演化'"
         >
           <AppIcon name="zap" :size="13" />
-          <span>动态力导</span>
+          <span>{{ locale === 'en-US' ? 'Force-Directed' : '动态力导' }}</span>
         </button>
       </div>
 
@@ -56,21 +56,21 @@
           class="backdrop-blur-xl px-3 py-1 rounded-xl border shadow-md flex items-center gap-2.5 text-xs ui-num"
           style="background: var(--surface-glass-nav); border-color: var(--border-strong); color: var(--text-secondary);"
         >
-          <div>节点: <strong class="font-semibold text-blue-500 dark:text-sky-400">{{ topologySummary.nodeCount }}</strong></div>
+          <div>{{ locale === 'en-US' ? 'Nodes: ' : '节点: ' }}<strong class="font-semibold text-blue-500 dark:text-sky-400">{{ topologySummary.nodeCount }}</strong></div>
           <div class="w-[1px] h-3" style="background: var(--border-strong);"></div>
-          <div>链路: <strong class="font-semibold text-emerald-600 dark:text-emerald-400">{{ topologySummary.linkCount }}</strong></div>
+          <div>{{ locale === 'en-US' ? 'Links: ' : '链路: ' }}<strong class="font-semibold text-emerald-600 dark:text-emerald-400">{{ topologySummary.linkCount }}</strong></div>
           <div class="w-[1px] h-3 hidden sm:block" style="background: var(--border-strong);"></div>
-          <div class="hidden sm:block">纵深: <strong class="font-semibold text-amber-600 dark:text-amber-400">{{ topologySummary.tierCount }} 层</strong></div>
+          <div class="hidden sm:block">{{ locale === 'en-US' ? 'Depth: ' : '纵深: ' }}<strong class="font-semibold text-amber-600 dark:text-amber-400">{{ topologySummary.tierCount }}</strong> {{ locale === 'en-US' ? 'tiers' : '层' }}</div>
         </div>
 
         <button
           @click="resetZoom"
           class="backdrop-blur-xl px-2.5 py-1 rounded-xl border text-xs font-medium cursor-pointer shadow-md transition-all active:scale-95 flex items-center gap-1 hover:opacity-90"
           style="background: var(--surface-glass-nav); border-color: var(--border-strong); color: var(--text-primary);"
-          title="重置视图缩放与居中"
+          :title="locale === 'en-US' ? 'Reset zoom and center view' : '重置视图缩放与居中'"
         >
           <AppIcon name="refresh" :size="13" />
-          <span>复位</span>
+          <span>{{ locale === 'en-US' ? 'Reset' : '复位' }}</span>
         </button>
       </div>
     </div>
@@ -90,8 +90,8 @@
       <div v-else class="w-full h-full flex items-center justify-center p-6">
         <EmptyState
           icon="radar"
-          title="工业网络拓扑雷达待命中"
-          description="点击顶部【全网深度扫描】发现局域网物理资产，或启动网卡嗅探捕获实时通信会话，系统将自动构建多层次网状拓扑。"
+          :title="locale === 'en-US' ? 'Industrial Topology Radar Standby' : '工业网络拓扑雷达待命中'"
+          :description="locale === 'en-US' ? 'Click Deep Asset Scan to discover LAN assets or start packet capture to automatically build hierarchical mesh topology.' : '点击顶部【全网深度扫描】发现局域网物理资产，或启动网卡嗅探捕获实时通信会话，系统将自动构建多层次网状拓扑。'"
         />
       </div>
     </div>
@@ -104,23 +104,23 @@
     >
       <div class="flex items-center gap-1.5">
         <span class="w-2 h-2 rounded-full bg-[#6366f1] inline-block"></span>
-        <span>Tier 1 核心网关</span>
+        <span>{{ locale === 'en-US' ? 'Tier 1 Core Gateway' : 'Tier 1 核心网关' }}</span>
       </div>
       <div class="flex items-center gap-1.5">
         <span class="w-2 h-2 rounded-full bg-[#0d9488] inline-block"></span>
-        <span>Tier 2 控制中心/服务器</span>
+        <span>{{ locale === 'en-US' ? 'Tier 2 Control Center / Servers' : 'Tier 2 控制中心/服务器' }}</span>
       </div>
       <div class="flex items-center gap-1.5">
         <span class="w-2 h-2 rounded-full bg-[#0284c7] inline-block"></span>
-        <span>Tier 3 现场终端</span>
+        <span>{{ locale === 'en-US' ? 'Tier 3 Field Endpoints' : 'Tier 3 现场终端' }}</span>
       </div>
       <div class="flex items-center gap-1.5">
         <span class="w-2 h-2 rounded-full bg-[#10b981] inline-block"></span>
-        <span>Tier 4 外部公网</span>
+        <span>{{ locale === 'en-US' ? 'Tier 4 External WAN' : 'Tier 4 外部公网' }}</span>
       </div>
       <div class="flex items-center gap-1.5">
         <span class="w-2 h-2 rounded-full bg-[#e11d48] inline-block"></span>
-        <span>高熵/风险</span>
+        <span>{{ locale === 'en-US' ? 'High-Entropy / Risk' : '高熵/风险' }}</span>
       </div>
     </div>
 
@@ -141,7 +141,7 @@
           <button
             @click="selectedNode = null"
             class="p-1 rounded-lg transition-colors cursor-pointer text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
-            title="关闭详情面板"
+            :title="locale === 'en-US' ? 'Close detail drawer' : '关闭详情面板'"
           >
             <AppIcon name="close" :size="14" />
           </button>
@@ -149,46 +149,46 @@
 
         <div class="space-y-1.5 text-xs">
           <div class="flex justify-between gap-2">
-            <span style="color: var(--text-muted);">拓扑层次:</span>
+            <span style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Hierarchy:' : '拓扑层次:' }}</span>
             <span class="font-medium text-indigo-600 dark:text-indigo-300 text-right">{{ selectedNode.meta.tierName }}</span>
           </div>
           <div class="flex justify-between gap-2">
-            <span style="color: var(--text-muted);">设备角色:</span>
+            <span style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Role:' : '设备角色:' }}</span>
             <span class="font-medium text-right">{{ selectedNode.meta.role }}</span>
           </div>
           <div class="flex justify-between gap-2">
-            <span style="color: var(--text-muted);">物理 MAC:</span>
+            <span style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Physical MAC:' : '物理 MAC:' }}</span>
             <span class="ui-num font-mono text-right">{{ selectedNode.mac || 'N/A' }}</span>
           </div>
           <div class="flex justify-between gap-2">
-            <span style="color: var(--text-muted);">硬件厂商:</span>
+            <span style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Vendor:' : '硬件厂商:' }}</span>
             <span class="truncate max-w-[160px] text-right" :title="selectedNode.vendor">{{ selectedNode.vendor || '通用网络设备' }}</span>
           </div>
           <div v-if="selectedNode.zoneName" class="flex justify-between gap-2">
-            <span style="color: var(--text-muted);">安全域:</span>
+            <span style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Security Zone:' : '安全域:' }}</span>
             <span class="text-indigo-600 dark:text-indigo-300 font-medium text-right">{{ selectedNode.zoneName }}</span>
           </div>
           <div v-if="selectedNode.osName" class="flex justify-between gap-2">
-            <span style="color: var(--text-muted);">系统指纹:</span>
+            <span style="color: var(--text-muted);">{{ locale === 'en-US' ? 'OS Fingerprint:' : '系统指纹:' }}</span>
             <span class="text-emerald-600 dark:text-emerald-300 font-medium text-right">{{ selectedNode.osName }}</span>
           </div>
           <div v-if="selectedNode.hostname" class="flex justify-between gap-2">
-            <span style="color: var(--text-muted);">主机名称:</span>
+            <span style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Hostname:' : '主机名称:' }}</span>
             <span class="text-amber-600 dark:text-amber-300 font-medium text-right">{{ selectedNode.hostname }}</span>
           </div>
           <div v-if="selectedNode.geoSummary" class="flex justify-between gap-2">
-            <span style="color: var(--text-muted);">地理归属:</span>
+            <span style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Geo Location:' : '地理归属:' }}</span>
             <span class="text-blue-600 dark:text-sky-300 text-right">{{ selectedNode.geoSummary }}</span>
           </div>
           <div class="flex justify-between gap-2">
-            <span style="color: var(--text-muted);">累计吞吐:</span>
+            <span style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Throughput:' : '累计吞吐:' }}</span>
             <span class="text-emerald-600 dark:text-emerald-400 font-semibold ui-num text-right">{{ selectedNode.pktCount }} 帧报文</span>
           </div>
         </div>
 
         <!-- 开放端口 -->
         <div v-if="selectedNode.ports && selectedNode.ports.length > 0" class="border-t pt-2" style="border-color: var(--border-subtle);">
-          <span class="text-[11px] font-semibold block mb-1.5" style="color: var(--text-muted);">开放网络服务与端口</span>
+          <span class="text-[11px] font-semibold block mb-1.5" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Open Network Services & Ports' : '开放网络服务与端口' }}</span>
           <div class="flex items-center gap-1 flex-wrap">
             <span
               v-for="p in selectedNode.ports"
@@ -203,7 +203,7 @@
         <!-- 关联邻居节点 -->
         <div class="border-t pt-2 flex-1" style="border-color: var(--border-subtle);">
           <span class="text-[11px] font-semibold block mb-1.5" style="color: var(--text-muted);">
-            直连拓扑邻居 ({{ selectedNode.neighbors.length }} 个节点)
+            {{ locale === 'en-US' ? `Connected Neighbors (${selectedNode.neighbors.length} nodes)` : `直连拓扑邻居 (${selectedNode.neighbors.length} 个节点)` }}
           </span>
           <div class="space-y-1 max-h-36 overflow-auto custom-scrollbar pr-1">
             <div
@@ -212,7 +212,7 @@
               @click="openIpDossier(nbr.peer)"
               class="p-1.5 rounded-lg text-[11px] flex items-center justify-between border cursor-pointer transition-colors group hover:bg-[var(--surface-hover)]"
               style="background: var(--surface-content-alt); border-color: var(--border-subtle);"
-              title="点击查阅该邻居 IP 全息档案与溯源"
+              :title="locale === 'en-US' ? 'View IP dossier & trace' : '点击查阅该邻居 IP 全息档案与溯源'"
             >
               <div class="flex items-center gap-1.5 truncate max-w-[175px]">
                 <AppIcon
@@ -228,7 +228,7 @@
               </div>
             </div>
             <div v-if="selectedNode.neighbors.length === 0" class="text-[11px] py-2 text-center" style="color: var(--text-muted);">
-              暂无通信邻居
+              {{ locale === 'en-US' ? 'No connected neighbors' : '暂无通信邻居' }}
             </div>
           </div>
         </div>
@@ -240,7 +240,7 @@
           class="ui-btn-primary w-full mt-1 py-1.5 px-3 text-xs font-medium justify-center shrink-0"
         >
           <AppIcon name="search" :size="13" />
-          <span>查阅 IP 全息档案与溯源</span>
+          <span>{{ locale === 'en-US' ? 'View IP Dossier & Trace' : '查阅 IP 全息档案与溯源' }}</span>
           <AppIcon name="arrow-right" :size="12" />
         </button>
       </div>
@@ -269,7 +269,9 @@ import VChart from 'vue-echarts';
 import IpDossierModal from './IpDossierModal.vue';
 import AppIcon from './AppIcon.vue';
 import { useI18n } from '../i18n';
-const { t } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 void t;
 import EmptyState from './EmptyState.vue';
 
@@ -362,8 +364,8 @@ function deduceNodeHierarchy(ip: string, asset?: DiscoveredAsset): NodeMeta {
   if (ip === '127.0.0.1' || ip === '::1' || ip === 'HOST_SYSTEM' || ip.toLowerCase() === 'localhost') {
     return {
       tier: 0,
-      tierName: 'Tier 0 探针宿主',
-      role: '探针采集中心 (Host)',
+      tierName: locale.value === 'en-US' ? 'Tier 0 Probe Host' : 'Tier 0 探针宿主',
+      role: locale.value === 'en-US' ? 'Probe Collection Host' : '探针采集中心 (Host)',
       color: '#f59e0b',
       borderColor: '#fde68a',
       shadowColor: '#d97706',
@@ -375,8 +377,8 @@ function deduceNodeHierarchy(ip: string, asset?: DiscoveredAsset): NodeMeta {
   if (ip === '255.255.255.255' || ip.startsWith('224.') || ip.startsWith('239.') || ip.startsWith('ff0')) {
     return {
       tier: 3,
-      tierName: '全网广播域',
-      role: '广播/组播端点',
+      tierName: locale.value === 'en-US' ? 'Broadcast Domain' : '全网广播域',
+      role: locale.value === 'en-US' ? 'Broadcast / Multicast Endpoint' : '广播/组播端点',
       color: '#fb923c',
       borderColor: '#fed7aa',
       shadowColor: '#ea580c',
@@ -390,8 +392,8 @@ function deduceNodeHierarchy(ip: string, asset?: DiscoveredAsset): NodeMeta {
   if (isGateway) {
     return {
       tier: 1,
-      tierName: 'Tier 1 核心网关/路由',
-      role: asset?.role || '核心网关 / 三层交换',
+      tierName: locale.value === 'en-US' ? 'Tier 1 Core Gateway / Router' : 'Tier 1 核心网关/路由',
+      role: asset?.role || (locale.value === 'en-US' ? 'Core Gateway / L3 Switch' : '核心网关 / 三层交换'),
       color: '#6366f1',
       borderColor: '#c7d2fe',
       shadowColor: '#4f46e5',
@@ -409,8 +411,8 @@ function deduceNodeHierarchy(ip: string, asset?: DiscoveredAsset): NodeMeta {
   if (isServerOrPlc) {
     return {
       tier: 2,
-      tierName: 'Tier 2 控制中心/PLC/服务器',
-      role: asset?.role || '关键工业控制 / 业务服务器',
+      tierName: locale.value === 'en-US' ? 'Tier 2 Control Center / PLC / Server' : 'Tier 2 控制中心/PLC/服务器',
+      role: asset?.role || (locale.value === 'en-US' ? 'Industrial Control / Server' : '关键工业控制 / 业务服务器'),
       color: '#0d9488',
       borderColor: '#99f6e4',
       shadowColor: '#0f766e',
@@ -424,8 +426,8 @@ function deduceNodeHierarchy(ip: string, asset?: DiscoveredAsset): NodeMeta {
   if (isLanClient) {
     return {
       tier: 3,
-      tierName: 'Tier 3 局域网终端/工作站',
-      role: asset?.role || '局域网活跃终端',
+      tierName: locale.value === 'en-US' ? 'Tier 3 LAN Endpoint / Workstation' : 'Tier 3 局域网终端/工作站',
+      role: asset?.role || (locale.value === 'en-US' ? 'LAN Active Endpoint' : '局域网活跃终端'),
       color: '#0284c7',
       borderColor: '#bae6fd',
       shadowColor: '#0369a1',
@@ -436,8 +438,8 @@ function deduceNodeHierarchy(ip: string, asset?: DiscoveredAsset): NodeMeta {
   // 6. Tier 4: 外部公网服务与远程端点 (WAN)
   return {
     tier: 4,
-    tierName: 'Tier 4 外部公网/云端',
-    role: asset?.role || '外部公网业务节点',
+    tierName: locale.value === 'en-US' ? 'Tier 4 External WAN / Cloud' : 'Tier 4 外部公网/云端',
+    role: asset?.role || (locale.value === 'en-US' ? 'External WAN Node' : '外部公网业务节点'),
     color: '#10b981',
     borderColor: '#a7f3d0',
     shadowColor: '#059669',
@@ -490,7 +492,7 @@ const topologyData = computed(() => {
       nodesMap.set(p.src_ip, {
         name: p.src_ip,
         mac: a?.mac || p.mac_src || 'N/A',
-        vendor: a?.vendor || '外部网络端点',
+        vendor: a?.vendor || (locale.value === 'en-US' ? 'External Network Endpoint' : '外部网络端点'),
         role: meta.role,
         zoneName: a?.zone_name,
         geoSummary: a?.geo_summary,
@@ -511,7 +513,7 @@ const topologyData = computed(() => {
       nodesMap.set(p.dst_ip, {
         name: p.dst_ip,
         mac: a?.mac || p.mac_dst || 'N/A',
-        vendor: a?.vendor || '外部网络端点',
+        vendor: a?.vendor || (locale.value === 'en-US' ? 'External Network Endpoint' : '外部网络端点'),
         role: meta.role,
         zoneName: a?.zone_name,
         geoSummary: a?.geo_summary,
@@ -532,7 +534,7 @@ const topologyData = computed(() => {
         const ttl = p.business_data.ttl;
         if (ttl <= 64) node.osName = 'Linux/RTOS';
         else if (ttl <= 128) node.osName = 'Windows';
-        else node.osName = '网络设备/路由';
+        else node.osName = locale.value === 'en-US' ? 'Network Device / Router' : '网络设备/路由';
       }
     }
 
@@ -791,26 +793,39 @@ const chartOption = computed(() => {
       formatter: (params: any) => {
         if (params.dataType === 'node') {
           const raw = params.data.rawNode;
-          const threatTag = raw.hasThreat ? '<span style="color: #e11d48; font-weight: bold;">[高熵风险]</span>' : '';
+          const threatTag = raw.hasThreat ? `<span style="color: #e11d48; font-weight: bold;">[${locale.value === 'en-US' ? 'High-Risk' : '高熵风险'}]</span>` : '';
+          const tierLbl = locale.value === 'en-US' ? 'Tier: ' : '层级: ';
+          const roleLbl = locale.value === 'en-US' ? 'Role: ' : '角色: ';
+          const vendorLbl = locale.value === 'en-US' ? 'Vendor: ' : '厂商: ';
+          const genericDev = locale.value === 'en-US' ? 'Generic Device' : '通用设备';
+          const trafficLbl = locale.value === 'en-US' ? 'Traffic: ' : '吞吐: ';
+          const pktsLbl = locale.value === 'en-US' ? 'frames' : '帧报文';
+          const portsLbl = locale.value === 'en-US' ? 'Ports: ' : '端口: ';
           return `
             <div style="font-family: ui-monospace, SFMono-Regular, monospace; padding: 2px;">
               <div style="font-weight: bold; color: ${tooltipTitleColor}; margin-bottom: 3px;">${raw.name} ${threatTag}</div>
-              <div>层级: <span>${raw.meta.tierName}</span></div>
-              <div>角色: <span>${raw.meta.role}</span></div>
+              <div>${tierLbl}<span>${raw.meta.tierName}</span></div>
+              <div>${roleLbl}<span>${raw.meta.role}</span></div>
               <div>MAC: <span style="color: ${tooltipMutedColor};">${raw.mac || 'N/A'}</span></div>
-              <div>厂商: <span style="color: ${tooltipMutedColor};">${raw.vendor || '通用设备'}</span></div>
-              <div>吞吐: <span style="color: #10b981; font-weight: bold;">${raw.pktCount} 帧报文</span></div>
-              ${raw.ports && raw.ports.length > 0 ? `<div>端口: <span style="color: #f59e0b;">:${raw.ports.join(', :')}</span></div>` : ''}
+              <div>${vendorLbl}<span style="color: ${tooltipMutedColor};">${raw.vendor || genericDev}</span></div>
+              <div>${trafficLbl}<span style="color: #10b981; font-weight: bold;">${raw.pktCount} ${pktsLbl}</span></div>
+              ${raw.ports && raw.ports.length > 0 ? `<div>${portsLbl}<span style="color: #f59e0b;">:${raw.ports.join(', :')}</span></div>` : ''}
             </div>
           `;
         } else if (params.dataType === 'edge') {
           const d = params.data;
+          const edgeTitle = d.lineStyle?.type === 'dashed'
+            ? (locale.value === 'en-US' ? 'Infrastructure Relation' : '基础设施拓扑关联')
+            : (locale.value === 'en-US' ? 'Live Traffic Flow' : '实时通信数据流');
+          const countLbl = locale.value === 'en-US' ? 'Packets: ' : '通信频次: ';
+          const timesLbl = locale.value === 'en-US' ? 'pkts' : '次';
+          const protoLbl = locale.value === 'en-US' ? 'Protocol: ' : '应用规约: ';
           return `
             <div style="font-family: ui-monospace, SFMono-Regular, monospace; padding: 2px;">
-              <div style="font-weight: bold; margin-bottom: 2px;">${d.lineStyle?.type === 'dashed' ? '基础设施拓扑关联' : '实时通信数据流'}</div>
+              <div style="font-weight: bold; margin-bottom: 2px;">${edgeTitle}</div>
               <div>${d.source} → ${d.target}</div>
-              <div>通信频次: <span style="color: ${tooltipTitleColor}; font-weight: bold;">${d.value} 次</span></div>
-              <div>应用规约: <span style="color: #f59e0b;">${d.protocol}</span></div>
+              <div>${countLbl}<span style="color: ${tooltipTitleColor}; font-weight: bold;">${d.value} ${timesLbl}</span></div>
+              <div>${protoLbl}<span style="color: #f59e0b;">${d.protocol}</span></div>
             </div>
           `;
         }

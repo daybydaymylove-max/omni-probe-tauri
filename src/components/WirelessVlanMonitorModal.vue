@@ -12,14 +12,14 @@
           <div>
             <div class="flex items-center gap-2 flex-wrap">
               <h3 class="text-sm font-bold" style="color: var(--text-primary)">
-                无线链路与虚拟局域网监测控制台
+                {{ locale === 'en-US' ? 'Wireless Link & Virtual LAN Monitoring Console' : '无线链路与虚拟局域网监测控制台' }}
               </h3>
               <span class="px-2 py-0.5 rounded-full text-[11px] ui-num font-semibold bg-indigo-500/12 text-indigo-700 dark:text-indigo-300 border border-indigo-500/25">
                 PRO-WIRELESS & VLAN
               </span>
             </div>
             <p class="text-[11px] ui-num mt-0.5" style="color: var(--text-muted)">
-              IEEE 802.11 Radiotap 信道热力 · 802.1Q/ad QinQ 跨层审计 · BLE HCI 空间路径衰减感知
+              {{ locale === 'en-US' ? 'IEEE 802.11 Channel Heatmap · 802.1Q/ad QinQ Cross-Layer Audit · BLE HCI Path Loss Sensing' : 'IEEE 802.11 Radiotap 信道热力 · 802.1Q/ad QinQ 跨层审计 · BLE HCI 空间路径衰减感知' }}
             </p>
           </div>
         </div>
@@ -46,14 +46,14 @@
               @click="refreshCurrentTelemetry"
               :disabled="loading"
               class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer disabled:opacity-50"
-              title="刷新遥测指标"
+              :title="locale === 'en-US' ? 'Refresh Telemetry Metrics' : '刷新遥测指标'"
             >
               <AppIcon name="refresh" :size="14" :class="loading ? 'animate-spin' : ''" />
             </button>
             <button
               @click="$emit('close')"
               class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer"
-              title="关闭"
+              :title="locale === 'en-US' ? 'Close' : '关闭'"
             >
               <AppIcon name="close" :size="15" />
             </button>
@@ -68,23 +68,23 @@
         <div v-if="activeTab === 'wifi'" class="space-y-5">
           <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
             <div class="ui-sub-card p-3.5">
-              <div class="text-xs font-medium" style="color: var(--text-muted)">总捕获 Wi-Fi 帧数</div>
+              <div class="text-xs font-medium" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Total Wi-Fi Frames' : '总捕获 Wi-Fi 帧数' }}</div>
               <div class="text-2xl ui-num font-bold mt-1" style="color: var(--text-primary)">
                 {{ wifiData.total_wifi_frames.toLocaleString() }}
               </div>
-              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">Radiotap / 802.11 载荷</div>
+              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Radiotap / 802.11 Payload' : 'Radiotap / 802.11 载荷' }}</div>
             </div>
 
             <div class="ui-sub-card p-3.5">
-              <div class="text-xs font-medium" style="color: var(--text-muted)">AP 热点 / BSSID 资产</div>
+              <div class="text-xs font-medium" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'AP Hotspot / BSSID Assets' : 'AP 热点 / BSSID 资产' }}</div>
               <div class="text-2xl ui-num font-bold text-sky-700 dark:text-sky-400 mt-1">
                 {{ wifiData.ap_assets.length }}
               </div>
-              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">活跃接入点空间感知</div>
+              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Active AP Spatial Sensing' : '活跃接入点空间感知' }}</div>
             </div>
 
             <div class="ui-sub-card p-3.5">
-              <div class="text-xs font-medium" style="color: var(--text-muted)">802.11 管理与控制帧</div>
+              <div class="text-xs font-medium" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Management & Control Frames' : '802.11 管理与控制帧' }}</div>
               <div class="text-2xl ui-num font-bold text-indigo-700 dark:text-indigo-400 mt-1">
                 {{ (wifiData.management_frames + wifiData.control_frames).toLocaleString() }}
               </div>
@@ -92,21 +92,21 @@
             </div>
 
             <div class="ui-sub-card p-3.5">
-              <div class="text-xs font-medium" style="color: var(--text-muted)">802.11 QoS 数据帧</div>
+              <div class="text-xs font-medium" style="color: var(--text-muted)">{{ locale === 'en-US' ? '802.11 QoS Data Frames' : '802.11 QoS 数据帧' }}</div>
               <div class="text-2xl ui-num font-bold text-emerald-700 dark:text-emerald-400 mt-1">
                 {{ wifiData.data_frames.toLocaleString() }}
               </div>
-              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">上层应用通信流量载荷</div>
+              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Upper Application Traffic' : '上层应用通信流量载荷' }}</div>
             </div>
 
             <div class="ui-sub-card p-3.5"
               :class="wifiData.deauth_attack_count > 0 ? '!border-rose-500/40 bg-rose-500/10' : ''">
-              <div class="text-xs font-medium" style="color: var(--text-muted)">Deauth 洪水告警</div>
+              <div class="text-xs font-medium" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Deauth Flood Alerts' : 'Deauth 洪水告警' }}</div>
               <div class="text-2xl ui-num font-bold mt-1"
                 :class="wifiData.deauth_attack_count > 0 ? 'text-rose-700 dark:text-rose-400' : ''" :style="wifiData.deauth_attack_count === 0 ? { color: 'var(--text-primary)' } : undefined">
                 {{ wifiData.deauth_attack_count }}
               </div>
-              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">拒绝服务断开攻击监测</div>
+              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Deauth DoS Attack Monitoring' : '拒绝服务断开攻击监测' }}</div>
             </div>
           </div>
 
@@ -116,7 +116,7 @@
               <div class="flex items-center gap-2 flex-wrap">
                 <h4 class="text-xs font-bold flex items-center gap-2" style="color: var(--text-primary)">
                   <AppIcon name="wifi" :size="14" />
-                  <span>操作系统原生 WLAN 物理适配器周边热点扫描</span>
+                  <span>{{ locale === 'en-US' ? 'OS Native WLAN Adapter Nearby Hotspot Scan' : '操作系统原生 WLAN 物理适配器周边热点扫描' }}</span>
                 </h4>
                 <span
                   v-if="nativeWifiScan"
@@ -127,14 +127,14 @@
                 >
                   {{
                     nativeWifiScan.native_scan_available
-                      ? `已发现 ${nativeWifiScan.scanned_ap_count} 个热点`
+                      ? (locale === 'en-US' ? `Found ${nativeWifiScan.scanned_ap_count} Hotspots` : `已发现 ${nativeWifiScan.scanned_ap_count} 个热点`)
                       : nativeWifiScan.reason_code === 'SERVICE_STOPPED'
-                        ? 'WLAN 服务已停止'
-                        : '无物理无线适配器'
+                        ? (locale === 'en-US' ? 'WLAN Service Stopped' : 'WLAN 服务已停止')
+                        : (locale === 'en-US' ? 'No Physical Wireless Adapter' : '无物理无线适配器')
                   }}
                 </span>
                 <span v-else-if="scanningNativeWifi" class="text-[11px] ui-num text-sky-600 dark:text-sky-300">
-                  正在探测系统物理无线网卡...
+                  {{ locale === 'en-US' ? 'Probing physical wireless adapter...' : '正在探测系统物理无线网卡...' }}
                 </span>
               </div>
 
@@ -144,11 +144,11 @@
                   @click="activeTab = 'workbench'; loadSample('wifi')"
                   class="px-2.5 py-1 rounded-lg bg-sky-500/12 hover:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/25 text-[11px] font-semibold cursor-pointer"
                 >
-                  载入 802.11 样本分析
+                  {{ locale === 'en-US' ? 'Load 802.11 Sample' : '载入 802.11 样本分析' }}
                 </button>
                 <button @click="runNativeWifiScan" :disabled="scanningNativeWifi" class="ui-btn-secondary px-3 py-1 text-xs">
                   <AppIcon name="refresh" :size="12" :class="scanningNativeWifi ? 'animate-spin' : ''" />
-                  <span>{{ scanningNativeWifi ? '扫描中...' : '重新扫描 WLAN' }}</span>
+                  <span>{{ scanningNativeWifi ? (locale === 'en-US' ? 'Scanning...' : '扫描中...') : (locale === 'en-US' ? 'Rescan WLAN' : '重新扫描 WLAN') }}</span>
                 </button>
               </div>
             </div>
@@ -168,7 +168,7 @@
                 @click="activeTab = 'bluetooth'"
                 class="underline font-semibold cursor-pointer shrink-0"
               >
-                切至蓝牙实机扫描 →
+                {{ locale === 'en-US' ? 'Switch to BLE Live Scan →' : '切至蓝牙实机扫描 →' }}
               </button>
             </div>
 
@@ -178,9 +178,9 @@
                   <tr>
                     <th class="py-2 px-3">SSID</th>
                     <th class="py-2 px-3">BSSID</th>
-                    <th class="py-2 px-3">信道 / 频段</th>
-                    <th class="py-2 px-3">RSSI 场强</th>
-                    <th class="py-2 px-3">认证加密</th>
+                    <th class="py-2 px-3">{{ locale === 'en-US' ? 'Channel / Band' : '信道 / 频段' }}</th>
+                    <th class="py-2 px-3">{{ locale === 'en-US' ? 'RSSI Level' : 'RSSI 场强' }}</th>
+                    <th class="py-2 px-3">{{ locale === 'en-US' ? 'Auth & Encryption' : '认证加密' }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y" style="border-color: var(--border-subtle); color: var(--text-secondary);">
@@ -200,16 +200,16 @@
             <div class="flex items-center justify-between flex-wrap gap-2">
               <h4 class="text-xs font-bold flex items-center gap-2" style="color: var(--text-primary)">
                 <AppIcon name="activity" :size="14" />
-                <span>物理频段信道占用热力图谱 (Channel Spectrum Heatmap)</span>
+                <span>{{ locale === 'en-US' ? 'Channel Spectrum Heatmap' : '物理频段信道占用热力图谱 (Channel Spectrum Heatmap)' }}</span>
                 <span class="text-[11px] font-normal" style="color: var(--text-muted)">2.4 GHz (Ch 1-14) / 5 GHz (Ch 36-165)</span>
               </h4>
               <span class="text-[11px] ui-num text-indigo-700 dark:text-indigo-400 font-semibold">
-                活跃信道数: {{ Object.keys(wifiData.channel_distribution).length }}
+                {{ locale === 'en-US' ? 'Active Channels:' : '活跃信道数:' }} {{ Object.keys(wifiData.channel_distribution).length }}
               </span>
             </div>
 
             <div class="space-y-2">
-              <div class="text-[10px] font-semibold uppercase tracking-wider" style="color: var(--text-muted)">2.4 GHz 频段信道 (Ch 1 - 14)</div>
+              <div class="text-[10px] font-semibold uppercase tracking-wider" style="color: var(--text-muted)">{{ locale === 'en-US' ? '2.4 GHz Channels (Ch 1 - 14)' : '2.4 GHz 频段信道 (Ch 1 - 14)' }}</div>
               <div class="grid grid-cols-7 lg:grid-cols-14 gap-2">
                 <div
                   v-for="ch in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]"
@@ -226,14 +226,14 @@
                     Ch {{ ch }}
                   </div>
                   <div class="text-[10px] ui-num" style="color: var(--text-muted)">
-                    {{ wifiData.channel_distribution[ch] || 0 }} 帧
+                    {{ wifiData.channel_distribution[ch] || 0 }} {{ locale === 'en-US' ? 'Frames' : '帧' }}
                   </div>
                 </div>
               </div>
             </div>
 
             <div class="space-y-2 pt-1">
-              <div class="text-[10px] font-semibold uppercase tracking-wider" style="color: var(--text-muted)">5 GHz 高速频段信道 (Ch 36 - 165)</div>
+              <div class="text-[10px] font-semibold uppercase tracking-wider" style="color: var(--text-muted)">{{ locale === 'en-US' ? '5 GHz High-speed Channels (Ch 36 - 165)' : '5 GHz 高速频段信道 (Ch 36 - 165)' }}</div>
               <div class="grid grid-cols-7 lg:grid-cols-13 gap-2">
                 <div
                   v-for="ch5 in [36, 40, 44, 48, 52, 56, 60, 64, 149, 153, 157, 161, 165]"
@@ -250,7 +250,7 @@
                     Ch {{ ch5 }}
                   </div>
                   <div class="text-[10px] ui-num" style="color: var(--text-muted)">
-                    {{ wifiData.channel_distribution[ch5] || 0 }} 帧
+                    {{ wifiData.channel_distribution[ch5] || 0 }} {{ locale === 'en-US' ? 'Frames' : '帧' }}
                   </div>
                 </div>
               </div>
@@ -261,10 +261,10 @@
               <div class="flex items-center justify-between text-xs">
                 <span class="font-bold flex items-center gap-1.5" style="color: var(--text-primary)">
                   <AppIcon name="activity" :size="13" />
-                  <span>Wi-Fi RSSI 时序场强波动曲线 (dBm)</span>
+                  <span>{{ locale === 'en-US' ? 'Wi-Fi RSSI Temporal Fluctuation (dBm)' : 'Wi-Fi RSSI 时序场强波动曲线 (dBm)' }}</span>
                 </span>
                 <span class="text-[11px] ui-num" style="color: var(--text-muted)">
-                  采样点数: {{ (wifiData.rssi_history || []).length }}
+                  {{ locale === 'en-US' ? 'Samples:' : '采样点数:' }} {{ (wifiData.rssi_history || []).length }}
                 </span>
               </div>
               <div class="h-28 rounded-xl border p-2 flex items-center justify-center relative overflow-hidden" style="border-color: var(--border-subtle); background: rgba(15, 23, 42, 0.92);">
@@ -274,7 +274,7 @@
                   <line x1="0" y1="68" x2="760" y2="68" stroke="rgba(148,163,184,0.16)" stroke-dasharray="3 3" />
                   <polyline :points="wifiRssiPolyline" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
                 </svg>
-                <span v-else class="text-[11px] text-slate-400">等待 802.11 / 原生 WLAN 扫描采集至少 2 个场强采样点</span>
+                <span v-else class="text-[11px] text-slate-400">{{ locale === 'en-US' ? 'Waiting for at least 2 RSSI samples from 802.11/WLAN scan' : '等待 802.11 / 原生 WLAN 扫描采集至少 2 个场强采样点' }}</span>
               </div>
             </div>
           </div>
@@ -283,9 +283,9 @@
             <div class="flex items-center justify-between">
               <h4 class="text-xs font-bold flex items-center gap-2" style="color: var(--text-primary)">
                 <AppIcon name="radar" :size="14" />
-                <span>捕获的 Wi-Fi 接入点资产拓扑</span>
+                <span>{{ locale === 'en-US' ? 'Captured Wi-Fi AP Asset Topology' : '捕获的 Wi-Fi 接入点资产拓扑' }}</span>
                 <span class="text-[11px] px-2 py-0.5 rounded-full ui-pill ui-num">
-                  共 {{ wifiData.ap_assets.length }} 个 AP
+                  {{ locale === 'en-US' ? `Total ${wifiData.ap_assets.length} APs` : `共 ${wifiData.ap_assets.length} 个 AP` }}
                 </span>
               </h4>
             </div>
@@ -294,14 +294,14 @@
               <table class="w-full text-left border-collapse">
                 <thead class="ui-table-head text-[11px] font-semibold uppercase tracking-wider">
                   <tr>
-                    <th class="py-2.5 px-3">SSID (网络热点名称)</th>
-                    <th class="py-2.5 px-3">BSSID MAC 地址</th>
-                    <th class="py-2.5 px-3">物理信道 / 频段</th>
-                    <th class="py-2.5 px-3">RSSI 信号强度</th>
-                    <th class="py-2.5 px-3">认证与加密规约</th>
-                    <th class="py-2.5 px-3">捕获帧数</th>
-                    <th class="py-2.5 px-3">安全概况</th>
-                    <th class="py-2.5 px-3 text-right">比对</th>
+                    <th class="py-2.5 px-3">{{ locale === 'en-US' ? 'SSID (Hotspot Name)' : 'SSID (网络热点名称)' }}</th>
+                    <th class="py-2.5 px-3">{{ locale === 'en-US' ? 'BSSID MAC Address' : 'BSSID MAC 地址' }}</th>
+                    <th class="py-2.5 px-3">{{ locale === 'en-US' ? 'Physical Channel / Band' : '物理信道 / 频段' }}</th>
+                    <th class="py-2.5 px-3">{{ locale === 'en-US' ? 'RSSI Signal Strength' : 'RSSI 信号强度' }}</th>
+                    <th class="py-2.5 px-3">{{ locale === 'en-US' ? 'Auth & Encryption Protocols' : '认证与加密规约' }}</th>
+                    <th class="py-2.5 px-3">{{ locale === 'en-US' ? 'Frames' : '捕获帧数' }}</th>
+                    <th class="py-2.5 px-3">{{ locale === 'en-US' ? 'Security' : '安全概况' }}</th>
+                    <th class="py-2.5 px-3 text-right">{{ locale === 'en-US' ? 'Diff' : '比对' }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y text-xs ui-num" style="border-color: var(--border-subtle); color: var(--text-secondary)">
@@ -340,12 +340,12 @@
                       </span>
                     </td>
                     <td class="py-3 px-3" style="color: var(--text-muted)">
-                      信标: {{ ap.beacon_count }} / 数据: {{ ap.data_packet_count }}
+                      {{ locale === 'en-US' ? 'Beacon:' : '信标:' }} {{ ap.beacon_count }} / {{ locale === 'en-US' ? 'Data:' : '数据:' }} {{ ap.data_packet_count }}
                     </td>
                     <td class="py-3 px-3">
                       <div v-if="ap.security_alerts.length === 0" class="text-emerald-700 dark:text-emerald-400 text-[11px] flex items-center gap-1">
                         <AppIcon name="check" :size="12" />
-                        <span>信道与加密合规</span>
+                        <span>{{ locale === 'en-US' ? 'Channel & Encryption Compliance' : '信道与加密合规' }}</span>
                       </div>
                       <div v-else class="flex flex-wrap gap-1">
                         <span
@@ -361,19 +361,19 @@
                     <td class="py-3 px-3 text-right">
                       <button @click="addWifiApToDiffQueue(ap)"
                         class="px-2 py-0.5 rounded bg-emerald-500/12 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-[11px] font-semibold cursor-pointer"
-                        title="将该 AP 信标属性加入全局多组比对队列">
-                        + 入队
+                        :title="locale === 'en-US' ? 'Add AP beacon attributes to global diff queue' : '将该 AP 信标属性加入全局多组比对队列'">
+                        {{ locale === 'en-US' ? '+ Enqueue' : '+ 入队' }}
                       </button>
                     </td>
                   </tr>
 
                   <tr v-if="wifiData.ap_assets.length === 0">
                     <td colspan="8" class="py-8">
-                      <EmptyState icon="wifi" title="暂未捕获 Wi-Fi 802.11 管理帧" description="需要处于 Monitor Mode (Radiotap/802.11) 链路的无线适配器抓包；亦可直接在下方打开单帧解码器载入 Radiotap 报文样本验证。">
+                      <EmptyState icon="wifi" :title="locale === 'en-US' ? 'No Wi-Fi 802.11 Management Frames Captured' : '暂未捕获 Wi-Fi 802.11 管理帧'" :description="locale === 'en-US' ? 'Requires wireless adapter in Monitor Mode, or load Radiotap sample below for verification.' : '需要处于 Monitor Mode (Radiotap/802.11) 链路的无线适配器抓包；亦可直接在下方打开单帧解码器载入 Radiotap 报文样本验证。'">
                         <template #actions>
                           <button @click="activeTab = 'workbench'; loadSample('wifi')" class="ui-btn-secondary px-3 py-1 text-xs">
                             <AppIcon name="zap" :size="12" />
-                            <span>载入 802.11 Radiotap 样本解码测试</span>
+                            <span>{{ locale === 'en-US' ? 'Load 802.11 Radiotap Sample for Dissection' : '载入 802.11 Radiotap 样本解码测试' }}</span>
                           </button>
                         </template>
                       </EmptyState>
@@ -389,47 +389,47 @@
         <div v-if="activeTab === 'vlan'" class="space-y-5">
           <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
             <div class="ui-sub-card p-3.5">
-              <div class="text-xs font-medium" style="color: var(--text-muted)">总 VLAN 报文数</div>
+              <div class="text-xs font-medium" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Total VLAN Packets' : '总 VLAN 报文数' }}</div>
               <div class="text-2xl ui-num font-bold mt-1" style="color: var(--text-primary)">
                 {{ vlanData.total_vlan_packets.toLocaleString() }}
               </div>
-              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">吞吐: {{ formatBytes(vlanData.total_vlan_bytes) }}</div>
+              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Throughput:' : '吞吐:' }} {{ formatBytes(vlanData.total_vlan_bytes) }}</div>
             </div>
 
             <div class="ui-sub-card p-3.5">
-              <div class="text-xs font-medium" style="color: var(--text-muted)">活跃 VLAN 隔离域</div>
+              <div class="text-xs font-medium" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Active VLAN Domains' : '活跃 VLAN 隔离域' }}</div>
               <div class="text-2xl ui-num font-bold text-indigo-700 dark:text-indigo-400 mt-1">
                 {{ vlanData.active_vlan_count }}
               </div>
-              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">VID 范围: 0 - 4095</div>
+              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'VID Range: 0 - 4095' : 'VID 范围: 0 - 4095' }}</div>
             </div>
 
             <div class="ui-sub-card p-3.5">
-              <div class="text-xs font-medium" style="color: var(--text-muted)">IEEE 802.1ad (QinQ) 双层</div>
+              <div class="text-xs font-medium" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'IEEE 802.1ad (QinQ) Dual Tag' : 'IEEE 802.1ad (QinQ) 双层' }}</div>
               <div class="text-2xl ui-num font-bold text-purple-700 dark:text-purple-400 mt-1">
                 {{ vlanData.qinq_packets.toLocaleString() }}
               </div>
-              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">S-Tag 运营商隧道流</div>
+              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'S-Tag Provider Tunnel Flow' : 'S-Tag 运营商隧道流' }}</div>
             </div>
 
             <div class="ui-sub-card p-3.5"
               :class="vlanData.vlan_hopping_threats > 0 ? '!border-rose-500/40 bg-rose-500/10' : ''">
-              <div class="text-xs font-medium" style="color: var(--text-muted)">Double Tagging 跳跃穿透</div>
+              <div class="text-xs font-medium" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Double Tagging Hopping' : 'Double Tagging 跳跃穿透' }}</div>
               <div class="text-2xl ui-num font-bold mt-1"
                 :class="vlanData.vlan_hopping_threats > 0 ? 'text-rose-700 dark:text-rose-400' : ''" :style="vlanData.vlan_hopping_threats === 0 ? { color: 'var(--text-primary)' } : undefined">
                 {{ vlanData.vlan_hopping_threats }}
               </div>
-              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">VLAN Hopping 越权告警</div>
+              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'VLAN Hopping Bypass Alert' : 'VLAN Hopping 越权告警' }}</div>
             </div>
 
             <div class="ui-sub-card p-3.5"
               :class="vlanData.default_vlan1_packets > 0 ? '!border-amber-500/40 bg-amber-500/10' : ''">
-              <div class="text-xs font-medium" style="color: var(--text-muted)">Default VLAN 1 流量</div>
+              <div class="text-xs font-medium" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Default VLAN 1 Traffic' : 'Default VLAN 1 流量' }}</div>
               <div class="text-2xl ui-num font-bold mt-1"
                 :class="vlanData.default_vlan1_packets > 0 ? 'text-amber-700 dark:text-amber-400' : ''" :style="vlanData.default_vlan1_packets === 0 ? { color: 'var(--text-primary)' } : undefined">
                 {{ vlanData.default_vlan1_packets.toLocaleString() }}
               </div>
-              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">默认未划分生产网泄露风险</div>
+              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Default Unsegmented Leak Risk' : '默认未划分生产网泄露风险' }}</div>
             </div>
           </div>
 
@@ -437,9 +437,9 @@
             <h4 class="text-xs font-bold flex items-center justify-between flex-wrap gap-2" style="color: var(--text-primary)">
               <span class="flex items-center gap-2">
                 <AppIcon name="sliders" :size="14" />
-                <span>802.1p CoS 业务优先级分布矩阵 (PCP 0-7 Class of Service)</span>
+                <span>{{ locale === 'en-US' ? '802.1p CoS Priority Distribution (PCP 0-7 Class of Service)' : '802.1p CoS 业务优先级分布矩阵 (PCP 0-7 Class of Service)' }}</span>
               </span>
-              <span class="text-[11px] font-normal" style="color: var(--text-muted)">语音 (5) / 视频 (4) / 关键工控应用 (3)</span>
+              <span class="text-[11px] font-normal" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Voice (5) / Video (4) / Critical ICS (3)' : '语音 (5) / 视频 (4) / 关键工控应用 (3)' }}</span>
             </h4>
 
             <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2 pt-2">
@@ -462,22 +462,22 @@
           <div class="ui-content-card p-5 space-y-3">
             <h4 class="text-xs font-bold flex items-center gap-2" style="color: var(--text-primary)">
               <AppIcon name="globe" :size="14" />
-              <span>Trunk 链路 VLAN 划分与安全合规表</span>
+              <span>{{ locale === 'en-US' ? 'Trunk Link VLAN Segmentation & Compliance' : 'Trunk 链路 VLAN 划分与安全合规表' }}</span>
             </h4>
 
             <div class="overflow-x-auto select-text">
               <table class="w-full text-left border-collapse">
                 <thead class="ui-table-head text-[11px] font-semibold uppercase tracking-wider">
                   <tr>
-                    <th class="py-2.5 px-3">VLAN 标识 (VID)</th>
-                    <th class="py-2.5 px-3">封装类型</th>
-                    <th class="py-2.5 px-3">外层 S-Tag</th>
-                    <th class="py-2.5 px-3">累计报文数</th>
-                    <th class="py-2.5 px-3">累计流量</th>
-                    <th class="py-2.5 px-3">活跃 MAC 数</th>
-                    <th class="py-2.5 px-3">采样 MAC 节点</th>
-                    <th class="py-2.5 px-3">安全合规审计</th>
-                    <th class="py-2.5 px-3 text-right">比对</th>
+                    <th class="py-2.5 px-3">{{ locale === 'en-US' ? 'VLAN ID (VID)' : 'VLAN 标识 (VID)' }}</th>
+                    <th class="py-2.5 px-3">{{ locale === 'en-US' ? 'Encapsulation' : '封装类型' }}</th>
+                    <th class="py-2.5 px-3">{{ locale === 'en-US' ? 'Outer S-Tag' : '外层 S-Tag' }}</th>
+                    <th class="py-2.5 px-3">{{ locale === 'en-US' ? 'Total Packets' : '累计报文数' }}</th>
+                    <th class="py-2.5 px-3">{{ locale === 'en-US' ? 'Total Traffic' : '累计流量' }}</th>
+                    <th class="py-2.5 px-3">{{ locale === 'en-US' ? 'Active MACs' : '活跃 MAC 数' }}</th>
+                    <th class="py-2.5 px-3">{{ locale === 'en-US' ? 'Sampled MAC Nodes' : '采样 MAC 节点' }}</th>
+                    <th class="py-2.5 px-3">{{ locale === 'en-US' ? 'Security Compliance' : '安全合规审计' }}</th>
+                    <th class="py-2.5 px-3 text-right">{{ locale === 'en-US' ? 'Diff' : '比对' }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y text-xs ui-num" style="border-color: var(--border-subtle); color: var(--text-secondary)">
@@ -509,12 +509,12 @@
                       {{ stat.active_mac_count }}
                     </td>
                     <td class="py-3 px-3 text-[11px] max-w-xs truncate" style="color: var(--text-muted)">
-                      {{ stat.sample_macs.join(', ') || '无记录' }}
+                      {{ stat.sample_macs.join(', ') || (locale === 'en-US' ? 'None' : '无记录') }}
                     </td>
                     <td class="py-3 px-3">
                       <div v-if="stat.security_flags.length === 0" class="text-emerald-700 dark:text-emerald-400 text-[11px] flex items-center gap-1">
                         <AppIcon name="check" :size="12" />
-                        <span>隔离正常</span>
+                        <span>{{ locale === 'en-US' ? 'Isolation Normal' : '隔离正常' }}</span>
                       </div>
                       <div v-else class="flex flex-wrap gap-1">
                         <span
@@ -531,15 +531,15 @@
                     <td class="py-3 px-3 text-right">
                       <button @click="addVlanToDiffQueue(stat)"
                         class="px-2 py-0.5 rounded bg-emerald-500/12 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-[11px] font-semibold cursor-pointer"
-                        title="将该 VLAN 隔离统计特征加入全局多组比对队列">
-                        + 入队
+                        :title="locale === 'en-US' ? 'Add VLAN isolation features to global diff queue' : '将该 VLAN 隔离统计特征加入全局多组比对队列'">
+                        {{ locale === 'en-US' ? '+ Enqueue' : '+ 入队' }}
                       </button>
                     </td>
                   </tr>
 
                   <tr v-if="vlanData.stats.length === 0">
                     <td colspan="9" class="py-8">
-                      <EmptyState icon="globe" title="未检测到 IEEE 802.1Q 标签报文" description="可在【单帧深度解剖诊断】中载入 802.1Q / QinQ 样本报文进行解码验证。" />
+                      <EmptyState icon="globe" :title="locale === 'en-US' ? 'No IEEE 802.1Q tagged packets detected' : '未检测到 IEEE 802.1Q 标签报文'" :description="locale === 'en-US' ? 'Load 802.1Q / QinQ sample frames in Single Frame Dissection for verification.' : '可在【单帧深度解剖诊断】中载入 802.1Q / QinQ 样本报文进行解码验证。'" />
                     </td>
                   </tr>
                 </tbody>
@@ -552,23 +552,23 @@
         <div v-if="activeTab === 'bluetooth'" class="space-y-5">
           <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
             <div class="ui-sub-card p-3.5">
-              <div class="text-xs font-medium" style="color: var(--text-muted)">总蓝牙 HCI 封包数</div>
+              <div class="text-xs font-medium" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Total Bluetooth HCI Packets' : '总蓝牙 HCI 封包数' }}</div>
               <div class="text-2xl ui-num font-bold mt-1" style="color: var(--text-primary)">
                 {{ btData.total_packets.toLocaleString() }}
               </div>
-              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">HCI H4 捕获数据流</div>
+              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'HCI H4 Capture Stream' : 'HCI H4 捕获数据流' }}</div>
             </div>
 
             <div class="ui-sub-card p-3.5">
-              <div class="text-xs font-medium" style="color: var(--text-muted)">空间感知设备总数</div>
+              <div class="text-xs font-medium" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Total Sensed Devices' : '空间感知设备总数' }}</div>
               <div class="text-2xl ui-num font-bold text-blue-700 dark:text-blue-400 mt-1">
                 {{ btData.active_device_count }}
               </div>
-              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">BD_ADDR 物理地址资产</div>
+              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'BD_ADDR Physical Assets' : 'BD_ADDR 物理地址资产' }}</div>
             </div>
 
             <div class="ui-sub-card p-3.5">
-              <div class="text-xs font-medium" style="color: var(--text-muted)">BLE 广播报文 (ADV)</div>
+              <div class="text-xs font-medium" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'BLE Advertising (ADV)' : 'BLE 广播报文 (ADV)' }}</div>
               <div class="text-2xl ui-num font-bold text-indigo-700 dark:text-indigo-400 mt-1">
                 {{ btData.advertising_packets.toLocaleString() }}
               </div>
@@ -576,21 +576,21 @@
             </div>
 
             <div class="ui-sub-card p-3.5">
-              <div class="text-xs font-medium" style="color: var(--text-muted)">L2CAP ACL 活跃数据流</div>
+              <div class="text-xs font-medium" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'L2CAP ACL Active Flows' : 'L2CAP ACL 活跃数据流' }}</div>
               <div class="text-2xl ui-num font-bold text-emerald-700 dark:text-emerald-400 mt-1">
                 {{ btData.acl_data_packets.toLocaleString() }}
               </div>
-              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">点对点连接通信通道</div>
+              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Peer-to-Peer Connection Channel' : '点对点连接通信通道' }}</div>
             </div>
 
             <div class="ui-sub-card p-3.5"
               :class="btData.unencrypted_att_count > 0 ? '!border-amber-500/40 bg-amber-500/10' : ''">
-              <div class="text-xs font-medium" style="color: var(--text-muted)">未加密 ATT 读写告警</div>
+              <div class="text-xs font-medium" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Unencrypted ATT Alerts' : '未加密 ATT 读写告警' }}</div>
               <div class="text-2xl ui-num font-bold mt-1"
                 :class="btData.unencrypted_att_count > 0 ? 'text-amber-700 dark:text-amber-400' : ''" :style="btData.unencrypted_att_count === 0 ? { color: 'var(--text-primary)' } : undefined">
                 {{ btData.unencrypted_att_count }}
               </div>
-              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">明文工控传感器数据暴露</div>
+              <div class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Plaintext ICS Sensor Data Exposure' : '明文工控传感器数据暴露' }}</div>
             </div>
           </div>
 
@@ -600,7 +600,7 @@
               <div class="flex items-center gap-2 flex-wrap">
                 <h4 class="text-xs font-bold flex items-center gap-2" style="color: var(--text-primary)">
                   <AppIcon name="cpu" :size="14" />
-                  <span>蓝牙控制器 · BLE 5.0 连续空口监听 & BTHPORT 底层协议追踪</span>
+                  <span>{{ locale === 'en-US' ? 'Bluetooth Controller · BLE 5.0 Continuous Air Sniffing & BTHPORT Tracing' : '蓝牙控制器 · BLE 5.0 连续空口监听 & BTHPORT 底层协议追踪' }}</span>
                 </h4>
                 <span
                   v-if="nativeBtScan"
@@ -609,7 +609,7 @@
                       ? 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/25'
                       : 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/30']"
                 >
-                  {{ nativeBtScan.adapters.length }} 适配器 · {{ btData.total_packets }} 帧 · {{ btData.active_device_count }} 活跃BLE · {{ nativeBtScan.devices.length }} 配对
+                  {{ nativeBtScan.adapters.length }} {{ locale === 'en-US' ? 'Adapters' : '适配器' }} · {{ btData.total_packets }} {{ locale === 'en-US' ? 'Frames' : '帧' }} · {{ btData.active_device_count }} {{ locale === 'en-US' ? 'Active BLE' : '活跃BLE' }} · {{ nativeBtScan.devices.length }} {{ locale === 'en-US' ? 'Paired' : '配对' }}
                 </span>
               </div>
               <div class="flex items-center gap-2 flex-wrap">
@@ -619,10 +619,10 @@
                     btData.continuous_ble_active || continuousBleActive
                       ? 'bg-emerald-600 text-white border-emerald-500 shadow-xs'
                       : 'ui-btn-secondary']"
-                  title="开启常驻后台 WinRT BLE 5.0 Watcher，实时统计广播周期(ms)、包速率、完整 AD TLV 与靠近/远离轨迹"
+                  :title="locale === 'en-US' ? 'Start background WinRT BLE 5.0 Watcher for adv intervals, packet rates, AD TLVs and proximity tracking' : '开启常驻后台 WinRT BLE 5.0 Watcher，实时统计广播周期(ms)、包速率、完整 AD TLV 与靠近/远离轨迹'"
                 >
                   <span class="w-2 h-2 rounded-full" :class="btData.continuous_ble_active || continuousBleActive ? 'bg-white animate-pulse' : 'bg-slate-400'"></span>
-                  <span>{{ btData.continuous_ble_active || continuousBleActive ? '停止实时空口监听' : '开启实时空口监听' }}</span>
+                  <span>{{ (btData.continuous_ble_active || continuousBleActive) ? (locale === 'en-US' ? 'Stop Live Air Sniffing' : '停止实时空口监听') : (locale === 'en-US' ? 'Start Live Air Sniffing' : '开启实时空口监听') }}</span>
                 </button>
                 <button
                   @click="toggleBthEtwCapture"
@@ -630,17 +630,17 @@
                     btData.bthport_etw_active || bthEtwActive
                       ? 'bg-indigo-600 text-white border-indigo-500'
                       : 'ui-btn-secondary']"
-                  title="无需 USBPcap，通过 Windows 内置 BTHPORT ETW 捕获原生双向 HCI CMD/EVT 与 L2CAP/ATT/SMP 帧（需管理员权限）"
+                  :title="locale === 'en-US' ? 'Capture native bidirectional HCI CMD/EVT & L2CAP/ATT/SMP frames via Windows BTHPORT ETW without USBPcap (Admin required)' : '无需 USBPcap，通过 Windows 内置 BTHPORT ETW 捕获原生双向 HCI CMD/EVT 与 L2CAP/ATT/SMP 帧（需管理员权限）'"
                 >
-                  <span>{{ btData.bthport_etw_active || bthEtwActive ? '停止 BTHPORT HCI' : 'BTHPORT HCI 抓包' }}</span>
+                  <span>{{ btData.bthport_etw_active || bthEtwActive ? (locale === 'en-US' ? 'Stop BTHPORT HCI' : '停止 BTHPORT HCI') : (locale === 'en-US' ? 'BTHPORT HCI Sniff' : 'BTHPORT HCI 抓包') }}</span>
                 </button>
                 <label class="flex items-center gap-1 text-[11px] cursor-pointer" style="color: var(--text-secondary)">
                   <input type="checkbox" v-model="btInquiryMode" class="accent-sky-500" />
-                  <span>深度无线寻呼 (~2.2s)</span>
+                  <span>{{ locale === 'en-US' ? 'Deep RF Inquiry (~2.2s)' : '深度无线寻呼 (~2.2s)' }}</span>
                 </label>
                 <button @click="runNativeBtScan" :disabled="scanningNativeBt" class="ui-btn-secondary px-3 py-1 text-xs">
                   <AppIcon name="refresh" :size="12" :class="scanningNativeBt ? 'animate-spin' : ''" />
-                  <span>{{ scanningNativeBt ? '扫描中...' : 'BLE+经典双模扫描' }}</span>
+                  <span>{{ scanningNativeBt ? (locale === 'en-US' ? 'Scanning...' : '扫描中...') : (locale === 'en-US' ? 'BLE + Classic Dual Mode' : 'BLE+经典双模扫描') }}</span>
                 </button>
               </div>
             </div>
@@ -652,37 +652,37 @@
                   @click="saveBluetoothBaseline"
                   :disabled="btToolBusy || btData.devices.length === 0"
                   class="ui-btn-secondary px-2.5 py-1 text-[11px] flex items-center gap-1 disabled:opacity-50"
-                  title="将当前捕获的蓝牙资产设备名单与平均 RSSI/距离保存为物理环境参考基线"
+                  :title="locale === 'en-US' ? 'Save captured Bluetooth asset list & average RSSI/distance as physical RF baseline' : '将当前捕获的蓝牙资产设备名单与平均 RSSI/距离保存为物理环境参考基线'"
                 >
                   <AppIcon name="database" :size="12" />
-                  <span>保存资产基线</span>
+                  <span>{{ locale === 'en-US' ? 'Save RF Baseline' : '保存资产基线' }}</span>
                 </button>
                 <button
                   @click="runBluetoothBaselineComparison(false)"
                   :disabled="btToolBusy"
                   class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border cursor-pointer flex items-center gap-1 bg-sky-500/12 text-sky-700 dark:text-sky-300 border-sky-500/25 hover:bg-sky-500/20 disabled:opacity-50"
-                  title="对比当前实时监测设备与历史基线/持久化记录，识别新增陌生设备、失联设备与信号漂移"
+                  :title="locale === 'en-US' ? 'Compare live monitored devices with historical baseline to identify unknown devices, lost nodes & RSSI drifts' : '对比当前实时监测设备与历史基线/持久化记录，识别新增陌生设备、失联设备与信号漂移'"
                 >
                   <AppIcon name="activity" :size="12" />
-                  <span>实时 vs 历史对照</span>
+                  <span>{{ locale === 'en-US' ? 'Live vs Baseline Diff' : '实时 vs 历史对照' }}</span>
                 </button>
                 <button
                   @click="exportBluetoothBtsnoop"
                   :disabled="btToolBusy || (btData.recent_frames || []).length === 0"
                   class="ui-btn-secondary px-2.5 py-1 text-[11px] flex items-center gap-1 disabled:opacity-50"
-                  title="将内存中实时截获帧编码导出为 Wireshark / Ellisys 通用 RFC 1761 标准 .btsnoop 文件"
+                  :title="locale === 'en-US' ? 'Export captured frames in RFC 1761 standard .btsnoop format for Wireshark & Ellisys' : '将内存中实时截获帧编码导出为 Wireshark / Ellisys 通用 RFC 1761 标准 .btsnoop 文件'"
                 >
                   <AppIcon name="download" :size="12" />
-                  <span>导出 .btsnoop</span>
+                  <span>{{ locale === 'en-US' ? 'Export .btsnoop' : '导出 .btsnoop' }}</span>
                 </button>
                 <button
                   @click="importBluetoothBtsnoop"
                   :disabled="btToolBusy"
                   class="ui-btn-secondary px-2.5 py-1 text-[11px] flex items-center gap-1 disabled:opacity-50"
-                  title="导入 Android btsnoop_hci.log 或 Wireshark .btsnoop 文件重放解码并生成多维统计图表"
+                  :title="locale === 'en-US' ? 'Import Android btsnoop_hci.log or Wireshark .btsnoop file to replay & dissect' : '导入 Android btsnoop_hci.log 或 Wireshark .btsnoop 文件重放解码并生成多维统计图表'"
                 >
                   <AppIcon name="upload" :size="12" />
-                  <span>导入 .btsnoop 重放</span>
+                  <span>{{ locale === 'en-US' ? 'Import .btsnoop Replay' : '导入 .btsnoop 重放' }}</span>
                 </button>
               </div>
               <div v-if="btToolMsg" class="text-[11px] ui-num text-sky-700 dark:text-sky-300 font-medium">
@@ -692,7 +692,7 @@
             <div v-if="nativeBtScan || bthEtwMsg || btData.bthport_etw_status" class="text-[11px] ui-num px-3 py-2 rounded-lg border bg-[var(--surface-glass-pill)] space-y-1" style="border-color: var(--border-subtle); color: var(--text-secondary);">
               <div v-if="nativeBtScan">[{{ nativeBtScan.platform }}] {{ nativeBtScan.diagnostic_message }}</div>
               <div class="flex flex-wrap items-center justify-between gap-2 text-[10px]" style="color: var(--text-muted)">
-                <span>底层 HCI ETW 状态: <strong style="color: var(--text-primary)">{{ bthEtwMsg || btData.bthport_etw_status || '待开启' }}</strong></span>
+                <span>{{ locale === 'en-US' ? 'Underlying HCI ETW Status:' : '底层 HCI ETW 状态:' }} <strong style="color: var(--text-primary)">{{ bthEtwMsg || btData.bthport_etw_status || (locale === 'en-US' ? 'Pending' : '待开启') }}</strong></span>
                 <span>HCI Command: {{ btData.hci_command_packets ?? 0 }} | HCI Event: {{ btData.hci_event_packets ?? 0 }} | L2CAP ACL: {{ btData.acl_data_packets }}</span>
               </div>
             </div>
@@ -709,11 +709,11 @@
               <table class="w-full text-left border-collapse text-xs ui-num">
                 <thead class="ui-table-head text-[10px] uppercase">
                   <tr>
-                    <th class="py-2 px-3">经典配对设备名称</th>
+                    <th class="py-2 px-3">{{ locale === 'en-US' ? 'Classic Paired Device Name' : '经典配对设备名称' }}</th>
                     <th class="py-2 px-3">BD_ADDR</th>
-                    <th class="py-2 px-3">连接 / 配对状态</th>
-                    <th class="py-2 px-3">最近使用</th>
-                    <th class="py-2 px-3 text-right">操作</th>
+                    <th class="py-2 px-3">{{ locale === 'en-US' ? 'Connection / Pairing Status' : '连接 / 配对状态' }}</th>
+                    <th class="py-2 px-3">{{ locale === 'en-US' ? 'Last Used' : '最近使用' }}</th>
+                    <th class="py-2 px-3 text-right">{{ locale === 'en-US' ? 'Actions' : '操作' }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y" style="border-color: var(--border-subtle); color: var(--text-secondary);">
@@ -721,15 +721,15 @@
                     <td class="py-2 px-3 font-semibold" style="color: var(--text-primary);">{{ d.name }}</td>
                     <td class="py-2 px-3 font-mono">{{ d.address }}</td>
                     <td class="py-2 px-3">
-                      <span v-if="d.connected" class="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold mr-1">已连接</span>
-                      <span v-if="d.authenticated" class="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-700 dark:text-sky-300 text-[10px] mr-1">已配对</span>
-                      <span v-if="d.remembered && !d.connected" class="px-1.5 py-0.5 rounded ui-pill text-[10px]">已记住</span>
+                      <span v-if="d.connected" class="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold mr-1">{{ locale === 'en-US' ? 'Connected' : '已连接' }}</span>
+                      <span v-if="d.authenticated" class="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-700 dark:text-sky-300 text-[10px] mr-1">{{ locale === 'en-US' ? 'Paired' : '已配对' }}</span>
+                      <span v-if="d.remembered && !d.connected" class="px-1.5 py-0.5 rounded ui-pill text-[10px]">{{ locale === 'en-US' ? 'Remembered' : '已记住' }}</span>
                     </td>
                     <td class="py-2 px-3">{{ d.last_used }}</td>
                     <td class="py-2 px-3 text-right">
                       <button @click="runBleGattAudit(d.address)" :disabled="auditingGattAddr === d.address"
                         class="px-2 py-0.5 rounded bg-sky-500/12 hover:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/25 text-[10px] font-semibold cursor-pointer disabled:opacity-50">
-                        {{ auditingGattAddr === d.address ? '探测中...' : 'GATT 审计' }}
+                        {{ auditingGattAddr === d.address ? (locale === 'en-US' ? 'Auditing...' : '探测中...') : (locale === 'en-US' ? 'GATT Audit' : 'GATT 审计') }}
                       </button>
                     </td>
                   </tr>
@@ -742,11 +742,11 @@
               <div class="flex items-center justify-between text-xs flex-wrap gap-2">
                 <span class="font-bold flex items-center gap-1.5" style="color: var(--text-primary)">
                   <AppIcon name="radar" :size="13" />
-                  <span>多维射频信号与协议统计图表 (ECharts 实时/历史引擎)</span>
+                  <span>{{ locale === 'en-US' ? 'Multi-dimensional RF Signal & Protocol Stats (ECharts Engine)' : '多维射频信号与协议统计图表 (ECharts 实时/历史引擎)' }}</span>
                 </span>
                 <div class="flex items-center gap-2 text-[11px] ui-num" style="color: var(--text-muted)">
                   <button v-if="selectedBtAddress" @click="selectedBtAddress = null" class="underline text-sky-500 cursor-pointer">解除单设备锁定 ({{ selectedBtAddress }})</button>
-                  <span>采样点数: {{ activeBtRssiSamples.length }} · 平均稳定度: {{ btStabilityAggregate.avgStability }}%</span>
+                  <span>{{ locale === 'en-US' ? 'Samples:' : '采样点数:' }} {{ activeBtRssiSamples.length }} · {{ locale === 'en-US' ? 'Avg Stability:' : '平均稳定度:' }} {{ btStabilityAggregate.avgStability }}%</span>
                 </div>
               </div>
 
@@ -754,17 +754,17 @@
                 <!-- 图 1: 极坐标近场空间雷达定位分布 -->
                 <div class="ui-sub-card p-3 space-y-1.5">
                   <div class="flex items-center justify-between text-[11px]">
-                    <span class="font-bold" style="color: var(--text-primary)">1. 极坐标近场空间分布图 (路径衰减测距 m)</span>
-                    <span class="text-[10px]" style="color: var(--text-muted)">红=风险 / 绿=可连 / 蓝=广播</span>
+                    <span class="font-bold" style="color: var(--text-primary)">{{ locale === 'en-US' ? '1. Polar Proximity Space Distribution (Log-Distance Model m)' : '1. 极坐标近场空间分布图 (路径衰减测距 m)' }}</span>
+                    <span class="text-[10px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Red=Risk / Green=Connectable / Blue=Adv' : '红=风险 / 绿=可连 / 蓝=广播' }}</span>
                   </div>
                   <div class="h-52 w-full relative">
                     <VChart v-if="filteredBtDevices.length > 0" :option="btPolarRadarOption" autoresize class="w-full h-full" />
                     <div v-else class="w-full h-full flex items-center justify-center text-[11px]" style="color: var(--text-muted)">
-                      等待捕获活跃 BLE/经典蓝牙资产后绘出空间距度分布
+                      {{ locale === 'en-US' ? 'Waiting for active BLE / Classic assets to render polar distribution' : '等待捕获活跃 BLE/经典蓝牙资产后绘出空间距度分布' }}
                     </div>
                   </div>
                   <div class="text-[10px]" style="color: var(--text-muted)">
-                    注: 径向距离依据真实 RSSI/TxPower 衰减模型估算，极角按设备 MAC 哈希稳定映射（单天线 PC 硬件无 AoA 方位角数据）。
+                    {{ locale === 'en-US' ? 'Note: Radial distance is estimated via log-distance path loss (RSSI/TxPower); polar angle is mapped via stable MAC hash (single antenna PC has no AoA hardware).' : '注: 径向距离依据真实 RSSI/TxPower 衰减模型估算，极角按设备 MAC 哈希稳定映射（单天线 PC 硬件无 AoA 方位角数据）。' }}
                   </div>
                 </div>
 
@@ -772,9 +772,9 @@
                 <div class="ui-sub-card p-3 space-y-1.5">
                   <div class="flex items-center justify-between text-[11px]">
                     <span class="font-bold" style="color: var(--text-primary)">
-                      {{ selectedBtAddress ? `2. ${selectedBtAddress} 单设备实时 vs 历史基准` : '2. 实时场强流 vs 历史持久化均值对照 (dBm)' }}
+                      {{ selectedBtAddress ? (locale === 'en-US' ? `2. ${selectedBtAddress} Realtime vs Baseline` : `2. ${selectedBtAddress} 单设备实时 vs 历史基准`) : (locale === 'en-US' ? '2. Realtime Field Strength vs Historic Mean Baseline (dBm)' : '2. 实时场强流 vs 历史持久化均值对照 (dBm)') }}
                     </span>
-                    <span class="text-[10px] ui-num" style="color: var(--text-muted)">实时均值 {{ btComparison?.realtime_mean_rssi_dbm ?? '-' }} vs 历史 {{ btComparison?.historical_mean_rssi_dbm ?? '-' }} dBm</span>
+                    <span class="text-[10px] ui-num" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Live Mean' : '实时均值' }} {{ btComparison?.realtime_mean_rssi_dbm ?? '-' }} vs {{ locale === 'en-US' ? 'History' : '历史' }} {{ btComparison?.historical_mean_rssi_dbm ?? '-' }} dBm</span>
                   </div>
                   <div class="h-52 w-full relative">
                     <VChart
@@ -784,24 +784,24 @@
                       class="w-full h-full"
                     />
                     <div v-else class="w-full h-full flex items-center justify-center text-[11px]" style="color: var(--text-muted)">
-                      开启「实时空口监听」或导入 .btsnoop 后自动绘出双线趋势对比
+                      {{ locale === 'en-US' ? 'Start Realtime Air Sniff or import .btsnoop to plot dual-line trend comparison' : '开启「实时空口监听」或导入 .btsnoop 后自动绘出双线趋势对比' }}
                     </div>
                   </div>
                   <div class="text-[10px]" style="color: var(--text-muted)">
-                    历史采样数据源自本地持久化 `bluetooth_history.jsonl` 与基线快照 `bluetooth_baseline.json`。
+                    {{ locale === 'en-US' ? 'Historical sample data is sourced from local persistent bluetooth_history.jsonl and baseline snapshot bluetooth_baseline.json.' : '历史采样数据源自本地持久化 `bluetooth_history.jsonl` 与基线快照 `bluetooth_baseline.json`。' }}
                   </div>
                 </div>
 
                 <!-- 图 3: 广播间隔分布直方图 & RSSI 抖动方差统计 -->
                 <div class="ui-sub-card p-3 space-y-1.5">
                   <div class="flex items-center justify-between text-[11px]">
-                    <span class="font-bold" style="color: var(--text-primary)">3. 广播间隔分布直方图与链路稳态</span>
-                    <span class="text-[10px] ui-num" style="color: var(--text-muted)">最大抖动: {{ btStabilityAggregate.worstName }} (σ={{ btStabilityAggregate.worstStddev }} dB)</span>
+                    <span class="font-bold" style="color: var(--text-primary)">{{ locale === 'en-US' ? '3. Advertising Interval Distribution & Link Stability' : '3. 广播间隔分布直方图与链路稳态' }}</span>
+                    <span class="text-[10px] ui-num" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Max Jitter:' : '最大抖动:' }} {{ btStabilityAggregate.worstName }} (σ={{ btStabilityAggregate.worstStddev }} dB)</span>
                   </div>
                   <div class="h-48 w-full relative">
                     <VChart v-if="btData.devices.length > 0" :option="btIntervalHistogramOption" autoresize class="w-full h-full" />
                     <div v-else class="w-full h-full flex items-center justify-center text-[11px]" style="color: var(--text-muted)">
-                      连续采集数秒后统计设备广播间隔 (&lt;35ms 触发高频告警)
+                      {{ locale === 'en-US' ? 'Collect for several seconds to aggregate intervals (&lt;35ms triggers flood alert)' : '连续采集数秒后统计设备广播间隔 (&lt;35ms 触发高频告警)' }}
                     </div>
                   </div>
                 </div>
@@ -810,13 +810,13 @@
                 <div class="ui-sub-card p-3 space-y-1.5">
                   <div class="flex items-center justify-between text-[11px]">
                     <span class="font-bold" style="color: var(--text-primary)">
-                      {{ btPieMode === 'protocol' ? '4. 真实协议分层占比 (HCI/L2CAP/ADV)' : '4. Bluetooth SIG 厂商生态占比' }}
+                      {{ btPieMode === 'protocol' ? (locale === 'en-US' ? '4. Protocol Hierarchy Share (HCI/L2CAP/ADV)' : '4. 真实协议分层占比 (HCI/L2CAP/ADV)') : (locale === 'en-US' ? '4. Bluetooth SIG Vendor Ecosystem Share' : '4. Bluetooth SIG 厂商生态占比') }}
                     </span>
                     <button
                       @click="btPieMode = btPieMode === 'protocol' ? 'vendor' : 'protocol'"
                       class="text-[10px] px-2 py-0.5 rounded border ui-btn-secondary cursor-pointer"
                     >
-                      切换至 {{ btPieMode === 'protocol' ? 'SIG 厂商' : '协议分层' }}
+                      {{ locale === 'en-US' ? (btPieMode === 'protocol' ? 'Switch to SIG Vendors' : 'Switch to Protocols') : `切换至 ${btPieMode === 'protocol' ? 'SIG 厂商' : '协议分层'}` }}
                     </button>
                   </div>
                   <div class="h-48 w-full relative">
@@ -827,11 +827,11 @@
                       class="w-full h-full"
                     />
                     <div v-else class="w-full h-full flex items-center justify-center text-[11px]" style="color: var(--text-muted)">
-                      暂无分片流量样本
+                      {{ locale === 'en-US' ? 'No fragmented traffic samples' : '暂无分片流量样本' }}
                     </div>
                   </div>
                   <div class="text-[10px]" style="color: var(--text-muted)">
-                    注: Windows 通用蓝牙适配器底层不向 OS 暴露物理 Ch37/38/39 广播信道号（需专用 RF 硬件如 nRF Sniffer）。
+                    {{ locale === 'en-US' ? 'Note: Windows generic Bluetooth adapters do not expose Ch37/38/39 PHY channels to OS (requires dedicated RF hardware like nRF Sniffer).' : '注: Windows 通用蓝牙适配器底层不向 OS 暴露物理 Ch37/38/39 广播信道号（需专用 RF 硬件如 nRF Sniffer）。' }}
                   </div>
                 </div>
               </div>
@@ -1012,7 +1012,7 @@
                         </button>
                         <button @click="addBleDeviceToDiffQueue(dev)"
                           class="px-2 py-0.5 rounded bg-emerald-500/12 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-[10px] font-semibold cursor-pointer">
-                          + 入队
+                          {{ locale === 'en-US' ? '+ Enqueue' : '+ 入队' }}
                         </button>
                       </div>
                     </td>
@@ -1024,7 +1024,7 @@
                         <template #actions>
                           <button @click="activeTab = 'workbench'; loadSample('bluetooth')" class="ui-btn-secondary px-3 py-1 text-xs">
                             <AppIcon name="zap" :size="12" />
-                            <span>载入 BLE Advertising 样本解码测试</span>
+                            <span>{{ locale === 'en-US' ? 'Load BLE Advertising Sample for Decode Test' : '载入 BLE Advertising 样本解码测试' }}</span>
                           </button>
                         </template>
                       </EmptyState>
@@ -1038,7 +1038,7 @@
             <div v-if="selectedBtDevice" class="mt-3 pt-3 border-t space-y-2.5 text-xs select-text" style="border-color: var(--border-subtle)">
               <div class="flex items-center justify-between flex-wrap gap-2">
                 <div class="font-bold flex items-center gap-2 ui-num" style="color: var(--text-primary)">
-                  <span>设备深钻透视: {{ selectedBtDevice.device_name }} ({{ selectedBtDevice.address }})</span>
+                  <span>{{ locale === 'en-US' ? 'Device Deep Dive:' : '设备深钻透视:' }} {{ selectedBtDevice.device_name }} ({{ selectedBtDevice.address }})</span>
                   <span v-if="selectedBtDevice.beacon_summary" class="px-2 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-300 text-[10px]">
                     {{ selectedBtDevice.beacon_summary }}
                   </span>
@@ -1046,7 +1046,7 @@
                 <div class="flex items-center gap-2">
                   <button v-if="selectedBtDevice.raw_frame_hex" @click="sendHexToWorkbench(selectedBtDevice.raw_frame_hex)"
                     class="ui-btn-secondary px-2.5 py-0.5 text-[11px]">
-                    在解剖台逐字节拆解此帧 →
+                    {{ locale === 'en-US' ? 'Dissect frame in analyzer →' : '在解剖台逐字节拆解此帧 →' }}
                   </button>
                   <button @click="selectedBtAddress = null" class="text-[11px] underline cursor-pointer" style="color: var(--text-muted)">关闭透视</button>
                 </div>
@@ -1060,19 +1060,19 @@
                   <div class="font-mono text-[10px] break-all" style="color: var(--text-muted)">HEX: {{ sec.data_hex || '(Empty)' }}</div>
                 </div>
               </div>
-              <div v-else class="text-[11px]" style="color: var(--text-muted)">该条目暂未记录扩展 AD DataSections（可能为被动仅地址响应帧）。</div>
+              <div v-else class="text-[11px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'No extended AD DataSections recorded for this entry (passive address-only response frame).' : '该条目暂未记录扩展 AD DataSections（可能为被动仅地址响应帧）。' }}</div>
             </div>
 
             <!-- WinRT BLE GATT 服务与特征只读安全穿透结果 (含读值展示) -->
             <div v-if="gattAudit" class="mt-3 pt-3 border-t space-y-2.5 text-xs select-text" style="border-color: var(--border-subtle)">
               <div class="flex items-center justify-between flex-wrap gap-2">
                 <span class="font-bold flex items-center gap-2 ui-num" style="color: var(--text-primary)">
-                  <span>BLE GATT 服务安全审计与特征读值 · {{ gattAudit.device_name || gattAudit.target_address }}</span>
+                  <span>{{ locale === 'en-US' ? 'BLE GATT Service Security Audit & Char Read ·' : 'BLE GATT 服务安全审计与特征读值 ·' }} {{ gattAudit.device_name || gattAudit.target_address }}</span>
                   <span v-if="gattAudit.unauthenticated_write_count > 0" class="px-2 py-0.5 rounded bg-rose-500/15 text-rose-600 dark:text-rose-300 border border-rose-500/30 text-[10px]">
-                    无鉴权可写风险: {{ gattAudit.unauthenticated_write_count }}
+                    {{ locale === 'en-US' ? 'Unauthenticated Write Risk:' : '无鉴权可写风险:' }} {{ gattAudit.unauthenticated_write_count }}
                   </span>
                 </span>
-                <button @click="gattAudit = null" class="text-[11px] underline cursor-pointer" style="color: var(--text-muted)">收起</button>
+                <button @click="gattAudit = null" class="text-[11px] underline cursor-pointer" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Collapse' : '收起' }}</button>
               </div>
               <div class="text-[11px] ui-num px-2.5 py-1.5 rounded border bg-[var(--surface-glass-pill)]" style="border-color: var(--border-subtle); color: var(--text-secondary)">
                 {{ gattAudit.diagnostic_message }}
@@ -1094,12 +1094,12 @@
                           :disabled="readingGattCharKey === `${svcIdx}:${chrIdx}`"
                           class="px-1.5 py-0.2 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-semibold cursor-pointer disabled:opacity-50"
                         >
-                          {{ readingGattCharKey === `${svcIdx}:${chrIdx}` ? '读取中...' : '实时读值' }}
+                          {{ readingGattCharKey === `${svcIdx}:${chrIdx}` ? (locale === 'en-US' ? 'Reading...' : '读取中...') : (locale === 'en-US' ? 'Live Read' : '实时读值') }}
                         </button>
                       </div>
                     </div>
                     <div v-if="chr.decoded_value || chr.raw_value_hex" class="text-[10px] text-emerald-700 dark:text-emerald-300 font-mono">
-                      实读数值: {{ chr.decoded_value || '' }} <span v-if="chr.raw_value_hex" style="color: var(--text-muted)">[{{ chr.raw_value_hex }}]</span>
+                      {{ locale === 'en-US' ? 'Actual Value:' : '实读数值:' }} {{ chr.decoded_value || '' }} <span v-if="chr.raw_value_hex" style="color: var(--text-muted)">[{{ chr.raw_value_hex }}]</span>
                     </div>
                   </div>
                 </div>
@@ -1112,9 +1112,9 @@
             <div class="flex items-center justify-between flex-wrap gap-2">
               <h4 class="text-xs font-bold flex items-center gap-2" style="color: var(--text-primary)">
                 <AppIcon name="layers" :size="14" />
-                <span>HCI / L2CAP / ATT / SMP 点对点会话状态重建 &amp; Handle 字典自动学习</span>
+                <span>{{ locale === 'en-US' ? 'HCI / L2CAP / ATT / SMP P2P Session Reconstruction & Handle Auto-learning' : 'HCI / L2CAP / ATT / SMP 点对点会话状态重建 &amp; Handle 字典自动学习' }}</span>
               </h4>
-              <span class="text-[11px] ui-num" style="color: var(--text-muted)">活跃会话句柄: {{ (btData.active_sessions || []).length }}</span>
+              <span class="text-[11px] ui-num" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Active Session Handles:' : '活跃会话句柄:' }} {{ (btData.active_sessions || []).length }}</span>
             </div>
             <div v-if="(btData.active_sessions || []).length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-2.5 select-text">
               <div v-for="sess in btData.active_sessions" :key="sess.conn_handle" class="ui-sub-card p-3 space-y-1.5 text-[11px] ui-num">
@@ -1126,7 +1126,7 @@
                     class="px-1.5 py-0.5 rounded text-[10px] font-bold border"
                     :class="sess.encrypted ? 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/25' : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'"
                   >
-                    {{ sess.encrypted ? '链路已加密' : '未见 EncryptionChange' }}
+                    {{ sess.encrypted ? (locale === 'en-US' ? 'Link Encrypted' : '链路已加密') : (locale === 'en-US' ? 'No EncryptionChange' : '未见 EncryptionChange') }}
                   </span>
                 </div>
                 <div class="flex flex-wrap gap-2 text-[10px]" style="color: var(--text-secondary)">
@@ -1135,7 +1135,7 @@
                   <span>Write: {{ sess.att_writes }}</span>
                   <span>Notify: {{ sess.att_notifies }}</span>
                   <span>SMP: {{ sess.smp_events }}</span>
-                  <span>更新: {{ sess.last_seen_timestamp }}</span>
+                  <span>{{ locale === 'en-US' ? 'Updated:' : '更新:' }} {{ sess.last_seen_timestamp }}</span>
                 </div>
                 <div v-if="sess.handle_uuid_map && sess.handle_uuid_map.length > 0" class="flex flex-wrap gap-1 pt-1">
                   <span
@@ -1149,7 +1149,7 @@
               </div>
             </div>
             <div v-else class="text-[11px] ui-num" style="color: var(--text-muted)">
-              当前仅检测到广播无连接流量；开启「BTHPORT HCI 抓包」或点击「导入 .btsnoop 重放」含 ACL 会话文件后将自动重建 MTU、EncryptionChange 与 Handle→UUID 字典。
+              {{ locale === 'en-US' ? 'Only broadcast connectionless traffic detected currently. Start "BTHPORT HCI Sniff" or "Import .btsnoop Replay" with ACL sessions to auto-reconstruct MTU, EncryptionChange and Handle→UUID dictionary.' : '当前仅检测到广播无连接流量；开启「BTHPORT HCI 抓包」或点击「导入 .btsnoop 重放」含 ACL 会话文件后将自动重建 MTU、EncryptionChange 与 Handle→UUID 字典。' }}
             </div>
           </div>
 
@@ -1158,21 +1158,21 @@
             <div class="flex items-center justify-between flex-wrap gap-2">
               <h4 class="text-xs font-bold flex items-center gap-2" style="color: var(--text-primary)">
                 <AppIcon name="terminal" :size="14" />
-                <span>实时底层蓝牙报文流水 (WinRT 空口 / BTHPORT-ETW HCI / L2CAP-ATT / SMP)</span>
+                <span>{{ locale === 'en-US' ? 'Realtime Underlying Bluetooth Packet Stream (WinRT Air / BTHPORT-ETW HCI / L2CAP-ATT / SMP)' : '实时底层蓝牙报文流水 (WinRT 空口 / BTHPORT-ETW HCI / L2CAP-ATT / SMP)' }}</span>
               </h4>
-              <span class="text-[11px] ui-num" style="color: var(--text-muted)">留存最近 {{ (btData.recent_frames || []).length }} / 120 帧 · 点击任意帧一键逐字节拆解</span>
+              <span class="text-[11px] ui-num" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Retaining latest' : '留存最近' }} {{ (btData.recent_frames || []).length }} / 120 {{ locale === 'en-US' ? 'frames · Click any frame to dissect' : '帧 · 点击任意帧一键逐字节拆解' }}</span>
             </div>
             <div class="max-h-56 overflow-y-auto overflow-x-auto select-text border rounded-xl" style="border-color: var(--border-subtle)">
               <table class="w-full text-left border-collapse text-[11px] ui-num">
                 <thead class="ui-table-head text-[10px] uppercase sticky top-0">
                   <tr>
-                    <th class="py-1.5 px-2.5">时间</th>
-                    <th class="py-1.5 px-2.5">通道 / 方向</th>
-                    <th class="py-1.5 px-2.5">协议层</th>
-                    <th class="py-1.5 px-2.5">地址</th>
-                    <th class="py-1.5 px-2.5">长度</th>
-                    <th class="py-1.5 px-2.5">语义摘要</th>
-                    <th class="py-1.5 px-2.5 text-right">剖析</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Time' : '时间' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Channel / Dir' : '通道 / 方向' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Layer' : '协议层' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Address' : '地址' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Length' : '长度' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Summary' : '语义摘要' }}</th>
+                    <th class="py-1.5 px-2.5 text-right">{{ locale === 'en-US' ? 'Dissect' : '剖析' }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y" style="border-color: var(--border-subtle); color: var(--text-secondary)">
@@ -1186,11 +1186,11 @@
                     <td class="py-1.5 px-2.5">{{ fr.length }} B</td>
                     <td class="py-1.5 px-2.5 max-w-xs truncate" :title="fr.summary">{{ fr.summary }}</td>
                     <td class="py-1.5 px-2.5 text-right">
-                      <span v-if="fr.raw_hex" class="text-sky-600 dark:text-sky-400 underline">拆解</span>
+                      <span v-if="fr.raw_hex" class="text-sky-600 dark:text-sky-400 underline">{{ locale === 'en-US' ? 'Dissect' : '拆解' }}</span>
                     </td>
                   </tr>
                   <tr v-if="!(btData.recent_frames && btData.recent_frames.length)">
-                    <td colspan="7" class="py-5 text-center text-xs" style="color: var(--text-muted)">暂无实时蓝牙底层报文记录，可启动上方「开启实时空口监听」或「BTHPORT HCI 抓包」。</td>
+                    <td colspan="7" class="py-5 text-center text-xs" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'No realtime Bluetooth packet records. Click "Start Air Sniff" or "BTHPORT HCI Sniff" above.' : '暂无实时蓝牙底层报文记录，可启动上方「开启实时空口监听」或「BTHPORT HCI 抓包」。' }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -1205,15 +1205,15 @@
               <div>
                 <h4 class="text-xs font-bold flex items-center gap-2" style="color: var(--text-primary)">
                   <AppIcon name="search" :size="14" />
-                  <span>无线与 VLAN 原生十六进制解剖工作台</span>
+                  <span>{{ locale === 'en-US' ? 'Wireless & VLAN Native Hex Dissection Workbench' : '无线与 VLAN 原生十六进制解剖工作台' }}</span>
                 </h4>
                 <p class="text-[11px] ui-num mt-0.5" style="color: var(--text-muted)">
-                  输入包含 Radiotap / 802.11 / 802.1Q / Bluetooth HCI 的十六进制报文进行逐层深度解剖
+                  {{ locale === 'en-US' ? 'Enter hexadecimal packets containing Radiotap / 802.11 / 802.1Q / Bluetooth HCI for layered deep dissection' : '输入包含 Radiotap / 802.11 / 802.1Q / Bluetooth HCI 的十六进制报文进行逐层深度解剖' }}
                 </p>
               </div>
 
               <div class="flex flex-wrap items-center gap-2">
-                <span class="text-[11px]" style="color: var(--text-muted)">快速载入标准样本:</span>
+                <span class="text-[11px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Quick Load Standard Samples:' : '快速载入标准样本:' }}</span>
                 <button @click="loadSample('wifi')" class="px-2.5 py-1 rounded-xl text-[11px] font-semibold ui-pill text-sky-700 dark:text-sky-300 cursor-pointer">
                   Wi-Fi Beacon
                 </button>
@@ -1230,17 +1230,17 @@
               <textarea
                 v-model="customHexInput"
                 rows="4"
-                placeholder="请在此粘贴 Hex 原始字符串（例如: 00 00 12 00 6C 00 00 00 6C 00 6C 09 A0 00 D3 A1 00 00...）"
+                :placeholder="locale === 'en-US' ? 'Paste raw hex string here (e.g., 00 00 12 00 6C 00 00 00 6C 00 6C 09 A0 00 D3 A1 00 00...)' : '请在此粘贴 Hex 原始字符串（例如: 00 00 12 00 6C 00 00 00 6C 00 6C 09 A0 00 D3 A1 00 00...)'"
                 class="w-full ui-input font-mono-code text-xs p-3"
               ></textarea>
               <div class="flex items-center justify-between flex-wrap gap-2">
                 <div class="flex items-center gap-3">
-                  <label class="text-xs font-semibold" style="color: var(--text-secondary)">解剖模式:</label>
+                  <label class="text-xs font-semibold" style="color: var(--text-secondary)">{{ locale === 'en-US' ? 'Dissect Mode:' : '解剖模式:' }}</label>
                   <select v-model="dissectMode" class="ui-input w-auto px-3 py-1 text-xs ui-num cursor-pointer">
-                    <option value="auto">自动探查 (Auto Detect)</option>
+                    <option value="auto">{{ locale === 'en-US' ? 'Auto Detect' : '自动探查 (Auto Detect)' }}</option>
                     <option value="wifi">Wi-Fi (802.11 / Radiotap)</option>
                     <option value="vlan">VLAN (802.1Q / 802.1ad QinQ)</option>
-                    <option value="bluetooth">蓝牙 (Bluetooth HCI / BLE)</option>
+                    <option value="bluetooth">{{ locale === 'en-US' ? 'Bluetooth HCI / BLE' : '蓝牙 (Bluetooth HCI / BLE)' }}</option>
                   </select>
                 </div>
 
@@ -1250,7 +1250,7 @@
                   class="ui-btn-primary px-5 py-2 rounded-xl text-xs font-bold"
                 >
                   <AppIcon name="zap" :size="13" />
-                  <span>{{ dissecting ? '解剖分析中...' : '执行深度原生解剖' }}</span>
+                  <span>{{ dissecting ? (locale === 'en-US' ? 'Dissecting...' : '解剖分析中...') : (locale === 'en-US' ? 'Execute Deep Native Dissection' : '执行深度原生解剖') }}</span>
                 </button>
               </div>
             </div>
@@ -1260,20 +1260,20 @@
                 <div class="flex items-center gap-2">
                   <span class="w-2.5 h-2.5 rounded-full" :class="dissectionResult.success ? 'bg-emerald-500' : 'bg-rose-500'"></span>
                   <span class="text-xs font-bold" style="color: var(--text-primary)">
-                    解剖定性: {{ dissectionResult.identified_protocol }}
+                    {{ locale === 'en-US' ? `Identified: ${dissectionResult.identified_protocol}` : `解剖定性: ${dissectionResult.identified_protocol}` }}
                   </span>
                   <span class="text-[11px] ui-num px-2 py-0.5 rounded ui-pill">
-                    载荷大小: {{ dissectionResult.raw_bytes_count }} 字节
+                    {{ locale === 'en-US' ? `Payload: ${dissectionResult.raw_bytes_count} Bytes` : `载荷大小: ${dissectionResult.raw_bytes_count} 字节` }}
                   </span>
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
                   <button @click="addDissectedFrameToDiffQueue"
                     class="px-2.5 py-0.5 rounded-lg bg-emerald-500/12 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-[11px] font-semibold cursor-pointer"
-                    title="将原始十六进制帧与结构化解码字段加入全局多组比对队列">
-                    + 加入多组比对队列
+                    :title="locale === 'en-US' ? 'Add raw hex frame & structured fields to global diff queue' : '将原始十六进制帧与结构化解码字段加入全局多组比对队列'">
+                    {{ locale === 'en-US' ? '+ Add to Diff Queue' : '+ 加入多组比对队列' }}
                   </button>
                   <div class="text-[11px] ui-num font-semibold" :class="dissectionResult.success ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'">
-                    {{ dissectionResult.success ? '协议解剖成功' : '解析异常' }}
+                    {{ dissectionResult.success ? (locale === 'en-US' ? 'Dissection Successful' : '协议解剖成功') : (locale === 'en-US' ? 'Parsing Anomaly' : '解析异常') }}
                   </div>
                 </div>
               </div>
@@ -1281,7 +1281,7 @@
               <div v-if="dissectionResult.security_threats && dissectionResult.security_threats.length > 0" class="p-3 rounded-lg bg-rose-500/12 border border-rose-500/30 space-y-1">
                 <div class="text-xs font-bold text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
                   <AppIcon name="alert" :size="13" />
-                  <span>触发的安全威胁与规约违规审计:</span>
+                  <span>{{ locale === 'en-US' ? 'Triggered Security Threats & Protocol Violations:' : '触发的安全威胁与规约违规审计:' }}</span>
                 </div>
                 <ul class="list-disc list-inside text-xs ui-num text-rose-700 dark:text-rose-300 space-y-0.5">
                   <li v-for="threat in dissectionResult.security_threats" :key="threat">
@@ -1291,7 +1291,7 @@
               </div>
 
               <div class="space-y-1">
-                <div class="text-[11px] font-bold" style="color: var(--text-muted)">结构化元数据树 (Structured Syntax Details):</div>
+                <div class="text-[11px] font-bold" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Structured Syntax Details:' : '结构化元数据树 (Structured Syntax Details):' }}</div>
                 <pre class="p-3 rounded-lg ui-input font-mono-code text-xs text-emerald-700 dark:text-emerald-400 overflow-x-auto max-h-64 custom-scrollbar">{{ JSON.stringify(dissectionResult.structured_details, null, 2) }}</pre>
               </div>
             </div>
@@ -1305,18 +1305,18 @@
         <div class="flex items-center gap-4">
           <span class="flex items-center gap-1.5">
             <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>引擎状态: 实时多协议物理层/链路层感知就绪</span>
+            <span>{{ locale === 'en-US' ? 'Engine Status: Realtime Multi-Protocol PHY/Link Layer Sensing Ready' : '引擎状态: 实时多协议物理层/链路层感知就绪' }}</span>
           </span>
           <span class="hidden sm:inline" style="color: var(--border-strong)">|</span>
-          <span class="hidden sm:inline">覆盖: 802.11 a/b/g/n/ac/ax/be · 802.1Q/ad · BLE HCI H4</span>
+          <span class="hidden sm:inline">{{ locale === 'en-US' ? 'Coverage: 802.11 a/b/g/n/ac/ax/be · 802.1Q/ad · BLE HCI H4' : '覆盖: 802.11 a/b/g/n/ac/ax/be · 802.1Q/ad · BLE HCI H4' }}</span>
         </div>
 
         <div class="flex items-center gap-2">
           <button @click="resetTelemetry" class="ui-btn-danger text-xs px-3 py-1 rounded-lg">
-            清空遥测历史
+            {{ locale === 'en-US' ? 'Clear Telemetry' : '清空遥测历史' }}
           </button>
           <button @click="$emit('close')" class="ui-btn-secondary text-xs px-4 py-1.5 rounded-xl font-bold">
-            完成并关闭
+            {{ locale === 'en-US' ? 'Done & Close' : '完成并关闭' }}
           </button>
         </div>
       </footer>
@@ -1335,7 +1335,9 @@ import { PolarComponent, GridComponent, TooltipComponent, LegendComponent } from
 import VChart from 'vue-echarts';
 import AppIcon from './AppIcon.vue';
 import { useI18n } from '../i18n';
-const { t } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 void t;
 import EmptyState from './EmptyState.vue';
 import { useUniversalDiff } from '../composables/useUniversalDiff';
@@ -1376,7 +1378,7 @@ function addWifiApToDiffQueue(ap: WifiAP) {
       encryption: ap.encryption_type,
       vendor: ap.vendor_name,
       rssi_dbm: String(ap.last_rssi_dbm),
-      alerts: ap.security_alerts.join(', ') || '合规'
+      alerts: ap.security_alerts.join(', ') || (locale.value === 'en-US' ? 'Compliant' : '合规')
     }
   }, `Wi-Fi ${ap.ssid || ap.bssid}`, false);
 }
@@ -1401,7 +1403,7 @@ function addVlanToDiffQueue(stat: VlanStat) {
       packets: String(stat.packet_count),
       bytes: String(stat.byte_count),
       sample_macs: stat.sample_macs.join(', ') || '-',
-      flags: stat.security_flags.join(', ') || '合规'
+      flags: stat.security_flags.join(', ') || (locale.value === 'en-US' ? 'Compliant' : '合规')
     }
   }, `VLAN ${stat.vid}`, false);
 }
@@ -1436,7 +1438,7 @@ function addDissectedFrameToDiffQueue() {
   const cleanHex = customHexInput.value.replace(/[\s\r\n\t]/g, '');
   diffBus.addToQueue({
     id: `WLS_FRAME_${Date.now()}`,
-    label: `[无线/链路帧] ${dissectionResult.value.identified_protocol}`,
+    label: locale.value === 'en-US' ? `[Wireless/Link Frame] ${dissectionResult.value.identified_protocol}` : `[无线/链路帧] ${dissectionResult.value.identified_protocol}`,
     protocol: dissectionResult.value.identified_protocol || 'WIRELESS-FRAME',
     src: 'Monitor-Interface',
     dst: 'Dissector',
@@ -1444,7 +1446,7 @@ function addDissectedFrameToDiffQueue() {
     rawText: cleanHex ? '' : JSON.stringify(dissectionResult.value.structured_details),
     length: cleanHex ? cleanHex.length / 2 : dissectionResult.value.raw_bytes_count,
     extraFields: dissectionResult.value.structured_details || {}
-  }, `无线帧 ${dissectionResult.value.identified_protocol}`, false);
+  }, locale.value === 'en-US' ? `Wireless Frame ${dissectionResult.value.identified_protocol}` : `无线帧 ${dissectionResult.value.identified_protocol}`, false);
 }
 
 defineProps<{
@@ -1459,12 +1461,13 @@ const activeTab = ref<'wifi' | 'vlan' | 'bluetooth' | 'workbench'>('wifi');
 const loading = ref(false);
 const dissecting = ref(false);
 
-const tabs = [
-  { id: 'wifi', label: 'Wi-Fi 频谱与 AP 资产', icon: 'wifi' },
-  { id: 'vlan', label: 'VLAN 拓扑与隔离审计', icon: 'globe' },
-  { id: 'bluetooth', label: '蓝牙近场空间感知', icon: 'radar' },
-  { id: 'workbench', label: '单帧深度解剖诊断', icon: 'search' },
-] as const;
+type WirelessTabId = 'wifi' | 'vlan' | 'bluetooth' | 'workbench';
+const tabs = computed<Array<{ id: WirelessTabId; label: string; icon: string }>>(() => [
+  { id: 'wifi', label: locale.value === 'en-US' ? 'Wi-Fi Spectrum & APs' : 'Wi-Fi 频谱与 AP 资产', icon: 'wifi' },
+  { id: 'vlan', label: locale.value === 'en-US' ? 'VLAN Topology & Audit' : 'VLAN 拓扑与隔离审计', icon: 'globe' },
+  { id: 'bluetooth', label: locale.value === 'en-US' ? 'Bluetooth Spatial Sensing' : '蓝牙近场空间感知', icon: 'radar' },
+  { id: 'workbench', label: locale.value === 'en-US' ? 'Single Frame Dissection' : '单帧深度解剖诊断', icon: 'search' },
+]);
 
 // Wi-Fi 遥测模型
 interface WifiAP {
@@ -1941,11 +1944,11 @@ const btPolarRadarOption = computed(() => {
       formatter: (params: { data?: PolarRadarPoint }) => {
         const p = params.data;
         if (!p) return '';
-        const alerts = p.flags.length ? p.flags.join(', ') : '未触发安全告警';
+        const alerts = p.flags.length ? p.flags.join(', ') : (locale.value === 'en-US' ? 'No Security Alerts' : '未触发安全告警');
         return `<div style="font-weight:700;margin-bottom:3px">${p.name}</div>
           <div style="font-family:monospace">MAC: ${p.address}</div>
-          <div>厂商: ${p.vendor} · ${p.phy}</div>
-          <div>测距: <b>${p.value[0]} m</b> · RSSI: <b>${p.rssi} dBm</b> · 包数: ${p.packets}</div>
+          <div>${locale.value === 'en-US' ? 'Vendor:' : '厂商:'} ${p.vendor} · ${p.phy}</div>
+          <div>${locale.value === 'en-US' ? 'Distance:' : '测距:'} <b>${p.value[0]} m</b> · RSSI: <b>${p.rssi} dBm</b> · ${locale.value === 'en-US' ? 'Packets:' : '包数:'} ${p.packets}</div>
           <div style="color:${p.flags.length ? '#fb7185' : '#34d399'};margin-top:2px">${alerts}</div>`;
       },
     },
@@ -1999,7 +2002,7 @@ const btRealtimeVsHistoryOption = computed(() => {
       legend: {
         top: 0,
         textStyle: { color: t.textMuted, fontSize: 10 },
-        data: ['实时 RSSI 均值 (dBm)', '历史基线 RSSI (dBm)'],
+        data: locale.value === 'en-US' ? ['Live RSSI Mean (dBm)', 'Historic Baseline RSSI (dBm)'] : ['实时 RSSI 均值 (dBm)', '历史基线 RSSI (dBm)'],
       },
       grid: { left: 42, right: 16, top: 28, bottom: 24 },
       xAxis: {
@@ -2017,7 +2020,7 @@ const btRealtimeVsHistoryOption = computed(() => {
       },
       series: [
         {
-          name: '实时 RSSI 均值 (dBm)',
+          name: locale.value === 'en-US' ? 'Live RSSI Mean (dBm)' : '实时 RSSI 均值 (dBm)',
           type: 'line',
           smooth: true,
           connectNulls: true,
@@ -2027,7 +2030,7 @@ const btRealtimeVsHistoryOption = computed(() => {
           areaStyle: { color: 'rgba(56, 189, 248, 0.14)' },
         },
         {
-          name: '历史基线 RSSI (dBm)',
+          name: locale.value === 'en-US' ? 'Historic Baseline RSSI (dBm)' : '历史基线 RSSI (dBm)',
           type: 'line',
           smooth: true,
           connectNulls: true,
@@ -2047,7 +2050,7 @@ const btRealtimeVsHistoryOption = computed(() => {
 
   const seriesList: Array<Record<string, unknown>> = [
     {
-      name: locked ? `${locked} 实时轨迹 (dBm)` : '实时全局场强波动 (dBm)',
+      name: locked ? (locale.value === 'en-US' ? `${locked} Live Track (dBm)` : `${locked} 实时轨迹 (dBm)`) : (locale.value === 'en-US' ? 'Live Global RSSI Fluctuation (dBm)' : '实时全局场强波动 (dBm)'),
       type: 'line',
       smooth: true,
       showSymbol: samples.length <= 24,
@@ -2059,7 +2062,7 @@ const btRealtimeVsHistoryOption = computed(() => {
   ];
   if (baselineVal !== null && labels.length > 0) {
     seriesList.push({
-      name: `该设备历史基准 (${baselineVal} dBm)`,
+      name: locale.value === 'en-US' ? `Historical Baseline (${baselineVal} dBm)` : `该设备历史基准 (${baselineVal} dBm)`,
       type: 'line',
       showSymbol: false,
       data: labels.map(() => baselineVal),
@@ -2134,7 +2137,7 @@ const btIntervalHistogramOption = computed(() => {
     },
     series: [
       {
-        name: '设备台数',
+        name: locale.value === 'en-US' ? 'Device Count' : '设备台数',
         type: 'bar',
         barWidth: '48%',
         data: buckets.map((val, idx) => ({
@@ -2165,7 +2168,7 @@ const btProtocolVendorOption = computed(() => {
   const sorted = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
   const top = sorted.slice(0, 6);
   const restSum = sorted.slice(6).reduce((acc, [, v]) => acc + v, 0);
-  if (restSum > 0) top.push(['其他 SIG 厂商', restSum]);
+  if (restSum > 0) top.push([locale.value === 'en-US' ? 'Other SIG Vendors' : '其他 SIG 厂商', restSum]);
 
   const data = top.map(([name, value]) => ({ name, value }));
 
@@ -2218,10 +2221,10 @@ async function saveBluetoothBaseline() {
   btToolBusy.value = true;
   try {
     const snap = await invoke<BluetoothBaselineSnapshot>('save_bluetooth_baseline_cmd');
-    btToolMsg.value = `已保存物理环境基准快照 (${snap.saved_at} · ${snap.device_count} 台设备)`;
+    btToolMsg.value = locale.value === 'en-US' ? `Saved RF baseline snapshot (${snap.saved_at} · ${snap.device_count} devices)` : `已保存物理环境基准快照 (${snap.saved_at} · ${snap.device_count} 台设备)`;
     await runBluetoothBaselineComparison(true);
   } catch (err) {
-    btToolMsg.value = `基线保存失败: ${String(err)}`;
+    btToolMsg.value = locale.value === 'en-US' ? `Save baseline failed: ${String(err)}` : `基线保存失败: ${String(err)}`;
   } finally {
     btToolBusy.value = false;
   }
@@ -2234,7 +2237,7 @@ async function runBluetoothBaselineComparison(silent = false) {
     btComparison.value = res;
     if (!silent) btToolMsg.value = res.diagnostic_message;
   } catch (err) {
-    if (!silent) btToolMsg.value = `实时与历史对照失败: ${String(err)}`;
+    if (!silent) btToolMsg.value = locale.value === 'en-US' ? `Realtime vs baseline comparison failed: ${String(err)}` : `实时与历史对照失败: ${String(err)}`;
   } finally {
     if (!silent) btToolBusy.value = false;
   }
@@ -2246,7 +2249,7 @@ async function exportBluetoothBtsnoop() {
     const res = await invoke<BtsnoopExportResult>('export_bluetooth_btsnoop_cmd');
     btToolMsg.value = res.message;
   } catch (err) {
-    btToolMsg.value = `导出 .btsnoop 失败: ${String(err)}`;
+    btToolMsg.value = locale.value === 'en-US' ? `Export .btsnoop failed: ${String(err)}` : `导出 .btsnoop 失败: ${String(err)}`;
   } finally {
     btToolBusy.value = false;
   }
@@ -2262,7 +2265,7 @@ async function importBluetoothBtsnoop() {
       await runBluetoothBaselineComparison(true);
     }
   } catch (err) {
-    btToolMsg.value = `导入 .btsnoop 失败: ${String(err)}`;
+    btToolMsg.value = locale.value === 'en-US' ? `Import .btsnoop failed: ${String(err)}` : `导入 .btsnoop 失败: ${String(err)}`;
   } finally {
     btToolBusy.value = false;
   }
@@ -2290,7 +2293,7 @@ async function readBleGattCharacteristic(
       ? `特征 ${res.characteristic_uuid} 实时读取成功: ${res.decoded_value || res.raw_value_hex || 'OK'}`
       : `特征 ${charUuid} 读取受阻: ${res.diagnostic_message}`;
   } catch (err) {
-    btToolMsg.value = `GATT 实时读值异常: ${String(err)}`;
+    btToolMsg.value = locale.value === 'en-US' ? `GATT live read error: ${String(err)}` : `GATT 实时读值异常: ${String(err)}`;
   } finally {
     readingGattCharKey.value = null;
   }
@@ -2322,7 +2325,7 @@ async function toggleContinuousBle() {
     }
     await fetchBluetoothTelemetry();
   } catch (err) {
-    bthEtwMsg.value = `实时 BLE 空口启动异常: ${String(err)}`;
+    bthEtwMsg.value = locale.value === 'en-US' ? `Realtime BLE air sniff error: ${String(err)}` : `实时 BLE 空口启动异常: ${String(err)}`;
   }
 }
 
@@ -2331,7 +2334,7 @@ async function toggleBthEtwCapture() {
     if (bthEtwActive.value || btData.value.bthport_etw_active) {
       await invoke('stop_bthport_etw_capture_cmd');
       bthEtwActive.value = false;
-      bthEtwMsg.value = '已停止 BTHPORT-ETW 驱动级 HCI/L2CAP 抓包';
+      bthEtwMsg.value = locale.value === 'en-US' ? 'Stopped BTHPORT-ETW driver HCI/L2CAP sniff' : '已停止 BTHPORT-ETW 驱动级 HCI/L2CAP 抓包';
       syncBtPollRate(continuousBleActive.value);
     } else {
       const msg = await invoke<string>('start_bthport_etw_capture_cmd');
@@ -2543,14 +2546,14 @@ function getPcpTotalCount(pcp: number): number {
 
 function getPcpShortLabel(pcp: number): string {
   const labels = [
-    '尽力而为 (BE)',
-    '背景流量 (BK)',
-    '优先业务 (EE)',
-    '工控关键 (CA)',
-    '视频低延时',
-    '实时语音 (VO)',
-    '拓扑控制 (IC)',
-    '网络保护 (NC)',
+    locale.value === 'en-US' ? 'Best Effort (BE)' : '尽力而为 (BE)',
+    locale.value === 'en-US' ? 'Background (BK)' : '背景流量 (BK)',
+    locale.value === 'en-US' ? 'Excellent Effort (EE)' : '优先业务 (EE)',
+    locale.value === 'en-US' ? 'Critical App (CA)' : '工控关键 (CA)',
+    locale.value === 'en-US' ? 'Video Low Latency' : '视频低延时',
+    locale.value === 'en-US' ? 'Voice (VO)' : '实时语音 (VO)',
+    locale.value === 'en-US' ? 'Internetwork Control (IC)' : '拓扑控制 (IC)',
+    locale.value === 'en-US' ? 'Network Control (NC)' : '网络保护 (NC)',
   ];
   return labels[pcp] || 'PCP ' + pcp;
 }
@@ -2577,9 +2580,9 @@ function getEncryptionClass(enc: string): string {
 }
 
 function getDistanceZone(m: number): string {
-  if (m < 1.0) return '近场 (<1m)';
-  if (m < 5.0) return '中场 (1-5m)';
-  return '远场 (>5m)';
+  if (m < 1.0) return locale.value === 'en-US' ? 'Near (<1m)' : '近场 (<1m)';
+  if (m < 5.0) return locale.value === 'en-US' ? 'Mid (1-5m)' : '中场 (1-5m)';
+  return locale.value === 'en-US' ? 'Far (>5m)' : '远场 (>5m)';
 }
 
 function formatBytes(bytes: number): string {

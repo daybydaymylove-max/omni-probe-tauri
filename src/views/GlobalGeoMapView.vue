@@ -93,7 +93,7 @@
           ]"
         >
           <AppIcon :name="autoRotate ? 'pause' : 'play'" :size="12" />
-          <span>{{ autoRotate ? '自转中' : '自转' }}</span>
+          <span>{{ autoRotate ? (locale === 'en-US' ? 'Rotating' : '自转中') : (locale === 'en-US' ? 'Auto-Rotate' : '自转') }}</span>
         </button>
 
         <!-- 图层显隐按钮组 -->
@@ -102,38 +102,38 @@
             @click="layers.terminator = !layers.terminator"
             :class="layers.terminator ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/35' : 'ui-pill opacity-75'"
             class="px-2 py-1 rounded-xl border transition-colors cursor-pointer flex items-center gap-1 font-medium"
-            title="切换太阳昼夜晨昏线"
+            :title="locale === 'en-US' ? 'Toggle solar terminator line' : '切换太阳昼夜晨昏线'"
           >
             <AppIcon name="sun" :size="12" />
-            <span>晨昏线</span>
+            <span>{{ locale === 'en-US' ? 'Terminator' : '晨昏线' }}</span>
           </button>
           <button
             @click="layers.cables = !layers.cables"
             :class="layers.cables ? 'bg-sky-500/15 text-sky-700 dark:text-cyan-300 border-sky-500/35' : 'ui-pill opacity-75'"
             class="px-2 py-1 rounded-xl border transition-colors cursor-pointer flex items-center gap-1 font-medium"
-            title="切换国际海缆参考底图"
+            :title="locale === 'en-US' ? 'Toggle submarine cables reference' : '切换国际海缆参考底图'"
           >
             <AppIcon name="link" :size="12" />
-            <span>海缆参考</span>
+            <span>{{ locale === 'en-US' ? 'Subsea Cables' : '海缆参考' }}</span>
           </button>
           <button
             @click="layers.graticules = !layers.graticules"
             :class="layers.graticules ? 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/35' : 'ui-pill opacity-75'"
             class="px-2 py-1 rounded-xl border transition-colors cursor-pointer flex items-center gap-1 font-medium"
-            title="切换 15° 高精经纬网格"
+            :title="locale === 'en-US' ? 'Toggle 15° graticule grid' : '切换 15° 高精经纬网格'"
           >
             <AppIcon name="compass" :size="12" />
-            <span>经纬网</span>
+            <span>{{ locale === 'en-US' ? 'Graticule' : '经纬网' }}</span>
           </button>
         </div>
 
         <button
           @click="resetViewport"
           class="ui-btn-secondary text-[11px] py-1 px-2.5 rounded-xl"
-          title="视角复位至本机物理中心"
+          :title="locale === 'en-US' ? 'Reset view to local center' : '视角复位至本机物理中心'"
         >
           <AppIcon name="refresh" :size="12" />
-          <span>复位</span>
+          <span>{{ locale === 'en-US' ? 'Reset' : '复位' }}</span>
         </button>
       </div>
     </header>
@@ -162,14 +162,14 @@
         <div class="absolute top-3 left-4 flex flex-wrap items-center gap-2 pointer-events-none text-[11px] ui-num">
           <div class="liquid-panel px-3 py-1 rounded-full flex items-center gap-2.5 flex-wrap" style="color: var(--text-secondary)">
             <span class="lens-edge-lip" aria-hidden="true"></span>
-            <span>视口: {{ centerLat >= 0 ? '+' : '' }}{{ centerLat.toFixed(1) }}°N, {{ centerLon >= 0 ? '+' : '' }}{{ centerLon.toFixed(1) }}°E</span>
+            <span>{{ locale === 'en-US' ? 'Viewport: ' : '视口: ' }}{{ centerLat >= 0 ? '+' : '' }}{{ centerLat.toFixed(1) }}°N, {{ centerLon >= 0 ? '+' : '' }}{{ centerLon.toFixed(1) }}°E</span>
             <span style="color: var(--border-strong)">|</span>
             <span>{{ scale.toFixed(2) }}x</span>
             <span style="color: var(--border-strong)">|</span>
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>本机源端</span>
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-sky-500"></span>通信对端</span>
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span>路由中转跳</span>
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span>告警源</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>{{ locale === 'en-US' ? 'Local Host' : '本机源端' }}</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-sky-500"></span>{{ locale === 'en-US' ? 'Remote Peer' : '通信对端' }}</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span>{{ locale === 'en-US' ? 'Route Hop' : '路由中转跳' }}</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span>{{ locale === 'en-US' ? 'Alert Source' : '告警源' }}</span>
           </div>
         </div>
 
@@ -181,10 +181,10 @@
           <div class="text-xs space-y-0.5">
             <div class="font-bold flex items-center gap-2" style="color: var(--text-primary)">
               <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-              <span>当前网卡嗅探待机：未捕获到真实双向公网通信流量</span>
+              <span>{{ locale === 'en-US' ? 'NIC Sniffer Standby: No live public traffic detected' : '当前网卡嗅探待机：未捕获到真实双向公网通信流量' }}</span>
             </div>
             <div class="text-[11px]" style="color: var(--text-secondary)">
-              本视图严格绑定真实流向。启动网卡嗅探后将实时绘出来往节点，或立即扫描本机已建外联。
+              {{ locale === 'en-US' ? 'This view strictly reflects live traffic. Start the sniffer to plot remote peers, or probe active external sockets.' : '本视图严格绑定真实流向。启动网卡嗅探后将实时绘出来往节点，或立即扫描本机已建外联。' }}
             </div>
           </div>
           <div class="flex items-center gap-2 shrink-0">
@@ -194,14 +194,14 @@
               class="ui-btn-primary text-xs py-1.5 px-3 rounded-xl"
             >
               <AppIcon name="play" :size="12" />
-              <span>启动网卡嗅探</span>
+              <span>{{ locale === 'en-US' ? 'Start NIC Sniffer' : '启动网卡嗅探' }}</span>
             </button>
             <button
               @click="probeOsSockets"
               class="ui-btn-secondary text-xs py-1.5 px-3 rounded-xl"
             >
               <AppIcon name="search" :size="12" />
-              <span>扫描当前活动外联</span>
+              <span>{{ locale === 'en-US' ? 'Scan Active Sockets' : '扫描当前活动外联' }}</span>
             </button>
           </div>
         </div>
@@ -213,9 +213,9 @@
         >
           <span class="w-3.5 h-3.5 rounded-full border-2 border-amber-500 border-t-transparent animate-spin shrink-0"></span>
           <div>
-            <div class="text-amber-700 dark:text-amber-300 font-bold">正在进行逐跳路由中转追踪: {{ tracerouteTargetIp }}</div>
+            <div class="text-amber-700 dark:text-amber-300 font-bold">{{ locale === 'en-US' ? `Tracing Hop-by-Hop Route: ${tracerouteTargetIp}` : `正在进行逐跳路由中转追踪: ${tracerouteTargetIp}` }}</div>
             <div class="text-[11px]" style="color: var(--text-secondary)">
-              已收集第 0 ~ {{ maxHopNumber }} 跳中转节点 (TTL Hop-by-Hop 实时绘制中)
+              {{ locale === 'en-US' ? `Collected hops 0 ~ ${maxHopNumber} (TTL Hop-by-Hop live rendering)` : `已收集第 0 ~ ${maxHopNumber} 跳中转节点 (TTL Hop-by-Hop 实时绘制中)` }}
             </div>
           </div>
         </div>
@@ -230,36 +230,36 @@
             <div class="font-bold flex items-center justify-between border-b pb-1" style="border-color: var(--border-subtle); color: var(--text-primary)">
               <span class="text-sky-700 dark:text-cyan-300">{{ hoveredCanvasItem.node.ip }}</span>
               <span class="text-[11px] px-1.5 py-0.5 rounded ui-pill">
-                {{ hoveredCanvasItem.node.is_self ? '本机源端' : (hoveredCanvasItem.node.country || '未知') }}
+                {{ hoveredCanvasItem.node.is_self ? (locale === 'en-US' ? 'Local Host' : '本机源端') : (hoveredCanvasItem.node.country || (locale === 'en-US' ? 'Unknown' : '未知')) }}
               </span>
             </div>
-            <div class="text-[11px]" style="color: var(--text-secondary)">位置: {{ hoveredCanvasItem.node.geo_label }}</div>
-            <div class="text-[11px]" style="color: var(--text-muted)">运营商: {{ hoveredCanvasItem.node.isp }}</div>
+            <div class="text-[11px]" style="color: var(--text-secondary)">{{ locale === 'en-US' ? 'Location: ' : '位置: ' }}{{ hoveredCanvasItem.node.geo_label }}</div>
+            <div class="text-[11px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'ISP: ' : '运营商: ' }}{{ hoveredCanvasItem.node.isp }}</div>
             <div v-if="!hoveredCanvasItem.node.is_self" class="text-[11px] flex justify-between pt-1 text-emerald-700 dark:text-emerald-400 font-semibold">
-              <span>入站: {{ formatBytes(hoveredCanvasItem.node.inbound_bytes) }}</span>
-              <span>出站: {{ formatBytes(hoveredCanvasItem.node.outbound_bytes) }}</span>
+              <span>{{ locale === 'en-US' ? 'Inbound: ' : '入站: ' }}{{ formatBytes(hoveredCanvasItem.node.inbound_bytes) }}</span>
+              <span>{{ locale === 'en-US' ? 'Outbound: ' : '出站: ' }}{{ formatBytes(hoveredCanvasItem.node.outbound_bytes) }}</span>
             </div>
             <div v-if="hoveredCanvasItem.node.distance_km > 0" class="text-[11px]" style="color: var(--text-muted)">
-              球面测地距离: {{ hoveredCanvasItem.node.distance_km }} km (光纤下限 {{ hoveredCanvasItem.node.theoretical_fiber_rtt_ms }} ms)
+              {{ locale === 'en-US' ? `Geodesic Dist: ${hoveredCanvasItem.node.distance_km} km (Fiber limit ${hoveredCanvasItem.node.theoretical_fiber_rtt_ms} ms)` : `球面测地距离: ${hoveredCanvasItem.node.distance_km} km (光纤下限 ${hoveredCanvasItem.node.theoretical_fiber_rtt_ms} ms)` }}
             </div>
             <div v-if="!hoveredCanvasItem.node.is_self" class="text-[11px] text-amber-700 dark:text-amber-300 pt-0.5 font-semibold">
-              点击节点定位坐标并开启路由中转追踪
+              {{ locale === 'en-US' ? 'Click node to locate and initiate traceroute' : '点击节点定位坐标并开启路由中转追踪' }}
             </div>
           </template>
 
           <template v-else-if="hoveredCanvasItem.kind === 'hop'">
             <div class="font-bold text-amber-700 dark:text-amber-300 border-b pb-1" style="border-color: var(--border-subtle)">
-              中转跳点 #{{ hoveredCanvasItem.hop.hop }} · {{ hoveredCanvasItem.hop.ip }}
+              {{ locale === 'en-US' ? `Hop Node #${hoveredCanvasItem.hop.hop} · ${hoveredCanvasItem.hop.ip}` : `中转跳点 #${hoveredCanvasItem.hop.hop} · ${hoveredCanvasItem.hop.ip}` }}
             </div>
             <div class="text-[11px]" style="color: var(--text-primary)">
-              地理归属: {{ hoveredCanvasItem.hop.country }} {{ hoveredCanvasItem.hop.province }} {{ hoveredCanvasItem.hop.city }}
+              {{ locale === 'en-US' ? 'Geo: ' : '地理归属: ' }}{{ hoveredCanvasItem.hop.country }} {{ hoveredCanvasItem.hop.province }} {{ hoveredCanvasItem.hop.city }}
             </div>
-            <div class="text-[11px]" style="color: var(--text-muted)">运营商: {{ hoveredCanvasItem.hop.isp }}</div>
+            <div class="text-[11px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'ISP: ' : '运营商: ' }}{{ hoveredCanvasItem.hop.isp }}</div>
             <div class="text-emerald-700 dark:text-emerald-400 text-[11px] font-bold">
-              响应耗时 RTT: {{ hoveredCanvasItem.hop.rtt_ms !== null ? hoveredCanvasItem.hop.rtt_ms + ' ms' : '超时' }}
+              {{ locale === 'en-US' ? 'RTT: ' : '响应耗时 RTT: ' }}{{ hoveredCanvasItem.hop.rtt_ms !== null ? hoveredCanvasItem.hop.rtt_ms + ' ms' : (locale === 'en-US' ? 'Timeout' : '超时') }}
             </div>
             <div class="text-[11px]" style="color: var(--text-muted)">
-              累计路由距离: {{ hoveredCanvasItem.hop.cumulative_distance_km.toFixed(1) }} km
+              {{ locale === 'en-US' ? 'Cumulative Dist: ' : '累计路由距离: ' }}{{ hoveredCanvasItem.hop.cumulative_distance_km.toFixed(1) }} km
             </div>
           </template>
         </div>
@@ -285,7 +285,7 @@
                 ]"
                 :style="activeSideTab !== 'peers' ? { color: 'var(--text-secondary)' } : undefined"
               >
-                通讯 IP 清单 ({{ peerNodes.length }})
+                {{ locale === 'en-US' ? `Peer IPs (${peerNodes.length})` : `通讯 IP 清单 (${peerNodes.length})` }}
               </button>
               <button
                 @click="activeSideTab = 'traceroute'"
@@ -295,18 +295,18 @@
                 ]"
                 :style="activeSideTab !== 'traceroute' ? { color: 'var(--text-secondary)' } : undefined"
               >
-                <span>路由中转追踪</span>
+                <span>{{ locale === 'en-US' ? 'Route Traceroute' : '路由中转追踪' }}</span>
                 <span v-if="tracerouteHops.length > 0" class="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[11px] ui-num">
-                  {{ maxHopNumber }}跳
+                  {{ maxHopNumber }}{{ locale === 'en-US' ? ' hops' : '跳' }}
                 </span>
               </button>
             </div>
             <button
               @click="isSidebarCollapsed = true"
               class="text-[11px] px-2 py-1 rounded-lg ui-pill flex items-center gap-1 cursor-pointer shrink-0"
-              title="收起侧栏"
+              :title="locale === 'en-US' ? 'Collapse sidebar' : '收起侧栏'"
             >
-              <span>收起</span>
+              <span>{{ locale === 'en-US' ? 'Collapse' : '收起' }}</span>
               <AppIcon name="chevron-right" :size="12" />
             </button>
           </div>
@@ -317,16 +317,16 @@
               v-model="manualTargetIp"
               @keyup.enter="handleManualTrace"
               type="text"
-              placeholder="输入公网 IP 或域名追踪 (如 8.8.8.8)"
+              :placeholder="locale === 'en-US' ? 'Enter public IP or domain (e.g. 8.8.8.8)' : '输入公网 IP 或域名追踪 (如 8.8.8.8)'"
               class="flex-1 ui-input ui-num text-[11px] py-1.5 px-2.5"
             />
             <button
               @click="handleManualTrace"
               :disabled="isTracing || !manualTargetIp.trim()"
               class="ui-btn-primary text-[11px] py-1.5 px-3 rounded-lg shrink-0"
-              title="立即标注坐标并追踪经历多少次路由中转"
+              :title="locale === 'en-US' ? 'Locate coordinates and trace route hops' : '立即标注坐标并追踪经历多少次路由中转'"
             >
-              {{ isTracing ? '探测中' : '定位+追踪' }}
+              {{ isTracing ? (locale === 'en-US' ? 'Tracing...' : '探测中') : (locale === 'en-US' ? 'Locate & Trace' : '定位+追踪') }}
             </button>
           </div>
         </div>
@@ -336,11 +336,11 @@
           <!-- 宏观汇总双卡 -->
           <div class="grid grid-cols-2 gap-2 text-xs ui-num">
             <div class="ui-sub-card p-2.5">
-              <div class="text-[11px]" style="color: var(--text-muted)">入站总吞吐 (Inbound)</div>
+              <div class="text-[11px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Total Inbound Throughput' : '入站总吞吐 (Inbound)' }}</div>
               <div class="text-sm font-bold text-emerald-700 dark:text-emerald-400 mt-0.5">{{ formatBytes(totalInboundBytes) }}</div>
             </div>
             <div class="ui-sub-card p-2.5">
-              <div class="text-[11px]" style="color: var(--text-muted)">出站总吞吐 (Outbound)</div>
+              <div class="text-[11px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Total Outbound Throughput' : '出站总吞吐 (Outbound)' }}</div>
               <div class="text-sm font-bold text-sky-700 dark:text-cyan-400 mt-0.5">{{ formatBytes(totalOutboundBytes) }}</div>
             </div>
           </div>
@@ -357,17 +357,16 @@
               </span>
             </div>
             <div class="text-[11px] space-y-0.5" style="color: var(--text-secondary)">
-              <div>地球定位: <strong style="color: var(--text-primary)">{{ selectedPeer.geo_label }}</strong></div>
-              <div>物理坐标: {{ selectedPeer.coord.lat.toFixed(2) }}°, {{ selectedPeer.coord.lon.toFixed(2) }}°</div>
-              <div>运营商/归属: {{ selectedPeer.isp }}</div>
-              <div v-if="selectedPeer.process_name">关联本地进程: <span class="text-sky-700 dark:text-sky-300 font-semibold">{{ selectedPeer.process_name }}</span></div>
+              <div>{{ locale === 'en-US' ? 'Geo Location: ' : '地球定位: ' }}<strong style="color: var(--text-primary)">{{ selectedPeer.geo_label }}</strong></div>
+              <div>{{ locale === 'en-US' ? 'Coordinates: ' : '物理坐标: ' }}{{ selectedPeer.coord.lat.toFixed(2) }}°, {{ selectedPeer.coord.lon.toFixed(2) }}°</div>
+              <div>{{ locale === 'en-US' ? 'ISP / ASN: ' : '运营商/归属: ' }}{{ selectedPeer.isp }}</div>
+              <div v-if="selectedPeer.process_name">{{ locale === 'en-US' ? 'Process: ' : '关联本地进程: ' }}<span class="text-sky-700 dark:text-sky-300 font-semibold">{{ selectedPeer.process_name }}</span></div>
               <div v-if="selectedPeer.distance_km > 0">
-                直线球面距离: <strong class="text-amber-700 dark:text-amber-300">{{ selectedPeer.distance_km }} km</strong>
-                (理论光纤下限 {{ selectedPeer.theoretical_fiber_rtt_ms }} ms)
+                {{ locale === 'en-US' ? 'Geodesic Dist: ' : '直线球面距离: ' }}<strong class="text-amber-700 dark:text-amber-300">{{ selectedPeer.distance_km }} km</strong> ({{ locale === 'en-US' ? 'Fiber Limit ' : '理论光纤下限 ' }}{{ selectedPeer.theoretical_fiber_rtt_ms }} ms)
               </div>
               <div class="flex justify-between pt-1 text-[11px] font-semibold">
-                <span class="text-emerald-700 dark:text-emerald-400">收: {{ formatBytes(selectedPeer.inbound_bytes) }} ({{ selectedPeer.inbound_packets }} pkt)</span>
-                <span class="text-sky-700 dark:text-cyan-400">发: {{ formatBytes(selectedPeer.outbound_bytes) }} ({{ selectedPeer.outbound_packets }} pkt)</span>
+                <span class="text-emerald-700 dark:text-emerald-400">{{ locale === 'en-US' ? 'RX: ' : '收: ' }}{{ formatBytes(selectedPeer.inbound_bytes) }} ({{ selectedPeer.inbound_packets }} pkt)</span>
+                <span class="text-sky-700 dark:text-cyan-400">{{ locale === 'en-US' ? 'TX: ' : '发: ' }}{{ formatBytes(selectedPeer.outbound_bytes) }} ({{ selectedPeer.outbound_packets }} pkt)</span>
               </div>
             </div>
             <button
@@ -376,16 +375,16 @@
               class="w-full ui-btn-primary justify-center py-2 px-3 rounded-xl text-xs"
             >
               <AppIcon name="radar" :size="14" />
-              <span>{{ isTracing && tracerouteTargetIp === selectedPeer.ip ? '正在追踪路由中转跳数...' : '追踪该 IP 到本机经历了多少次路由中转' }}</span>
+              <span>{{ isTracing && tracerouteTargetIp === selectedPeer.ip ? (locale === 'en-US' ? 'Tracing route hops...' : '正在追踪路由中转跳数...') : (locale === 'en-US' ? 'Trace route hops to local host' : '追踪该 IP 到本机经历了多少次路由中转') }}</span>
             </button>
           </div>
 
           <!-- 过滤框 -->
           <div class="flex items-center justify-between text-[11px] select-none" style="color: var(--text-muted)">
-            <span>按总流量降序 (点击 IP 定位与追踪)</span>
+            <span>{{ locale === 'en-US' ? 'Sorted by total traffic (Click IP to trace)' : '按总流量降序 (点击 IP 定位与追踪)' }}</span>
             <label class="flex items-center gap-1.5 cursor-pointer font-medium" style="color: var(--text-secondary)">
               <input type="checkbox" v-model="hidePrivateIps" class="rounded accent-sky-500" />
-              <span>仅看公网 IP</span>
+              <span>{{ locale === 'en-US' ? 'Public IPs Only' : '仅看公网 IP' }}</span>
             </label>
           </div>
 
@@ -393,8 +392,8 @@
           <EmptyState
             v-if="filteredPeerNodes.length === 0"
             icon="globe"
-            title="暂无已捕获的通信对端 IP"
-            description="开启【启动网卡嗅探】后将自动解析往来数据包对端 IP；或点击【探测本机当前外联】获取活跃 Socket。"
+            :title="locale === 'en-US' ? 'No Captured Peer IPs' : '暂无已捕获的通信对端 IP'"
+            :description="locale === 'en-US' ? 'Start NIC sniffer to resolve peer IPs, or click probe active sockets to scan live connections.' : '开启【启动网卡嗅探】后将自动解析往来数据包对端 IP；或点击【探测本机当前外联】获取活跃 Socket。'"
           />
 
           <div v-else class="space-y-1.5">
@@ -422,8 +421,8 @@
                   </span>
                   <button @click.stop="addGeoPeerToDiffQueue(peer)"
                     class="px-1.5 py-0.5 rounded bg-emerald-500/12 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-[11px] font-semibold cursor-pointer"
-                    title="加入全局多组IP特征比对队列">
-                    +入队
+                    :title="locale === 'en-US' ? 'Queue IP into multi-group comparison' : '加入全局多组IP特征比对队列'">
+                    {{ locale === 'en-US' ? '+ Queue' : '+入队' }}
                   </button>
                 </div>
               </div>
@@ -446,33 +445,33 @@
           <EmptyState
             v-if="tracerouteHops.length === 0 && !isTracing"
             icon="radar"
-            title="尚未执行路由中转路径探测"
-            description="点击地图上任意通信节点、在列表中选定对端或输入公网 IP，即可实时探测沿途各跳路由器。"
+            :title="locale === 'en-US' ? 'No Route Trace Executed' : '尚未执行路由中转路径探测'"
+            :description="locale === 'en-US' ? 'Click any node on the map, select a peer or enter an IP to trace hops in real-time.' : '点击地图上任意通信节点、在列表中选定对端或输入公网 IP，即可实时探测沿途各跳路由器。'"
           />
 
           <!-- 追踪报告总结卡片 -->
           <div v-else class="space-y-3">
             <div class="ui-sub-card p-3 border-amber-500/40 bg-amber-500/8 space-y-2 text-xs ui-num">
               <div class="flex items-center justify-between border-b pb-1.5" style="border-color: var(--border-subtle)">
-                <span class="font-bold text-amber-700 dark:text-amber-300">追踪目标: {{ tracerouteTargetIp }}</span>
+                <span class="font-bold text-amber-700 dark:text-amber-300">{{ locale === 'en-US' ? 'Target: ' : '追踪目标: ' }}{{ tracerouteTargetIp }}</span>
                 <span v-if="isTracing" class="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/18 text-amber-700 dark:text-amber-300 font-semibold">
-                  探测进行中...
+                  {{ locale === 'en-US' ? 'Tracing in progress...' : '探测进行中...' }}
                 </span>
                 <span v-else-if="tracerouteReport?.is_completed" class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/18 text-emerald-700 dark:text-emerald-300 font-bold">
-                  已抵达终点
+                  {{ locale === 'en-US' ? 'Destination Reached' : '已抵达终点' }}
                 </span>
                 <span v-else class="text-[11px] px-2 py-0.5 rounded-full ui-pill">
-                  部分跳点被屏蔽
+                  {{ locale === 'en-US' ? 'Some Hops Shielded' : '部分跳点被屏蔽' }}
                 </span>
               </div>
 
               <div class="grid grid-cols-2 gap-2 pt-0.5">
                 <div class="p-2 rounded-xl border" style="background: var(--surface-content); border-color: var(--border-subtle)">
-                  <div class="text-[11px]" style="color: var(--text-muted)">总计经历路由中转</div>
-                  <div class="text-base font-bold text-amber-700 dark:text-amber-300 mt-0.5">{{ maxHopNumber }} <span class="text-xs font-normal">次跳数 (Hops)</span></div>
+                  <div class="text-[11px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Total Route Hops' : '总计经历路由中转' }}</div>
+                  <div class="text-base font-bold text-amber-700 dark:text-amber-300 mt-0.5">{{ maxHopNumber }} <span class="text-xs font-normal">{{ locale === 'en-US' ? 'hops' : '次跳数' }}</span></div>
                 </div>
                 <div class="p-2 rounded-xl border" style="background: var(--surface-content); border-color: var(--border-subtle)">
-                  <div class="text-[11px]" style="color: var(--text-muted)">累计跨距 / 实测 RTT</div>
+                  <div class="text-[11px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Cumulative Dist / Measured RTT' : '累计跨距 / 实测 RTT' }}</div>
                   <div class="text-xs font-bold text-sky-700 dark:text-cyan-300 mt-1">
                     {{ totalTraceDistanceKm.toFixed(0) }} km · {{ endToEndRttText }}
                   </div>
@@ -487,13 +486,13 @@
             <!-- 逐跳垂直路由时间轴 (Hop 0 -> Hop N) -->
             <div class="space-y-1.5">
               <div class="text-[11px] font-bold flex items-center justify-between gap-2" style="color: var(--text-secondary)">
-                <span>逐跳中转路径剖析 (Hop-by-Hop)</span>
+                <span>{{ locale === 'en-US' ? 'Hop-by-Hop Route Dissection' : '逐跳中转路径剖析 (Hop-by-Hop)' }}</span>
                 <div class="flex items-center gap-1.5">
-                  <span class="ui-num" style="color: var(--text-muted)">共 {{ tracerouteHops.length }} 跳</span>
+                  <span class="ui-num" style="color: var(--text-muted)">{{ locale === 'en-US' ? `${tracerouteHops.length} hops total` : `共 ${tracerouteHops.length} 跳` }}</span>
                   <button v-if="tracerouteHops.length > 0" @click="addTracerouteToDiffQueue"
                     class="px-2 py-0.5 rounded bg-emerald-500/12 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-[11px] font-semibold cursor-pointer"
-                    title="将该完整多跳路径序列纳入全局多组路径比对队列">
-                    + 整条路径入队
+                    :title="locale === 'en-US' ? 'Queue multi-hop route sequence into diff workbench' : '将该完整多跳路径序列纳入全局多组路径比对队列'">
+                    {{ locale === 'en-US' ? '+ Queue Route' : '+ 整条路径入队' }}
                   </button>
                 </div>
               </div>
@@ -527,7 +526,7 @@
                         #{{ hop.hop }}
                       </span>
                       <span class="font-bold truncate" style="color: var(--text-primary)">
-                        {{ hop.is_timeout ? '* * * (请求超时 / 防火墙屏蔽)' : hop.ip }}
+                        {{ hop.is_timeout ? (locale === 'en-US' ? '* * * (Request Timeout / Shielded)' : '* * * (请求超时 / 防火墙屏蔽)') : hop.ip }}
                       </span>
                     </div>
                     <span
@@ -541,14 +540,14 @@
 
                   <div v-if="!hop.is_timeout" class="text-[11px] mt-1 flex items-center justify-between gap-2" style="color: var(--text-secondary)">
                     <span class="truncate">
-                      {{ hop.is_lan ? (hop.lan_role || '内网设备') : `${hop.country} ${hop.province} ${hop.city}`.trim() || '公网路由节点' }}
+                      {{ hop.is_lan ? (hop.lan_role || (locale === 'en-US' ? 'LAN Device' : '内网设备')) : `${hop.country} ${hop.province} ${hop.city}`.trim() || (locale === 'en-US' ? 'Public Hop' : '公网路由节点') }}
                     </span>
                     <span class="truncate max-w-28 shrink-0" style="color: var(--text-muted)">{{ hop.isp }}</span>
                   </div>
 
                   <div v-if="!hop.is_timeout && hop.cumulative_distance_km > 0" class="text-[11px] mt-0.5 flex justify-between" style="color: var(--text-muted)">
-                    <span>累计距本机: {{ hop.cumulative_distance_km.toFixed(1) }} km</span>
-                    <span>理论光纤 RTT: {{ hop.theoretical_fiber_rtt_ms }} ms</span>
+                    <span>{{ locale === 'en-US' ? 'Dist from host: ' : '累计距本机: ' }}{{ hop.cumulative_distance_km.toFixed(1) }} km</span>
+                    <span>{{ locale === 'en-US' ? 'Fiber RTT: ' : '理论光纤 RTT: ' }}{{ hop.theoretical_fiber_rtt_ms }} ms</span>
                   </div>
                 </div>
               </div>
@@ -567,7 +566,7 @@
       style="color: var(--accent-primary-text)"
     >
       <AppIcon name="chevron-left" :size="13" />
-      <span>展开通讯清单与路由分析</span>
+      <span>{{ locale === 'en-US' ? 'Expand Peer List & Route Analysis' : '展开通讯清单与路由分析' }}</span>
     </button>
   </div>
 </template>
@@ -589,9 +588,9 @@ function addGeoPeerToDiffQueue(peer: RealPeerGeoNode) {
   const summary = `IP=${peer.ip}|GEO=${peer.geo_label}|ISP=${peer.isp}|PROTO=${peer.primary_protocol}|DIST=${peer.distance_km}km|IN=${peer.inbound_bytes}B|OUT=${peer.outbound_bytes}B`;
   diffBus.addToQueue({
     id: `GEO_${peer.ip}`,
-    label: `[地理节点] ${peer.ip}`,
+    label: locale.value === 'en-US' ? `[Geo Node] ${peer.ip}` : `[地理节点] ${peer.ip}`,
     protocol: peer.primary_protocol || 'GEO-PEER',
-    src: '本机探测点',
+    src: locale.value === 'en-US' ? 'Local Probe Point' : '本机探测点',
     dst: peer.ip,
     format: 'ASCII',
     isRawText: true,
@@ -606,7 +605,7 @@ function addGeoPeerToDiffQueue(peer: RealPeerGeoNode) {
       is_threat: String(peer.is_threat),
       process_name: peer.process_name || '-'
     }
-  }, `节点 ${peer.ip}`, false);
+  }, locale.value === 'en-US' ? `Node ${peer.ip}` : `节点 ${peer.ip}`, false);
 }
 
 function addTracerouteToDiffQueue() {
@@ -616,7 +615,7 @@ function addTracerouteToDiffQueue() {
     .join('\n');
   diffBus.addToQueue({
     id: `TRACE_${tracerouteTargetIp.value}_${Date.now()}`,
-    label: `[路由轨迹] ➔ ${tracerouteTargetIp.value} (${tracerouteHops.value.length}跳)`,
+    label: locale.value === 'en-US' ? `[Route Path] ➔ ${tracerouteTargetIp.value} (${tracerouteHops.value.length} hops)` : `[路由轨迹] ➔ ${tracerouteTargetIp.value} (${tracerouteHops.value.length}跳)`,
     protocol: 'TRACEROUTE',
     src: 'Local-Gateway',
     dst: tracerouteTargetIp.value || 'Target',
@@ -631,7 +630,7 @@ function addTracerouteToDiffQueue() {
       total_distance_km: totalTraceDistanceKm.value.toFixed(1),
       end_to_end_rtt: endToEndRttText.value
     }
-  }, `路由 ${tracerouteTargetIp.value}`, false);
+  }, locale.value === 'en-US' ? `Route ${tracerouteTargetIp.value}` : `路由 ${tracerouteTargetIp.value}`, false);
 }
 import {
   HIGH_RES_WORLD_POLYGONS,
@@ -1018,11 +1017,11 @@ async function initStandbySelfAnchor() {
       is_self: true,
       is_private: true,
       has_geo: true,
-      country: '中国',
+      country: locale.value === 'en-US' ? 'China' : '中国',
       province: '',
-      city: '本机探测终端',
-      isp: '本地网络适配器',
-      geo_label: '本机源端 (待机预览)',
+      city: locale.value === 'en-US' ? 'Local Host Terminal' : '本机探测终端',
+      isp: locale.value === 'en-US' ? 'Local Network Adapter' : '本地网络适配器',
+      geo_label: locale.value === 'en-US' ? 'Local Host (Standby)' : '本机源端 (待机预览)',
       coord: { lat: 22.5431, lon: 114.0579 },
       inbound_bytes: 0,
       outbound_bytes: 0,
@@ -1632,7 +1631,7 @@ function drawRealPeerTrafficArcsAndNodes(ctx: CanvasRenderingContext2D, w: numbe
 
       ctx.fillStyle = isDarkTheme.value ? '#34d399' : '#047857';
       ctx.font = 'bold 11px monospace';
-      ctx.fillText(`本机 [${selfNode.value.city}]`, pt.x + 9, pt.y - 6);
+      const localPrefix = locale.value === 'en-US' ? 'Local' : '本机'; ctx.fillText(`${localPrefix} [${selfNode.value.city}]`, pt.x + 9, pt.y - 6);
     }
   }
 }
@@ -1696,7 +1695,7 @@ function drawTracerouteHopPath(ctx: CanvasRenderingContext2D, w: number, h: numb
     const firstH = grp.hops[0];
     const lastH = grp.hops[grp.hops.length - 1];
     const hopSpan = grp.hops.length > 1 ? `#${firstH.hop}~#${lastH.hop}` : `#${firstH.hop}`;
-    const cityLabel = firstH.city || firstH.country || '路由节点';
+    const cityLabel = firstH.city || firstH.country || (locale.value === 'en-US' ? 'Route Hop' : '路由节点');
     const rttTag = lastH.rtt_ms !== null ? ` ${lastH.rtt_ms}ms` : '';
 
     ctx.fillStyle = isDarkTheme.value ? '#fef08a' : '#b45309';

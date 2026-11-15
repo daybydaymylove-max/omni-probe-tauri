@@ -19,7 +19,7 @@
                 : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'">
               <span class="w-1.5 h-1.5 rounded-full shrink-0"
                 :class="isRunning ? 'bg-emerald-500' : 'bg-slate-400'"></span>
-              <span>{{ isRunning ? t('netAssist.sessionRunning', { status: sessionStatus }) : t('netAssist.sessionIdle') }}</span>
+              <span>{{ isRunning ? t('netAssist.sessionRunning', { status: sessionStatusText }) : t('netAssist.sessionIdle') }}</span>
             </span>
           </div>
           <p class="text-[11px] mt-0.5" style="color: var(--text-muted)">
@@ -33,10 +33,10 @@
         <!-- 统计胶囊 -->
         <div class="flex items-center gap-2.5 ui-pill px-3 py-1 rounded-xl text-[11px]">
           <span style="color: var(--text-muted)">RX:</span>
-          <span class="font-bold text-emerald-700 dark:text-emerald-400">{{ formatBytes(stats.rxBytes) }} ({{ stats.rxPackets }} 帧)</span>
+          <span class="font-bold text-emerald-700 dark:text-emerald-400">{{ formatBytes(stats.rxBytes) }} ({{ stats.rxPackets }} {{ locale === 'en-US' ? 'frames' : '帧' }})</span>
           <span style="color: var(--border-strong)">|</span>
           <span style="color: var(--text-muted)">TX:</span>
-          <span class="font-bold text-sky-700 dark:text-sky-400">{{ formatBytes(stats.txBytes) }} ({{ stats.txPackets }} 帧)</span>
+          <span class="font-bold text-sky-700 dark:text-sky-400">{{ formatBytes(stats.txBytes) }} ({{ stats.txPackets }} {{ locale === 'en-US' ? 'frames' : '帧' }})</span>
         </div>
 
         <button @click="resetStats" class="ui-pill p-1.5 rounded-xl cursor-pointer" :title="t('netAssist.resetStats')">
@@ -171,7 +171,7 @@
             <div class="grid grid-cols-2 gap-1.5">
               <div>
                 <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-secondary);">{{ t('netAssist.udpBindPort') }}</label>
-                <input v-model.number="localBindPort" :disabled="isRunning" type="number" placeholder="0 (随机)" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono ui-num" />
+                <input v-model.number="localBindPort" :disabled="isRunning" type="number" :placeholder="locale === 'en-US' ? '0 (Random)' : '0 (随机)'" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono ui-num" />
               </div>
               <div>
                 <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-secondary);">{{ t('netAssist.udpTargetPort') }}</label>
@@ -183,7 +183,7 @@
                 <label class="text-[11px] font-semibold" style="color: var(--text-secondary);">{{ t('netAssist.udpTargetHost') }}</label>
                 <span class="text-[11px] text-blue-600 dark:text-sky-400 cursor-pointer hover:underline" @click="targetIp = '255.255.255.255'">{{ t('netAssist.udpBroadcast') }}</span>
               </div>
-              <input v-model="targetIp" placeholder="127.0.0.1 或 255.255.255.255" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono" />
+              <input v-model="targetIp" :placeholder="locale === 'en-US' ? '127.0.0.1 or 255.255.255.255' : '127.0.0.1 或 255.255.255.255'" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono" />
             </div>
           </template>
 
@@ -220,7 +220,7 @@
               <span class="font-semibold flex items-center gap-1.5" style="color: var(--text-primary);">
                 <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                 <span>{{ t('netAssist.rxTerminal') }}</span>
-                <span class="text-[11px] ui-num" style="color: var(--text-muted);">[{{ filteredPacketLog.length }} / {{ packetLog.length }} 帧]</span>
+                <span class="text-[11px] ui-num" style="color: var(--text-muted);">[{{ filteredPacketLog.length }} / {{ packetLog.length }} {{ locale === 'en-US' ? 'frames' : '帧' }}]</span>
               </span>
               <div class="flex items-center glass-pill p-0.5 rounded-lg text-[11px] font-mono">
                 <button @click="rxFormat = 'HEX'" :class="['px-2 py-0.5 rounded-md transition-all font-semibold cursor-pointer', rxFormat === 'HEX' ? 'bg-blue-600 text-white' : 'text-[var(--text-secondary)]']">HEX</button>
@@ -257,7 +257,7 @@
               </button>
 
               <button @click="packetLog = []" class="ui-btn-secondary px-2 py-0.5 text-[11px]">{{ t('netAssist.clearRx') }}</button>
-              <button @click="diffBus.openScratchpad()" class="ui-btn-secondary px-2 py-0.5 text-[11px] text-indigo-600 dark:text-indigo-300" title="打开自由数据差分工作台">
+              <button @click="diffBus.openScratchpad()" class="ui-btn-secondary px-2 py-0.5 text-[11px] text-indigo-600 dark:text-indigo-300" :title="locale === 'en-US' ? 'Open Free Data Diff Workbench' : '打开自由数据差分工作台'">
                 <AppIcon name="scale" :size="11" />
                 <span>{{ locale === 'en-US' ? 'Diff' : '比对' }}</span>
               </button>
@@ -289,13 +289,13 @@
                   <span v-if="showTimestamp" class="ui-num">{{ formatTime(item.timestamp_ms) }}</span>
 
                   <div class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                    <button @click="copyText(item.payload_hex)" class="ui-pill px-1.5 py-0.5 text-[11px] cursor-pointer" title="复制 HEX">HEX</button>
-                    <button @click="copyText(item.payload_text)" class="ui-pill px-1.5 py-0.5 text-[11px] cursor-pointer" title="复制 ASCII">TXT</button>
-                    <button @click="fillTxInput(item.payload_hex)" class="px-1.5 py-0.5 rounded bg-blue-500/12 text-blue-700 dark:text-sky-300 border border-blue-500/25 text-[11px] font-semibold cursor-pointer" title="转入发送区重发">载入</button>
-                    <button @click="inspectPacketInModal(item)" class="px-1.5 py-0.5 rounded bg-indigo-500/12 text-indigo-700 dark:text-indigo-300 border border-indigo-500/25 text-[11px] font-semibold cursor-pointer" title="全景解构此帧">解构</button>
-                    <button @click="setDiffSlotA(item)" class="px-1.5 py-0.5 rounded bg-blue-500/12 text-blue-700 dark:text-sky-300 border border-blue-500/25 text-[11px] font-semibold cursor-pointer">设为 A</button>
-                    <button @click="setDiffSlotB(item)" class="px-1.5 py-0.5 rounded bg-indigo-500/12 text-indigo-700 dark:text-indigo-300 border border-indigo-500/25 text-[11px] font-semibold cursor-pointer">设为 B</button>
-                    <button @click="addLogToDiffQueue(item)" class="px-1.5 py-0.5 rounded bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-[11px] font-semibold cursor-pointer" title="加入全局多组比对队列">+ 入队</button>
+                    <button @click="copyText(item.payload_hex)" class="ui-pill px-1.5 py-0.5 text-[11px] cursor-pointer" :title="locale === 'en-US' ? 'Copy HEX' : '复制 HEX'">HEX</button>
+                    <button @click="copyText(item.payload_text)" class="ui-pill px-1.5 py-0.5 text-[11px] cursor-pointer" :title="locale === 'en-US' ? 'Copy ASCII' : '复制 ASCII'">TXT</button>
+                    <button @click="fillTxInput(item.payload_hex)" class="px-1.5 py-0.5 rounded bg-blue-500/12 text-blue-700 dark:text-sky-300 border border-blue-500/25 text-[11px] font-semibold cursor-pointer" :title="locale === 'en-US' ? 'Load into TX area' : '转入发送区重发'">{{ locale === 'en-US' ? 'Load' : '载入' }}</button>
+                    <button @click="inspectPacketInModal(item)" class="px-1.5 py-0.5 rounded bg-indigo-500/12 text-indigo-700 dark:text-indigo-300 border border-indigo-500/25 text-[11px] font-semibold cursor-pointer" :title="locale === 'en-US' ? 'Dissect frame in detail modal' : '全景解构此帧'">{{ locale === 'en-US' ? 'Dissect' : '解构' }}</button>
+                    <button @click="setDiffSlotA(item)" class="px-1.5 py-0.5 rounded bg-blue-500/12 text-blue-700 dark:text-sky-300 border border-blue-500/25 text-[11px] font-semibold cursor-pointer">{{ locale === 'en-US' ? 'Diff A' : '设为 A' }}</button>
+                    <button @click="setDiffSlotB(item)" class="px-1.5 py-0.5 rounded bg-indigo-500/12 text-indigo-700 dark:text-indigo-300 border border-indigo-500/25 text-[11px] font-semibold cursor-pointer">{{ locale === 'en-US' ? 'Diff B' : '设为 B' }}</button>
+                    <button @click="addLogToDiffQueue(item)" class="px-1.5 py-0.5 rounded bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-[11px] font-semibold cursor-pointer" :title="locale === 'en-US' ? 'Queue frame into diff workbench' : '加入全局多组比对队列'">{{ locale === 'en-US' ? '+ Queue' : '+ 入队' }}</button>
                   </div>
                 </div>
               </div>
@@ -334,14 +334,14 @@
             <div class="flex items-center gap-2 text-[11px] flex-wrap">
               <select v-model="appendChecksum" style="width: auto" class="ui-input px-2 py-1 text-[11px] font-semibold shrink-0">
                 <option value="NONE">{{ t('netAssist.checksumNone') }}</option>
-                <option value="MODBUS_CRC16">Modbus CRC-16 (低字节在前)</option>
+                <option value="MODBUS_CRC16">{{ locale === 'en-US' ? 'Modbus CRC-16 (Low byte first)' : 'Modbus CRC-16 (低字节在前)' }}</option>
                 <option value="CRC32">CRC-32 (IEEE 802.3)</option>
-                <option value="SUM8">8位累加和 (SumCheck)</option>
-                <option value="BCC">异或校验 (BCC/XOR)</option>
+                <option value="SUM8">{{ locale === 'en-US' ? '8-bit Checksum (Sum8)' : '8位累加和 (SumCheck)' }}</option>
+                <option value="BCC">{{ locale === 'en-US' ? 'XOR Check (BCC)' : '异或校验 (BCC/XOR)' }}</option>
               </select>
 
               <select v-model="newlineType" style="width: auto" class="ui-input px-2 py-1 text-[11px] font-semibold shrink-0">
-                <option value="NONE">无换行</option>
+                <option value="NONE">{{ locale === 'en-US' ? 'None (No Break)' : '无换行' }}</option>
                 <option value="CRLF">\r\n (CRLF)</option>
                 <option value="LF">\n (LF)</option>
                 <option value="CR">\r (CR)</option>
@@ -373,7 +373,7 @@
                   <span v-if="txFormat === 'HEX'" :class="hexValidation.valid ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400 font-semibold'">
                     {{ hexValidation.message }}
                   </span>
-                  <span v-else>字符长度: {{ txPayload.length }} 字符</span>
+                  <span v-else>{{ locale === 'en-US' ? `Length: ${txPayload.length} chars` : `字符长度: ${txPayload.length} 字符` }}</span>
 
                   <span v-if="previewChecksum && appendChecksum !== 'NONE'" class="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/25 font-semibold text-[11px]">
                     + {{ appendChecksum }}: [{{ previewChecksum }}]
@@ -381,9 +381,9 @@
                 </div>
 
                 <div v-if="txHistoryList.length > 0" class="flex items-center gap-1">
-                  <span>历史:</span>
+                  <span>{{ locale === 'en-US' ? 'History:' : '历史:' }}</span>
                   <select @change="txPayload = ($event.target as HTMLSelectElement).value" class="bg-transparent text-[11px] outline-none max-w-[120px] truncate cursor-pointer" style="color: var(--text-primary);">
-                    <option value="">-- 最近发送 --</option>
+                    <option value="">{{ locale === 'en-US' ? '-- Recent Sent --' : '-- 最近发送 --' }}</option>
                     <option v-for="(h, idx) in txHistoryList" :key="idx" :value="h">{{ h }}</option>
                   </select>
                 </div>
@@ -424,14 +424,14 @@
           <label class="text-[11px] font-semibold block mb-1.5" style="color: var(--text-secondary);">{{ t('netAssist.quickTemplates') }}</label>
           <select @change="applyProtocolPreset(($event.target as HTMLSelectElement).value); ($event.target as HTMLSelectElement).value = ''" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono">
             <option value="">{{ locale === 'en-US' ? '-- Load Standard Industrial Payload --' : '-- 一键填入工业标准载荷 --' }}</option>
-            <option value="modbus_read">Modbus-TCP: 读保持寄存器 0-1 (Func 03)</option>
-            <option value="modbus_write">Modbus-TCP: 写单个保持寄存器 (Func 06)</option>
-            <option value="modbus_rtu">Modbus-RTU: 读寄存器 (含CRC16: 01 03 00 00 00 02 C4 0B)</option>
-            <option value="s7comm_setup">西门子 S7Comm: COTP 与通信握手请求</option>
-            <option value="iec104_testfr">电力 IEC 104: U 格式测试激活帧 (TESTFR_ACT)</option>
-            <option value="mqtt_ping">物联网 MQTT: 心跳保活帧 (PINGREQ)</option>
-            <option value="http_probe">HTTP/1.1: 基础探活请求 (GET / HTTP/1.1)</option>
-            <option value="sl651_telemetry">水利 SL651: 遥测数据上报帧</option>
+            <option value="modbus_read">{{ locale === 'en-US' ? 'Modbus-TCP: Read Holding Regs 0-1 (Func 03)' : 'Modbus-TCP: 读保持寄存器 0-1 (Func 03)' }}</option>
+            <option value="modbus_write">{{ locale === 'en-US' ? 'Modbus-TCP: Write Single Register (Func 06)' : 'Modbus-TCP: 写单个保持寄存器 (Func 06)' }}</option>
+            <option value="modbus_rtu">{{ locale === 'en-US' ? 'Modbus-RTU: Read Regs (with CRC16: 01 03 00 00 00 02 C4 0B)' : 'Modbus-RTU: 读寄存器 (含CRC16: 01 03 00 00 00 02 C4 0B)' }}</option>
+            <option value="s7comm_setup">{{ locale === 'en-US' ? 'Siemens S7Comm: COTP & Communication Handshake' : '西门子 S7Comm: COTP 与通信握手请求' }}</option>
+            <option value="iec104_testfr">{{ locale === 'en-US' ? 'Power IEC 104: U-Format Test Activation (TESTFR_ACT)' : '电力 IEC 104: U 格式测试激活帧 (TESTFR_ACT)' }}</option>
+            <option value="mqtt_ping">{{ locale === 'en-US' ? 'IoT MQTT: Heartbeat Keepalive (PINGREQ)' : '物联网 MQTT: 心跳保活帧 (PINGREQ)' }}</option>
+            <option value="http_probe">{{ locale === 'en-US' ? 'HTTP/1.1: Basic Probe Request (GET / HTTP/1.1)' : 'HTTP/1.1: 基础探活请求 (GET / HTTP/1.1)' }}</option>
+            <option value="sl651_telemetry">{{ locale === 'en-US' ? 'Water SL651: Telemetry Data Reporting Frame' : '水利 SL651: 遥测数据上报帧' }}</option>
           </select>
         </div>
 
@@ -548,13 +548,13 @@ const protocolModes = computed<ProtocolModeOption[]>(() => [
 ]);
 
 const quickPorts = [
-  { port: 502, label: 'Modbus', desc: '工业 Modbus-TCP 标准通信端口' },
-  { port: 102, label: 'S7', desc: '西门子 S7Comm PLC 通信端口' },
-  { port: 2404, label: '104', desc: '电力调度 IEC 60870-5-104 端口' },
-  { port: 1883, label: 'MQTT', desc: '物联网 MQTT 消息代理端口' },
-  { port: 80, label: 'HTTP', desc: '标准超文本通信端口' },
-  { port: 8080, label: 'Web', desc: '常用开发与嵌入式 Web 端口' },
-  { port: 44818, label: 'ENIP', desc: '罗克韦尔 EtherNet/IP 工业端口' },
+  { port: 502, label: 'Modbus', desc: locale.value === 'en-US' ? 'Industrial Modbus-TCP standard port' : '工业 Modbus-TCP 标准通信端口' },
+  { port: 102, label: 'S7', desc: locale.value === 'en-US' ? 'Siemens S7Comm PLC communication port' : '西门子 S7Comm PLC 通信端口' },
+  { port: 2404, label: '104', desc: locale.value === 'en-US' ? 'IEC 60870-5-104 telecontrol port' : '电力调度 IEC 60870-5-104 端口' },
+  { port: 1883, label: 'MQTT', desc: locale.value === 'en-US' ? 'IoT MQTT message broker port' : '物联网 MQTT 消息代理端口' },
+  { port: 80, label: 'HTTP', desc: locale.value === 'en-US' ? 'Standard HTTP communication port' : '标准超文本通信端口' },
+  { port: 8080, label: 'Web', desc: locale.value === 'en-US' ? 'Common dev & embedded Web port' : '常用开发与嵌入式 Web 端口' },
+  { port: 44818, label: 'ENIP', desc: locale.value === 'en-US' ? 'Rockwell EtherNet/IP industrial port' : '罗克韦尔 EtherNet/IP 工业端口' },
 ];
 
 interface LocalIpInfo {
@@ -565,7 +565,19 @@ interface LocalIpInfo {
 
 const selectedMode = ref<'TCP_CLIENT' | 'TCP_SERVER' | 'UDP'>('TCP_CLIENT');
 const isRunning = ref(false);
-const sessionStatus = ref('就绪');
+const sessionStatus = ref('ready');
+const sessionStatusText = computed(() => {
+  if (sessionStatus.value === 'ready' || sessionStatus.value === '就绪') {
+    return locale.value === 'en-US' ? 'Ready' : '就绪';
+  }
+  if (sessionStatus.value === 'running' || sessionStatus.value === '运行中') {
+    return locale.value === 'en-US' ? 'Running' : '运行中';
+  }
+  if (sessionStatus.value === 'stopped' || sessionStatus.value === '已停止') {
+    return locale.value === 'en-US' ? 'Stopped' : '已停止';
+  }
+  return sessionStatus.value;
+});
 
 // 配置参数
 const targetIp = ref('127.0.0.1');
@@ -573,8 +585,8 @@ const targetPort = ref(8080);
 const localBindIp = ref('0.0.0.0');
 const localBindPort = ref(8080);
 const localIpList = ref<LocalIpInfo[]>([
-  { ip: '0.0.0.0', name: '0.0.0.0 (全部本地网卡 / Any)', is_loopback: false },
-  { ip: '127.0.0.1', name: '127.0.0.1 (本地回环 / Loopback)', is_loopback: true },
+  { ip: '0.0.0.0', name: locale.value === 'en-US' ? '0.0.0.0 (All local NICs / Any)' : '0.0.0.0 (全部本地网卡 / Any)', is_loopback: false },
+  { ip: '127.0.0.1', name: locale.value === 'en-US' ? '127.0.0.1 (Local Loopback)' : '127.0.0.1 (本地回环 / Loopback)', is_loopback: true },
 ]);
 const frameTimeoutMs = ref(25);
 const activeClients = ref<string[]>([]);
@@ -648,30 +660,30 @@ function buildLogDiffPayload(item: PacketLogItem) {
 }
 
 function setDiffSlotA(item: PacketLogItem) {
-  diffBus.setSlotA(buildLogDiffPayload(item), `套接字调试 ${item.direction} #${item.id}`);
+  diffBus.setSlotA(buildLogDiffPayload(item), locale.value === 'en-US' ? `Socket Debug ${item.direction} #${item.id}` : `套接字调试 ${item.direction} #${item.id}`);
 }
 
 function setDiffSlotB(item: PacketLogItem) {
-  diffBus.setSlotB(buildLogDiffPayload(item), `套接字调试 ${item.direction} #${item.id}`);
+  diffBus.setSlotB(buildLogDiffPayload(item), locale.value === 'en-US' ? `Socket Debug ${item.direction} #${item.id}` : `套接字调试 ${item.direction} #${item.id}`);
   if (diffBus.slotA.value) {
     diffBus.compareSlots();
   }
 }
 
 function addLogToDiffQueue(item: PacketLogItem) {
-  diffBus.addToQueue(buildLogDiffPayload(item), `套接字 ${item.direction} #${item.id}`, false);
+  diffBus.addToQueue(buildLogDiffPayload(item), locale.value === 'en-US' ? `Socket ${item.direction} #${item.id}` : `套接字 ${item.direction} #${item.id}`, false);
 }
 
 function compareTxWithLastRx() {
   if (!lastRxItem.value) {
-    notifyWarning('提示', '尚未捕获到任何对端响应帧，请先发送并接收数据');
+    notifyWarning(locale.value === 'en-US' ? 'Notice' : '提示', locale.value === 'en-US' ? 'No peer response captured yet, please send and receive data first' : '尚未捕获到任何对端响应帧，请先发送并接收数据');
     return;
   }
   const isAsciiMode = txFormat.value === 'ASCII';
   const cleanHex = !isAsciiMode ? txPayload.value.replace(/[\s\r\n\t]/g, '') : '';
   const txItem = {
     id: 'TX_DRAFT',
-    label: `[TX 请求帧] ${targetIp.value || '127.0.0.1'}:${targetPort.value || 0}`,
+    label: locale.value === 'en-US' ? `[TX Request] ${targetIp.value || '127.0.0.1'}:${targetPort.value || 0}` : `[TX 请求帧] ${targetIp.value || '127.0.0.1'}:${targetPort.value || 0}`,
     timestamp: new Date().toLocaleTimeString(),
     direction: 'TX',
     protocol: selectedMode.value,
@@ -685,7 +697,7 @@ function compareTxWithLastRx() {
   };
   const rxItem = {
     id: lastRxItem.value.id,
-    label: `[RX 最新回复] ${lastRxItem.value.remote_addr}`,
+    label: locale.value === 'en-US' ? `[RX Latest Response] ${lastRxItem.value.remote_addr}` : `[RX 最新回复] ${lastRxItem.value.remote_addr}`,
     timestamp: formatTime(lastRxItem.value.timestamp_ms),
     direction: 'RX',
     protocol: selectedMode.value,
@@ -722,11 +734,11 @@ interface PresetCommand {
 }
 
 const presetCommands = ref<PresetCommand[]>([
-  { name: 'Modbus 读保持寄存器', payload: '01 03 00 00 00 02' },
-  { name: 'Modbus 读输入寄存器', payload: '01 04 00 00 00 02' },
-  { name: 'S7Comm 握手请求', payload: '03 00 00 16 11 E0 00 00 00 01 00 C1 02 01 00 C2 02 01 02 C0 01 09' },
-  { name: 'IEC 104 测试激活帧', payload: '68 04 43 00 00 00' },
-  { name: 'MQTT PINGREQ 心跳', payload: 'C0 00' },
+  { name: locale.value === 'en-US' ? 'Modbus Read Holding Regs' : 'Modbus 读保持寄存器', payload: '01 03 00 00 00 02' },
+  { name: locale.value === 'en-US' ? 'Modbus Read Input Regs' : 'Modbus 读输入寄存器', payload: '01 04 00 00 00 02' },
+  { name: locale.value === 'en-US' ? 'S7Comm Handshake Setup' : 'S7Comm 握手请求', payload: '03 00 00 16 11 E0 00 00 00 01 00 C1 02 01 00 C2 02 01 02 C0 01 09' },
+  { name: locale.value === 'en-US' ? 'IEC 104 TESTFR Activation' : 'IEC 104 测试激活帧', payload: '68 04 43 00 00 00' },
+  { name: locale.value === 'en-US' ? 'MQTT PINGREQ Keepalive' : 'MQTT PINGREQ 心跳', payload: 'C0 00' },
 ]);
 
 // 过滤接收日志
@@ -743,20 +755,20 @@ const filteredPacketLog = computed(() => {
 // HEX 输入实时校验计算
 const hexValidation = computed(() => {
   if (txFormat.value !== 'HEX') {
-    return { valid: true, message: 'ASCII 文本模式' };
+    return { valid: true, message: locale.value === 'en-US' ? 'ASCII Text Mode' : 'ASCII 文本模式' };
   }
   const clean = txPayload.value.replace(/\s+/g, '');
   if (!clean) {
-    return { valid: true, message: '待输入数据' };
+    return { valid: true, message: locale.value === 'en-US' ? 'Awaiting Data Input' : '待输入数据' };
   }
   if (!/^[0-9a-fA-F]*$/.test(clean)) {
-    return { valid: false, message: '存在非十六进制字符 (合法范围: 0-9, A-F)' };
+    return { valid: false, message: locale.value === 'en-US' ? 'Invalid hex characters detected (Allowed: 0-9, A-F)' : '存在非十六进制字符 (合法范围: 0-9, A-F)' };
   }
   if (clean.length % 2 !== 0) {
-    return { valid: false, message: '半字节缺失 (当前为奇数个字符)' };
+    return { valid: false, message: locale.value === 'en-US' ? 'Odd nibble detected (Odd number of characters)' : '半字节缺失 (当前为奇数个字符)' };
   }
   const bytesCount = clean.length / 2;
-  return { valid: true, message: `有效载荷: ${bytesCount} 字节` };
+  return { valid: true, message: locale.value === 'en-US' ? `Valid Payload: ${bytesCount} bytes` : `有效载荷: ${bytesCount} 字节` };
 });
 
 // 监听并动态预计算即将追加的校验和
@@ -807,19 +819,19 @@ function formatTxHex() {
 function copyText(str: string) {
   if (!str) return;
   navigator.clipboard.writeText(str).then(() => {
-    notifySuccess('已复制至剪贴板', str.length > 30 ? `${str.slice(0, 30)}...` : str);
+    notifySuccess(locale.value === 'en-US' ? 'Copied to Clipboard' : '已复制至剪贴板', str.length > 30 ? `${str.slice(0, 30)}...` : str);
   });
 }
 
 function fillTxInput(hexStr: string) {
   txPayload.value = formatHexSpaced(hexStr);
   txFormat.value = 'HEX';
-  notifyInfo('已载入发送输入区', '可直接修改后执行回显或反向发送');
+  notifyInfo(locale.value === 'en-US' ? 'Loaded into TX Area' : '已载入发送输入区', locale.value === 'en-US' ? 'Ready to modify or echo/transmit' : '可直接修改后执行回显或反向发送');
 }
 
 function resetStats() {
   stats.value = { rxBytes: 0, rxPackets: 0, txBytes: 0, txPackets: 0 };
-  notifyInfo('通信统计已复位', 'RX/TX 吞吐与帧计数器已归零');
+  notifyInfo(locale.value === 'en-US' ? 'Statistics Reset' : '通信统计已复位', locale.value === 'en-US' ? 'RX/TX throughput and frame counters cleared' : 'RX/TX 吞吐与帧计数器已归零');
 }
 
 async function loadLocalIpAddresses() {
@@ -844,7 +856,7 @@ async function toggleSession() {
     try {
       await invoke('stop_net_assist_session_cmd');
       isRunning.value = false;
-      sessionStatus.value = '已停止';
+      sessionStatus.value = 'stopped';
       if (repeatTimer) {
         clearInterval(repeatTimer);
         repeatTimer = null;
@@ -855,9 +867,9 @@ async function toggleSession() {
         sequenceTimer = null;
         isSequencePolling.value = false;
       }
-      notifyInfo('网络调试会话已终止', '物理套接字句柄已安全释放');
+      notifyInfo(locale.value === 'en-US' ? 'Session Terminated' : '网络调试会话已终止', locale.value === 'en-US' ? 'Socket handle safely released' : '物理套接字句柄已安全释放');
     } catch (e) {
-      notifyError('停止会话失败', e);
+      notifyError(locale.value === 'en-US' ? 'Failed to Stop Session' : '停止会话失败', e);
     }
   } else {
     try {
@@ -872,17 +884,17 @@ async function toggleSession() {
 
       await invoke('start_net_assist_session_cmd', { config });
       isRunning.value = true;
-      sessionStatus.value = '运行中';
-      notifySuccess('网络调试会话已建立', `模式: ${selectedMode.value}，端口已成功绑定接通`);
+      sessionStatus.value = 'running';
+      notifySuccess(locale.value === 'en-US' ? 'Session Established' : '网络调试会话已建立', locale.value === 'en-US' ? `Mode: ${selectedMode.value}, port bound and connected` : `模式: ${selectedMode.value}，端口已成功绑定接通`);
     } catch (e) {
-      notifyError('启动调试会话受阻', e);
+      notifyError(locale.value === 'en-US' ? 'Failed to Start Session' : '启动调试会话受阻', e);
     }
   }
 }
 
 async function sendPayload() {
   if (!isRunning.value) {
-    notifyWarning('操作受阻', '请先启动调试会话并建立套接字连接');
+    notifyWarning(locale.value === 'en-US' ? 'Action Blocked' : '操作受阻', locale.value === 'en-US' ? 'Please start session and connect socket first' : '请先启动调试会话并建立套接字连接');
     return;
   }
 
@@ -915,7 +927,7 @@ async function sendPayload() {
       });
       hexToSend += checksumStr.replace(/\s+/g, '');
     } catch (e) {
-      notifyError('校验和计算失败', e);
+      notifyError(locale.value === 'en-US' ? 'Checksum Calculation Failed' : '校验和计算失败', e);
       return;
     }
   }
@@ -941,7 +953,7 @@ async function sendPayload() {
       }
     }
   } catch (e) {
-    notifyError('发送数据受阻', e);
+    notifyError(locale.value === 'en-US' ? 'Failed to Send Data' : '发送数据受阻', e);
   }
 }
 
@@ -953,7 +965,7 @@ function sendSpecificPreset(preset: PresetCommand) {
 
 function addNewPreset() {
   presetCommands.value.push({
-    name: `自定义指令 ${presetCommands.value.length + 1}`,
+    name: locale.value === 'en-US' ? `Custom Cmd ${presetCommands.value.length + 1}` : `自定义指令 ${presetCommands.value.length + 1}`,
     payload: '01 03 00 00 00 01',
   });
   savePresetsToStorage();
@@ -975,20 +987,20 @@ function savePresetsToStorage() {
 function toggleAutoRepeat() {
   if (autoRepeat.value) {
     if (!isRunning.value) {
-      notifyWarning('请先启动会话', '调试会话处于就绪状态下方可执行循环自动发送');
+      notifyWarning(locale.value === 'en-US' ? 'Start Session First' : '请先启动会话', locale.value === 'en-US' ? 'Auto repeat requires an active session' : '调试会话处于就绪状态下方可执行循环自动发送');
       autoRepeat.value = false;
       return;
     }
     repeatTimer = setInterval(() => {
       sendPayload();
     }, Math.max(50, repeatIntervalMs.value));
-    notifyInfo('自动循环发送已启动', `发送步长间隔: ${repeatIntervalMs.value} ms`);
+    notifyInfo(locale.value === 'en-US' ? 'Auto Repeat Started' : '自动循环发送已启动', locale.value === 'en-US' ? `Interval: ${repeatIntervalMs.value} ms` : `发送步长间隔: ${repeatIntervalMs.value} ms`);
   } else {
     if (repeatTimer) {
       clearInterval(repeatTimer);
       repeatTimer = null;
     }
-    notifyInfo('自动循环发送已停止', '已恢复手动发报模式');
+    notifyInfo(locale.value === 'en-US' ? 'Auto Repeat Stopped' : '自动循环发送已停止', locale.value === 'en-US' ? 'Restored manual mode' : '已恢复手动发报模式');
   }
 }
 
@@ -999,14 +1011,14 @@ function toggleSequencePoller() {
       sequenceTimer = null;
     }
     isSequencePolling.value = false;
-    notifyInfo('指令序列轮发已终止', '已暂停周期多从站轮询');
+    notifyInfo(locale.value === 'en-US' ? 'Sequence Polling Stopped' : '指令序列轮发已终止', locale.value === 'en-US' ? 'Multi-slave cycle paused' : '已暂停周期多从站轮询');
   } else {
     if (!isRunning.value) {
-      notifyWarning('会话未建立', '请先启动网络调试会话后再执行序列轮发');
+      notifyWarning(locale.value === 'en-US' ? 'Session Not Established' : '会话未建立', locale.value === 'en-US' ? 'Please start network session first' : '请先启动网络调试会话后再执行序列轮发');
       return;
     }
     if (presetCommands.value.length === 0) {
-      notifyWarning('无预置指令', '请先在右侧添加至少一条待发送指令');
+      notifyWarning(locale.value === 'en-US' ? 'No Preset Commands' : '无预置指令', locale.value === 'en-US' ? 'Please add at least one command on the right' : '请先在右侧添加至少一条待发送指令');
       return;
     }
     isSequencePolling.value = true;
@@ -1023,7 +1035,7 @@ function toggleSequencePoller() {
       }
     }, Math.max(100, sequenceIntervalMs.value));
 
-    notifySuccess('多指令序列轮发已启动', `步长间隔: ${sequenceIntervalMs.value} ms`);
+    notifySuccess(locale.value === 'en-US' ? 'Sequence Polling Started' : '多指令序列轮发已启动', locale.value === 'en-US' ? `Step interval: ${sequenceIntervalMs.value} ms` : `步长间隔: ${sequenceIntervalMs.value} ms`);
   }
 }
 
@@ -1060,12 +1072,12 @@ function applyProtocolPreset(type: string) {
       txPayload.value = '7E 7E 01 00 00 00 00 01 00 02 32 00 00 03 14 00 00 00';
       break;
   }
-  notifyInfo('工控规约模板已载入', `已将 ${type} 报文载入发送终端`);
+  notifyInfo(locale.value === 'en-US' ? 'Protocol Template Loaded' : '工控规约模板已载入', locale.value === 'en-US' ? `Loaded ${type} into TX terminal` : `已将 ${type} 报文载入发送终端`);
 }
 
 async function exportLog() {
   if (packetLog.value.length === 0) {
-    notifyWarning('导出提示', '当前无数据记录可供导出');
+    notifyWarning(locale.value === 'en-US' ? 'Export Notice' : '导出提示', locale.value === 'en-US' ? 'No data records available to export' : '当前无数据记录可供导出');
     return;
   }
   const lines = packetLog.value.map(p => {
@@ -1074,9 +1086,9 @@ async function exportLog() {
   await saveTextViaNativeDesktop(
     `OmniProbe_SocketLog_${Date.now()}.txt`,
     lines.join('\n'),
-    '通信日志文本 (*.txt)',
+    locale.value === 'en-US' ? 'Communication Log (*.txt)' : '通信日志文本 (*.txt)',
     '*.txt;*.log',
-    '导出网络调试通信日志'
+    locale.value === 'en-US' ? 'Export Communication Logs' : '导出网络调试通信日志'
   );
 }
 
@@ -1102,8 +1114,8 @@ function inspectPacketInModal(item: PacketLogItem) {
     raw_text: item.payload_text,
     entropy: 0,
     entropy_level: 'normal',
-    mac_src: '-- (Socket 通道)',
-    mac_dst: '-- (Socket 通道)',
+    mac_src: locale.value === 'en-US' ? '-- (Socket Channel)' : '-- (Socket 通道)',
+    mac_dst: locale.value === 'en-US' ? '-- (Socket Channel)' : '-- (Socket 通道)',
     chain_hash: `NET_ASSIST_${item.id}`,
     business_data: undefined,
   };
@@ -1137,7 +1149,7 @@ onMounted(async () => {
       txPayload.value = formatHexSpaced(incoming);
       txFormat.value = 'HEX';
       localStorage.removeItem('omni_probe_net_assist_incoming_payload');
-      notifyInfo('已载入待测报文载荷', '来自全息流量分析台的快捷推送');
+      notifyInfo(locale.value === 'en-US' ? 'Payload Loaded' : '已载入待测报文载荷', locale.value === 'en-US' ? 'Quick push from Traffic Analyzer' : '来自全息流量分析台的快捷推送');
     }
   } catch (err) {
     console.warn('[NetAssist] restore persisted storage or incoming payload failed:', err);
@@ -1197,9 +1209,9 @@ onMounted(async () => {
   unlistenClients = await listen<{ active_clients?: string[]; event_type?: string; client_addr?: string }>('net-assist-clients', (event) => {
     activeClients.value = event.payload.active_clients || [];
     if (event.payload.event_type === 'CONNECTED') {
-      notifyInfo('新客户端接入', `端点: ${event.payload.client_addr} 已连接`);
+      notifyInfo(locale.value === 'en-US' ? 'New Client Connected' : '新客户端接入', locale.value === 'en-US' ? `Endpoint: ${event.payload.client_addr} connected` : `端点: ${event.payload.client_addr} 已连接`);
     } else {
-      notifyWarning('客户端断开', `端点: ${event.payload.client_addr} 已退出`);
+      notifyWarning(locale.value === 'en-US' ? 'Client Disconnected' : '客户端断开', locale.value === 'en-US' ? `Endpoint: ${event.payload.client_addr} exited` : `端点: ${event.payload.client_addr} 已退出`);
     }
   });
 });

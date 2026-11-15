@@ -15,7 +15,7 @@
             <div class="flex items-center gap-2 flex-wrap">
               <h2 class="text-[13px] font-semibold tracking-tight" style="color: var(--text-primary);">{{ locale === 'en-US' ? '4D Compliance Audit & Data De-identification Workspace' : '四维合规安全审查与数据脱敏清洗工作台' }}</h2>
               <span class="ui-pill px-2 py-0.5 rounded-full text-[11px] font-medium">
-                GB/T 22239 等保三级 · GB/T 43697 · 国家秘密法
+                {{ locale === 'en-US' ? 'GB/T 22239 Level 3 · GB/T 43697 · State Secrets Law' : 'GB/T 22239 等保三级 · GB/T 43697 · 国家秘密法' }}
               </span>
             </div>
             <p class="text-[11px] mt-0.5 truncate" style="color: var(--text-muted);">
@@ -146,7 +146,7 @@
               {{ sanitizationPolicies.length }} <span class="text-[11px] font-normal" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Policies' : '套标准策略模板' }}</span>
             </div>
             <div class="text-[11px] truncate mt-0.5" style="color: var(--text-muted);">
-              闭环逆向复测 · 出具密码学防篡改凭单
+              {{ locale === 'en-US' ? 'Closed-loop reverse audit · Issue cryptographic tamper-proof proof' : '闭环逆向复测 · 出具密码学防篡改凭单' }}
             </div>
           </div>
           <span
@@ -161,8 +161,8 @@
           >
             {{
               auditProof
-                ? (auditProof.is_fully_compliant ? '核验通过' : '存在残留')
-                : (sanitizationPolicies.length > 0 ? '待自测核验' : '未加载策略')
+                ? (auditProof.is_fully_compliant ? (locale === 'en-US' ? 'Verified Clean' : '核验通过') : (locale === 'en-US' ? 'Residual Detected' : '存在残留'))
+                : (sanitizationPolicies.length > 0 ? (locale === 'en-US' ? 'Pending Audit' : '待自测核验') : (locale === 'en-US' ? 'No Policy' : '未加载策略'))
             }}
           </span>
         </div>
@@ -181,14 +181,14 @@
         </div>
         <div class="min-w-0">
           <div class="font-semibold text-xs flex items-center gap-2 flex-wrap">
-            <span class="text-amber-700 dark:text-amber-300 font-bold">💡 智能感知提示：{{ ruleAssetsHealth.smart_status.status_title }}</span>
+            <span class="text-amber-700 dark:text-amber-300 font-bold">💡 {{ locale === 'en-US' ? 'Smart Perception Notice: ' : '智能感知提示：' }}{{ ruleAssetsHealth.smart_status.status_title }}</span>
             <span class="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/25 text-amber-800 dark:text-amber-200 font-semibold">
-              包体积 {{ formatBytes(ruleAssetsHealth.smart_status.archive_size_bytes) }} · 待构建
+              {{ locale === 'en-US' ? 'Package size ' : '包体积 ' }}{{ formatBytes(ruleAssetsHealth.smart_status.archive_size_bytes) }} · {{ locale === 'en-US' ? 'Pending build' : '待构建' }}
             </span>
           </div>
           <p class="text-[11px] opacity-90 mt-0.5 leading-snug">
             {{ ruleAssetsHealth.smart_status.status_description }}
-            <b class="text-amber-800 dark:text-amber-300 ml-1">Suricata 引擎调用前需进行一次解压展开与 CVE 聚合提取，之后即可零开销就地调用。</b>
+            <b class="text-amber-800 dark:text-amber-300 ml-1">{{ locale === 'en-US' ? 'Suricata engine requires one-time extraction and CVE aggregation before zero-overhead direct invocation.' : 'Suricata 引擎调用前需进行一次解压展开与 CVE 聚合提取，之后即可零开销就地调用。' }}</b>
           </p>
         </div>
       </div>
@@ -199,20 +199,20 @@
           class="ui-btn-primary bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-1.5 text-xs flex items-center gap-1.5 shadow-sm font-semibold"
         >
           <AppIcon name="shield" :size="13" />
-          <span>{{ isSmartSyncing ? '正在智能解包并聚合 CVE (秒级)...' : '⚡ 立即智能解包并构建生效' }}</span>
+          <span>{{ isSmartSyncing ? (locale === 'en-US' ? 'Smart unpacking & aggregating CVEs (seconds)...' : '正在智能解包并聚合 CVE (秒级)...') : (locale === 'en-US' ? '⚡ Smart Unpack & Build Now' : '⚡ 立即智能解包并构建生效') }}</span>
         </button>
         <button
           @click="isRuleAssetsModalOpen = true; showOfflineManualHelp = true"
           class="ui-btn-secondary px-3 py-1.5 text-xs border-amber-500/30 flex items-center gap-1"
         >
           <AppIcon name="document" :size="12" />
-          <span>脱网部署说明</span>
+          <span>{{ locale === 'en-US' ? 'Air-gapped Guide' : '脱网部署说明' }}</span>
         </button>
         <button
           @click="isRuleAssetsModalOpen = true; showOfflineManualHelp = false"
           class="ui-btn-secondary px-3 py-1.5 text-xs border-amber-500/30"
         >
-          <span>规则底账 ({{ ruleAssetsHealth.total_assets }})</span>
+          <span>{{ locale === 'en-US' ? `Rules Ledger (${ruleAssetsHealth.total_assets})` : `规则底账 (${ruleAssetsHealth.total_assets})` }}</span>
         </button>
       </div>
     </div>
@@ -228,14 +228,14 @@
         </div>
         <div class="min-w-0">
           <div class="font-semibold text-xs flex items-center gap-2 flex-wrap">
-            <span class="text-sky-700 dark:text-sky-300 font-bold">🔄 智能感知提示：{{ ruleAssetsHealth.smart_status.status_title }}</span>
+            <span class="text-sky-700 dark:text-sky-300 font-bold">🔄 {{ locale === 'en-US' ? 'Smart Perception Notice: ' : '智能感知提示：' }}{{ ruleAssetsHealth.smart_status.status_title }}</span>
             <span class="px-2 py-0.5 rounded-full text-[10px] bg-sky-500/25 text-sky-800 dark:text-sky-200 font-semibold">
-              新包拷入时间: {{ ruleAssetsHealth.smart_status.archive_mtime_str }}
+              {{ locale === 'en-US' ? 'New package timestamp: ' : '新包拷入时间: ' }}{{ ruleAssetsHealth.smart_status.archive_mtime_str }}
             </span>
           </div>
           <p class="text-[11px] opacity-90 mt-0.5 leading-snug">
             {{ ruleAssetsHealth.smart_status.status_description }}
-            <span class="opacity-80 ml-1">建议一键执行智能同步更新，引擎将增量解压最新分类规则并重新生成 6,000+ 条 CVE 聚合库热重载生效。</span>
+            <span class="opacity-80 ml-1">{{ locale === 'en-US' ? 'Recommended to sync update: incremental unpacking of categorized rules and hot reload of 6,000+ CVEs.' : '建议一键执行智能同步更新，引擎将增量解压最新分类规则并重新生成 6,000+ 条 CVE 聚合库热重载生效。' }}</span>
           </p>
         </div>
       </div>
@@ -246,13 +246,13 @@
           class="ui-btn-primary bg-sky-600 hover:bg-sky-500 text-white px-3.5 py-1.5 text-xs flex items-center gap-1.5 shadow-sm font-semibold"
         >
           <AppIcon name="refresh" :size="13" />
-          <span>{{ isSmartSyncing ? '正在同步更新最新规则...' : '⚡ 立即智能同步更新' }}</span>
+          <span>{{ isSmartSyncing ? (locale === 'en-US' ? 'Syncing latest rules...' : '正在同步更新最新规则...') : (locale === 'en-US' ? '⚡ Smart Sync Update Now' : '⚡ 立即智能同步更新') }}</span>
         </button>
         <button
           @click="isRuleAssetsModalOpen = true"
           class="ui-btn-secondary px-3 py-1.5 text-xs border-sky-500/30"
         >
-          <span>智能诊断看板</span>
+          <span>{{ locale === 'en-US' ? 'Diagnostic Dashboard' : '智能诊断看板' }}</span>
         </button>
       </div>
     </div>
@@ -264,9 +264,9 @@
     >
       <div class="flex items-center gap-2 min-w-0">
         <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
-        <span class="font-semibold shrink-0 text-emerald-800 dark:text-emerald-300">✅ 离线规则库已处于最新状态 (零开销直读模式)</span>
+        <span class="font-semibold shrink-0 text-emerald-800 dark:text-emerald-300">{{ locale === 'en-US' ? '✅ Offline rules library up to date (Zero-overhead direct mode)' : '✅ 离线规则库已处于最新状态 (零开销直读模式)' }}</span>
         <span class="text-[11px] opacity-85 truncate">
-          当前运行: <b>{{ ruleAssetsHealth?.active_library_name }}</b> ({{ ruleAssetsHealth?.active_rule_count }} 条规则 / {{ ruleAssetsHealth?.active_cve_count }} 条 CVE 签名) · 本地规则库与压缩包完全同步，<b>调用时就地内存直读，无需重复解压</b>
+          {{ locale === 'en-US' ? 'Active: ' : '当前运行: ' }}<b>{{ ruleAssetsHealth?.active_library_name }}</b> ({{ ruleAssetsHealth?.active_rule_count }} {{ locale === 'en-US' ? 'rules' : '条规则' }} / {{ ruleAssetsHealth?.active_cve_count }} {{ locale === 'en-US' ? 'CVE signatures' : '条 CVE 签名' }}) · {{ locale === 'en-US' ? 'Synchronized with local archive; memory direct-read without re-extraction' : '本地规则库与压缩包完全同步，调用时就地内存直读，无需重复解压' }}
         </span>
       </div>
       <div class="flex items-center gap-2 shrink-0">
@@ -274,16 +274,16 @@
           @click="handleSmartSyncArchive()"
           :disabled="isSmartSyncing"
           class="ui-btn-secondary px-2.5 py-1 text-[11px] flex items-center gap-1"
-          title="如本地规则文件异常，可点击强制重新从压缩包解压并构建 CVE 聚合库"
+          :title="locale === 'en-US' ? 'Force re-extraction from archive and rebuild CVE aggregated library' : '如本地规则文件异常，可点击强制重新从压缩包解压并构建 CVE 聚合库'"
         >
           <AppIcon name="refresh" :size="11" />
-          <span>{{ isSmartSyncing ? '重新构建中...' : '强制重新构建' }}</span>
+          <span>{{ isSmartSyncing ? (locale === 'en-US' ? 'Rebuilding...' : '重新构建中...') : (locale === 'en-US' ? 'Force Rebuild' : '强制重新构建') }}</span>
         </button>
         <button
           @click="isRuleAssetsModalOpen = true"
           class="ui-btn-secondary px-2.5 py-1 text-[11px]"
         >
-          <span>规则底账 ({{ ruleAssetsHealth?.total_assets }})</span>
+          <span>{{ locale === 'en-US' ? `Rules Ledger (${ruleAssetsHealth?.total_assets})` : `规则底账 (${ruleAssetsHealth?.total_assets})` }}</span>
         </button>
       </div>
     </div>
@@ -299,13 +299,13 @@
         </div>
         <div class="min-w-0">
           <div class="font-semibold text-xs flex items-center gap-2 flex-wrap">
-            <span>离线规则库资产自检告警：检测到当前缺失全量 CVE 离线规则库</span>
+            <span>{{ locale === 'en-US' ? 'Offline Rules Self-Test Warning: Missing full CVE offline library' : '离线规则库资产自检告警：检测到当前缺失全量 CVE 离线规则库' }}</span>
             <span class="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/25 text-amber-800 dark:text-amber-300 font-semibold">
-              缺少 {{ ruleAssetsHealth.missing_assets }} 项关键离线资产
+              {{ locale === 'en-US' ? `Missing ${ruleAssetsHealth.missing_assets} key offline assets` : `缺少 ${ruleAssetsHealth.missing_assets} 项关键离线资产` }}
             </span>
           </div>
           <p class="text-[11px] opacity-90 mt-0.5 leading-snug">
-            当前仅运行基础工业核心基线 ({{ ruleAssetsHealth.active_rule_count }} 条)。官方全量 52,975 条入侵特征及 6,264 条 CVE 漏洞利用签名未就绪，脱机环境无法离线阻断深度 CVE 攻击。建议一键在线同步下载，或在脱网环境下导入本地离线包。
+            {{ locale === 'en-US' ? `Running basic industrial core baseline only (${ruleAssetsHealth.active_rule_count} rules). Full 52,975 intrusion signatures & 6,264 CVE exploit signatures not ready; cannot block deep CVE attacks offline. Recommended to sync online or import local air-gapped package.` : `当前仅运行基础工业核心基线 (${ruleAssetsHealth.active_rule_count} 条)。官方全量 52,975 条入侵特征及 6,264 条 CVE 漏洞利用签名未就绪，脱机环境无法离线阻断深度 CVE 攻击。建议一键在线同步下载，或在脱网环境下导入本地离线包。` }}
           </p>
         </div>
       </div>
@@ -316,20 +316,20 @@
           class="ui-btn-primary bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-1.5 text-xs flex items-center gap-1.5 shadow-sm"
         >
           <AppIcon name="refresh" :size="12" />
-          <span>{{ isSyncingRules ? '正在在线拉取并构建 (5.2万条)...' : '一键在线下载并构建全量库' }}</span>
+          <span>{{ isSyncingRules ? (locale === 'en-US' ? 'Downloading & building online (52k rules)...' : '正在在线拉取并构建 (5.2万条)...') : (locale === 'en-US' ? 'Download & Build Full Library Online' : '一键在线下载并构建全量库') }}</span>
         </button>
         <button
           @click="isRuleAssetsModalOpen = true; showOfflineManualHelp = true"
           class="ui-btn-secondary px-3 py-1.5 text-xs border-amber-500/30 flex items-center gap-1"
         >
           <AppIcon name="document" :size="12" />
-          <span>导入本地 .tar.gz / 离线说明</span>
+          <span>{{ locale === 'en-US' ? 'Import Local .tar.gz / Offline Guide' : '导入本地 .tar.gz / 离线说明' }}</span>
         </button>
         <button
           @click="isRuleAssetsModalOpen = true; showOfflineManualHelp = false"
           class="ui-btn-secondary px-3 py-1.5 text-xs border-amber-500/30"
         >
-          <span>规则底账</span>
+          <span>{{ locale === 'en-US' ? 'Rules Ledger' : '规则底账' }}</span>
         </button>
       </div>
     </div>
@@ -347,7 +347,7 @@
               activeTab === 'network' ? 'bg-[var(--accent-primary)] text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             ]"
           >
-            <span>网络安全审查</span>
+            <span>{{ locale === 'en-US' ? 'Network Security Audit' : '网络安全审查' }}</span>
             <span :class="['px-1.5 py-0.5 rounded-full text-[11px] ui-num', activeTab === 'network' ? 'bg-white/20 text-white' : 'bg-[var(--surface-glass-pill)] text-[var(--text-secondary)]']">{{ networkEvents.length }}</span>
           </button>
 
@@ -358,7 +358,7 @@
               activeTab === 'data_sec' ? 'bg-[var(--accent-primary)] text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             ]"
           >
-            <span>数据安全审查 (分类分级)</span>
+            <span>{{ locale === 'en-US' ? 'Data Security Audit (Classification)' : '数据安全审查 (分类分级)' }}</span>
             <span :class="['px-1.5 py-0.5 rounded-full text-[11px] ui-num', activeTab === 'data_sec' ? 'bg-white/20 text-white' : 'bg-[var(--surface-glass-pill)] text-[var(--text-secondary)]']">{{ sensitiveFindings.length }}</span>
           </button>
 
@@ -369,7 +369,7 @@
               activeTab === 'confidential' ? 'bg-[var(--accent-primary)] text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             ]"
           >
-            <span>保密安全审查 (法定公文)</span>
+            <span>{{ locale === 'en-US' ? 'Secrecy Compliance Audit (Documents)' : '保密安全审查 (法定公文)' }}</span>
             <span :class="['px-1.5 py-0.5 rounded-full text-[11px] ui-num', activeTab === 'confidential' ? 'bg-white/20 text-white' : 'bg-[var(--surface-glass-pill)] text-[var(--text-secondary)]']">{{ confidentialityAlerts.length }}</span>
           </button>
 
@@ -380,7 +380,7 @@
               activeTab === 'sanitizer' ? 'bg-[var(--accent-primary)] text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             ]"
           >
-            <span>数据脱敏清洗与闭环核验</span>
+            <span>{{ locale === 'en-US' ? 'De-identification & Verification' : '数据脱敏清洗与闭环核验' }}</span>
             <span :class="['px-1.5 py-0.5 rounded-full text-[11px] ui-num', activeTab === 'sanitizer' ? 'bg-white/20 text-white' : 'bg-[var(--surface-glass-pill)] text-[var(--text-secondary)]']">ISO/GB</span>
           </button>
 
@@ -391,7 +391,7 @@
               activeTab === 'engines' ? 'bg-[var(--accent-primary)] text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             ]"
           >
-            <span>深度规则引擎 &amp; 脚本沙箱</span>
+            <span>{{ locale === 'en-US' ? 'Deep Rule Engines & Script Sandbox' : '深度规则引擎 &amp; 脚本沙箱' }}</span>
             <span :class="['px-1.5 py-0.5 rounded-full text-[11px] ui-num', activeTab === 'engines' ? 'bg-white/20 text-white' : 'bg-[var(--surface-glass-pill)] text-[var(--text-secondary)]']">
               {{ (suricataMetrics?.total_hits ?? 0) + (glushkovMetrics?.total_threat_hits ?? 0) }}
             </span>
@@ -399,11 +399,11 @@
         </div>
 
         <div class="text-[11px]" style="color: var(--text-muted);">
-          <span v-if="activeTab === 'network'">检测 Modbus/S7/SL651 越权写指令、DNS 信息熵香农隧道 (H&gt;4.2)、ICMP 隐匿通道</span>
-          <span v-else-if="activeTab === 'data_sec'">GB/T 43697 数据四级分类分级、身份证 ISO 7064 与银行卡 Luhn 算法真值校验</span>
-          <span v-else-if="activeTab === 'confidential'">Aho-Corasick 多模式自动机扫描法定绝密/机密/秘密标密词与红头发文字号</span>
-          <span v-else-if="activeTab === 'sanitizer'">提供掩码脱敏、HMAC-SHA256 假名化及脱敏后敏感零残余二次逆向复测</span>
-          <span v-else-if="activeTab === 'engines'">Suricata 工业 DSL、Glushkov 位并行正则自动机与受限 Gas 脚本虚拟机</span>
+          <span v-if="activeTab === 'network'">{{ locale === 'en-US' ? 'Detects Modbus/S7/SL651 write violations, high-entropy DNS tunnels (H>4.2), and covert ICMP channels' : '检测 Modbus/S7/SL651 越权写指令、DNS 信息熵香农隧道 (H>4.2)、ICMP 隐匿通道' }}</span>
+          <span v-else-if="activeTab === 'data_sec'">{{ locale === 'en-US' ? 'GB/T 43697 4-tier data classification, ISO 7064 ID card & Luhn bank card validation' : 'GB/T 43697 数据四级分类分级、身份证 ISO 7064 与银行卡 Luhn 算法真值校验' }}</span>
+          <span v-else-if="activeTab === 'confidential'">{{ locale === 'en-US' ? 'Aho-Corasick automaton scans state secrets, classification markers & red-header doc IDs' : 'Aho-Corasick 多模式自动机扫描法定绝密/机密/秘密标密词与红头发文字号' }}</span>
+          <span v-else-if="activeTab === 'sanitizer'">{{ locale === 'en-US' ? 'Masking, HMAC-SHA256 pseudonymization and zero-residual secondary reverse verification' : '提供掩码脱敏、HMAC-SHA256 假名化及脱敏后敏感零残余二次逆向复测' }}</span>
+          <span v-else-if="activeTab === 'engines'">{{ locale === 'en-US' ? 'Suricata Industrial DSL, Glushkov bit-parallel regex automaton & restricted Gas script VM' : 'Suricata 工业 DSL、Glushkov 位并行正则自动机与受限 Gas 脚本虚拟机' }}</span>
         </div>
       </div>
 
@@ -413,7 +413,7 @@
       <div v-if="activeTab === 'network'" class="flex-1 overflow-hidden flex flex-col gap-2 min-h-0">
         <div class="flex items-center justify-between gap-2 shrink-0 flex-wrap">
           <div class="flex items-center gap-1.5 text-xs flex-wrap">
-            <span class="font-medium" style="color: var(--text-muted);">事件过滤:</span>
+            <span class="font-medium" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Event Filter:' : '事件过滤:' }}</span>
             <button
               v-for="t in networkEventFilterOptions"
               :key="t.key"
@@ -430,11 +430,10 @@
             <button
               @click="showVpnDetectorModal = true"
               class="ui-btn-secondary px-2.5 py-1 text-[11px] font-semibold text-rose-700 dark:text-rose-300 border-rose-500/30"
-              title="启动终端本地+链路DPI+DFI/MSS+机房/DNS错位四维 VPN 隧道侦测"
-            >
-              VPN/代理隧道深度侦测
+              :title="locale === 'en-US' ? 'Launch 4D VPN/proxy tunnel detection via local + DPI + DFI/MSS + DNS mismatch' : '启动终端本地+链路DPI+DFI/MSS+机房/DNS错位四维 VPN 隧道侦测'">
+              {{ locale === 'en-US' ? 'Deep VPN/Tunnel Detector' : 'VPN/代理隧道深度侦测' }}
             </button>
-            <span class="text-[11px] ui-num" style="color: var(--text-muted);">共显示 {{ filteredNetworkEvents.length }} 笔网络安全事件</span>
+            <span class="text-[11px] ui-num" style="color: var(--text-muted);">{{ locale === 'en-US' ? `Showing ${filteredNetworkEvents.length} network security events` : `共显示 ${filteredNetworkEvents.length} 笔网络安全事件` }}</span>
           </div>
         </div>
 
@@ -442,11 +441,11 @@
         <div class="ui-sub-card px-3 py-2 flex items-center justify-between gap-3 text-xs shrink-0 flex-wrap">
           <div class="flex items-center gap-2 min-w-0">
             <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
-            <span class="font-semibold shrink-0" style="color: var(--text-primary);">工控专有与长尾解包插件生态:</span>
-            <span class="text-[11px] truncate" style="color: var(--text-secondary);">已装载 {{ industrialPlugins.length }} 种原生/声明式解包器 (SEMI HSMS、横河 Vnet/IP、霍尼韦尔 FTE、施耐德 UMAS、倍福 ADS 等)</span>
+            <span class="font-semibold shrink-0" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'OT Proprietary & Long-Tail Dissector Ecosystem:' : '工控专有与长尾解包插件生态:' }}</span>
+            <span class="text-[11px] truncate" style="color: var(--text-secondary);">{{ locale === 'en-US' ? `Loaded ${industrialPlugins.length} native/declarative dissectors (SEMI HSMS, Yokogawa Vnet/IP, Honeywell FTE, Schneider UMAS, Beckhoff ADS, etc.)` : `已装载 ${industrialPlugins.length} 种原生/声明式解包器 (SEMI HSMS、横河 Vnet/IP、霍尼韦尔 FTE、施耐德 UMAS、倍福 ADS 等)` }}</span>
           </div>
           <button @click="showPluginDrawer = !showPluginDrawer" class="ui-btn-secondary px-2.5 py-1 text-[11px] shrink-0">
-            <span>{{ showPluginDrawer ? '收起解包器清单' : '查看已载入解包插件' }}</span>
+            <span>{{ showPluginDrawer ? (locale === 'en-US' ? 'Collapse Dissector List' : '收起解包器清单') : (locale === 'en-US' ? 'View Loaded Dissectors' : '查看已载入解包插件') }}</span>
             <AppIcon :name="showPluginDrawer ? 'chevron-up' : 'chevron-down'" :size="12" />
           </button>
         </div>
@@ -459,20 +458,20 @@
                 class="w-2 h-2 rounded-full shrink-0"
                 :class="wfpStatus?.engine_connected ? 'bg-emerald-500' : wfpStatus?.permission_denied ? 'bg-amber-500' : 'bg-slate-400'"
               ></span>
-              <span class="font-semibold shrink-0" style="color: var(--text-primary);">内核 WFP + XDP 双层过滤:</span>
+              <span class="font-semibold shrink-0" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Kernel WFP + XDP Dual-Layer Filter:' : '内核 WFP + XDP 双层过滤:' }}</span>
               <span class="text-[11px]" style="color: var(--text-secondary);">
                 {{ wfpStatus?.engine_connected
-                  ? `fwpuclnt.dll 内核会话已就绪 · 当前激活 ${wfpStatus.active_rules?.length ?? 0} 条系统级入/出站阻断规则`
+                  ? (locale === 'en-US' ? `fwpuclnt.dll kernel session active · ${wfpStatus.active_rules?.length ?? 0} system inbound/outbound rules active` : `fwpuclnt.dll 内核会话已就绪 · 当前激活 ${wfpStatus.active_rules?.length ?? 0} 条系统级入/出站阻断规则`)
                   : wfpStatus?.permission_denied
-                    ? '当前进程非管理员权限 (ERROR_ACCESS_DENIED)，阻断操作将降级为 XDP 前端丢弃 + 代理拦截'
-                    : (wfpStatus?.last_message || '正在探测 Windows Filtering Platform 内核会话能力...') }}
+                    ? (locale === 'en-US' ? 'Non-admin process (ERROR_ACCESS_DENIED); blocking degraded to XDP frontend drop + proxy intercept' : '当前进程非管理员权限 (ERROR_ACCESS_DENIED)，阻断操作将降级为 XDP 前端丢弃 + 代理拦截')
+                    : (wfpStatus?.last_message || (locale === 'en-US' ? 'Probing Windows Filtering Platform kernel session...' : '正在探测 Windows Filtering Platform 内核会话能力...')) }}
               </span>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
               <input
                 v-model="manualWfpTarget"
                 type="text"
-                placeholder="IPv4 / CIDR (如 192.168.1.99)"
+                :placeholder="locale === 'en-US' ? 'IPv4 / CIDR (e.g. 192.168.1.99)' : 'IPv4 / CIDR (如 192.168.1.99)'"
                 class="px-2.5 py-1 rounded-lg border text-[11px] w-56 ui-num"
                 style="background: var(--surface-input); border-color: var(--border-subtle); color: var(--text-primary);"
               />
@@ -481,22 +480,22 @@
                 class="ui-btn-primary px-2.5 py-1 text-[11px] shrink-0"
                 :disabled="!manualWfpTarget.trim()"
               >
-                内核阻断
+                {{ locale === 'en-US' ? 'Kernel Block' : '内核阻断' }}
               </button>
-              <button @click="fetchWfpStatus" class="ui-btn-secondary px-2 py-1 text-[11px] shrink-0" title="刷新 WFP 内核过滤状态">
+              <button @click="fetchWfpStatus" class="ui-btn-secondary px-2 py-1 text-[11px] shrink-0" :title="locale === 'en-US' ? 'Refresh WFP Kernel Filter Status' : '刷新 WFP 内核过滤状态'">
                 <AppIcon name="refresh" :size="12" />
               </button>
             </div>
           </div>
 
           <div v-if="wfpStatus && (wfpStatus.active_rules?.length ?? 0) > 0" class="flex items-center gap-1.5 flex-wrap pt-1 border-t" style="border-color: var(--border-subtle);">
-            <span class="text-[11px]" style="color: var(--text-muted);">生效中规则 (点击解除):</span>
+            <span class="text-[11px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Active Rules (Click to unblock):' : '生效中规则 (点击解除):' }}</span>
             <button
               v-for="rule in wfpStatus.active_rules"
               :key="rule.cidr_normalized"
               @click="unblockWfpTarget(rule.cidr_normalized)"
               class="px-2 py-0.5 rounded-lg border text-[11px] ui-num flex items-center gap-1.5 cursor-pointer bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300 hover:bg-rose-500/20 transition-colors"
-              :title="`原因: ${rule.reason || '安全审查拦截'} | 点击从 WFP 内核与 XDP 黑名单移除`"
+              :title="locale === 'en-US' ? `Reason: ${rule.reason || 'Security Review Block'} | Click to remove from WFP/XDP` : `原因: ${rule.reason || '安全审查拦截'} | 点击从 WFP 内核与 XDP 黑名单移除`"
             >
               <span>{{ rule.cidr_normalized }}</span>
               <span class="opacity-75">{{ rule.outbound_filter_id > 0 ? `#${rule.outbound_filter_id}` : 'XDP' }}</span>
@@ -523,12 +522,12 @@
                   {{ plug.plugin_type === 'NATIVE_RUST_CORE' ? 'Rust' : 'JSON' }}
                 </span>
               </div>
-              <div class="truncate" style="color: var(--text-secondary);" :title="plug.vendor">厂商: {{ plug.vendor }}</div>
-              <div class="ui-num mt-0.5" style="color: var(--text-muted);">端口: {{ plug.default_ports?.join(', ') || '任意' }}</div>
+              <div class="truncate" style="color: var(--text-secondary);" :title="plug.vendor">{{ locale === 'en-US' ? 'Vendor:' : '厂商:' }} {{ plug.vendor }}</div>
+              <div class="ui-num mt-0.5" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Port:' : '端口:' }} {{ plug.default_ports?.join(', ') || (locale === 'en-US' ? 'Any' : '任意') }}</div>
             </div>
             <div class="mt-1.5 pt-1 border-t flex items-center justify-between" style="border-color: var(--border-subtle); color: var(--text-muted);">
               <span class="truncate" :title="plug.category">{{ plug.category }}</span>
-              <span class="text-rose-600 dark:text-rose-400 font-medium shrink-0">越权审计</span>
+              <span class="text-rose-600 dark:text-rose-400 font-medium shrink-0">{{ locale === 'en-US' ? 'Audit' : '越权审计' }}</span>
             </div>
           </div>
         </div>
@@ -538,14 +537,14 @@
           <table class="w-full text-left text-xs border-collapse">
             <thead class="ui-table-head sticky top-0 z-10 select-none">
               <tr>
-                <th class="py-2 px-3">事件 ID</th>
-                <th class="py-2 px-3">时间戳</th>
-                <th class="py-2 px-3">事件分类</th>
-                <th class="py-2 px-3">危害等级</th>
-                <th class="py-2 px-3">通信双方 (源 → 宿)</th>
-                <th class="py-2 px-3">规约/协议</th>
-                <th class="py-2 px-3">技术勘验摘要与判定依据</th>
-                <th class="py-2 px-3 text-right">操作</th>
+                <th class="py-2 px-3">{{ locale === 'en-US' ? 'Event ID' : '事件 ID' }}</th>
+                <th class="py-2 px-3">{{ locale === 'en-US' ? 'Timestamp' : '时间戳' }}</th>
+                <th class="py-2 px-3">{{ locale === 'en-US' ? 'Category' : '事件分类' }}</th>
+                <th class="py-2 px-3">{{ locale === 'en-US' ? 'Severity' : '危害等级' }}</th>
+                <th class="py-2 px-3">{{ locale === 'en-US' ? 'Endpoints (Src → Dst)' : '通信双方 (源 → 宿)' }}</th>
+                <th class="py-2 px-3">{{ locale === 'en-US' ? 'Protocol' : '规约/协议' }}</th>
+                <th class="py-2 px-3">{{ locale === 'en-US' ? 'Forensic Summary & Evidence' : '技术勘验摘要与判定依据' }}</th>
+                <th class="py-2 px-3 text-right">{{ locale === 'en-US' ? 'Action' : '操作' }}</th>
               </tr>
             </thead>
             <tbody class="divide-y text-xs" style="border-color: var(--border-subtle);">
@@ -589,19 +588,19 @@
                 </td>
                 <td class="py-2 px-3 text-right whitespace-nowrap space-x-1.5">
                   <button @click="blockIpAddress(evt.src_ip, evt.summary)" class="ui-btn-danger px-2 py-0.5 text-[11px]">
-                    一键阻断
+                    {{ locale === 'en-US' ? 'Block IP' : '一键阻断' }}
                   </button>
                   <button @click="selectedDetailJson = evt.detail_json; isDetailModalOpen = true" class="ui-btn-secondary px-2 py-0.5 text-[11px]">
-                    勘验 JSON
+                    {{ locale === 'en-US' ? 'Audit JSON' : '勘验 JSON' }}
                   </button>
                   <button @click="addNetworkEventToDiffQueue(evt)" class="px-2 py-0.5 rounded bg-emerald-500/12 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-[11px] font-semibold cursor-pointer">
-                    + 入队
+                    {{ locale === 'en-US' ? '+ Enqueue' : '+ 入队' }}
                   </button>
                 </td>
               </tr>
               <tr v-if="filteredNetworkEvents.length === 0">
                 <td colspan="8" class="text-center py-12">
-                  <EmptyState icon="shield" title="暂无越权工控指令或隐蔽隧道事件" />
+                  <EmptyState icon="shield" :title="locale === 'en-US' ? 'No unauthorized ICS commands or covert tunnel events' : '暂无越权工控指令或隐蔽隧道事件'" />
                 </td>
               </tr>
             </tbody>
@@ -616,9 +615,9 @@
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 shrink-0">
           <div class="p-2.5 rounded-xl bg-rose-500/8 border border-rose-500/25 flex items-center justify-between">
             <div>
-              <div class="text-[11px] font-semibold text-rose-700 dark:text-rose-300">核心数据 (最高防护等级)</div>
+              <div class="text-[11px] font-semibold text-rose-700 dark:text-rose-300">{{ locale === 'en-US' ? 'Core Data (Max Protection Level)' : '核心数据 (最高防护等级)' }}</div>
               <div class="text-sm ui-num font-bold mt-0.5" style="color: var(--text-primary);">
-                {{ dataSecSummary.core_data_hits }} <span class="text-[11px] font-normal" style="color: var(--text-muted);">笔</span>
+                {{ dataSecSummary.core_data_hits }} <span class="text-[11px] font-normal" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'hits' : '笔' }}</span>
               </div>
             </div>
             <span class="text-[11px] font-semibold text-rose-700 dark:text-rose-300 bg-rose-500/15 px-1.5 py-0.5 rounded">L4</span>
@@ -626,9 +625,9 @@
 
           <div class="p-2.5 rounded-xl bg-amber-500/8 border border-amber-500/25 flex items-center justify-between">
             <div>
-              <div class="text-[11px] font-semibold text-amber-700 dark:text-amber-300">重要数据 (关键业务载荷)</div>
+              <div class="text-[11px] font-semibold text-amber-700 dark:text-amber-300">{{ locale === 'en-US' ? 'Important Data (Critical Payloads)' : '重要数据 (关键业务载荷)' }}</div>
               <div class="text-sm ui-num font-bold mt-0.5" style="color: var(--text-primary);">
-                {{ dataSecSummary.important_data_hits }} <span class="text-[11px] font-normal" style="color: var(--text-muted);">笔</span>
+                {{ dataSecSummary.important_data_hits }} <span class="text-[11px] font-normal" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'hits' : '笔' }}</span>
               </div>
             </div>
             <span class="text-[11px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-500/15 px-1.5 py-0.5 rounded">L3</span>
@@ -636,9 +635,9 @@
 
           <div class="p-2.5 rounded-xl bg-indigo-500/8 border border-indigo-500/25 flex items-center justify-between">
             <div>
-              <div class="text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">敏感个人信息 (PII 校验)</div>
+              <div class="text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">{{ locale === 'en-US' ? 'Sensitive Personal Info (PII)' : '敏感个人信息 (PII 校验)' }}</div>
               <div class="text-sm ui-num font-bold mt-0.5" style="color: var(--text-primary);">
-                {{ dataSecSummary.pii_hits }} <span class="text-[11px] font-normal" style="color: var(--text-muted);">笔</span>
+                {{ dataSecSummary.pii_hits }} <span class="text-[11px] font-normal" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'hits' : '笔' }}</span>
               </div>
             </div>
             <span class="text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-500/15 px-1.5 py-0.5 rounded">PII</span>
@@ -646,9 +645,9 @@
 
           <div class="ui-sub-card p-2.5 flex items-center justify-between">
             <div>
-              <div class="text-[11px] font-semibold" style="color: var(--text-secondary);">会话流式还原文件</div>
+              <div class="text-[11px] font-semibold" style="color: var(--text-secondary);">{{ locale === 'en-US' ? 'Reconstructed Stream Files' : '会话流式还原文件' }}</div>
               <div class="text-sm ui-num font-bold mt-0.5" style="color: var(--text-primary);">
-                {{ reconstructedFiles.length }} <span class="text-[11px] font-normal" style="color: var(--text-muted);">个检材</span>
+                {{ reconstructedFiles.length }} <span class="text-[11px] font-normal" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'files' : '个检材' }}</span>
               </div>
             </div>
             <span class="ui-pill text-[11px] font-semibold px-1.5 py-0.5">MIME</span>
@@ -659,18 +658,18 @@
           <!-- 左侧：敏感数据明细列表 -->
           <div class="border rounded-xl overflow-hidden flex flex-col" style="border-color: var(--border-subtle); background: var(--surface-content-alt);">
             <div class="p-2.5 border-b text-xs font-semibold flex items-center justify-between shrink-0" style="border-color: var(--border-subtle); color: var(--text-primary);">
-              <span class="ui-num">敏感数据流动流水 ({{ sensitiveFindings.length }})</span>
-              <span class="text-[11px]" style="color: var(--text-muted);">GB/T 43697 规则</span>
+              <span class="ui-num">{{ locale === 'en-US' ? `Sensitive Data Flows (${sensitiveFindings.length})` : `敏感数据流动流水 (${sensitiveFindings.length})` }}</span>
+              <span class="text-[11px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'GB/T 43697 Rules' : 'GB/T 43697 规则' }}</span>
             </div>
             <div class="flex-1 overflow-auto custom-scrollbar">
               <table class="w-full text-left text-xs border-collapse">
                 <thead class="ui-table-head sticky top-0 select-none">
                   <tr>
-                    <th class="py-2 px-2.5">规则分类</th>
-                    <th class="py-2 px-2.5">通信端点</th>
-                    <th class="py-2 px-2.5">脱敏样本预览</th>
-                    <th class="py-2 px-2.5">判定依据</th>
-                    <th class="py-2 px-2.5 text-right">操作</th>
+                    <th class="py-2 px-2.5">{{ locale === 'en-US' ? 'Category' : '规则分类' }}</th>
+                    <th class="py-2 px-2.5">{{ locale === 'en-US' ? 'Endpoints' : '通信端点' }}</th>
+                    <th class="py-2 px-2.5">{{ locale === 'en-US' ? 'Masked Sample' : '脱敏样本预览' }}</th>
+                    <th class="py-2 px-2.5">{{ locale === 'en-US' ? 'Evidence' : '判定依据' }}</th>
+                    <th class="py-2 px-2.5 text-right">{{ locale === 'en-US' ? 'Action' : '操作' }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y text-xs" style="border-color: var(--border-subtle);">
@@ -690,16 +689,16 @@
                     </td>
                     <td class="py-2 px-2.5 text-right whitespace-nowrap space-x-1">
                       <button @click="inspectFindingDetail(item)" class="ui-btn-secondary px-2 py-0.5 text-[11px]">
-                        勘验详情
+                        {{ locale === 'en-US' ? 'Details' : '勘验详情' }}
                       </button>
                       <button @click="addSensitiveFindingToDiffQueue(item)" class="px-2 py-0.5 rounded bg-emerald-500/12 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-[11px] font-semibold cursor-pointer">
-                        + 入队
+                        {{ locale === 'en-US' ? '+ Enqueue' : '+ 入队' }}
                       </button>
                     </td>
                   </tr>
                   <tr v-if="sensitiveFindings.length === 0">
                     <td colspan="5" class="text-center py-8 text-xs" style="color: var(--text-muted);">
-                      未检出符合触发条件的敏感数据流明文
+                      {{ locale === 'en-US' ? 'No sensitive plaintext data flows detected matching trigger criteria' : '未检出符合触发条件的敏感数据流明文' }}
                     </td>
                   </tr>
                 </tbody>
@@ -710,19 +709,19 @@
           <!-- 右侧：会话流式还原文件清单 -->
           <div class="border rounded-xl overflow-hidden flex flex-col" style="border-color: var(--border-subtle); background: var(--surface-content-alt);">
             <div class="p-2.5 border-b text-xs font-semibold flex items-center justify-between shrink-0" style="border-color: var(--border-subtle); color: var(--text-primary);">
-              <span class="ui-num">会话流式还原与传输载荷文件 ({{ reconstructedFiles.length }})</span>
-              <span class="text-[11px]" style="color: var(--text-muted);">10MB 有界截断</span>
+              <span class="ui-num">{{ locale === 'en-US' ? `Reconstructed Session Files (${reconstructedFiles.length})` : `会话流式还原与传输载荷文件 (${reconstructedFiles.length})` }}</span>
+              <span class="text-[11px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? '10MB Bounded Truncation' : '10MB 有界截断' }}</span>
             </div>
             <div class="flex-1 overflow-auto custom-scrollbar">
               <table class="w-full text-left text-xs border-collapse">
                 <thead class="ui-table-head sticky top-0 select-none">
                   <tr>
-                    <th class="py-2 px-2.5">还原文件名</th>
-                    <th class="py-2 px-2.5">MIME 类型</th>
-                    <th class="py-2 px-2.5">体积大小</th>
-                    <th class="py-2 px-2.5">密级判定</th>
-                    <th class="py-2 px-2.5">SHA256 哈希</th>
-                    <th class="py-2 px-2.5 text-right">操作</th>
+                    <th class="py-2 px-2.5">{{ locale === 'en-US' ? 'Filename' : '还原文件名' }}</th>
+                    <th class="py-2 px-2.5">{{ locale === 'en-US' ? 'MIME Type' : 'MIME 类型' }}</th>
+                    <th class="py-2 px-2.5">{{ locale === 'en-US' ? 'Size' : '体积大小' }}</th>
+                    <th class="py-2 px-2.5">{{ locale === 'en-US' ? 'Classification' : '密级判定' }}</th>
+                    <th class="py-2 px-2.5">{{ locale === 'en-US' ? 'SHA-256 Hash' : 'SHA256 哈希' }}</th>
+                    <th class="py-2 px-2.5 text-right">{{ locale === 'en-US' ? 'Action' : '操作' }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y text-xs" style="border-color: var(--border-subtle);">
@@ -745,13 +744,13 @@
                     </td>
                     <td class="py-2 px-2.5 text-right whitespace-nowrap">
                       <button @click="inspectFileDetail(f)" class="ui-btn-secondary px-2 py-0.5 text-[11px]">
-                        检材详情
+                        {{ locale === 'en-US' ? 'File Details' : '检材详情' }}
                       </button>
                     </td>
                   </tr>
                   <tr v-if="reconstructedFiles.length === 0">
                     <td colspan="6" class="text-center py-8 text-xs" style="color: var(--text-muted);">
-                      暂无还原网络传输文件 (支持 PDF/Office/JSON/XML 流)
+                      {{ locale === 'en-US' ? 'No reconstructed network files yet (Supports PDF/Office/JSON/XML streams)' : '暂无还原网络传输文件 (支持 PDF/Office/JSON/XML 流)' }}
                     </td>
                   </tr>
                 </tbody>
@@ -769,7 +768,7 @@
         <div class="ui-sub-card p-2 flex items-center justify-between text-xs flex-wrap gap-2 shrink-0">
           <div class="flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span class="font-semibold" style="color: var(--text-primary);">保密审查 BMB 标准实测平台 (v2.2)</span>
+            <span class="font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Secrecy Compliance BMB Standard Field Audit Platform (v2.2)' : '保密审查 BMB 标准实测平台 (v2.2)' }}</span>
             <span class="text-[11px]" style="color: var(--text-muted);">BMB17-2006 · BMB20-2007 · BMB22-2007 · GB/T 9704-2012</span>
           </div>
           <div class="flex items-center gap-1.5 flex-wrap">
@@ -778,56 +777,56 @@
               :class="secrecySubView === 'overview' ? 'ui-tab-pill-active text-amber-700 dark:text-amber-300' : 'ui-tab-pill'"
               class="px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer transition-colors"
             >
-              网流告警与公文送检 ({{ confidentialityAlerts.length }})
+              {{ locale === 'en-US' ? 'Traffic Alerts & Documents' : '网流告警与公文送检' }} ({{ confidentialityAlerts.length }})
             </button>
             <button
               @click="secrecySubView = 'usb'"
               :class="secrecySubView === 'usb' ? 'ui-tab-pill-active text-amber-700 dark:text-amber-300' : 'ui-tab-pill'"
               class="px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer transition-colors"
             >
-              USB 历史痕迹 ({{ usbForensicsReport ? usbForensicsReport.total_devices_found : '未核' }})
+              {{ locale === 'en-US' ? 'USB Traces' : 'USB 历史痕迹' }} ({{ usbForensicsReport ? usbForensicsReport.total_devices_found : (locale === 'en-US' ? 'Unchecked' : '未核') }})
             </button>
             <button
               @click="secrecySubView = 'docs'"
               :class="secrecySubView === 'docs' ? 'ui-tab-pill-active text-amber-700 dark:text-amber-300' : 'ui-tab-pill'"
               class="px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer transition-colors"
             >
-              复合文档穿透 ({{ dissectReport ? dissectReport.hit_files_count : '未扫' }})
+              {{ locale === 'en-US' ? 'Document Dissection' : '复合文档穿透' }} ({{ dissectReport ? dissectReport.hit_files_count : (locale === 'en-US' ? 'Unscanned' : '未扫') }})
             </button>
             <button
               @click="secrecySubView = 'dualhomed'"
               :class="secrecySubView === 'dualhomed' ? 'ui-tab-pill-active text-amber-700 dark:text-amber-300' : 'ui-tab-pill'"
               class="px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer transition-colors"
             >
-              一机两用排查 ({{ dualHomedReport ? dualHomedReport.risk_level : '未检' }})
+              {{ locale === 'en-US' ? 'Dual-Homed Audit' : '一机两用排查' }} ({{ dualHomedReport ? dualHomedReport.risk_level : (locale === 'en-US' ? 'Unchecked' : '未检') }})
             </button>
             <button
               @click="secrecySubView = 'history'"
               :class="secrecySubView === 'history' ? 'ui-tab-pill-active text-amber-700 dark:text-amber-300' : 'ui-tab-pill'"
               class="px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer transition-colors"
             >
-              历史外联 ({{ networkHistoryReport ? (networkHistoryReport.suspicious_mobile_hotspots.length + networkHistoryReport.historic_rndis_devices.length) : '未检' }})
+              {{ locale === 'en-US' ? 'Historic Egress' : '历史外联' }} ({{ networkHistoryReport ? (networkHistoryReport.suspicious_mobile_hotspots.length + networkHistoryReport.historic_rndis_devices.length) : (locale === 'en-US' ? 'Unchecked' : '未检') }})
             </button>
             <button
               @click="secrecySubView = 'ole2'"
               :class="secrecySubView === 'ole2' ? 'ui-tab-pill-active text-amber-700 dark:text-amber-300' : 'ui-tab-pill'"
               class="px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer transition-colors"
             >
-              OLE2 / 扇区 ({{ ole2Report ? (ole2Report.ole2_hits.length + ole2Report.slack_hits.length) : '未扫' }})
+              {{ locale === 'en-US' ? 'OLE2 / Slack Space' : 'OLE2 / 扇区' }} ({{ ole2Report ? (ole2Report.ole2_hits.length + ole2Report.slack_hits.length) : (locale === 'en-US' ? 'Unscanned' : '未扫') }})
             </button>
             <button
               @click="secrecySubView = 'osusage'"
               :class="secrecySubView === 'osusage' ? 'ui-tab-pill-active text-amber-700 dark:text-amber-300' : 'ui-tab-pill'"
               class="px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer transition-colors"
             >
-              LNK / 打印痕迹 ({{ osUsageReport ? osUsageReport.total_lnk_parsed : '未审' }})
+              {{ locale === 'en-US' ? 'LNK / Spooler Traces' : 'LNK / 打印痕迹' }} ({{ osUsageReport ? osUsageReport.total_lnk_parsed : (locale === 'en-US' ? 'Unaudited' : '未审') }})
             </button>
             <button
               @click="secrecySubView = 'apptrace'"
               :class="secrecySubView === 'apptrace' ? 'ui-tab-pill-active text-amber-700 dark:text-amber-300' : 'ui-tab-pill'"
               class="px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer transition-colors"
             >
-              浏览器 / IM 外发 ({{ appTraceReport ? (appTraceReport.suspicious_downloads.length + appTraceReport.chat_file_hits.length) : '未审' }})
+              {{ locale === 'en-US' ? 'Browser / IM Egress' : '浏览器 / IM 外发' }} ({{ appTraceReport ? (appTraceReport.suspicious_downloads.length + appTraceReport.chat_file_hits.length) : (locale === 'en-US' ? 'Unaudited' : '未审') }})
             </button>
           </div>
         </div>
@@ -837,58 +836,58 @@
           <!-- 卡 1: USBSTOR 历史插拔痕迹取证 -->
           <div class="ui-sub-card p-2.5 flex flex-col justify-between gap-1.5">
             <div class="flex items-center justify-between gap-2">
-              <span class="text-xs font-semibold" style="color: var(--text-primary);">1. USB 历史插拔痕迹</span>
+              <span class="text-xs font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? '1. USB History Traces' : '1. USB 历史插拔痕迹' }}</span>
               <span
                 v-if="usbForensicsReport"
                 class="px-1.5 py-0.5 rounded text-[10px] font-semibold ui-num"
                 :class="usbForensicsReport.has_critical_violation ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'"
               >
-                {{ usbForensicsReport.has_critical_violation ? `违规 ${usbForensicsReport.unauthorized_device_count} 个` : '合规洁净' }}
+                {{ usbForensicsReport.has_critical_violation ? (locale === 'en-US' ? `${usbForensicsReport.unauthorized_device_count} violations` : `违规 ${usbForensicsReport.unauthorized_device_count} 个`) : (locale === 'en-US' ? 'Clean' : '合规洁净') }}
               </span>
             </div>
             <div class="text-[11px] truncate" style="color: var(--text-muted);">
-              {{ usbForensicsReport ? usbForensicsReport.summary_conclusion : '读取注册表 USBSTOR 与 setupapi 安装日志' }}
+              {{ usbForensicsReport ? usbForensicsReport.summary_conclusion : (locale === 'en-US' ? 'Read registry USBSTOR and setupapi installation logs' : '读取注册表 USBSTOR 与 setupapi 安装日志') }}
             </div>
             <div class="flex items-center gap-1.5 pt-0.5">
               <button @click="runSecrecyUsbHistoryAudit" :disabled="isAuditingUsbHistory" class="ui-btn-primary bg-amber-600 hover:bg-amber-500 px-2.5 py-1 text-[11px] flex-1">
-                {{ isAuditingUsbHistory ? '提取中...' : '提取历史 USB 痕迹' }}
+                {{ isAuditingUsbHistory ? (locale === 'en-US' ? 'Extracting...' : '提取中...') : (locale === 'en-US' ? 'Extract USB History Traces' : '提取历史 USB 痕迹') }}
               </button>
-              <button v-if="usbForensicsReport" @click="secrecySubView = 'usb'" class="ui-btn-secondary px-2 py-1 text-[11px]">明细</button>
+              <button v-if="usbForensicsReport" @click="secrecySubView = 'usb'" class="ui-btn-secondary px-2 py-1 text-[11px]">{{ locale === 'en-US' ? 'Details' : '明细' }}</button>
             </div>
           </div>
 
           <!-- 卡 2: 复合公文 (DOCX/OFD/PDF/ZIP) 穿透检索 -->
           <div class="ui-sub-card p-2.5 flex flex-col justify-between gap-1.5">
             <div class="flex items-center justify-between gap-2">
-              <span class="text-xs font-semibold" style="color: var(--text-primary);">2. 复合公文穿透扫描</span>
+              <span class="text-xs font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? '2. Deep Document Dissection' : '2. 复合公文穿透扫描' }}</span>
               <span
                 v-if="dissectReport"
                 class="px-1.5 py-0.5 rounded text-[10px] font-semibold ui-num"
                 :class="dissectReport.hit_files_count > 0 ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'"
               >
-                {{ dissectReport.hit_files_count > 0 ? `命中 ${dissectReport.hit_files_count} 份` : `扫 ${dissectReport.scanned_files_count} 洁净` }}
+                {{ dissectReport.hit_files_count > 0 ? (locale === 'en-US' ? `${dissectReport.hit_files_count} hits` : `命中 ${dissectReport.hit_files_count} 份`) : (locale === 'en-US' ? `${dissectReport.scanned_files_count} clean` : `扫 ${dissectReport.scanned_files_count} 洁净`) }}
               </span>
             </div>
             <div class="flex items-center gap-1">
               <input
                 v-model="dissectTargetPath"
-                placeholder="输入待扫描目录或点击选择..."
+                :placeholder="locale === 'en-US' ? 'Enter target directory or browse...' : '输入待扫描目录或点击选择...'"
                 class="ui-input px-2 py-0.5 text-[11px] font-mono flex-1 min-w-0"
               />
-              <button @click="pickAndSetDissectFolder" class="ui-btn-secondary px-2 py-0.5 text-[11px] shrink-0" title="选择本地文件夹">选目录</button>
+              <button @click="pickAndSetDissectFolder" class="ui-btn-secondary px-2 py-0.5 text-[11px] shrink-0" :title="locale === 'en-US' ? 'Select local folder' : '选择本地文件夹'">{{ locale === 'en-US' ? 'Browse' : '选目录' }}</button>
             </div>
             <div class="flex items-center gap-1.5 pt-0.5">
               <button @click="runDocumentDissectAudit" :disabled="!dissectTargetPath.trim() || isDissectingDocs" class="ui-btn-primary bg-amber-600 hover:bg-amber-500 px-2.5 py-1 text-[11px] flex-1">
-                {{ isDissectingDocs ? '二进制解构中...' : '穿透扫描标密文档' }}
+                {{ isDissectingDocs ? (locale === 'en-US' ? 'Dissecting binaries...' : '二进制解构中...') : (locale === 'en-US' ? 'Scan Classified Documents' : '穿透扫描标密文档') }}
               </button>
-              <button v-if="dissectReport" @click="secrecySubView = 'docs'" class="ui-btn-secondary px-2 py-1 text-[11px]">明细</button>
+              <button v-if="dissectReport" @click="secrecySubView = 'docs'" class="ui-btn-secondary px-2 py-1 text-[11px]">{{ locale === 'en-US' ? 'Details' : '明细' }}</button>
             </div>
           </div>
 
           <!-- 卡 3: 双网卡“一机两用”核查 -->
           <div class="ui-sub-card p-2.5 flex flex-col justify-between gap-1.5">
             <div class="flex items-center justify-between gap-2">
-              <span class="text-xs font-semibold" style="color: var(--text-primary);">3. “一机两用”路由核查</span>
+              <span class="text-xs font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? '3. Dual-Homed Routing Check' : '3. “一机两用”路由核查' }}</span>
               <span
                 v-if="dualHomedReport"
                 class="px-1.5 py-0.5 rounded text-[10px] font-semibold ui-num"
@@ -898,20 +897,20 @@
               </span>
             </div>
             <div class="text-[11px] truncate" style="color: var(--text-muted);" :title="dualHomedReport?.reason">
-              {{ dualHomedReport ? dualHomedReport.reason : '探测有线/无线双激活及公私网路由桥接' }}
+              {{ dualHomedReport ? dualHomedReport.reason : (locale === 'en-US' ? 'Probe simultaneous wired/wireless links & public/private bridge' : '探测有线/无线双激活及公私网路由桥接') }}
             </div>
             <div class="flex items-center gap-1.5 pt-0.5">
               <button @click="runDualHomedNetworkAudit" :disabled="isAuditingDualHomed" class="ui-btn-primary bg-amber-600 hover:bg-amber-500 px-2.5 py-1 text-[11px] flex-1">
-                {{ isAuditingDualHomed ? '路由检测中...' : '检测一机两用双联' }}
+                {{ isAuditingDualHomed ? (locale === 'en-US' ? 'Checking routing...' : '路由检测中...') : (locale === 'en-US' ? 'Detect Dual-Homed Links' : '检测一机两用双联') }}
               </button>
-              <button v-if="dualHomedReport" @click="secrecySubView = 'dualhomed'" class="ui-btn-secondary px-2 py-1 text-[11px]">明细</button>
+              <button v-if="dualHomedReport" @click="secrecySubView = 'dualhomed'" class="ui-btn-secondary px-2 py-1 text-[11px]">{{ locale === 'en-US' ? 'Details' : '明细' }}</button>
             </div>
           </div>
 
           <!-- 卡 4: BMB 标准 A4 保密勘验正式大报告 -->
           <div class="ui-sub-card p-2.5 flex flex-col justify-between gap-1.5 border-rose-500/20">
             <div class="flex items-center justify-between gap-2">
-              <span class="text-xs font-semibold" style="color: var(--text-primary);">4. BMB 现场勘验大报告</span>
+              <span class="text-xs font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? '4. BMB Field Audit Formal Report' : '4. BMB 现场勘验大报告' }}</span>
               <span
                 class="px-1.5 py-0.5 rounded text-[10px] font-semibold"
                 :class="secrecyVerdict.code === 'QUALIFIED' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' : secrecyVerdict.code === 'CONDITIONALLY_QUALIFIED' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300' : 'bg-rose-600 text-white'"
@@ -920,11 +919,11 @@
               </span>
             </div>
             <div class="text-[11px] truncate font-mono" style="color: var(--text-muted);">
-              编号 {{ secrecyDigest.reportId }} · SM3 保全
+              {{ locale === 'en-US' ? 'Report ID ' : '编号 ' }}{{ secrecyDigest.reportId }} · {{ locale === 'en-US' ? 'SM3 Secured' : 'SM3 保全' }}
             </div>
             <button @click="openSecrecyFormalReportModal" class="ui-btn-primary px-2.5 py-1 text-[11px] w-full flex items-center justify-center gap-1">
               <AppIcon name="report" :size="12" />
-              <span>出具 BMB 勘验 A4 正式报告</span>
+              <span>{{ locale === 'en-US' ? 'Generate BMB A4 Formal Report' : '出具 BMB 勘验 A4 正式报告' }}</span>
             </button>
           </div>
         </div>
@@ -934,80 +933,80 @@
           <!-- 卡 5: 历史外联与手机 USB 共享痕迹 -->
           <div class="ui-sub-card p-2.5 flex flex-col justify-between gap-1.5">
             <div class="flex items-center justify-between gap-2">
-              <span class="text-xs font-semibold" style="color: var(--text-primary);">5. 历史 Wi-Fi / RNDIS 外联</span>
+              <span class="text-xs font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? '5. Historic Wi-Fi / RNDIS Egress' : '5. 历史 Wi-Fi / RNDIS 外联' }}</span>
               <span
                 v-if="networkHistoryReport"
                 class="px-1.5 py-0.5 rounded text-[10px] font-semibold ui-num"
                 :class="networkHistoryReport.has_historic_violation ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'"
               >
-                {{ networkHistoryReport.has_historic_violation ? '检出外联痕迹' : '历史洁净' }}
+                {{ networkHistoryReport.has_historic_violation ? (locale === 'en-US' ? 'Egress Traces Detected' : '检出外联痕迹') : (locale === 'en-US' ? 'Clean History' : '历史洁净') }}
               </span>
             </div>
             <div class="text-[11px] truncate" style="color: var(--text-muted);" :title="networkHistoryReport?.summary_conclusion">
-              {{ networkHistoryReport ? networkHistoryReport.summary_conclusion : '解析 WlanSvc 配置 XML、USB RNDIS 共享及拨号记录' }}
+              {{ networkHistoryReport ? networkHistoryReport.summary_conclusion : (locale === 'en-US' ? 'Parse WlanSvc XML, USB RNDIS sharing & dial-up records' : '解析 WlanSvc 配置 XML、USB RNDIS 共享及拨号记录') }}
             </div>
             <div class="flex items-center gap-1.5 pt-0.5">
               <button @click="runNetworkHistoryAudit" :disabled="isAuditingNetworkHistory" class="ui-btn-primary bg-indigo-600 hover:bg-indigo-500 px-2.5 py-1 text-[11px] flex-1">
-                {{ isAuditingNetworkHistory ? '取证扫描中...' : '排查历史外联痕迹' }}
+                {{ isAuditingNetworkHistory ? (locale === 'en-US' ? 'Forensic scanning...' : '取证扫描中...') : (locale === 'en-US' ? 'Audit Historic Egress' : '排查历史外联痕迹') }}
               </button>
-              <button v-if="networkHistoryReport" @click="secrecySubView = 'history'" class="ui-btn-secondary px-2 py-1 text-[11px]">明细</button>
+              <button v-if="networkHistoryReport" @click="secrecySubView = 'history'" class="ui-btn-secondary px-2 py-1 text-[11px]">{{ locale === 'en-US' ? 'Details' : '明细' }}</button>
             </div>
           </div>
 
           <!-- 卡 6: OLE2 老式文档解构与扇区残片扫描 -->
           <div class="ui-sub-card p-2.5 flex flex-col justify-between gap-1.5">
             <div class="flex items-center justify-between gap-2">
-              <span class="text-xs font-semibold" style="color: var(--text-primary);">6. OLE2 与磁盘残片检索</span>
+              <span class="text-xs font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? '6. OLE2 & Slack Space Retrieval' : '6. OLE2 与磁盘残片检索' }}</span>
               <span
                 v-if="ole2Report"
                 class="px-1.5 py-0.5 rounded text-[10px] font-semibold ui-num"
                 :class="(ole2Report.ole2_hits.length + ole2Report.slack_hits.length) > 0 ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'"
               >
-                {{ (ole2Report.ole2_hits.length + ole2Report.slack_hits.length) > 0 ? `命中 ${ole2Report.ole2_hits.length}+${ole2Report.slack_hits.length}` : '洁净' }}
+                {{ (ole2Report.ole2_hits.length + ole2Report.slack_hits.length) > 0 ? (locale === 'en-US' ? `Hits ${ole2Report.ole2_hits.length}+${ole2Report.slack_hits.length}` : `命中 ${ole2Report.ole2_hits.length}+${ole2Report.slack_hits.length}`) : (locale === 'en-US' ? 'Clean' : '洁净') }}
               </span>
             </div>
             <div class="flex items-center gap-1">
               <input
                 v-model="ole2RawSlackTarget"
-                placeholder="可选残片目标(如 \\.\D: 或镜像文件)"
+                :placeholder="locale === 'en-US' ? 'Optional slack target (e.g. \\\\.\\D: or raw disk image)' : '可选残片目标(如 \\.\D: 或镜像文件)'"
                 class="ui-input px-2 py-0.5 text-[11px] font-mono flex-1 min-w-0"
               />
             </div>
             <div class="flex items-center gap-1.5 pt-0.5">
               <button @click="runOle2AndSlackAudit" :disabled="isDissectingOle2" class="ui-btn-primary bg-indigo-600 hover:bg-indigo-500 px-2.5 py-1 text-[11px] flex-1">
-                {{ isDissectingOle2 ? 'CFBF 解析中...' : '扫描 DOC/XLS 与残片' }}
+                {{ isDissectingOle2 ? (locale === 'en-US' ? 'CFBF parsing...' : 'CFBF 解析中...') : (locale === 'en-US' ? 'Scan Legacy DOC/XLS & Slack' : '扫描 DOC/XLS 与残片') }}
               </button>
-              <button v-if="ole2Report" @click="secrecySubView = 'ole2'" class="ui-btn-secondary px-2 py-1 text-[11px]">明细</button>
+              <button v-if="ole2Report" @click="secrecySubView = 'ole2'" class="ui-btn-secondary px-2 py-1 text-[11px]">{{ locale === 'en-US' ? 'Details' : '明细' }}</button>
             </div>
           </div>
 
           <!-- 卡 7: 操作系统使用轨迹 (.lnk / .SHD / 开关机) -->
           <div class="ui-sub-card p-2.5 flex flex-col justify-between gap-1.5">
             <div class="flex items-center justify-between gap-2">
-              <span class="text-xs font-semibold" style="color: var(--text-primary);">7. OS 行为与打印留痕</span>
+              <span class="text-xs font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? '7. OS Activity & Print Spooler Traces' : '7. OS 行为与打印留痕' }}</span>
               <span
                 v-if="osUsageReport"
                 class="px-1.5 py-0.5 rounded text-[10px] font-semibold ui-num"
                 :class="osUsageReport.secrecy_named_access_count > 0 ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'"
               >
-                {{ `LNK ${osUsageReport.total_lnk_parsed} · 打印 ${osUsageReport.print_spooler_jobs.length}` }}
+                {{ `LNK ${osUsageReport.total_lnk_parsed} · ${locale === 'en-US' ? 'Print' : '打印'} ${osUsageReport.print_spooler_jobs.length}` }}
               </span>
             </div>
             <div class="text-[11px] truncate" style="color: var(--text-muted);">
-              {{ osUsageReport ? `可移动打开 ${osUsageReport.suspicious_u_disk_file_count} 项 · 涉密命名 ${osUsageReport.secrecy_named_access_count} 项` : '解析 Recent 快捷方式、Spooler 脱机与开关机日志' }}
+              {{ osUsageReport ? (locale === 'en-US' ? `Removable drive files: ${osUsageReport.suspicious_u_disk_file_count} · Classified names: ${osUsageReport.secrecy_named_access_count}` : `可移动打开 ${osUsageReport.suspicious_u_disk_file_count} 项 · 涉密命名 ${osUsageReport.secrecy_named_access_count} 项`) : (locale === 'en-US' ? 'Parse Recent shortcuts, Spooler offline files & power logs' : '解析 Recent 快捷方式、Spooler 脱机与开关机日志') }}
             </div>
             <div class="flex items-center gap-1.5 pt-0.5">
               <button @click="runOsUsageAudit" :disabled="isAuditingOsUsage" class="ui-btn-primary bg-indigo-600 hover:bg-indigo-500 px-2.5 py-1 text-[11px] flex-1">
-                {{ isAuditingOsUsage ? '轨迹还原中...' : '提取操作与打印痕迹' }}
+                {{ isAuditingOsUsage ? (locale === 'en-US' ? 'Restoring traces...' : '轨迹还原中...') : (locale === 'en-US' ? 'Extract Activity & Spooler Traces' : '提取操作与打印痕迹') }}
               </button>
-              <button v-if="osUsageReport" @click="secrecySubView = 'osusage'" class="ui-btn-secondary px-2 py-1 text-[11px]">明细</button>
+              <button v-if="osUsageReport" @click="secrecySubView = 'osusage'" class="ui-btn-secondary px-2 py-1 text-[11px]">{{ locale === 'en-US' ? 'Details' : '明细' }}</button>
             </div>
           </div>
 
           <!-- 卡 8: 浏览器下载 SQLite 与即时通信目录审计 -->
           <div class="ui-sub-card p-2.5 flex flex-col justify-between gap-1.5">
             <div class="flex items-center justify-between gap-2">
-              <span class="text-xs font-semibold" style="color: var(--text-primary);">8. 浏览器与 IM 外发审计</span>
+              <span class="text-xs font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? '8. Browser & IM Egress Audit' : '8. 浏览器与 IM 外发审计' }}</span>
               <span
                 v-if="appTraceReport"
                 class="px-1.5 py-0.5 rounded text-[10px] font-semibold ui-num"
@@ -1017,13 +1016,13 @@
               </span>
             </div>
             <div class="text-[11px] truncate" style="color: var(--text-muted);">
-              {{ appTraceReport ? `下载 ${appTraceReport.total_downloads_checked} 条 · IM 文件 ${appTraceReport.chat_files_checked} 份` : '无锁解析 Chrome/Edge/Firefox 历史与微信钉钉缓存' }}
+              {{ appTraceReport ? (locale === 'en-US' ? `Downloads: ${appTraceReport.total_downloads_checked} · IM files: ${appTraceReport.chat_files_checked}` : `下载 ${appTraceReport.total_downloads_checked} 条 · IM 文件 ${appTraceReport.chat_files_checked} 份`) : (locale === 'en-US' ? 'Lockless parsing of Chrome/Edge/Firefox history & WeChat/DingTalk caches' : '无锁解析 Chrome/Edge/Firefox 历史与微信钉钉缓存') }}
             </div>
             <div class="flex items-center gap-1.5 pt-0.5">
               <button @click="runAppTracesAudit" :disabled="isAuditingAppTraces" class="ui-btn-primary bg-indigo-600 hover:bg-indigo-500 px-2.5 py-1 text-[11px] flex-1">
-                {{ isAuditingAppTraces ? '库解析中...' : '审计浏览器与聊天传输' }}
+                {{ isAuditingAppTraces ? (locale === 'en-US' ? 'Parsing databases...' : '库解析中...') : (locale === 'en-US' ? 'Audit Browser & Chat Transfers' : '审计浏览器与聊天传输') }}
               </button>
-              <button v-if="appTraceReport" @click="secrecySubView = 'apptrace'" class="ui-btn-secondary px-2 py-1 text-[11px]">明细</button>
+              <button v-if="appTraceReport" @click="secrecySubView = 'apptrace'" class="ui-btn-secondary px-2 py-1 text-[11px]">{{ locale === 'en-US' ? 'Details' : '明细' }}</button>
             </div>
           </div>
         </div>
@@ -1034,23 +1033,23 @@
           <div class="flex-1 border rounded-xl overflow-hidden flex flex-col min-h-0">
             <div class="p-2.5 border-b text-xs font-semibold flex items-center justify-between shrink-0" style="border-color: var(--border-subtle); color: var(--text-primary); background: var(--surface-content-alt);">
               <div class="flex items-center gap-2">
-                <span>涉密公文与违规外联安全警报流水</span>
+                <span>{{ locale === 'en-US' ? 'Classified Documents & Illegal Egress Alert Ledger' : '涉密公文与违规外联安全警报流水' }}</span>
                 <span class="px-1.5 py-0.5 rounded-full text-[11px] bg-rose-500/15 text-rose-700 dark:text-rose-300 ui-num font-semibold">{{ confidentialityAlerts.length }} 笔</span>
               </div>
-              <span class="text-[11px]" style="color: var(--text-muted);">国家秘密法法定标志 · 红头公文字号 · 高危外联阻断</span>
+              <span class="text-[11px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'State Secrets Law Legal Markers · Red-Header Doc IDs · High-Risk Egress Block' : '国家秘密法法定标志 · 红头公文字号 · 高危外联阻断' }}</span>
             </div>
 
             <div class="flex-1 overflow-auto custom-scrollbar" style="background: var(--surface-content-alt);">
               <table class="w-full text-left text-xs border-collapse">
                 <thead class="ui-table-head sticky top-0 select-none">
                   <tr>
-                    <th class="py-2 px-3">告警 ID</th>
-                    <th class="py-2 px-3">时间</th>
-                    <th class="py-2 px-3">告警分类</th>
-                    <th class="py-2 px-3">法定定密等级</th>
-                    <th class="py-2 px-3">命中特征实体/字号</th>
-                    <th class="py-2 px-3">审查判定说明</th>
-                    <th class="py-2 px-3 text-right">操作</th>
+                    <th class="py-2 px-3">{{ locale === 'en-US' ? 'Alert ID' : '告警 ID' }}</th>
+                    <th class="py-2 px-3">{{ locale === 'en-US' ? 'Time' : '时间' }}</th>
+                    <th class="py-2 px-3">{{ locale === 'en-US' ? 'Category' : '告警分类' }}</th>
+                    <th class="py-2 px-3">{{ locale === 'en-US' ? 'Legal Secrecy Level' : '法定定密等级' }}</th>
+                    <th class="py-2 px-3">{{ locale === 'en-US' ? 'Matched Entity / Doc ID' : '命中特征实体/字号' }}</th>
+                    <th class="py-2 px-3">{{ locale === 'en-US' ? 'Audit Verdict Summary' : '审查判定说明' }}</th>
+                    <th class="py-2 px-3 text-right">{{ locale === 'en-US' ? 'Action' : '操作' }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y text-xs" style="border-color: var(--border-subtle);">
@@ -1079,19 +1078,19 @@
                         @click="blockEgressTarget(alt.target_entity, alt.summary)"
                         class="ui-btn-danger px-2 py-0.5 text-[11px]"
                       >
-                        阻断外联
+                        {{ locale === 'en-US' ? 'Block Egress' : '阻断外联' }}
                       </button>
                       <button @click="selectedDetailJson = alt.detail_json; isDetailModalOpen = true" class="ui-btn-secondary px-2 py-0.5 text-[11px]">
-                        勘验 JSON
+                        {{ locale === 'en-US' ? 'Inspect JSON' : '勘验 JSON' }}
                       </button>
                       <button @click="addConfidentialAlertToDiffQueue(alt)" class="px-2 py-0.5 rounded bg-emerald-500/12 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-[11px] font-semibold cursor-pointer">
-                        + 入队
+                        {{ locale === 'en-US' ? '+ Enqueue' : '+ 入队' }}
                       </button>
                     </td>
                   </tr>
                   <tr v-if="confidentialityAlerts.length === 0">
                     <td colspan="7" class="text-center py-8 text-xs" style="color: var(--text-muted);">
-                      网络通信与硬件总线暂未触发涉密合规与违规外联警报
+                      {{ locale === 'en-US' ? 'No secrecy compliance or illegal egress alerts triggered on network/buses' : '网络通信与硬件总线暂未触发涉密合规与违规外联警报' }}
                     </td>
                   </tr>
                 </tbody>
@@ -1104,28 +1103,28 @@
             <div class="flex items-center justify-between pb-2 border-b shrink-0 flex-wrap gap-2" style="border-color: var(--border-subtle);">
               <div class="flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                <span class="text-xs font-semibold" style="color: var(--text-primary);">涉密红头公文与文档即时静态扫描验算器</span>
-                <span class="text-[11px]" style="color: var(--text-muted);">Aho-Corasick 多模式自动机线性匹配</span>
+                <span class="text-xs font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Classified Red-Header Document Instant Static Scanner' : '涉密红头公文与文档即时静态扫描验算器' }}</span>
+                <span class="text-[11px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Aho-Corasick Multi-Pattern Automaton Linear Matching' : 'Aho-Corasick 多模式自动机线性匹配' }}</span>
               </div>
               <button @click="runStaticConfidentialityScan" :disabled="!scanInputText.trim() || isScanningText" class="ui-btn-primary bg-amber-600 hover:bg-amber-500 px-3 py-1 text-xs">
-                {{ isScanningText ? '扫描验算中...' : '立即执行保密静态扫描' }}
+                {{ isScanningText ? (locale === 'en-US' ? 'Scanning & computing...' : '扫描验算中...') : (locale === 'en-US' ? 'Execute Static Secrecy Scan' : '立即执行保密静态扫描') }}
               </button>
             </div>
 
             <div class="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-3 pt-2.5 overflow-hidden min-h-0">
               <div class="flex flex-col min-h-0">
-                <label class="text-[11px] font-semibold mb-1" style="color: var(--text-muted);">待验算公文档案 / 邮件草稿 / 代码或文本载荷:</label>
+                <label class="text-[11px] font-semibold mb-1" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Document Draft / Email / Code or Text Payload to Inspect:' : '待验算公文档案 / 邮件草稿 / 代码或文本载荷:' }}</label>
                 <textarea
                   v-model="scanInputText"
-                  placeholder="粘贴待审查的公文草稿文本、发文通知或通信载荷... 例如：国务院办公厅发[2024]12号通知，本件属于机密★20年..."
+                  :placeholder="locale === 'en-US' ? 'Paste document draft, notice or payload to inspect... e.g. Notice on State Council Dispatch [2024] No. 12, Classified Confidential★20 Years...' : '粘贴待审查的公文草稿文本、发文通知或通信载荷... 例如：国务院办公厅发[2024]12号通知，本件属于机密★20年...'"
                   class="ui-input flex-1 w-full p-2.5 font-mono text-xs resize-none custom-scrollbar"
                 ></textarea>
               </div>
 
               <div class="flex flex-col min-h-0 rounded-xl border p-3 overflow-auto custom-scrollbar" style="background: var(--surface-content); border-color: var(--border-subtle);">
                 <div class="text-[11px] font-semibold mb-1.5 flex items-center justify-between" style="color: var(--text-muted);">
-                  <span>保密合规技术审查勘验结论:</span>
-                  <span v-if="confidentialScanResult" class="ui-num">检材体积: {{ confidentialScanResult.scanned_bytes }} 字节</span>
+                  <span>{{ locale === 'en-US' ? 'Secrecy Technical Audit Conclusion:' : '保密合规技术审查勘验结论:' }}</span>
+                  <span v-if="confidentialScanResult" class="ui-num">{{ locale === 'en-US' ? 'Sample Size:' : '检材体积:' }} {{ confidentialScanResult.scanned_bytes }} {{ locale === 'en-US' ? 'Bytes' : '字节' }}</span>
                 </div>
 
                 <div v-if="confidentialScanResult" class="space-y-2 text-xs">
@@ -1135,16 +1134,16 @@
                   >
                     <div class="font-semibold flex items-center gap-2 flex-wrap">
                       <AppIcon :name="confidentialScanResult.is_secret ? 'alert' : 'check'" :size="14" />
-                      <span>{{ confidentialScanResult.is_secret ? '检出涉密与红头特征' : '未见标密违规特征' }}</span>
+                      <span>{{ confidentialScanResult.is_secret ? (locale === 'en-US' ? 'Classified & Red-Header Features Detected' : '检出涉密与红头特征') : (locale === 'en-US' ? 'No Classification Violations' : '未见标密违规特征') }}</span>
                       <span v-if="confidentialScanResult.is_secret" class="px-1.5 py-0.5 rounded text-[11px] bg-rose-500/20 font-mono">
-                        最高定密等级: {{ confidentialScanResult.highest_level }}
+                        {{ locale === 'en-US' ? 'Highest Classification: ' : '最高定密等级: ' }}{{ confidentialScanResult.highest_level }}
                       </span>
                     </div>
                     <p class="text-[11px] mt-1">{{ confidentialScanResult.recommendation }}</p>
                   </div>
 
                   <div v-if="confidentialScanResult.hit_markers.length > 0">
-                    <div class="text-[11px] font-semibold" style="color: var(--text-muted);">命中法定秘密标识:</div>
+                    <div class="text-[11px] font-semibold" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Matched Legal Secrecy Markers:' : '命中法定秘密标识:' }}</div>
                     <div class="flex flex-wrap gap-1 mt-1">
                       <span
                         v-for="m in confidentialScanResult.hit_markers"
@@ -1157,7 +1156,7 @@
                   </div>
 
                   <div v-if="confidentialScanResult.document_signatures.length > 0">
-                    <div class="text-[11px] font-semibold" style="color: var(--text-muted);">命中红头公文发文字号:</div>
+                    <div class="text-[11px] font-semibold" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Matched Red-Header Document IDs:' : '命中红头公文发文字号:' }}</div>
                     <div class="flex flex-wrap gap-1 mt-1">
                       <span
                         v-for="s in confidentialScanResult.document_signatures"
@@ -1171,7 +1170,7 @@
                 </div>
 
                 <div v-else class="flex-1 flex flex-col items-center justify-center text-xs" style="color: var(--text-muted);">
-                  <span>在左侧粘贴文本并点击“立即执行保密静态扫描”</span>
+                  <span>{{ locale === 'en-US' ? 'Paste text on the left and click Execute Static Secrecy Scan' : '在左侧粘贴文本并点击“立即执行保密静态扫描”' }}</span>
                 </div>
               </div>
             </div>
@@ -1182,26 +1181,26 @@
         <div v-else-if="secrecySubView === 'usb'" class="flex-1 border rounded-xl overflow-hidden flex flex-col min-h-0" style="border-color: var(--border-subtle); background: var(--surface-content-alt);">
           <div class="p-2.5 border-b text-xs flex items-center justify-between flex-wrap gap-2 shrink-0" style="border-color: var(--border-subtle);">
             <div class="flex items-center gap-2">
-              <span class="font-semibold" style="color: var(--text-primary);">涉密终端 USBSTOR 历史插拔痕迹与盘符映射取证表</span>
+              <span class="font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Classified Terminal USBSTOR History Traces & Drive Mapping Table' : '涉密终端 USBSTOR 历史插拔痕迹与盘符映射取证表' }}</span>
               <span v-if="usbForensicsReport" class="text-[11px] font-mono" style="color: var(--text-muted);">
                 主机: {{ usbForensicsReport.scanned_host }} · 扫描时间: {{ usbForensicsReport.scan_time }}
               </span>
             </div>
             <button @click="runSecrecyUsbHistoryAudit" :disabled="isAuditingUsbHistory" class="ui-btn-secondary px-2.5 py-1 text-[11px]">
-              {{ isAuditingUsbHistory ? '重新提取中...' : '刷新 USB 物理取证' }}
+              {{ isAuditingUsbHistory ? (locale === 'en-US' ? 'Re-extracting...' : '重新提取中...') : (locale === 'en-US' ? 'Refresh USB Forensics' : '刷新 USB 物理取证') }}
             </button>
           </div>
           <div class="flex-1 overflow-auto custom-scrollbar">
             <table v-if="usbForensicsReport && usbForensicsReport.devices.length > 0" class="w-full text-left text-xs border-collapse">
               <thead class="ui-table-head sticky top-0 select-none">
                 <tr>
-                  <th class="py-2 px-3">友好设备名称</th>
+                  <th class="py-2 px-3">{{ locale === 'en-US' ? 'Friendly Device Name' : '友好设备名称' }}</th>
                   <th class="py-2 px-3">VID / PID</th>
-                  <th class="py-2 px-3">物理唯一序列号</th>
-                  <th class="py-2 px-3">历史盘符</th>
-                  <th class="py-2 px-3">首次 / 末次接入时间戳</th>
-                  <th class="py-2 px-3">证据来源</th>
-                  <th class="py-2 px-3">BMB22 合规裁决</th>
+                  <th class="py-2 px-3">{{ locale === 'en-US' ? 'Serial Number' : '物理唯一序列号' }}</th>
+                  <th class="py-2 px-3">{{ locale === 'en-US' ? 'Drive Letter' : '历史盘符' }}</th>
+                  <th class="py-2 px-3">{{ locale === 'en-US' ? 'First / Last Arrival' : '首次 / 末次接入时间戳' }}</th>
+                  <th class="py-2 px-3">{{ locale === 'en-US' ? 'Evidence Source' : '证据来源' }}</th>
+                  <th class="py-2 px-3">{{ locale === 'en-US' ? 'BMB22 Verdict' : 'BMB22 合规裁决' }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y text-xs" style="border-color: var(--border-subtle);">
@@ -1211,20 +1210,20 @@
                   <td class="py-2 px-3 font-mono text-[11px]" style="color: var(--text-secondary);">{{ dev.serial_number }}</td>
                   <td class="py-2 px-3 font-mono font-semibold" style="color: var(--text-primary);">{{ dev.assigned_drive_letter }}</td>
                   <td class="py-2 px-3 font-mono text-[11px] ui-num" style="color: var(--text-secondary);">
-                    <div>首: {{ dev.first_installed_time }}</div>
-                    <div>末: {{ dev.last_arrival_time }}</div>
+                    <div>{{ locale === 'en-US' ? 'First: ' : '首: ' }}{{ dev.first_installed_time }}</div>
+                    <div>{{ locale === 'en-US' ? 'Last: ' : '末: ' }}{{ dev.last_arrival_time }}</div>
                   </td>
                   <td class="py-2 px-3 font-mono text-[11px]" style="color: var(--text-muted);">{{ dev.evidence_source }}</td>
                   <td class="py-2 px-3">
                     <span class="px-2 py-0.5 rounded text-[11px] font-semibold" :class="dev.is_whitelisted ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' : 'bg-rose-600 text-white'">
-                      {{ dev.is_whitelisted ? '授权白名单' : '非授权违规介质' }}
+                      {{ dev.is_whitelisted ? (locale === 'en-US' ? 'Whitelisted' : '授权白名单') : (locale === 'en-US' ? 'Unauthorized Medium' : '非授权违规介质') }}
                     </span>
                   </td>
                 </tr>
               </tbody>
             </table>
             <div v-else class="p-8 text-center text-xs" style="color: var(--text-muted);">
-              {{ usbForensicsReport ? usbForensicsReport.summary_conclusion : '点击上方“提取历史 USB 痕迹”以物理穿透注册表 USBSTOR 与 MountedDevices。' }}
+              {{ usbForensicsReport ? usbForensicsReport.summary_conclusion : (locale === 'en-US' ? 'Click Extract USB History Traces to penetrate registry USBSTOR & MountedDevices.' : '点击上方“提取历史 USB 痕迹”以物理穿透注册表 USBSTOR 与 MountedDevices。') }}
             </div>
           </div>
         </div>
@@ -1233,7 +1232,7 @@
         <div v-else-if="secrecySubView === 'docs'" class="flex-1 border rounded-xl overflow-hidden flex flex-col min-h-0" style="border-color: var(--border-subtle); background: var(--surface-content-alt);">
           <div class="p-2.5 border-b text-xs flex items-center justify-between flex-wrap gap-2 shrink-0" style="border-color: var(--border-subtle);">
             <div class="flex items-center gap-2">
-              <span class="font-semibold" style="color: var(--text-primary);">复合文档二进制穿透解构与法定标密检索清单</span>
+              <span class="font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Compound Document Binary Dissection & Legal Secrecy Retrieval Ledger' : '复合文档二进制穿透解构与法定标密检索清单' }}</span>
               <span v-if="dissectReport" class="text-[11px] font-mono" style="color: var(--text-muted);">
                 已解构 {{ dissectReport.scanned_files_count }} 份文档 · 耗时 {{ dissectReport.duration_ms }} ms · 加密/阻塞 {{ dissectReport.encrypted_or_blocked_count }} 份
               </span>
@@ -1246,12 +1245,12 @@
             <table v-if="dissectReport && dissectReport.hits.length > 0" class="w-full text-left text-xs border-collapse">
               <thead class="ui-table-head sticky top-0 select-none">
                 <tr>
-                  <th class="py-2 px-3">文件路径 (含嵌套层级)</th>
-                  <th class="py-2 px-3">格式</th>
-                  <th class="py-2 px-3">标密等级</th>
-                  <th class="py-2 px-3">命中标识与发文字号</th>
-                  <th class="py-2 px-3">SM3 摘要 (前16位)</th>
-                  <th class="py-2 px-3">脱敏内容摘要</th>
+                  <th class="py-2 px-3">{{ locale === 'en-US' ? 'File Path (Nested)' : '文件路径 (含嵌套层级)' }}</th>
+                  <th class="py-2 px-3">{{ locale === 'en-US' ? 'Format' : '格式' }}</th>
+                  <th class="py-2 px-3">{{ locale === 'en-US' ? 'Secrecy Level' : '标密等级' }}</th>
+                  <th class="py-2 px-3">{{ locale === 'en-US' ? 'Matched Markers & Doc IDs' : '命中标识与发文字号' }}</th>
+                  <th class="py-2 px-3">{{ locale === 'en-US' ? 'SM3 Hash' : 'SM3 摘要 (前16位)' }}</th>
+                  <th class="py-2 px-3">{{ locale === 'en-US' ? 'Masked Summary' : '脱敏内容摘要' }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y text-xs" style="border-color: var(--border-subtle);">
@@ -1283,28 +1282,28 @@
         <div v-else-if="secrecySubView === 'dualhomed'" class="flex-1 border rounded-xl overflow-hidden flex flex-col min-h-0" style="border-color: var(--border-subtle); background: var(--surface-content-alt);">
           <div class="p-2.5 border-b text-xs flex items-center justify-between flex-wrap gap-2 shrink-0" style="border-color: var(--border-subtle);">
             <div class="flex items-center gap-2 flex-wrap">
-              <span class="font-semibold" style="color: var(--text-primary);">宿主机“一机两用”双网连通性与路由表穿透核查</span>
+              <span class="font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Host Dual-Homed Connectivity & Routing Table Penetration Audit' : '宿主机“一机两用”双网连通性与路由表穿透核查' }}</span>
               <span v-if="dualHomedReport && dualHomedReport.wireless_ssid" class="px-2 py-0.5 rounded bg-rose-500/15 text-rose-700 dark:text-rose-300 font-mono text-[11px]">
-                关联热点 SSID: {{ dualHomedReport.wireless_ssid }}
+                {{ locale === 'en-US' ? 'Associated SSID: ' : '关联热点 SSID: ' }}{{ dualHomedReport.wireless_ssid }}
               </span>
             </div>
             <button @click="runDualHomedNetworkAudit" :disabled="isAuditingDualHomed" class="ui-btn-secondary px-2.5 py-1 text-[11px]">
-              {{ isAuditingDualHomed ? '检测中...' : '刷新接口与路由核查' }}
+              {{ isAuditingDualHomed ? (locale === 'en-US' ? 'Checking...' : '检测中...') : (locale === 'en-US' ? 'Refresh Interface & Routing Audit' : '刷新接口与路由核查') }}
             </button>
           </div>
           <div v-if="dualHomedReport" class="p-2.5 border-b text-xs shrink-0" :class="dualHomedReport.is_dual_homed_violation ? 'bg-rose-500/10 text-rose-700 dark:text-rose-200' : dualHomedReport.risk_level === 'HIGH' ? 'bg-amber-500/10 text-amber-800 dark:text-amber-200' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-200'" style="border-color: var(--border-subtle);">
-            <b>裁决说明 [{{ dualHomedReport.risk_level }}]：</b>{{ dualHomedReport.reason }}
+            <b>{{ locale === 'en-US' ? 'Verdict Description [' : '裁决说明 [' }}{{ dualHomedReport.risk_level }}]：</b>{{ dualHomedReport.reason }}
           </div>
           <div class="flex-1 overflow-auto custom-scrollbar">
             <table v-if="dualHomedReport && dualHomedReport.interfaces.length > 0" class="w-full text-left text-xs border-collapse">
               <thead class="ui-table-head sticky top-0 select-none">
                 <tr>
-                  <th class="py-2 px-3">网卡适配器名称</th>
-                  <th class="py-2 px-3">链路物理分类</th>
-                  <th class="py-2 px-3">当前状态</th>
-                  <th class="py-2 px-3">IPv4 地址列表</th>
-                  <th class="py-2 px-3">默认网关</th>
-                  <th class="py-2 px-3">网络边界归属</th>
+                  <th class="py-2 px-3">{{ locale === 'en-US' ? 'Adapter Name' : '网卡适配器名称' }}</th>
+                  <th class="py-2 px-3">{{ locale === 'en-US' ? 'Medium Type' : '链路物理分类' }}</th>
+                  <th class="py-2 px-3">{{ locale === 'en-US' ? 'Status' : '当前状态' }}</th>
+                  <th class="py-2 px-3">{{ locale === 'en-US' ? 'IPv4 Addresses' : 'IPv4 地址列表' }}</th>
+                  <th class="py-2 px-3">{{ locale === 'en-US' ? 'Default Gateway' : '默认网关' }}</th>
+                  <th class="py-2 px-3">{{ locale === 'en-US' ? 'Boundary Attribution' : '网络边界归属' }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y text-xs" style="border-color: var(--border-subtle);">
@@ -1313,21 +1312,21 @@
                   <td class="py-2 px-3 font-mono">{{ nic.if_type }}</td>
                   <td class="py-2 px-3">
                     <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold" :class="nic.is_up ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' : 'ui-pill'">
-                      {{ nic.is_up ? 'UP 已连接' : 'DOWN' }}
+                      {{ nic.is_up ? (locale === 'en-US' ? 'UP (Connected)' : 'UP 已连接') : 'DOWN' }}
                     </span>
                   </td>
                   <td class="py-2 px-3 font-mono ui-num" style="color: var(--text-secondary);">{{ nic.ip_addresses.join(', ') || '-' }}</td>
                   <td class="py-2 px-3 font-mono ui-num" style="color: var(--text-secondary);">{{ nic.gateway_addresses.join(', ') || '-' }}</td>
                   <td class="py-2 px-3">
-                    <span v-if="nic.is_connected_to_public" class="text-rose-600 dark:text-rose-400 font-semibold">公网路由暴露</span>
-                    <span v-else-if="nic.is_connected_to_private" class="text-emerald-600 dark:text-emerald-400">内网私网段</span>
-                    <span v-else style="color: var(--text-muted);">未配置地址</span>
+                    <span v-if="nic.is_connected_to_public" class="text-rose-600 dark:text-rose-400 font-semibold">{{ locale === 'en-US' ? 'Public Route Exposed' : '公网路由暴露' }}</span>
+                    <span v-else-if="nic.is_connected_to_private" class="text-emerald-600 dark:text-emerald-400">{{ locale === 'en-US' ? 'Private Subnet' : '内网私网段' }}</span>
+                    <span v-else style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Unconfigured' : '未配置地址' }}</span>
                   </td>
                 </tr>
               </tbody>
             </table>
             <div v-else class="p-8 text-center text-xs" style="color: var(--text-muted);">
-              点击上方“检测一机两用双联”提取宿主机全部网卡接口与系统默认网关路由。
+              {{ locale === 'en-US' ? 'Click Detect Dual-Homed Links above to extract all NICs and default gateway routes.' : '点击上方“检测一机两用双联”提取宿主机全部网卡接口与系统默认网关路由。' }}
             </div>
           </div>
         </div>
@@ -1336,35 +1335,35 @@
         <div v-else-if="secrecySubView === 'history'" class="flex-1 border rounded-xl overflow-hidden flex flex-col min-h-0" style="border-color: var(--border-subtle); background: var(--surface-content-alt);">
           <div class="p-2.5 border-b flex items-center justify-between text-xs shrink-0" style="border-color: var(--border-subtle);">
             <div class="flex items-center gap-2">
-              <span class="font-semibold" style="color: var(--text-primary);">历史无线 Wi-Fi 配置、USB RNDIS 共享及拨号连接取证</span>
+              <span class="font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Historic Wi-Fi Profiles, USB RNDIS Sharing & Dial-Up Forensics' : '历史无线 Wi-Fi 配置、USB RNDIS 共享及拨号连接取证' }}</span>
               <span v-if="networkHistoryReport" class="text-[11px] ui-num" style="color: var(--text-muted);">
                 Wi-Fi {{ networkHistoryReport.total_wifi_profiles_found }} 项 · 可疑热点 {{ networkHistoryReport.suspicious_mobile_hotspots.length }} 项 · RNDIS {{ networkHistoryReport.historic_rndis_devices.length }} 台
               </span>
             </div>
-            <button @click="runNetworkHistoryAudit" :disabled="isAuditingNetworkHistory" class="ui-btn-secondary px-2.5 py-1 text-[11px]">重新排查</button>
+            <button @click="runNetworkHistoryAudit" :disabled="isAuditingNetworkHistory" class="ui-btn-secondary px-2.5 py-1 text-[11px]">{{ locale === 'en-US' ? 'Re-audit' : '重新排查' }}</button>
           </div>
           <div class="flex-1 overflow-auto custom-scrollbar p-2.5 space-y-3">
             <template v-if="networkHistoryReport">
               <div v-if="networkHistoryReport.degrade_notes.length > 0" class="p-2 rounded-lg bg-amber-500/10 border border-amber-500/25 text-[11px] text-amber-800 dark:text-amber-300">
-                <b>降级与权限说明：</b>{{ networkHistoryReport.degrade_notes.join('；') }}
+                <b>{{ locale === 'en-US' ? 'Degrade & Permission Notes: ' : '降级与权限说明：' }}</b>{{ networkHistoryReport.degrade_notes.join('; ') }}
               </div>
               <div v-if="networkHistoryReport.historic_rndis_devices.length > 0" class="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-700 dark:text-rose-300">
-                <b>检出历史手机 USB 网络共享 (RNDIS / Apple Mobile) 设备实例：</b>
+                <b>{{ locale === 'en-US' ? 'Detected Historic Mobile USB Tethering (RNDIS / Apple Mobile) Devices:' : '检出历史手机 USB 网络共享 (RNDIS / Apple Mobile) 设备实例：' }}</b>
                 <ul class="list-disc ml-4 mt-1 font-mono text-[11px]">
                   <li v-for="(dev, idx) in networkHistoryReport.historic_rndis_devices" :key="idx">{{ dev }}</li>
                 </ul>
               </div>
               <div v-if="networkHistoryReport.historic_dialup_connections.length > 0" class="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs">
-                <b>检出历史拨号 / VPN 连接配置：</b> {{ networkHistoryReport.historic_dialup_connections.join('、') }}
+                <b>{{ locale === 'en-US' ? 'Detected Historic Dial-up / VPN Configurations: ' : '检出历史拨号 / VPN 连接配置：' }}</b> {{ networkHistoryReport.historic_dialup_connections.join('、') }}
               </div>
               <table v-if="networkHistoryReport.all_wifi_profiles.length > 0" class="w-full text-left text-xs border-collapse">
                 <thead class="ui-table-head sticky top-0">
                   <tr>
-                    <th class="py-1.5 px-2.5">配置文件名</th>
-                    <th class="py-1.5 px-2.5">无线 SSID</th>
-                    <th class="py-1.5 px-2.5">认证 / 加密方式</th>
-                    <th class="py-1.5 px-2.5">配置末次修改时间</th>
-                    <th class="py-1.5 px-2.5 text-center">风险特征</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Profile Name' : '配置文件名' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Wireless SSID' : '无线 SSID' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Auth / Encryption' : '认证 / 加密方式' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Last Modified' : '配置末次修改时间' }}</th>
+                    <th class="py-1.5 px-2.5 text-center">{{ locale === 'en-US' ? 'Risk Feature' : '风险特征' }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y" style="border-color: var(--border-subtle);">
@@ -1375,20 +1374,20 @@
                     <td class="py-1.5 px-2.5 ui-num">{{ w.last_modified_time }}</td>
                     <td class="py-1.5 px-2.5 text-center">
                       <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold" :class="w.is_mobile_hotspot_feature ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300' : 'ui-pill'">
-                        {{ w.is_mobile_hotspot_feature ? '手机热点特征' : '常规无线配置' }}
+                        {{ w.is_mobile_hotspot_feature ? (locale === 'en-US' ? 'Mobile Hotspot' : '手机热点特征') : (locale === 'en-US' ? 'Normal Wi-Fi' : '常规无线配置') }}
                       </span>
                     </td>
                   </tr>
                 </tbody>
               </table>
               <div v-if="networkHistoryReport.historic_network_profiles.length > 0">
-                <div class="text-[11px] font-semibold mb-1" style="color: var(--text-muted);">NetworkList 注册表历史网络连接列表：</div>
+                <div class="text-[11px] font-semibold mb-1" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'NetworkList Registry Historical Connections:' : 'NetworkList 注册表历史网络连接列表：' }}</div>
                 <table class="w-full text-left text-xs border-collapse">
                   <thead class="ui-table-head">
                     <tr>
-                      <th class="py-1.5 px-2.5">网络配置名称</th>
-                      <th class="py-1.5 px-2.5">网络类型 (Category)</th>
-                      <th class="py-1.5 px-2.5">末次连接时间</th>
+                      <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Profile Name' : '网络配置名称' }}</th>
+                      <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Category' : '网络类型 (Category)' }}</th>
+                      <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Last Connected Time' : '末次连接时间' }}</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y" style="border-color: var(--border-subtle);">
@@ -1401,10 +1400,10 @@
                 </table>
               </div>
               <div v-if="networkHistoryReport.all_wifi_profiles.length === 0 && networkHistoryReport.historic_network_profiles.length === 0 && networkHistoryReport.historic_rndis_devices.length === 0" class="p-6 text-center text-xs text-emerald-600 dark:text-emerald-400">
-                未在注册表、WlanSvc 与网络配置库中检出任何非授权外联历史痕迹。
+                {{ locale === 'en-US' ? 'No unauthorized egress traces found in Registry, WlanSvc or Network Profiles.' : '未在注册表、WlanSvc 与网络配置库中检出任何非授权外联历史痕迹。' }}
               </div>
             </template>
-            <div v-else class="p-8 text-center text-xs" style="color: var(--text-muted);">点击上方“排查历史外联痕迹”启动全量 WlanSvc、USB RNDIS 与拨号配置取证。</div>
+            <div v-else class="p-8 text-center text-xs" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Click "Check Historic Egress Traces" above to trigger WlanSvc, USB RNDIS & Dial-up forensic scan.' : '点击上方“排查历史外联痕迹”启动全量 WlanSvc、USB RNDIS 与拨号配置取证。' }}</div>
           </div>
         </div>
 
@@ -1412,32 +1411,32 @@
         <div v-else-if="secrecySubView === 'ole2'" class="flex-1 border rounded-xl overflow-hidden flex flex-col min-h-0" style="border-color: var(--border-subtle); background: var(--surface-content-alt);">
           <div class="p-2.5 border-b flex items-center justify-between text-xs shrink-0" style="border-color: var(--border-subtle);">
             <div class="flex items-center gap-2">
-              <span class="font-semibold" style="color: var(--text-primary);">OLE2 复合二进制文档 (.doc/.xls/.ppt) 及扇区残片取证明细</span>
+              <span class="font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'OLE2 Compound Binary (.doc/.xls/.ppt) & Slack Sector Forensics' : 'OLE2 复合二进制文档 (.doc/.xls/.ppt) 及扇区残片取证明细' }}</span>
               <span v-if="ole2Report" class="text-[11px] ui-num" style="color: var(--text-muted);">
-                解构 {{ ole2Report.scanned_ole2_files }} 份 · OLE2 命中 {{ ole2Report.ole2_hits.length }} 份 · 扇区 {{ ole2Report.slack_scanned_bytes }} Bytes (残片命中 {{ ole2Report.slack_hits.length }})
+                {{ locale === 'en-US' ? 'Dissected' : '解构' }} {{ ole2Report.scanned_ole2_files }} · OLE2 {{ locale === 'en-US' ? 'Hits' : '命中' }} {{ ole2Report.ole2_hits.length }} · {{ locale === 'en-US' ? 'Sector' : '扇区' }} {{ ole2Report.slack_scanned_bytes }} B ({{ locale === 'en-US' ? 'Slack Hits' : '残片命中' }} {{ ole2Report.slack_hits.length }})
               </span>
             </div>
-            <button @click="runOle2AndSlackAudit" :disabled="isDissectingOle2" class="ui-btn-secondary px-2.5 py-1 text-[11px]">重新扫描</button>
+            <button @click="runOle2AndSlackAudit" :disabled="isDissectingOle2" class="ui-btn-secondary px-2.5 py-1 text-[11px]">{{ locale === 'en-US' ? 'Rescan' : '重新扫描' }}</button>
           </div>
           <div class="flex-1 overflow-auto custom-scrollbar p-2.5 space-y-3">
             <template v-if="ole2Report">
               <div v-if="ole2Report.warnings.length > 0" class="p-2 rounded-lg bg-amber-500/10 border border-amber-500/25 text-[11px] text-amber-800 dark:text-amber-300">
-                <b>解析提示：</b>{{ ole2Report.warnings.join('；') }}
+                <b>{{ locale === 'en-US' ? 'Notice:' : '解析提示：' }}</b>{{ ole2Report.warnings.join('；') }}
               </div>
               <table v-if="ole2Report.ole2_hits.length > 0" class="w-full text-left text-xs border-collapse">
                 <thead class="ui-table-head sticky top-0">
                   <tr>
-                    <th class="py-1.5 px-2.5">文件路径与 CFBF 子流</th>
-                    <th class="py-1.5 px-2.5 text-center">定密判定</th>
-                    <th class="py-1.5 px-2.5">命中标志词 / 文号</th>
-                    <th class="py-1.5 px-2.5">SM3 哈希与脱敏摘要</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'File Path & CFBF Stream' : '文件路径与 CFBF 子流' }}</th>
+                    <th class="py-1.5 px-2.5 text-center">{{ locale === 'en-US' ? 'Verdict' : '定密判定' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Matched Marker / Dispatch No.' : '命中标志词 / 文号' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'SM3 Hash & Masked Summary' : 'SM3 哈希与脱敏摘要' }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y" style="border-color: var(--border-subtle);">
                   <tr v-for="(h, idx) in ole2Report.ole2_hits" :key="idx" class="hover:bg-[var(--surface-hover)]">
                     <td class="py-1.5 px-2.5 font-mono text-[11px]">
                       <div class="font-semibold">{{ h.file_path }}</div>
-                      <div style="color: var(--text-muted);">流: {{ h.sub_stream_name }}</div>
+                      <div style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Stream:' : '流:' }} {{ h.sub_stream_name }}</div>
                     </td>
                     <td class="py-1.5 px-2.5 text-center"><span class="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[10px] font-semibold">{{ h.secrecy_level }}</span></td>
                     <td class="py-1.5 px-2.5 font-semibold">{{ [...h.matched_markers, ...h.document_signatures].join('、') || '-' }}</td>
@@ -1451,10 +1450,10 @@
               <table v-if="ole2Report.slack_hits.length > 0" class="w-full text-left text-xs border-collapse">
                 <thead class="ui-table-head">
                   <tr>
-                    <th class="py-1.5 px-2.5">卷 / 镜像目标</th>
-                    <th class="py-1.5 px-2.5">物理字节偏移</th>
-                    <th class="py-1.5 px-2.5">命中标密关键词</th>
-                    <th class="py-1.5 px-2.5">残片文本脱敏窗口</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Volume / Image' : '卷 / 镜像目标' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Physical Offset' : '物理字节偏移' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Matched Marker' : '命中标密关键词' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Slack Masked Preview' : '残片文本脱敏窗口' }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y" style="border-color: var(--border-subtle);">
@@ -1467,10 +1466,10 @@
                 </tbody>
               </table>
               <div v-if="ole2Report.ole2_hits.length === 0 && ole2Report.slack_hits.length === 0" class="p-6 text-center text-xs text-emerald-600 dark:text-emerald-400">
-                目录 {{ ole2Report.target_folder }} 内 OLE2 二进制流及对应扇区检索未命中法定涉密标密词。
+                {{ locale === 'en-US' ? `No statutory classified markers matched in OLE2 streams or slack space under ${ole2Report.target_folder}.` : `目录 ${ole2Report.target_folder} 内 OLE2 二进制流及对应扇区检索未命中法定涉密标密词。` }}
               </div>
             </template>
-            <div v-else class="p-8 text-center text-xs" style="color: var(--text-muted);">填写复合文档扫描目录（与可选残片路径）后点击“扫描 DOC/XLS 与残片”。</div>
+            <div v-else class="p-8 text-center text-xs" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Enter compound document folder (and optional raw sector path) then click "Scan DOC/XLS & Slack".' : '填写复合文档扫描目录（与可选残片路径）后点击“扫描 DOC/XLS 与残片”。' }}</div>
           </div>
         </div>
 
@@ -1478,30 +1477,30 @@
         <div v-else-if="secrecySubView === 'osusage'" class="flex-1 border rounded-xl overflow-hidden flex flex-col min-h-0" style="border-color: var(--border-subtle); background: var(--surface-content-alt);">
           <div class="p-2.5 border-b flex items-center justify-between text-xs shrink-0" style="border-color: var(--border-subtle);">
             <div class="flex items-center gap-2">
-              <span class="font-semibold" style="color: var(--text-primary);">OS 快捷方式 (.lnk)、Spooler 打印影子及开关机事件时间线</span>
+              <span class="font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'OS Shortcuts (.lnk), Spooler Print Shadows & Boot Event Timeline' : 'OS 快捷方式 (.lnk)、Spooler 打印影子及开关机事件时间线' }}</span>
               <span v-if="osUsageReport" class="text-[11px] ui-num" style="color: var(--text-muted);">
-                快捷方式 {{ osUsageReport.total_lnk_parsed }} 条 · 打印作业 {{ osUsageReport.print_spooler_jobs.length }} 项 · 开关机事件 {{ osUsageReport.system_boot_history.length }} 条
+                {{ locale === 'en-US' ? 'Shortcuts' : '快捷方式' }} {{ osUsageReport.total_lnk_parsed }} · {{ locale === 'en-US' ? 'Print Jobs' : '打印作业' }} {{ osUsageReport.print_spooler_jobs.length }} · {{ locale === 'en-US' ? 'Boot Events' : '开关机事件' }} {{ osUsageReport.system_boot_history.length }}
               </span>
             </div>
-            <button @click="runOsUsageAudit" :disabled="isAuditingOsUsage" class="ui-btn-secondary px-2.5 py-1 text-[11px]">重新提取</button>
+            <button @click="runOsUsageAudit" :disabled="isAuditingOsUsage" class="ui-btn-secondary px-2.5 py-1 text-[11px]">{{ locale === 'en-US' ? 'Re-extract' : '重新提取' }}</button>
           </div>
           <div class="flex-1 overflow-auto custom-scrollbar p-2.5 space-y-3">
             <template v-if="osUsageReport">
               <div v-if="osUsageReport.degrade_notes.length > 0" class="p-2 rounded-lg bg-amber-500/10 border border-amber-500/25 text-[11px] text-amber-800 dark:text-amber-300">
-                <b>提示与降级记录：</b>{{ osUsageReport.degrade_notes.join('；') }}
+                <b>{{ locale === 'en-US' ? 'Degrade Notes:' : '提示与降级记录：' }}</b>{{ osUsageReport.degrade_notes.join('；') }}
               </div>
               <div v-if="osUsageReport.system_boot_history.length > 0" class="p-2 rounded-lg border text-[11px] font-mono space-y-0.5 max-h-28 overflow-auto custom-scrollbar" style="border-color: var(--border-subtle);">
-                <div class="font-semibold font-sans mb-1" style="color: var(--text-primary);">最近系统开关机审计时间线：</div>
+                <div class="font-semibold font-sans mb-1" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Recent System Boot/Shutdown Timeline:' : '最近系统开关机审计时间线：' }}</div>
                 <div v-for="(b, idx) in osUsageReport.system_boot_history.slice(0, 15)" :key="idx" style="color: var(--text-secondary);">{{ b }}</div>
               </div>
               <table v-if="osUsageReport.recent_files.length > 0" class="w-full text-left text-xs border-collapse">
                 <thead class="ui-table-head sticky top-0">
                   <tr>
-                    <th class="py-1.5 px-2.5">快捷方式名</th>
-                    <th class="py-1.5 px-2.5">MS-SHLLINK 真实目标路径</th>
-                    <th class="py-1.5 px-2.5">介质类型</th>
-                    <th class="py-1.5 px-2.5">末次访问时间</th>
-                    <th class="py-1.5 px-2.5 text-center">风险标签</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Shortcut Name' : '快捷方式名' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'MS-SHLLINK Target Path' : 'MS-SHLLINK 真实目标路径' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Drive Type' : '介质类型' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Last Access Time' : '末次访问时间' }}</th>
+                    <th class="py-1.5 px-2.5 text-center">{{ locale === 'en-US' ? 'Risk Tag' : '风险标签' }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y" style="border-color: var(--border-subtle);">
@@ -1511,9 +1510,9 @@
                     <td class="py-1.5 px-2.5">{{ f.drive_type }}</td>
                     <td class="py-1.5 px-2.5 ui-num">{{ f.target_last_access_time }}</td>
                     <td class="py-1.5 px-2.5 text-center space-x-1">
-                      <span v-if="f.is_removable_media_target" class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-semibold">可移动盘</span>
-                      <span v-if="f.is_secrecy_named" class="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[10px] font-semibold">涉密命名</span>
-                      <span v-if="!f.is_removable_media_target && !f.is_secrecy_named" class="ui-pill text-[10px]">本地常规</span>
+                      <span v-if="f.is_removable_media_target" class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-semibold">{{ locale === 'en-US' ? 'Removable' : '可移动盘' }}</span>
+                      <span v-if="f.is_secrecy_named" class="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[10px] font-semibold">{{ locale === 'en-US' ? 'Classified Named' : '涉密命名' }}</span>
+                      <span v-if="!f.is_removable_media_target && !f.is_secrecy_named" class="ui-pill text-[10px]">{{ locale === 'en-US' ? 'Local Regular' : '本地常规' }}</span>
                     </td>
                   </tr>
                 </tbody>
@@ -1521,11 +1520,11 @@
               <table v-if="osUsageReport.print_spooler_jobs.length > 0" class="w-full text-left text-xs border-collapse">
                 <thead class="ui-table-head">
                   <tr>
-                    <th class="py-1.5 px-2.5">作业号</th>
-                    <th class="py-1.5 px-2.5">打印文档标题</th>
-                    <th class="py-1.5 px-2.5">打印机队列</th>
-                    <th class="py-1.5 px-2.5">提交时间</th>
-                    <th class="py-1.5 px-2.5 text-center">判定</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Job ID' : '作业号' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Document Title' : '打印文档标题' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Printer Queue' : '打印机队列' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Submitted' : '提交时间' }}</th>
+                    <th class="py-1.5 px-2.5 text-center">{{ locale === 'en-US' ? 'Verdict' : '判定' }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y" style="border-color: var(--border-subtle);">
@@ -1536,14 +1535,14 @@
                     <td class="py-1.5 px-2.5 ui-num">{{ j.submit_time }}</td>
                     <td class="py-1.5 px-2.5 text-center">
                       <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold" :class="j.is_secrecy_suspicious ? 'bg-rose-600 text-white' : 'ui-pill'">
-                        {{ j.is_secrecy_suspicious ? '涉密嫌疑' : '常规打印' }}
+                        {{ j.is_secrecy_suspicious ? (locale === 'en-US' ? 'Suspicious' : '涉密嫌疑') : (locale === 'en-US' ? 'Regular' : '常规打印') }}
                       </span>
                     </td>
                   </tr>
                 </tbody>
               </table>
             </template>
-            <div v-else class="p-8 text-center text-xs" style="color: var(--text-muted);">点击上方“提取操作与打印痕迹”解析系统 Recent 快捷方式、Spooler 与事件日志。</div>
+            <div v-else class="p-8 text-center text-xs" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Click "Extract Usage & Print Traces" above to parse system Recent shortcuts, Spooler & event logs.' : '点击上方“提取操作与打印痕迹”解析系统 Recent 快捷方式、Spooler 与事件日志。' }}</div>
           </div>
         </div>
 
@@ -1551,12 +1550,12 @@
         <div v-else-if="secrecySubView === 'apptrace'" class="flex-1 border rounded-xl overflow-hidden flex flex-col min-h-0" style="border-color: var(--border-subtle); background: var(--surface-content-alt);">
           <div class="p-2.5 border-b flex items-center justify-between text-xs shrink-0" style="border-color: var(--border-subtle);">
             <div class="flex items-center gap-2">
-              <span class="font-semibold" style="color: var(--text-primary);">浏览器下载 SQLite3 历史与微信/企业微信/钉钉传输目录审计</span>
+              <span class="font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Browser Download SQLite3 History & WeChat/DingTalk Transfer Directory Audit' : '浏览器下载 SQLite3 历史与微信/企业微信/钉钉传输目录审计' }}</span>
               <span v-if="appTraceReport" class="text-[11px] ui-num" style="color: var(--text-muted);">
                 下载记录 {{ appTraceReport.total_downloads_checked }} 条 (可疑 {{ appTraceReport.suspicious_downloads.length }}) · IM 文件 {{ appTraceReport.chat_files_checked }} 份 (命中 {{ appTraceReport.chat_file_hits.length }})
               </span>
             </div>
-            <button @click="runAppTracesAudit" :disabled="isAuditingAppTraces" class="ui-btn-secondary px-2.5 py-1 text-[11px]">重新审计</button>
+            <button @click="runAppTracesAudit" :disabled="isAuditingAppTraces" class="ui-btn-secondary px-2.5 py-1 text-[11px]">{{ locale === 'en-US' ? 'Re-audit' : '重新审计' }}</button>
           </div>
           <div class="flex-1 overflow-auto custom-scrollbar p-2.5 space-y-3">
             <template v-if="appTraceReport">
@@ -1566,11 +1565,11 @@
               <table v-if="appTraceReport.suspicious_downloads.length > 0 || appTraceReport.recent_downloads_sample.length > 0" class="w-full text-left text-xs border-collapse">
                 <thead class="ui-table-head sticky top-0">
                   <tr>
-                    <th class="py-1.5 px-2.5">浏览器</th>
-                    <th class="py-1.5 px-2.5">落盘目标路径</th>
-                    <th class="py-1.5 px-2.5">下载来源 URL</th>
-                    <th class="py-1.5 px-2.5">下载时间</th>
-                    <th class="py-1.5 px-2.5 text-center">命中标识</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Browser' : '浏览器' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Target Path' : '落盘目标路径' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Source URL' : '下载来源 URL' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Download Time' : '下载时间' }}</th>
+                    <th class="py-1.5 px-2.5 text-center">{{ locale === 'en-US' ? 'Matched Marker' : '命中标识' }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y" style="border-color: var(--border-subtle);">
@@ -1581,7 +1580,7 @@
                     <td class="py-1.5 px-2.5 ui-num whitespace-nowrap">{{ d.download_time }}</td>
                     <td class="py-1.5 px-2.5 text-center">
                       <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold" :class="d.is_suspicious_secrecy ? 'bg-rose-600 text-white' : 'ui-pill'">
-                        {{ d.is_suspicious_secrecy ? (d.matched_marker || '涉密命中') : '常规样本' }}
+                        {{ d.is_suspicious_secrecy ? (locale === 'en-US' ? (d.matched_marker || 'Classified') : (d.matched_marker || '涉密命中')) : (locale === 'en-US' ? 'Normal' : '常规样本') }}
                       </span>
                     </td>
                   </tr>
@@ -1590,11 +1589,11 @@
               <table v-if="appTraceReport.chat_file_hits.length > 0" class="w-full text-left text-xs border-collapse">
                 <thead class="ui-table-head">
                   <tr>
-                    <th class="py-1.5 px-2.5">通信软件</th>
-                    <th class="py-1.5 px-2.5">传输文件名</th>
-                    <th class="py-1.5 px-2.5">物理路径</th>
-                    <th class="py-1.5 px-2.5 text-right">字节数</th>
-                    <th class="py-1.5 px-2.5 text-center">涉密关键字</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'IM Client' : '通信软件' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'File Name' : '传输文件名' }}</th>
+                    <th class="py-1.5 px-2.5">{{ locale === 'en-US' ? 'Physical Path' : '物理路径' }}</th>
+                    <th class="py-1.5 px-2.5 text-right">{{ locale === 'en-US' ? 'Bytes' : '字节数' }}</th>
+                    <th class="py-1.5 px-2.5 text-center">{{ locale === 'en-US' ? 'Keyword' : '涉密关键字' }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y" style="border-color: var(--border-subtle);">
@@ -1622,7 +1621,7 @@
       <div v-else-if="activeTab === 'sanitizer'" class="flex-1 overflow-hidden flex flex-col gap-2.5 min-h-0">
         <div class="ui-sub-card flex items-center justify-between gap-3 p-2.5 shrink-0 flex-wrap">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold" style="color: var(--text-primary);">脱敏标准策略:</span>
+            <span class="text-xs font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Sanitization Policy:' : '脱敏标准策略:' }}</span>
             <select v-model="selectedPolicyId" class="ui-input px-2.5 py-1 text-xs">
               <option v-for="p in sanitizationPolicies" :key="p.policy_id" :value="p.policy_id">
                 {{ p.name }} ({{ p.policy_id }})
@@ -1631,21 +1630,21 @@
           </div>
 
           <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold" style="color: var(--text-primary);">确定性散列加盐 (Salt):</span>
-            <input v-model="hmacSalt" placeholder="默认工业主盐值..." class="ui-input px-2 py-1 font-mono text-xs w-48" />
+            <span class="text-xs font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Salt for Deterministic Hash:' : '确定性散列加盐 (Salt):' }}</span>
+            <input v-model="hmacSalt" :placeholder="locale === 'en-US' ? 'Default industrial master salt...' : '默认工业主盐值...'" class="ui-input px-2 py-1 font-mono text-xs w-48" />
           </div>
 
           <button @click="executeSanitization" :disabled="!rawSanitizeText.trim() || isSanitizing" class="ui-btn-primary bg-emerald-600 hover:bg-emerald-500 px-3.5 py-1.5 text-xs">
-            {{ isSanitizing ? '清洗脱敏中...' : '执行工业级脱敏清洗' }}
+            {{ isSanitizing ? (locale === 'en-US' ? 'Sanitizing in progress...' : '清洗脱敏中...') : (locale === 'en-US' ? 'Execute Industrial De-identification' : '执行工业级脱敏清洗') }}
           </button>
         </div>
 
         <div class="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-3 overflow-hidden min-h-0">
           <div class="ui-sub-card flex flex-col p-2.5 min-h-0">
             <div class="flex items-center justify-between pb-1.5 mb-1.5 border-b shrink-0" style="border-color: var(--border-subtle);">
-              <span class="text-xs font-semibold" style="color: var(--text-primary);">清洗前原始待脱敏文本:</span>
+              <span class="text-xs font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Raw Text Before De-identification:' : '清洗前原始待脱敏文本:' }}</span>
               <button @click="fillSampleText" class="text-[11px] text-blue-600 dark:text-sky-400 hover:underline cursor-pointer font-semibold">
-                载入涉密与 PII 综合检材用例
+                {{ locale === 'en-US' ? 'Load Secrecy & PII Sample Test Cases' : '载入涉密与 PII 综合检材用例' }}
               </button>
             </div>
             <textarea
@@ -1657,13 +1656,13 @@
 
           <div class="ui-sub-card flex flex-col p-2.5 min-h-0">
             <div class="flex items-center justify-between pb-1.5 mb-1.5 border-b shrink-0 gap-2" style="border-color: var(--border-subtle);">
-              <span class="text-xs font-semibold" style="color: var(--text-primary);">清洗后脱敏成果 (已处理 {{ sanitizeResult?.matched_replacements_count || 0 }} 处):</span>
+              <span class="text-xs font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? `De-identified Output (${sanitizeResult?.matched_replacements_count || 0} replaced):` : `清洗后脱敏成果 (已处理 ${sanitizeResult?.matched_replacements_count || 0} 处):` }}</span>
               <div v-if="sanitizeResult" class="flex items-center gap-2">
                 <button @click="compareSanitizationBeforeAfter" class="px-2 py-0.5 rounded bg-indigo-500/12 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/25 text-[11px] font-semibold cursor-pointer">
-                  对比脱敏前后差异
+                  {{ locale === 'en-US' ? 'Compare Diff' : '对比脱敏前后差异' }}
                 </button>
                 <button @click="copyToClipboard(sanitizeResult.sanitized_content)" class="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer font-semibold">
-                  复制脱敏文本
+                  {{ locale === 'en-US' ? 'Copy Output' : '复制脱敏文本' }}
                 </button>
               </div>
             </div>
@@ -1681,16 +1680,16 @@
           <div class="space-y-1">
             <div class="flex items-center gap-2">
               <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span class="text-xs font-semibold" style="color: var(--text-primary);">闭环合规验证器 (Sanitization Verifier)</span>
-              <span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-semibold">零敏感残余逆向复验</span>
+              <span class="text-xs font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Closed-Loop Compliance Verifier' : '闭环合规验证器 (Sanitization Verifier)' }}</span>
+              <span class="text-[11px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-semibold">{{ locale === 'en-US' ? 'Zero Residual Reverse Audit' : '零敏感残余逆向复验' }}</span>
             </div>
             <p class="text-[11px]" style="color: var(--text-secondary);">
-              将清洗后成果自动回灌至数据安全与保密审查引擎进行二次反向探查，当且仅当敏感残余为 0 时出具防篡改审计凭单。
+              {{ locale === 'en-US' ? 'Automatically feeds sanitized output back into data security & secrecy audit engines for reverse verification; issues tamper-proof audit proof only when residual hits equal 0.' : '将清洗后成果自动回灌至数据安全与保密审查引擎进行二次反向探查，当且仅当敏感残余为 0 时出具防篡改审计凭单。' }}
             </p>
           </div>
 
           <button @click="verifyComplianceProof" :disabled="!sanitizeResult || isVerifying" class="ui-btn-primary bg-emerald-600 hover:bg-emerald-500 px-3.5 py-1.5 text-xs">
-            {{ isVerifying ? '执行逆向复测中...' : '执行闭环合规验证' }}
+            {{ isVerifying ? (locale === 'en-US' ? 'Executing reverse audit...' : '执行逆向复测中...') : (locale === 'en-US' ? 'Execute Closed-Loop Compliance Verification' : '执行闭环合规验证') }}
           </button>
         </div>
 
@@ -1703,17 +1702,17 @@
               <div class="text-xs font-semibold flex items-center gap-2" style="color: var(--text-primary);">
                 <span>{{ auditProof.verdict }}</span>
                 <span class="text-[11px] ui-num text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 px-1.5 py-0.5 rounded">
-                  凭单 #{{ auditProof.proof_id }}
+                  {{ locale === 'en-US' ? 'Proof #' : '凭单 #' }}{{ auditProof.proof_id }}
                 </span>
               </div>
               <div class="text-[11px] font-mono mt-0.5" style="color: var(--text-secondary);">
-                原始哈希: {{ auditProof.original_sha256.substring(0, 16) }}... → 脱敏后哈希: {{ auditProof.sanitized_sha256.substring(0, 16) }}...
+                {{ locale === 'en-US' ? 'Raw SHA256: ' : '原始哈希: ' }}{{ auditProof.original_sha256.substring(0, 16) }}... → {{ locale === 'en-US' ? 'Sanitized SHA256: ' : '脱敏后哈希: ' }}{{ auditProof.sanitized_sha256.substring(0, 16) }}...
               </div>
             </div>
           </div>
           <div class="text-right text-[11px] ui-num text-emerald-700 dark:text-emerald-300">
-            <div>核验时间: {{ auditProof.verified_at }}</div>
-            <div class="font-semibold mt-0.5">残余敏感特征: {{ auditProof.residual_sensitive_hits }} 处 (完全合规)</div>
+            <div>{{ locale === 'en-US' ? 'Verified At: ' : '核验时间: ' }}{{ auditProof.verified_at }}</div>
+            <div class="font-semibold mt-0.5">{{ locale === 'en-US' ? `Residual Sensitive Features: ${auditProof.residual_sensitive_hits} (Fully Compliant)` : `残余敏感特征: ${auditProof.residual_sensitive_hits} 处 (完全合规)` }}</div>
           </div>
         </div>
       </div>
@@ -1724,21 +1723,21 @@
       <div v-else-if="activeTab === 'engines'" class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 overflow-hidden min-h-0 text-xs">
         <div class="lg:col-span-4 flex flex-col gap-2 ui-sub-card p-3 overflow-hidden min-h-0">
           <div class="flex items-center justify-between">
-            <span class="font-semibold text-blue-600 dark:text-sky-300">Suricata DSL 两阶段引擎</span>
+            <span class="font-semibold text-blue-600 dark:text-sky-300">{{ locale === 'en-US' ? 'Suricata DSL Two-Stage Engine' : 'Suricata DSL 两阶段引擎' }}</span>
             <div class="flex items-center gap-1">
               <button @click="reloadSuricataFromDisk" class="ui-btn-secondary px-2 py-0.5 text-[11px]" title="从本地 data/suricata_rules.rules 重新热载">
                 <AppIcon name="refresh" :size="11" />
-                <span>磁盘热重载</span>
+                <span>{{ locale === 'en-US' ? 'Reload Disk' : '磁盘热重载' }}</span>
               </button>
               <button @click="loadSuricataFileTextToEditor" class="ui-btn-secondary px-2 py-0.5 text-[11px]" title="读取本地持久化规则全文至编辑器">
-                <span>载入全文</span>
+                <span>{{ locale === 'en-US' ? 'Load Fulltext' : '载入全文' }}</span>
               </button>
             </div>
           </div>
           <!-- 规则分类库按需热切换器与官方同步 -->
           <div class="flex flex-col gap-1.5 p-2 rounded-lg border bg-[var(--surface-content)]" style="border-color: var(--border-subtle);">
             <div class="flex items-center justify-between text-[11px]">
-              <span class="font-semibold text-[var(--text-secondary)]">探针绑定的规则库:</span>
+              <span class="font-semibold text-[var(--text-secondary)]">{{ locale === 'en-US' ? 'Probe Bound Rules Library:' : '探针绑定的规则库:' }}</span>
               <button
                 @click="handleSyncRules()"
                 :disabled="isSyncingRules"
@@ -1746,7 +1745,7 @@
                 title="在线从官方 Emerging Threats 规则源拉取全量 5.2 万条规则并构建 CVE 聚合库"
               >
                 <AppIcon name="refresh" :size="10" />
-                <span>{{ isSyncingRules ? '正在在线拉取...' : '官方全量源同步' }}</span>
+                <span>{{ isSyncingRules ? (locale === 'en-US' ? 'Downloading...' : '正在在线拉取...') : (locale === 'en-US' ? 'Sync Official Full Source' : '官方全量源同步') }}</span>
               </button>
             </div>
             <select
@@ -1765,15 +1764,15 @@
           </div>
           <div class="grid grid-cols-3 gap-1.5 text-[11px]">
             <div class="p-2 rounded-lg border" style="background: var(--surface-content); border-color: var(--border-subtle);">
-              <div style="color: var(--text-muted);">已编规则</div>
+              <div style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Compiled Rules' : '已编规则' }}</div>
               <div class="font-semibold ui-num text-sm" style="color: var(--text-primary);">{{ suricataMetrics?.total_rules ?? 0 }}</div>
             </div>
             <div class="p-2 rounded-lg border" style="background: var(--surface-content); border-color: var(--border-subtle);">
-              <div style="color: var(--text-muted);">扫过载荷</div>
+              <div style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Payloads Scanned' : '扫过载荷' }}</div>
               <div class="font-semibold ui-num text-sm" style="color: var(--text-primary);">{{ suricataMetrics?.total_packets_scanned ?? 0 }}</div>
             </div>
             <div class="p-2 rounded-lg border" style="background: var(--surface-content); border-color: var(--border-subtle);">
-              <div style="color: var(--text-muted);">告警命中</div>
+              <div style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Alarm Hits' : '告警命中' }}</div>
               <div class="font-semibold ui-num text-rose-600 dark:text-rose-400 text-sm">{{ suricataMetrics?.total_hits ?? 0 }}</div>
             </div>
           </div>
@@ -1785,15 +1784,15 @@
           ></textarea>
           <div class="grid grid-cols-2 gap-1.5">
             <button @click="loadCustomSuricataRules" :disabled="!suricataRuleInput.trim()" class="ui-btn-primary py-1.5 text-xs justify-center">
-              内存热编译
+              {{ locale === 'en-US' ? 'Hot Compile' : '内存热编译' }}
             </button>
             <button @click="saveSuricataRulesToDisk" :disabled="!suricataRuleInput.trim()" class="ui-btn-secondary border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10 py-1.5 text-xs justify-center">
-              落盘并应用
+              {{ locale === 'en-US' ? 'Persist & Apply' : '落盘并应用' }}
             </button>
           </div>
           <div class="flex-1 overflow-y-auto custom-scrollbar space-y-1 text-[11px]">
             <div v-if="(suricataMetrics?.recent_hits?.length ?? 0) === 0" class="text-center py-4" style="color: var(--text-muted);">
-              暂无实时 Suricata 规则告警命中
+              {{ locale === 'en-US' ? 'No real-time Suricata alarms triggered' : '暂无实时 Suricata 规则告警命中' }}
             </div>
             <div v-for="(h, i) in suricataMetrics?.recent_hits || []" :key="i" class="p-2 rounded bg-rose-500/12 border border-rose-500/25 text-rose-700 dark:text-rose-200">
               <div class="font-semibold">[SID:{{ h.signature_id }}] {{ h.name }}</div>
@@ -1804,31 +1803,31 @@
 
         <div class="lg:col-span-4 flex flex-col gap-2 ui-sub-card p-3 overflow-hidden min-h-0">
           <div class="flex items-center justify-between">
-            <span class="font-semibold text-indigo-600 dark:text-indigo-300">Glushkov 位并行正则自动机</span>
-            <button @click="resetGlushkovMetrics" class="ui-btn-secondary px-2 py-0.5 text-[11px]">计数清零</button>
+            <span class="font-semibold text-indigo-600 dark:text-indigo-300">{{ locale === 'en-US' ? 'Glushkov Bit-Parallel Regex Automaton' : 'Glushkov 位并行正则自动机' }}</span>
+            <button @click="resetGlushkovMetrics" class="ui-btn-secondary px-2 py-0.5 text-[11px]">{{ locale === 'en-US' ? 'Reset Counters' : '计数清零' }}</button>
           </div>
           <div class="grid grid-cols-2 gap-1.5 text-[11px]">
             <div class="p-2 rounded-lg border" style="background: var(--surface-content); border-color: var(--border-subtle);">
-              <div style="color: var(--text-muted);">预置工业正则规则</div>
+              <div style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Preset OT Regex Rules' : '预置工业正则规则' }}</div>
               <div class="font-semibold ui-num text-indigo-600 dark:text-indigo-300 text-sm">{{ glushkovMetrics?.compiled_rules_count ?? 0 }} 条</div>
             </div>
             <div class="p-2 rounded-lg border" style="background: var(--surface-content); border-color: var(--border-subtle);">
-              <div style="color: var(--text-muted);">累计扫包 / 威胁命中</div>
+              <div style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Scanned / Threat Hits' : '累计扫包 / 威胁命中' }}</div>
               <div class="font-semibold ui-num text-sm" style="color: var(--text-primary);">{{ glushkovMetrics?.total_scanned_packets ?? 0 }} / <span class="text-amber-600 dark:text-amber-300">{{ glushkovMetrics?.total_threat_hits ?? 0 }}</span></div>
             </div>
           </div>
           <textarea
             v-model="glushkovTestHex"
             rows="3"
-            placeholder="输入十六进制载荷验证位并行自动机即时扫描 (如 247b6a6e64693a6c646170)"
+            :placeholder="locale === 'en-US' ? 'Enter hex payload to verify bit-parallel automaton scanning (e.g. 247b6a6e64693a6c646170)' : '输入十六进制载荷验证位并行自动机即时扫描 (如 247b6a6e64693a6c646170)'"
             class="ui-input w-full p-2 font-mono text-[11px] resize-none"
           ></textarea>
           <button @click="runGlushkovScan" :disabled="!glushkovTestHex.trim()" class="ui-btn-primary bg-indigo-600 hover:bg-indigo-500 w-full py-1.5 text-xs justify-center">
-            执行 Glushkov 自动机扫描
+            {{ locale === 'en-US' ? 'Run Glushkov Scan' : '执行 Glushkov 自动机扫描' }}
           </button>
           <div class="flex-1 overflow-y-auto custom-scrollbar space-y-1 text-[11px]">
             <div v-if="glushkovScanMatches.length === 0" class="text-center py-4" style="color: var(--text-muted);">
-              等待手工验证载荷或抓包自动命中结果
+              {{ locale === 'en-US' ? 'Waiting for manual verification payload or live capture hits' : '等待手工验证载荷或抓包自动命中结果' }}
             </div>
             <div v-for="(m, i) in glushkovScanMatches" :key="i" class="p-2 rounded bg-indigo-500/12 border border-indigo-500/25 text-indigo-700 dark:text-indigo-200">
               <div class="font-semibold">#{{ m.rule_id }} · {{ m.rule_name }} ({{ m.threat_class }})</div>
@@ -1839,7 +1838,7 @@
 
         <div class="lg:col-span-4 flex flex-col gap-2 ui-sub-card p-3 overflow-hidden min-h-0">
           <div class="flex items-center justify-between">
-            <span class="font-semibold text-emerald-600 dark:text-emerald-300">沙箱安全分析脚本虚拟机</span>
+            <span class="font-semibold text-emerald-600 dark:text-emerald-300">{{ locale === 'en-US' ? 'Sandbox Script Analysis Virtual Machine' : '沙箱安全分析脚本虚拟机' }}</span>
             <span class="text-[11px] ui-num" style="color: var(--text-muted);">Gas限额:10,000 | 内存:256KB</span>
           </div>
           <textarea
@@ -1850,11 +1849,11 @@
           ></textarea>
           <input
             v-model="auditScriptHex"
-            placeholder="传入样本报文十六进制载荷 (如 00010000000601050000ff00)..."
+            :placeholder="locale === 'en-US' ? 'Pass sample packet hex payload (e.g. 00010000000601050000ff00)...' : '传入样本报文十六进制载荷 (如 00010000000601050000ff00)...'"
             class="ui-input w-full px-2.5 py-1.5 font-mono text-[11px]"
           />
           <button @click="runAuditScript" :disabled="!auditScriptSource.trim()" class="ui-btn-primary bg-emerald-600 hover:bg-emerald-500 w-full py-1.5 text-xs justify-center">
-            在隔离沙箱中执行脚本
+            {{ locale === 'en-US' ? 'Execute Script in Sandbox' : '在隔离沙箱中执行脚本' }}
           </button>
           <div v-if="auditScriptResult" class="flex-1 overflow-y-auto custom-scrollbar p-2.5 rounded-lg border text-[11px] font-mono space-y-1" style="background: var(--surface-input); border-color: var(--border-subtle); color: var(--text-primary);">
             <div>事件加载: <b class="text-emerald-600 dark:text-emerald-300">{{ auditScriptResult.events_loaded }}</b> | 返回值: <b class="text-blue-600 dark:text-sky-300">{{ auditScriptResult.return_value }}</b></div>
@@ -1874,9 +1873,9 @@
               <AppIcon name="shield" :size="15" />
             </div>
             <div>
-              <h3 class="text-[13px] font-semibold" style="color: var(--text-primary);">全系统离线规则库资产健康自检与更新中枢</h3>
+              <h3 class="text-[13px] font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'System-Wide Offline Rules Library Health Self-Test & Update Center' : '全系统离线规则库资产健康自检与更新中枢' }}</h3>
               <p class="text-[10px]" style="color: var(--text-muted);">
-                监测工业核心基线、全量 CVE 漏洞聚合库、ET Open 54 分类离线库、国家秘密法公文规约与 GB/T 43697 数据凭证
+                {{ locale === 'en-US' ? 'Monitors industrial baselines, CVE vulnerability library, ET Open 54 offline categories, State Secrets Law protocols & GB/T 43697' : '监测工业核心基线、全量 CVE 漏洞聚合库、ET Open 54 分类离线库、国家秘密法公文规约与 GB/T 43697 数据凭证' }}
               </p>
             </div>
           </div>
@@ -1907,7 +1906,7 @@
                       : 'bg-amber-500 animate-pulse')"
                 ></span>
                 <span class="font-bold text-xs" style="color: var(--text-primary);">
-                  系统智能感知与决策：{{ ruleAssetsHealth.smart_status.status_title }}
+                  {{ locale === 'en-US' ? 'System Perception & Decision: ' : '系统智能感知与决策：' }}{{ ruleAssetsHealth.smart_status.status_title }}
                 </span>
                 <span
                   class="px-2 py-0.5 rounded text-[10px] font-semibold"
@@ -1932,7 +1931,7 @@
                     : 'bg-amber-600 hover:bg-amber-500')"
               >
                 <AppIcon :name="ruleAssetsHealth.smart_status.status_code === 'UPDATE_AVAILABLE' ? 'refresh' : 'shield'" :size="12" />
-                <span>{{ isSmartSyncing ? '正在智能执行中...' : (ruleAssetsHealth.smart_status.status_code === 'UP_TO_DATE' ? '强制重新构建' : '⚡ 立即智能同步并生效') }}</span>
+                <span>{{ isSmartSyncing ? (locale === 'en-US' ? 'Executing smart sync...' : '正在智能执行中...') : (ruleAssetsHealth.smart_status.status_code === 'UP_TO_DATE' ? (locale === 'en-US' ? 'Force Rebuild' : '强制重新构建') : (locale === 'en-US' ? '⚡ Smart Sync & Apply' : '⚡ 立即智能同步并生效')) }}</span>
               </button>
             </div>
 
@@ -1940,9 +1939,9 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
               <div class="p-2.5 rounded-lg border bg-[var(--surface-content)]" style="border-color: var(--border-subtle);">
                 <div class="font-semibold text-[11px] flex items-center justify-between" style="color: var(--text-secondary);">
-                  <span>📦 本地离线安装包源 (.tar.gz)</span>
+                  <span>📦 {{ locale === 'en-US' ? 'Local Offline Package Source (.tar.gz)' : '本地离线安装包源 (.tar.gz)' }}</span>
                   <span class="font-mono" :class="ruleAssetsHealth.smart_status.archive_exists ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'">
-                    {{ ruleAssetsHealth.smart_status.archive_exists ? '已检测到' : '未检测到' }}
+                    {{ ruleAssetsHealth.smart_status.archive_exists ? (locale === 'en-US' ? 'Detected' : '已检测到') : (locale === 'en-US' ? 'Not Found' : '未检测到') }}
                   </span>
                 </div>
                 <div class="mt-1 space-y-0.5" style="color: var(--text-muted);">
@@ -1954,15 +1953,15 @@
 
               <div class="p-2.5 rounded-lg border bg-[var(--surface-content)]" style="border-color: var(--border-subtle);">
                 <div class="font-semibold text-[11px] flex items-center justify-between" style="color: var(--text-secondary);">
-                  <span>📂 已展开规则库运行态 (data/rules/)</span>
+                  <span>📂 {{ locale === 'en-US' ? 'Extracted Rules Runtime (data/rules/)' : '已展开规则库运行态 (data/rules/)' }}</span>
                   <span class="font-mono" :class="ruleAssetsHealth.smart_status.cve_aggregated_exists ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'">
-                    {{ ruleAssetsHealth.smart_status.extracted_files_count }} 个分类规则
+                    {{ ruleAssetsHealth.smart_status.extracted_files_count }} {{ locale === 'en-US' ? 'categorized rules' : '个分类规则' }}
                   </span>
                 </div>
                 <div class="mt-1 space-y-0.5" style="color: var(--text-muted);">
-                  <div>CVE 聚合特征库: <span class="font-mono" :class="ruleAssetsHealth.smart_status.cve_aggregated_exists ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-amber-600 dark:text-amber-400'">{{ ruleAssetsHealth.smart_status.cve_aggregated_exists ? '已生成 (6,264 条独立 CVE)' : '未生成' }}</span></div>
+                  <div>CVE 聚合特征库: <span class="font-mono" :class="ruleAssetsHealth.smart_status.cve_aggregated_exists ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-amber-600 dark:text-amber-400'">{{ ruleAssetsHealth.smart_status.cve_aggregated_exists ? (locale === 'en-US' ? 'Generated (6,264 CVEs)' : '已生成 (6,264 条独立 CVE)') : (locale === 'en-US' ? 'Not Generated' : '未生成') }}</span></div>
                   <div>展开库最新时间: <span class="font-mono" style="color: var(--text-primary);">{{ ruleAssetsHealth.smart_status.latest_extracted_mtime_str }}</span></div>
-                  <div>当前调用模式: <span class="font-semibold text-emerald-700 dark:text-emerald-300">内存零开销就地直读 (无需重复解压)</span></div>
+                  <div>当前调用模式: <span class="font-semibold text-emerald-700 dark:text-emerald-300">{{ locale === 'en-US' ? 'In-memory zero-overhead direct read (No re-extraction)' : '内存零开销就地直读 (无需重复解压)' }}</span></div>
                 </div>
               </div>
             </div>
@@ -1982,25 +1981,25 @@
           <!-- 总体健康度卡片 -->
           <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
             <div class="ui-sub-card p-2.5">
-              <div class="text-[11px]" style="color: var(--text-muted);">离线规则资产项</div>
+              <div class="text-[11px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Offline Rule Assets' : '离线规则资产项' }}</div>
               <div class="text-base font-bold ui-num mt-0.5" style="color: var(--text-primary);">
-                {{ ruleAssetsHealth?.ready_assets ?? 0 }} / {{ ruleAssetsHealth?.total_assets ?? 0 }} 项就绪
+                {{ ruleAssetsHealth?.ready_assets ?? 0 }} / {{ ruleAssetsHealth?.total_assets ?? 0 }} {{ locale === 'en-US' ? 'ready' : '项就绪' }}
               </div>
             </div>
             <div class="ui-sub-card p-2.5">
-              <div class="text-[11px]" style="color: var(--text-muted);">当前运行规则库</div>
+              <div class="text-[11px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Active Rule Library' : '当前运行规则库' }}</div>
               <div class="text-sm font-semibold truncate mt-0.5 text-blue-600 dark:text-sky-300" :title="ruleAssetsHealth?.active_library_name">
                 {{ ruleAssetsHealth?.active_library_name ?? '基础基线' }}
               </div>
             </div>
             <div class="ui-sub-card p-2.5">
-              <div class="text-[11px]" style="color: var(--text-muted);">活跃规则条数</div>
+              <div class="text-[11px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Active Rule Count' : '活跃规则条数' }}</div>
               <div class="text-base font-bold ui-num mt-0.5 text-emerald-600 dark:text-emerald-400">
                 {{ (ruleAssetsHealth?.active_rule_count ?? 0).toLocaleString() }} 条
               </div>
             </div>
             <div class="ui-sub-card p-2.5">
-              <div class="text-[11px]" style="color: var(--text-muted);">全网 CVE 覆盖</div>
+              <div class="text-[11px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'CVE Signatures' : '全网 CVE 覆盖' }}</div>
               <div class="text-base font-bold ui-num mt-0.5 text-purple-600 dark:text-purple-300">
                 {{ (ruleAssetsHealth?.active_cve_count ?? 0).toLocaleString() }} 处签名
               </div>
@@ -2010,10 +2009,10 @@
           <!-- 资产明细列表 -->
           <div class="ui-sub-card p-3 space-y-2">
             <div class="font-semibold text-xs flex items-center justify-between" style="color: var(--text-primary);">
-              <span>五大离线规则库资产健康明细清单</span>
+              <span>{{ locale === 'en-US' ? '5 Offline Rule Library Assets Health Ledger' : '五大离线规则库资产健康明细清单' }}</span>
               <button @click="fetchRuleAssetsHealth" class="ui-btn-secondary px-2 py-0.5 text-[11px] flex items-center gap-1">
                 <AppIcon name="refresh" :size="10" />
-                <span>刷新自检状态</span>
+                <span>{{ locale === 'en-US' ? 'Refresh Status' : '刷新自检状态' }}</span>
               </button>
             </div>
             <div class="space-y-1.5">
@@ -2030,7 +2029,7 @@
                       class="px-1.5 py-0.5 rounded text-[10px] font-semibold"
                       :class="asset.status === 'Active' ? 'bg-blue-500/20 text-blue-700 dark:text-sky-300' : (asset.status === 'Ready' ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300' : 'bg-amber-500/20 text-amber-800 dark:text-amber-300')"
                     >
-                      {{ asset.status === 'Active' ? '● 正在运行' : (asset.status === 'Ready' ? '就绪' : '缺失/待下载') }}
+                      {{ asset.status === 'Active' ? (locale === 'en-US' ? '● Active' : '● 正在运行') : (asset.status === 'Ready' ? (locale === 'en-US' ? 'Ready' : '就绪') : (locale === 'en-US' ? 'Missing' : '缺失/待下载')) }}
                     </span>
                     <span class="text-[10px] ui-num font-mono" style="color: var(--text-muted);">
                       {{ formatBytes(asset.file_size_bytes) }} · {{ asset.rule_count.toLocaleString() }} 规则 {{ asset.cve_count > 0 ? `(${asset.cve_count.toLocaleString()} CVE)` : '' }}
@@ -2051,7 +2050,7 @@
                     :disabled="!asset.exists || asset.is_active"
                     class="ui-btn-secondary px-2.5 py-1 text-[11px]"
                   >
-                    {{ asset.is_active ? '当前活跃' : '切换为此库' }}
+                    {{ asset.is_active ? (locale === 'en-US' ? 'Active' : '当前活跃') : (locale === 'en-US' ? 'Switch' : '切换为此库') }}
                   </button>
                   <button
                     v-if="!asset.exists && asset.download_url"
@@ -2068,7 +2067,7 @@
 
           <!-- 在线源与镜像配置 -->
           <div class="ui-sub-card p-3 space-y-2">
-            <div class="font-semibold text-xs" style="color: var(--text-primary);">官方规则下载更新源配置</div>
+            <div class="font-semibold text-xs" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Official Rule Download Source Config' : '官方规则下载更新源配置' }}</div>
             <div class="flex items-center gap-2 flex-wrap">
               <input
                 v-model="customMirrorUrl"
@@ -2081,7 +2080,7 @@
                 class="ui-btn-primary px-3 py-1.5 text-xs flex items-center gap-1.5 shrink-0"
               >
                 <AppIcon name="download" :size="13" />
-                <span>{{ isSyncingRules ? '正在在线拉取并构建 (5.2万条)...' : '全量同步并热重载' }}</span>
+                <span>{{ isSyncingRules ? (locale === 'en-US' ? 'Syncing online (52k rules)...' : '正在在线拉取并构建 (5.2万条)...') : (locale === 'en-US' ? 'Full Sync & Hot Reload' : '全量同步并热重载') }}</span>
               </button>
             </div>
             <p class="text-[10px]" style="color: var(--text-muted);">
@@ -2094,13 +2093,13 @@
             <div class="flex items-center justify-between">
               <div class="font-semibold text-xs flex items-center gap-1.5" style="color: var(--text-primary);">
                 <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span>脱网与涉密隔离网环境：手动导入本地规则安装包 (.tar.gz)</span>
+                <span>{{ locale === 'en-US' ? 'Air-gapped & Isolated Network: Manual Import of Local Package (.tar.gz)' : '脱网与涉密隔离网环境：手动导入本地规则安装包 (.tar.gz)' }}</span>
               </div>
               <button
                 @click="showOfflineManualHelp = !showOfflineManualHelp"
                 class="ui-btn-secondary px-2 py-0.5 text-[11px] text-emerald-700 dark:text-emerald-300"
               >
-                <span>{{ showOfflineManualHelp ? '收起离线说明' : '查看脱网部署说明' }}</span>
+                <span>{{ showOfflineManualHelp ? (locale === 'en-US' ? 'Collapse Guide' : '收起离线说明') : (locale === 'en-US' ? 'View Air-Gapped Guide' : '查看脱网部署说明') }}</span>
               </button>
             </div>
 
@@ -2110,7 +2109,7 @@
               class="p-2 rounded-lg bg-emerald-500/15 border border-emerald-500/35 flex items-center justify-between gap-2 text-xs flex-wrap"
             >
               <div class="text-[11px] text-emerald-800 dark:text-emerald-200">
-                <span>已在本地检测到就绪包：</span>
+                <span>{{ locale === 'en-US' ? 'Ready package detected locally: ' : '已在本地检测到就绪包：' }}</span>
                 <b class="font-mono">{{ ruleAssetsHealth.local_archive_detected }}</b>
                 <span class="ml-1 opacity-80">({{ formatBytes(ruleAssetsHealth.local_archive_size_bytes || 0) }})</span>
               </div>
@@ -2119,7 +2118,7 @@
                 :disabled="isExtractingLocal"
                 class="ui-btn-primary bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 text-xs shadow-xs"
               >
-                <span>{{ isExtractingLocal ? '正在解压提取...' : '一键直接解压并热重载' }}</span>
+                <span>{{ isExtractingLocal ? (locale === 'en-US' ? 'Extracting...' : '正在解压提取...') : (locale === 'en-US' ? 'Extract & Hot Reload' : '一键直接解压并热重载') }}</span>
               </button>
             </div>
 
@@ -2131,7 +2130,7 @@
                 title="打开 Windows 原生文件选择器选取本地 .tar.gz 规则包"
               >
                 <AppIcon name="document" :size="13" />
-                <span>选择本地文件...</span>
+                <span>{{ locale === 'en-US' ? 'Choose Local File...' : '选择本地文件...' }}</span>
               </button>
               <input
                 v-model="manualLocalArchivePath"
@@ -2630,11 +2629,11 @@ async function handleSmartSyncArchive() {
   isSmartSyncing.value = true;
   try {
     const res = await invoke<SyncRuleResult>('smart_sync_rules_archive_cmd');
-    notifySuccess('智能感知与构建执行完成', res.message);
+    notifySuccess(locale.value === 'en-US' ? 'Smart perception and build completed' : '智能感知与构建执行完成', res.message);
     await fetchDeepEngines();
     await fetchRuleAssetsHealth();
   } catch (e) {
-    notifyError('智能解包执行失败', `请检查本地文件完整性: ${String(e)}`);
+    notifyError(locale.value === 'en-US' ? 'Smart unpack execution failed' : '智能解包执行失败', locale.value === 'en-US' ? `Check local file integrity: ${String(e)}` : `请检查本地文件完整性: ${String(e)}`);
   } finally {
     isSmartSyncing.value = false;
   }
@@ -2645,7 +2644,7 @@ async function handleBrowseLocalArchive() {
     const selected = await invoke<string | null>('browse_local_rules_archive_file_cmd');
     if (selected) {
       manualLocalArchivePath.value = selected;
-      notifySuccess('已选取规则安装包', `文件: ${selected}`);
+      notifySuccess(locale.value === 'en-US' ? 'Rules package selected' : '已选取规则安装包', locale.value === 'en-US' ? `File: ${selected}` : `文件: ${selected}`);
     }
   } catch (e) {
     console.error('浏览本地规则包失败:', e);
@@ -2658,11 +2657,11 @@ async function handleExtractLocalArchive(targetPath?: string) {
     const res = await invoke<SyncRuleResult>('import_and_extract_local_rules_archive_cmd', {
       archivePath: targetPath || (manualLocalArchivePath.value.trim() ? manualLocalArchivePath.value.trim() : null),
     });
-    notifySuccess('本地规则包解压构建完成', res.message);
+    notifySuccess(locale.value === 'en-US' ? 'Local rules package extraction & build completed' : '本地规则包解压构建完成', res.message);
     await fetchDeepEngines();
     await fetchRuleAssetsHealth();
   } catch (e) {
-    notifyError('解压本地安装包失败', `请核验文件路径或规约格式: ${String(e)}`);
+    notifyError(locale.value === 'en-US' ? 'Failed to extract local package' : '解压本地安装包失败', locale.value === 'en-US' ? `Verify file path or format: ${String(e)}` : `请核验文件路径或规约格式: ${String(e)}`);
   } finally {
     isExtractingLocal.value = false;
   }
@@ -2688,11 +2687,11 @@ async function handleSwitchRuleFile(fileName: string) {
   try {
     const info = await invoke<SuricataRuleFileInfo>('switch_active_suricata_rule_file_cmd', { fileName });
     suricataFileInfo.value = info;
-    notifySuccess('规则库切换成功', `已切换探针运行规则库为 ${fileName} (加载 ${info.total_rules} 条规则)`);
+    notifySuccess(locale.value === 'en-US' ? 'Rules library switched successfully' : '规则库切换成功', locale.value === 'en-US' ? `Active library set to ${fileName} (${info.total_rules} rules loaded)` : `已切换探针运行规则库为 ${fileName} (加载 ${info.total_rules} 条规则)`);
     await fetchDeepEngines();
     await fetchRuleAssetsHealth();
   } catch (e) {
-    notifyError('切换规则库失败', e);
+    notifyError(locale.value === 'en-US' ? 'Failed to switch rules library' : '切换规则库失败', e);
   }
 }
 
@@ -2702,11 +2701,11 @@ async function handleSyncRules(mirrorUrl?: string) {
     const res = await invoke<SyncRuleResult>('download_and_sync_suricata_rules_cmd', {
       mirrorUrl: mirrorUrl || (customMirrorUrl.value.trim() ? customMirrorUrl.value.trim() : null),
     });
-    notifySuccess('全量规则库下载与构建完成', res.message);
+    notifySuccess(locale.value === 'en-US' ? 'Full rules library download & build completed' : '全量规则库下载与构建完成', res.message);
     await fetchDeepEngines();
     await fetchRuleAssetsHealth();
   } catch (e) {
-    notifyError('在线下载规则库失败', `请检查网络连通性或代理配置: ${String(e)}`);
+    notifyError(locale.value === 'en-US' ? 'Failed to download rules library online' : '在线下载规则库失败', locale.value === 'en-US' ? `Check network connectivity or proxy: ${String(e)}` : `请检查网络连通性或代理配置: ${String(e)}`);
   } finally {
     isSyncingRules.value = false;
   }
@@ -2736,11 +2735,11 @@ async function loadCustomSuricataRules() {
   if (!suricataRuleInput.value.trim()) return;
   try {
     const loaded = await invoke<number>('load_suricata_dsl_rules_cmd', { rulesText: suricataRuleInput.value });
-    notifySuccess('Suricata 规则热编译完成', `成功加载 ${loaded} 条工业 DSL 规则`);
+    notifySuccess(locale.value === 'en-US' ? 'Suricata rules hot compile completed' : 'Suricata 规则热编译完成', locale.value === 'en-US' ? `Successfully loaded ${loaded} industrial DSL rules` : `成功加载 ${loaded} 条工业 DSL 规则`);
     suricataRuleInput.value = '';
     await fetchDeepEngines();
   } catch (e) {
-    notifyError('Suricata 规则编译失败', e);
+    notifyError(locale.value === 'en-US' ? 'Suricata rules compilation failed' : 'Suricata 规则编译失败', e);
   }
 }
 
@@ -2748,10 +2747,10 @@ async function reloadSuricataFromDisk() {
   try {
     const info = await invoke<SuricataRuleFileInfo>('reload_suricata_rules_from_disk_cmd');
     suricataFileInfo.value = info;
-    notifySuccess('本地规则库热重载成功', `已完整加载 ${info.total_rules} 条工业规则 (${formatBytes(info.file_size_bytes)})`);
+    notifySuccess(locale.value === 'en-US' ? 'Local rules library hot-reloaded' : '本地规则库热重载成功', locale.value === 'en-US' ? `Fully loaded ${info.total_rules} industrial rules (${formatBytes(info.file_size_bytes)})` : `已完整加载 ${info.total_rules} 条工业规则 (${formatBytes(info.file_size_bytes)})`);
     await fetchDeepEngines();
   } catch (e) {
-    notifyError('本地规则库热重载失败', e);
+    notifyError(locale.value === 'en-US' ? 'Failed to hot reload local rules library' : '本地规则库热重载失败', e);
   }
 }
 
@@ -2759,9 +2758,9 @@ async function loadSuricataFileTextToEditor() {
   try {
     const text = await invoke<string>('read_suricata_rule_file_text_cmd');
     suricataRuleInput.value = text;
-    notifySuccess('本地规则全文已载入', '已将磁盘 rules 文件全量载入到编辑器中');
+    notifySuccess(locale.value === 'en-US' ? 'Local rules text loaded' : '本地规则全文已载入', locale.value === 'en-US' ? 'Disk rules file loaded into editor' : '已将磁盘 rules 文件全量载入到编辑器中');
   } catch (e) {
-    notifyError('读取本地规则文件失败', e);
+    notifyError(locale.value === 'en-US' ? 'Failed to read local rules file' : '读取本地规则文件失败', e);
   }
 }
 
@@ -2772,10 +2771,10 @@ async function saveSuricataRulesToDisk() {
       rulesText: suricataRuleInput.value,
     });
     suricataFileInfo.value = info;
-    notifySuccess('规则已持久化到磁盘', `成功保存并装载 ${info.total_rules} 条规则到 ${info.file_path}`);
+    notifySuccess(locale.value === 'en-US' ? 'Rules persisted to disk' : '规则已持久化到磁盘', locale.value === 'en-US' ? `Saved & loaded ${info.total_rules} rules to ${info.file_path}` : `成功保存并装载 ${info.total_rules} 条规则到 ${info.file_path}`);
     await fetchDeepEngines();
   } catch (e) {
-    notifyError('保存规则文件到磁盘失败', e);
+    notifyError(locale.value === 'en-US' ? 'Failed to save rules to disk' : '保存规则文件到磁盘失败', e);
   }
 }
 
@@ -2786,7 +2785,7 @@ async function runGlushkovScan() {
     glushkovScanMatches.value = await invoke<GlushkovMatch[]>('scan_payload_glushkov_cmd', { payloadHex: cleaned });
     await fetchDeepEngines();
   } catch (e) {
-    notifyError('Glushkov 正则扫描失败', e);
+    notifyError(locale.value === 'en-US' ? 'Glushkov regex scan failed' : 'Glushkov 正则扫描失败', e);
   }
 }
 
@@ -2795,7 +2794,7 @@ async function resetGlushkovMetrics() {
     await invoke('reset_glushkov_engine_metrics_cmd');
     await fetchDeepEngines();
   } catch (e) {
-    notifyError('重置 Glushkov 统计失败', e);
+    notifyError(locale.value === 'en-US' ? 'Failed to reset Glushkov metrics' : '重置 Glushkov 统计失败', e);
   }
 }
 
@@ -3053,10 +3052,10 @@ async function runSecrecyUsbHistoryAudit() {
     if (rep.has_critical_violation) {
       notifyWarning('检出非授权历史 USB 接入痕迹', rep.summary_conclusion);
     } else {
-      notifySuccess('USB 历史取证核验完成', rep.summary_conclusion);
+      notifySuccess(locale.value === 'en-US' ? 'USB history forensics completed' : 'USB 历史取证核验完成', rep.summary_conclusion);
     }
   } catch (e: unknown) {
-    notifyError('USB 历史取证执行失败', String(e));
+    notifyError(locale.value === 'en-US' ? 'Failed to execute USB history forensics' : 'USB 历史取证执行失败', String(e));
   } finally {
     isAuditingUsbHistory.value = false;
   }
@@ -3072,7 +3071,7 @@ async function pickAndSetDissectFolder() {
       await runDocumentDissectAudit();
     }
   } catch (e: unknown) {
-    notifyError('打开目录选择器失败', String(e));
+    notifyError(locale.value === 'en-US' ? 'Failed to open directory picker' : '打开目录选择器失败', String(e));
   }
 }
 
@@ -3087,12 +3086,12 @@ async function runDocumentDissectAudit() {
     dissectReport.value = rep;
     secrecySubView.value = 'docs';
     if (rep.hit_files_count > 0) {
-      notifyWarning(`穿透检出 ${rep.hit_files_count} 份涉密标密或保护文件`, `已扫描目录 ${rep.target_folder} 共 ${rep.scanned_files_count} 份文档`);
+      notifyWarning(locale.value === 'en-US' ? `Dissected & detected ${rep.hit_files_count} classified/protected files` : `穿透检出 ${rep.hit_files_count} 份涉密标密或保护文件`, locale.value === 'en-US' ? `Scanned ${rep.scanned_files_count} documents in ${rep.target_folder}` : `已扫描目录 ${rep.target_folder} 共 ${rep.scanned_files_count} 份文档`);
     } else {
-      notifySuccess('复合文档穿透扫描完成', `已扫描 ${rep.scanned_files_count} 份文件，未命中涉密标密特征`);
+      notifySuccess(locale.value === 'en-US' ? 'Document dissection scan completed' : '复合文档穿透扫描完成', locale.value === 'en-US' ? `Scanned ${rep.scanned_files_count} documents with no classified features` : `已扫描 ${rep.scanned_files_count} 份文件，未命中涉密标密特征`);
     }
   } catch (e: unknown) {
-    notifyError('复合文档解构失败', String(e));
+    notifyError(locale.value === 'en-US' ? 'Document dissection failed' : '复合文档解构失败', String(e));
   } finally {
     isDissectingDocs.value = false;
   }
@@ -3112,7 +3111,7 @@ async function runDualHomedNetworkAudit() {
       notifySuccess('网络接口一机两用排查合规', verdict.reason);
     }
   } catch (e: unknown) {
-    notifyError('双网卡一机两用检测失败', String(e));
+    notifyError(locale.value === 'en-US' ? 'Dual-homed network check failed' : '双网卡一机两用检测失败', String(e));
   } finally {
     isAuditingDualHomed.value = false;
   }
@@ -3125,12 +3124,12 @@ async function runNetworkHistoryAudit() {
     networkHistoryReport.value = rep;
     secrecySubView.value = 'history';
     if (rep.has_historic_violation) {
-      notifyWarning('检出历史手机热点或 RNDIS 共享外联痕迹', rep.summary_conclusion);
+      notifyWarning(locale.value === 'en-US' ? 'Detected historic mobile hotspot / RNDIS egress traces' : '检出历史手机热点或 RNDIS 共享外联痕迹', rep.summary_conclusion);
     } else {
-      notifySuccess('历史外联与网络配置取证完成', rep.summary_conclusion);
+      notifySuccess(locale.value === 'en-US' ? 'Historic egress forensics completed' : '历史外联与网络配置取证完成', rep.summary_conclusion);
     }
   } catch (e: unknown) {
-    notifyError('历史外联取证执行失败', String(e));
+    notifyError(locale.value === 'en-US' ? 'Failed to execute historic egress forensics' : '历史外联取证执行失败', String(e));
   } finally {
     isAuditingNetworkHistory.value = false;
   }
@@ -3141,13 +3140,13 @@ async function runOle2AndSlackAudit() {
   if (!folder) {
     try {
       const chosen = await invoke<string | null>('pick_native_folder_dialog_cmd', {
-        title: '选择待扫描 OLE2 老式文档 (DOC/XLS/PPT) 目录',
+        title: locale.value === 'en-US' ? 'Select OLE2 compound document directory (DOC/XLS/PPT)' : '选择待扫描 OLE2 老式文档 (DOC/XLS/PPT) 目录',
       });
       if (!chosen) return;
       dissectTargetPath.value = chosen;
       folder = chosen;
     } catch (e: unknown) {
-      notifyError('打开目录选择器失败', String(e));
+      notifyError(locale.value === 'en-US' ? 'Failed to open directory picker' : '打开目录选择器失败', String(e));
       return;
     }
   }
@@ -3162,12 +3161,12 @@ async function runOle2AndSlackAudit() {
     secrecySubView.value = 'ole2';
     const totalHits = rep.ole2_hits.length + rep.slack_hits.length;
     if (totalHits > 0) {
-      notifyWarning(`检出 ${rep.ole2_hits.length} 份 OLE2 涉密公文及 ${rep.slack_hits.length} 处扇区残片`, `已解构 ${rep.scanned_ole2_files} 份复合文件`);
+      notifyWarning(locale.value === 'en-US' ? `Detected ${rep.ole2_hits.length} OLE2 classified docs & ${rep.slack_hits.length} slack fragments` : `检出 ${rep.ole2_hits.length} 份 OLE2 涉密公文及 ${rep.slack_hits.length} 处扇区残片`, locale.value === 'en-US' ? `Dissected ${rep.scanned_ole2_files} compound files` : `已解构 ${rep.scanned_ole2_files} 份复合文件`);
     } else {
-      notifySuccess('OLE2 二进制流及扇区残片检索洁净', `共解构 ${rep.scanned_ole2_files} 份文档，扫描 ${rep.slack_scanned_bytes} Bytes`);
+      notifySuccess(locale.value === 'en-US' ? 'OLE2 streams and slack sectors verified clean' : 'OLE2 二进制流及扇区残片检索洁净', locale.value === 'en-US' ? `Dissected ${rep.scanned_ole2_files} docs, scanned ${rep.slack_scanned_bytes} Bytes` : `共解构 ${rep.scanned_ole2_files} 份文档，扫描 ${rep.slack_scanned_bytes} Bytes`);
     }
   } catch (e: unknown) {
-    notifyError('OLE2 与扇区残片检索失败', String(e));
+    notifyError(locale.value === 'en-US' ? 'Failed to search OLE2 & slack space' : 'OLE2 与扇区残片检索失败', String(e));
   } finally {
     isDissectingOle2.value = false;
   }
@@ -3180,12 +3179,12 @@ async function runOsUsageAudit() {
     osUsageReport.value = rep;
     secrecySubView.value = 'osusage';
     if (rep.secrecy_named_access_count > 0 || rep.print_spooler_jobs.some((j) => j.is_secrecy_suspicious)) {
-      notifyWarning('检出涉密命名快捷方式访问或可疑打印作业', `共解析 ${rep.total_lnk_parsed} 条快捷方式`);
+      notifyWarning(locale.value === 'en-US' ? 'Detected classified named shortcut access or suspicious print job' : '检出涉密命名快捷方式访问或可疑打印作业', locale.value === 'en-US' ? `Parsed ${rep.total_lnk_parsed} shortcuts` : `共解析 ${rep.total_lnk_parsed} 条快捷方式`);
     } else {
-      notifySuccess('系统操作轨迹与打印留痕审计完成', `解析 ${rep.total_lnk_parsed} 条快捷方式，${rep.print_spooler_jobs.length} 条打印作业`);
+      notifySuccess(locale.value === 'en-US' ? 'OS activity & print spooler audit completed' : '系统操作轨迹与打印留痕审计完成', locale.value === 'en-US' ? `Parsed ${rep.total_lnk_parsed} shortcuts, ${rep.print_spooler_jobs.length} spooler jobs` : `解析 ${rep.total_lnk_parsed} 条快捷方式，${rep.print_spooler_jobs.length} 条打印作业`);
     }
   } catch (e: unknown) {
-    notifyError('操作系统轨迹审计失败', String(e));
+    notifyError(locale.value === 'en-US' ? 'OS activity audit failed' : '操作系统轨迹审计失败', String(e));
   } finally {
     isAuditingOsUsage.value = false;
   }
@@ -3199,12 +3198,12 @@ async function runAppTracesAudit() {
     secrecySubView.value = 'apptrace';
     const hitCount = rep.suspicious_downloads.length + rep.chat_file_hits.length;
     if (hitCount > 0) {
-      notifyWarning(`检出 ${rep.suspicious_downloads.length} 条浏览器涉密下载及 ${rep.chat_file_hits.length} 份 IM 传输命中`, `共核验下载 ${rep.total_downloads_checked} 条`);
+      notifyWarning(locale.value === 'en-US' ? `Detected ${rep.suspicious_downloads.length} classified browser downloads & ${rep.chat_file_hits.length} IM transfer hits` : `检出 ${rep.suspicious_downloads.length} 条浏览器涉密下载及 ${rep.chat_file_hits.length} 份 IM 传输命中`, locale.value === 'en-US' ? `Verified ${rep.total_downloads_checked} downloads` : `共核验下载 ${rep.total_downloads_checked} 条`);
     } else {
-      notifySuccess('浏览器下载与即时通信轨迹审计洁净', `共核验下载 ${rep.total_downloads_checked} 条、IM 文件 ${rep.chat_files_checked} 份`);
+      notifySuccess(locale.value === 'en-US' ? 'Browser downloads and IM traces verified clean' : '浏览器下载与即时通信轨迹审计洁净', locale.value === 'en-US' ? `Verified ${rep.total_downloads_checked} downloads, ${rep.chat_files_checked} IM files` : `共核验下载 ${rep.total_downloads_checked} 条、IM 文件 ${rep.chat_files_checked} 份`);
     }
   } catch (e: unknown) {
-    notifyError('应用外发轨迹审计失败', String(e));
+    notifyError(locale.value === 'en-US' ? 'Application egress audit failed' : '应用外发轨迹审计失败', String(e));
   } finally {
     isAuditingAppTraces.value = false;
   }
@@ -3226,9 +3225,9 @@ function printSecrecyFormalReport() {
     setTimeout(() => {
       printWin.print();
     }, 350);
-    notifySuccess('已拉起 BMB 保密现场勘验 A4 报告打印窗口');
+    notifySuccess(locale.value === 'en-US' ? 'Launched BMB secrecy audit A4 report print dialog' : '已拉起 BMB 保密现场勘验 A4 报告打印窗口');
   } else {
-    notifyWarning('打印弹窗被浏览器拦截，请允许弹出窗口或使用 HTML 导出功能');
+    notifyWarning(locale.value === 'en-US' ? 'Print window was blocked by browser popup blocker; please allow popups or use HTML export' : '打印弹窗被浏览器拦截，请允许弹出窗口或使用 HTML 导出功能');
   }
 }
 
@@ -3238,15 +3237,15 @@ async function downloadSecrecyFormalReportHtml() {
   await saveTextViaNativeDesktop(
     `${safeReportNo}_BMB_Secrecy_Inspection_Report.html`,
     htmlContent,
-    'BMB 保密安全勘验报告 (*.html)',
+    locale.value === 'en-US' ? 'BMB Secrecy Audit Report (*.html)' : 'BMB 保密安全勘验报告 (*.html)',
     '*.html',
-    '导出 BMB 保密安全现场勘验 A4 报告',
+    locale.value === 'en-US' ? 'Export BMB Secrecy On-Site Inspection A4 Report' : '导出 BMB 保密安全现场勘验 A4 报告',
   );
 }
 
 function copySecrecyFormalReportMarkdown() {
   copyToClipboard(secrecyReportMarkdownPreview.value);
-  notifySuccess('已复制 BMB 保密现场勘验 Markdown 底稿至剪贴板');
+  notifySuccess(locale.value === 'en-US' ? 'Copied BMB secrecy audit Markdown draft to clipboard' : '已复制 BMB 保密现场勘验 Markdown 底稿至剪贴板');
 }
 
 // ============================================================
@@ -3303,12 +3302,13 @@ const auditReport = ref<any | null>(null);
 
 // 全局 Toast 提示状态
 function showToast(msg: string) {
-  if (msg.includes('失败')) {
-    notifyError('防火墙规则阻断受阻', msg);
-  } else if (msg.includes('已经')) {
-    notifyWarning('防火墙规则已存在', msg);
+  const isEn = locale.value === 'en-US';
+  if (msg.includes('失败') || msg.toLowerCase().includes('failed')) {
+    notifyError(isEn ? 'Firewall block rule hindered' : '防火墙规则阻断受阻', msg);
+  } else if (msg.includes('已经') || msg.toLowerCase().includes('already')) {
+    notifyWarning(isEn ? 'Firewall block rule already exists' : '防火墙规则已存在', msg);
   } else {
-    notifySuccess('防火墙规则阻断生效', msg);
+    notifySuccess(isEn ? 'Firewall block rule enforced' : '防火墙规则阻断生效', msg);
   }
 }
 
@@ -3393,9 +3393,9 @@ async function unblockWfpTarget(target: string) {
   try {
     const msg = await invoke<string>('wfp_unblock_ip_cmd', { target });
     await fetchWfpStatus();
-    notifySuccess('WFP / XDP 阻断已解除', msg);
+    notifySuccess(locale.value === 'en-US' ? 'WFP / XDP block removed' : 'WFP / XDP 阻断已解除', msg);
   } catch (e) {
-    notifyError('解除内核阻断失败', String(e));
+    notifyError(locale.value === 'en-US' ? 'Failed to unblock kernel rule' : '解除内核阻断失败', String(e));
   }
 }
 
@@ -3410,8 +3410,10 @@ async function applyWfpAndNotify(target: string, reason: string, appRuleSaved: b
   if (!isValidIpv4OrCidr(target)) {
     if (appRuleSaved) {
       notifyWarning(
-        '已写入应用代理阻断名单',
-        `目标 ${target} 非纯 IPv4/CIDR 地址，已同步至 HTTP 代理规则拦截；WFP 内核层仅拦截 IPv4/CIDR 端点`
+        locale.value === 'en-US' ? 'Added to application proxy blocklist' : '已写入应用代理阻断名单',
+        locale.value === 'en-US'
+          ? `Target ${target} is not a pure IPv4/CIDR address; synchronized to HTTP proxy rule intercept (WFP kernel layer only intercepts IPv4/CIDR endpoints)`
+          : `目标 ${target} 非纯 IPv4/CIDR 地址，已同步至 HTTP 代理规则拦截；WFP 内核层仅拦截 IPv4/CIDR 端点`
       );
     }
     return;
@@ -3419,13 +3421,13 @@ async function applyWfpAndNotify(target: string, reason: string, appRuleSaved: b
   const wfpRes = await invoke<WfpBlockOutcome>('wfp_block_ip_cmd', { target: target.trim(), reason });
   await fetchWfpStatus();
   if (wfpRes.kernel_enforced) {
-    notifySuccess('WFP 内核 + XDP 三层阻断生效', wfpRes.message);
+    notifySuccess(locale.value === 'en-US' ? 'WFP kernel + XDP L3 drop active' : 'WFP 内核 + XDP 三层阻断生效', wfpRes.message);
   } else if (wfpRes.permission_denied) {
-    notifyWarning('WFP 内核提权受限，已降级前端 XDP + 代理拦截', wfpRes.message);
+    notifyWarning(locale.value === 'en-US' ? 'WFP privilege restricted; degraded to frontend XDP + proxy intercept' : 'WFP 内核提权受限，已降级前端 XDP + 代理拦截', wfpRes.message);
   } else if (!wfpRes.success) {
-    notifyError('WFP 内核规则校验拦截', wfpRes.message);
+    notifyError(locale.value === 'en-US' ? 'WFP kernel rule validation blocked' : 'WFP 内核规则校验拦截', wfpRes.message);
   } else {
-    notifyWarning('XDP 前端丢弃 + 代理规则已激活', wfpRes.message);
+    notifyWarning(locale.value === 'en-US' ? 'XDP frontend drop + proxy rule active' : 'XDP 前端丢弃 + 代理规则已激活', wfpRes.message);
   }
 }
 
@@ -3715,9 +3717,9 @@ async function downloadReportJson() {
   await saveTextViaNativeDesktop(
     `comprehensive_security_audit_report_${Date.now()}.json`,
     JSON.stringify(auditReport.value, null, 2),
-    '安全勘验报告 JSON (*.json)',
+    locale.value === 'en-US' ? 'Security Audit Report JSON (*.json)' : '安全勘验报告 JSON (*.json)',
     '*.json',
-    '导出综合安全合规勘验报告'
+    locale.value === 'en-US' ? 'Export Comprehensive Security Audit Report' : '导出综合安全合规勘验报告'
   );
 }
 

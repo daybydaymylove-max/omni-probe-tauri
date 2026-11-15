@@ -24,9 +24,9 @@
           <div class="flex items-center justify-between text-xs font-bold text-(--text-primary)">
             <span class="inline-flex items-center gap-1.5">
               <AppIcon name="zap" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-              <span>行业标准规约预设模板:</span>
+              <span>{{ locale === 'en-US' ? 'Industry Standard Presets:' : '行业标准规约预设模板:' }}</span>
             </span>
-            <span class="text-[11px] text-indigo-600 dark:text-indigo-400 font-normal">一键载入工控标准物理层与分帧策略</span>
+            <span class="text-[11px] text-indigo-600 dark:text-indigo-400 font-normal">{{ locale === 'en-US' ? 'One-click load industrial physical layer & framing strategy' : '一键载入工控标准物理层与分帧策略' }}</span>
           </div>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
             <button @click="applyPreset('modbus_rtu')"
@@ -36,17 +36,17 @@
             </button>
             <button @click="applyPreset('dlt645')"
               class="ui-content-card hover:border-indigo-500/50 text-(--text-primary) p-2.5 rounded-xl text-left transition-all cursor-pointer">
-              <div class="font-bold text-xs">DL/T 645 电表</div>
+              <div class="font-bold text-xs">{{ locale === 'en-US' ? 'DL/T 645 Meter' : 'DL/T 645 电表' }}</div>
               <div class="text-[11px] text-(--text-muted) font-mono-code ui-num">2400, 8-E-1, 3.5T</div>
             </button>
             <button @click="applyPreset('nmea0183')"
               class="ui-content-card hover:border-indigo-500/50 text-(--text-primary) p-2.5 rounded-xl text-left transition-all cursor-pointer">
-              <div class="font-bold text-xs">NMEA 0183 导航</div>
+              <div class="font-bold text-xs">{{ locale === 'en-US' ? 'NMEA 0183 GNSS' : 'NMEA 0183 导航' }}</div>
               <div class="text-[11px] text-(--text-muted) font-mono-code ui-num">4800, 8-N-1, CRLF</div>
             </button>
             <button @click="applyPreset('high_speed')"
               class="ui-content-card hover:border-indigo-500/50 text-(--text-primary) p-2.5 rounded-xl text-left transition-all cursor-pointer">
-              <div class="font-bold text-xs">高速工控串口</div>
+              <div class="font-bold text-xs">{{ locale === 'en-US' ? 'High-Speed Industrial' : '高速工控串口' }}</div>
               <div class="text-[11px] text-(--text-muted) font-mono-code ui-num">115200, 8-N-1, 3.5T</div>
             </button>
           </div>
@@ -54,19 +54,19 @@
 
         <!-- 硬件参数配置网格 -->
         <div class="space-y-3">
-          <h4 class="text-xs font-bold text-(--text-primary) uppercase tracking-wider">1. 物理层四大参数与流控</h4>
+          <h4 class="text-xs font-bold text-(--text-primary) uppercase tracking-wider">{{ locale === 'en-US' ? '1. Physical Layer & Flow Control' : '1. 物理层四大参数与流控' }}</h4>
           <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
             <div>
-              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">目标串口 (COM Port)</label>
+              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">{{ locale === 'en-US' ? 'Target Port (COM Port)' : '目标串口 (COM Port)' }}</label>
               <select v-model="selectedPort"
                 class="ui-input w-full px-2.5 py-1.5 font-mono-code text-xs">
                 <option v-for="p in serialPorts" :key="p" :value="p">{{ p }}</option>
-                <option v-if="serialPorts.length === 0" value="">未发现可用串口</option>
+                <option v-if="serialPorts.length === 0" value="">{{ locale === 'en-US' ? 'No serial ports detected' : '未发现可用串口' }}</option>
               </select>
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">波特率 (Baud Rate)</label>
+              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">{{ locale === 'en-US' ? 'Baud Rate' : '波特率 (Baud Rate)' }}</label>
               <select v-model.number="config.baud_rate"
                 class="ui-input w-full px-2.5 py-1.5 font-mono-code ui-num text-xs">
                 <option :value="1200">1200 bps</option>
@@ -79,7 +79,7 @@
                 <option :value="115200">115200 bps</option>
                 <option :value="230400">230400 bps</option>
                 <option :value="460800">460800 bps</option>
-                <option :value="921600">921600 bps (高速调试)</option>
+                <option :value="921600">{{ locale === 'en-US' ? '921600 bps (High-Speed)' : '921600 bps (高速调试)' }}</option>
                 <option :value="1000000">1000000 bps (1M)</option>
                 <option :value="1500000">1500000 bps (1.5M)</option>
                 <option :value="2000000">2000000 bps (2M)</option>
@@ -93,17 +93,17 @@
                 <option :value="5">5 Bits</option>
                 <option :value="6">6 Bits</option>
                 <option :value="7">7 Bits</option>
-                <option :value="8">8 Bits (常用)</option>
+                <option :value="8">{{ locale === 'en-US' ? '8 Bits (Common)' : '8 Bits (常用)' }}</option>
               </select>
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">奇偶校验位 (Parity)</label>
+              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">{{ locale === 'en-US' ? 'Parity' : '奇偶校验位 (Parity)' }}</label>
               <select v-model="config.parity"
                 class="ui-input w-full px-2.5 py-1.5 font-mono-code text-xs">
-                <option value="None">None 无校验 (8-N-1)</option>
-                <option value="Odd">Odd 奇校验</option>
-                <option value="Even">Even 偶校验 (DL/T 645)</option>
+                <option value="None">{{ locale === 'en-US' ? 'None (8-N-1)' : 'None 无校验 (8-N-1)' }}</option>
+                <option value="Odd">{{ locale === 'en-US' ? 'Odd Parity' : 'Odd 奇校验' }}</option>
+                <option value="Even">{{ locale === 'en-US' ? 'Even Parity (DL/T 645)' : 'Even 偶校验 (DL/T 645)' }}</option>
               </select>
             </div>
 
@@ -111,18 +111,18 @@
               <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">{{ t('serialConfig.stopBits') }}</label>
               <select v-model.number="config.stop_bits"
                 class="ui-input w-full px-2.5 py-1.5 font-mono-code ui-num text-xs">
-                <option :value="1">1 停止位</option>
-                <option :value="2">2 停止位</option>
+                <option :value="1">{{ locale === 'en-US' ? '1 Stop Bit' : '1 停止位' }}</option>
+                <option :value="2">{{ locale === 'en-US' ? '2 Stop Bits' : '2 停止位' }}</option>
               </select>
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">硬件/软件流控 (Flow Control)</label>
+              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">{{ locale === 'en-US' ? 'Flow Control' : '硬件/软件流控 (Flow Control)' }}</label>
               <select v-model="config.flow_control"
                 class="ui-input w-full px-2.5 py-1.5 font-mono-code text-xs">
-                <option value="None">None 无流控</option>
-                <option value="Software">Software 软件流控 (XON/XOFF)</option>
-                <option value="Hardware">Hardware 硬件流控 (RTS/CTS)</option>
+                <option value="None">{{ locale === 'en-US' ? 'None (No Flow Control)' : 'None 无流控' }}</option>
+                <option value="Software">{{ locale === 'en-US' ? 'Software (XON/XOFF)' : 'Software 软件流控 (XON/XOFF)' }}</option>
+                <option value="Hardware">{{ locale === 'en-US' ? 'Hardware (RTS/CTS)' : 'Hardware 硬件流控 (RTS/CTS)' }}</option>
               </select>
             </div>
           </div>
@@ -131,45 +131,45 @@
         <!-- 动态分帧策略配置 -->
         <div class="space-y-3 border-t border-(--border-subtle) pt-4">
           <div class="flex items-center justify-between flex-wrap gap-2">
-            <h4 class="text-xs font-bold text-(--text-primary) uppercase tracking-wider">2. 工业级数据流分帧引擎 (Framing Engine)</h4>
+            <h4 class="text-xs font-bold text-(--text-primary) uppercase tracking-wider">{{ locale === 'en-US' ? '2. Industrial Framing Engine' : '2. 工业级数据流分帧引擎 (Framing Engine)' }}</h4>
             <span class="text-[11px] text-indigo-700 dark:text-indigo-300 font-mono-code ui-num font-bold bg-indigo-500/12 px-2.5 py-0.5 rounded-lg border border-indigo-500/30">
-              理论 3.5T 动态超时: {{ calculated3_5tMs.toFixed(2) }} ms
+              {{ locale === 'en-US' ? 'Theoretical 3.5T Timeout: ' : '理论 3.5T 动态超时: ' }}{{ calculated3_5tMs.toFixed(2) }} ms
             </span>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
             <div>
-              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">分帧模式 (Frame Mode)</label>
+              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">{{ locale === 'en-US' ? 'Framing Mode' : '分帧模式 (Frame Mode)' }}</label>
               <select v-model="config.frame_mode"
                 class="ui-input w-full px-2.5 py-1.5 font-bold text-xs">
-                <option value="Auto3_5T">Auto3_5T: 智能 3.5 字符动态时间超时分帧 (推荐)</option>
-                <option value="TimeoutMs">TimeoutMs: 显式固定静默超时分帧 (ms)</option>
-                <option value="Delimiter">Delimiter: 特殊定界符分帧 (如 0D0A 回车换行)</option>
-                <option value="FixedLength">FixedLength: 固定字节长度分帧</option>
+                <option value="Auto3_5T">{{ locale === 'en-US' ? 'Auto3_5T: Dynamic 3.5-char timeout (Recommended)' : 'Auto3_5T: 智能 3.5 字符动态时间超时分帧 (推荐)' }}</option>
+                <option value="TimeoutMs">{{ locale === 'en-US' ? 'TimeoutMs: Fixed silence timeout (ms)' : 'TimeoutMs: 显式固定静默超时分帧 (ms)' }}</option>
+                <option value="Delimiter">{{ locale === 'en-US' ? 'Delimiter: Special delimiter bytes (e.g. 0D0A)' : 'Delimiter: 特殊定界符分帧 (如 0D0A 回车换行)' }}</option>
+                <option value="FixedLength">{{ locale === 'en-US' ? 'FixedLength: Fixed byte length framing' : 'FixedLength: 固定字节长度分帧' }}</option>
               </select>
             </div>
 
             <!-- 根据模式显示对应参数输入 -->
             <div v-if="config.frame_mode === 'TimeoutMs'">
-              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">静默超时毫秒数 (Timeout ms)</label>
+              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">{{ locale === 'en-US' ? 'Silence Timeout (ms)' : '静默超时毫秒数 (Timeout ms)' }}</label>
               <input v-model.number="config.frame_timeout_ms" type="number" min="1" max="10000"
                 class="ui-input w-full px-2.5 py-1.5 font-mono-code ui-num text-xs">
             </div>
 
             <div v-else-if="config.frame_mode === 'Delimiter'">
-              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">定界符十六进制 (Delimiter Hex)</label>
-              <input v-model="config.frame_delimiter_hex" placeholder="如 0D0A 或 0A"
+              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">{{ locale === 'en-US' ? 'Delimiter Hex' : '定界符十六进制 (Delimiter Hex)' }}</label>
+              <input v-model="config.frame_delimiter_hex" :placeholder="locale === 'en-US' ? 'e.g. 0D0A or 0A' : '如 0D0A 或 0A'"
                 class="ui-input w-full px-2.5 py-1.5 font-mono-code text-xs">
             </div>
 
             <div v-else-if="config.frame_mode === 'FixedLength'">
-              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">每帧固定字节长度 (Fixed Length)</label>
+              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">{{ locale === 'en-US' ? 'Fixed Byte Length' : '每帧固定字节长度 (Fixed Length)' }}</label>
               <input v-model.number="config.frame_fixed_length" type="number" min="1" max="65535"
                 class="ui-input w-full px-2.5 py-1.5 font-mono-code ui-num text-xs">
             </div>
 
             <div v-else class="ui-sub-card flex items-center text-xs text-(--text-secondary) p-2.5 rounded-xl">
-              <span>根据波特率与字符结构，底层引擎自动计算 3.5 字符无数据静默判定为一帧。</span>
+              <span>{{ locale === 'en-US' ? 'Engine calculates 3.5-character silence based on baud rate and char structure.' : '根据波特率与字符结构，底层引擎自动计算 3.5 字符无数据静默判定为一帧。' }}</span>
             </div>
           </div>
         </div>
@@ -184,16 +184,16 @@
       <!-- 模态框底部操作栏 -->
       <div class="px-6 py-3 border-t border-(--border-subtle) bg-(--surface-content-alt) flex items-center justify-between shrink-0">
         <span class="text-xs text-(--text-muted) font-mono-code ui-num">
-          当前配置: {{ selectedPort || '未选串口' }} @ {{ config.baud_rate }}bps ({{ config.data_bits }}-{{ config.parity[0] }}-{{ config.stop_bits }})
+          {{ locale === 'en-US' ? 'Config: ' : '当前配置: ' }}{{ selectedPort || (locale === 'en-US' ? 'None' : '未选串口') }} @ {{ config.baud_rate }}bps ({{ config.data_bits }}-{{ config.parity[0] }}-{{ config.stop_bits }})
         </span>
         <div class="flex items-center gap-2">
           <button @click="$emit('close')" class="ui-btn-secondary px-3.5 py-1.5 text-xs font-semibold cursor-pointer">
-            取消
+            {{ locale === 'en-US' ? 'Cancel' : '取消' }}
           </button>
           <button @click="startCaptureWithConfig" :disabled="isStarting || !selectedPort"
             class="ui-btn-primary text-xs px-4 py-1.5 font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-40">
             <AppIcon v-if="isStarting" name="refresh" class="w-3.5 h-3.5 animate-spin" />
-            <span>以专业参数挂钩监听</span>
+            <span>{{ locale === 'en-US' ? 'Hook & Listen with Parameters' : '以专业参数挂钩监听' }}</span>
           </button>
         </div>
       </div>
@@ -206,7 +206,9 @@ import { ref, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import AppIcon from './AppIcon.vue';
 import { useI18n } from '../i18n';
-const { t } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 
 const props = defineProps<{
   isOpen: boolean;
@@ -298,7 +300,7 @@ async function startCaptureWithConfig() {
     }, 1200);
   } catch (err: any) {
     isStatusError.value = true;
-    statusMsg.value = `启动失败: ${err?.message || String(err)}`;
+    statusMsg.value = locale.value === 'en-US' ? `Start failed: ${err?.message || String(err)}` : `启动失败: ${err?.message || String(err)}`;
   } finally {
     isStarting.value = false;
   }

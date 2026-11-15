@@ -80,12 +80,12 @@
 
         <button @click="$emit('probeAllPorts')" :disabled="probingAll" class="ui-btn-secondary px-2.5 py-1 text-xs">
           <AppIcon name="zap" :size="13" :class="{ 'animate-spin': probingAll }" />
-          <span>探活</span>
+          <span>{{ locale === 'en-US' ? 'Probe' : '探活' }}</span>
         </button>
 
         <button @click="openTargetBannerScan('')" class="ui-btn-secondary px-2.5 py-1 text-xs" title="打开 CIDR 网段与全连接 Banner 并发扫描工作台">
           <AppIcon name="radar" :size="13" class="text-sky-500" />
-          <span>CIDR/Banner 扫描</span>
+          <span>{{ locale === 'en-US' ? 'CIDR/Banner Scan' : 'CIDR/Banner 扫描' }}</span>
         </button>
 
         <button
@@ -96,7 +96,7 @@
           ]"
         >
           <AppIcon name="activity" :size="13" />
-          <span>快照</span>
+          <span>{{ locale === 'en-US' ? 'Snapshot' : '快照' }}</span>
           <span
             v-if="snapshotList.length > 0"
             class="px-1.5 py-0.5 rounded-full text-[11px] ui-num font-semibold bg-[var(--accent-primary-soft)] text-[var(--accent-primary-text)]"
@@ -107,7 +107,7 @@
 
         <button @click="$emit('clearAssets')" class="ui-btn-danger px-3 py-1 text-xs">
           <AppIcon name="trash" :size="13" />
-          <span>清空</span>
+          <span>{{ locale === 'en-US' ? 'Clear' : '清空' }}</span>
         </button>
       </div>
     </div>
@@ -118,23 +118,23 @@
         <div class="flex items-center gap-2 min-w-0">
           <span class="text-[13px] font-semibold flex items-center gap-1.5" style="color: var(--text-primary);">
             <span class="w-2 h-2 rounded-full bg-indigo-500 shrink-0"></span>
-            <span>全网资产快照持久化与基线差分审计工作台</span>
+            <span>{{ locale === 'en-US' ? 'Asset Snapshot & Baseline Diff Audit Studio' : '全网资产快照持久化与基线差分审计工作台' }}</span>
           </span>
           <span class="text-xs hidden lg:inline" style="color: var(--text-muted);">
-            支持历史快照持久化、任意两版本比对、高危端口变动与 MAC 漂移审计
+            {{ locale === 'en-US' ? 'Historical snapshot persistence, arbitrary version comparison, port & MAC drift audit' : '支持历史快照持久化、任意两版本比对、高危端口变动与 MAC 漂移审计' }}
           </span>
         </div>
 
         <div class="flex items-center gap-2 text-xs">
           <input
             v-model="newSnapshotName"
-            placeholder="快照备注名称 (可选)"
+            :placeholder="locale === 'en-US' ? 'Snapshot note/name (optional)' : '快照备注名称 (可选)'"
             class="ui-input w-48 px-2.5 py-1 text-xs"
           />
           <button @click="doSaveSnapshot" :disabled="isSavingSnapshot" class="ui-btn-primary px-3 py-1 text-xs">
             <AppIcon v-if="isSavingSnapshot" name="refresh" :size="13" class="animate-spin" />
             <AppIcon v-else name="archive" :size="13" />
-            <span>保存当前快照</span>
+            <span>{{ locale === 'en-US' ? 'Save Current Snapshot' : '保存当前快照' }}</span>
           </button>
           <button @click="showDiffWorkbench = false" title="收起快照工作台" class="ui-btn-secondary w-7 h-7 p-0 justify-center">
             <AppIcon name="close" :size="14" />
@@ -157,7 +157,7 @@
         <div>
           <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">对比目标 (Target Snapshot)</label>
           <select v-model="selectedTargetSnapshotId" class="ui-input w-full px-2 py-1.5 text-xs ui-num">
-            <option value="CURRENT_REALTIME">当前实时感知资产 ({{ assets.length }} 节点)</option>
+            <option value="CURRENT_REALTIME">{{ locale === 'en-US' ? `Current Real-time Assets (${assets.length} nodes)` : `当前实时感知资产 (${assets.length} 节点)` }}</option>
             <option v-for="s in snapshotList" :key="s.id" :value="s.id">
               {{ s.name }} ({{ s.total_assets }} 资产 / {{ s.timestamp_str }})
             </option>
@@ -172,7 +172,7 @@
           >
             <AppIcon v-if="isComparing" name="refresh" :size="13" class="animate-spin" />
             <AppIcon v-else name="search" :size="13" />
-            <span>执行多维差分比对</span>
+            <span>{{ locale === 'en-US' ? 'Run Multidimensional Diff' : '执行多维差分比对' }}</span>
           </button>
           <button @click="loadSnapshots" title="刷新快照清单" class="ui-btn-secondary px-2.5 py-1.5">
             <AppIcon name="refresh" :size="14" />
@@ -255,12 +255,12 @@
           <table class="w-full text-left text-xs border-collapse table-fixed">
             <thead class="ui-table-head sticky top-0 z-10">
               <tr>
-                <th class="p-2.5 w-[18%]">节点 IP</th>
-                <th class="p-2.5 w-[12%]">差分类型</th>
-                <th class="p-2.5 w-[16%]">MAC 状态</th>
-                <th class="p-2.5 w-[14%]">角色变动</th>
-                <th class="p-2.5 w-[22%]">开放端口差分</th>
-                <th class="p-2.5 w-[18%]">风险等级与审计说明</th>
+                <th class="p-2.5 w-[18%]">{{ locale === 'en-US' ? 'Node IP' : '节点 IP' }}</th>
+                <th class="p-2.5 w-[12%]">{{ locale === 'en-US' ? 'Diff Type' : '差分类型' }}</th>
+                <th class="p-2.5 w-[16%]">{{ locale === 'en-US' ? 'MAC Status' : 'MAC 状态' }}</th>
+                <th class="p-2.5 w-[14%]">{{ locale === 'en-US' ? 'Role Change' : '角色变动' }}</th>
+                <th class="p-2.5 w-[22%]">{{ locale === 'en-US' ? 'Port Diff' : '开放端口差分' }}</th>
+                <th class="p-2.5 w-[18%]">{{ locale === 'en-US' ? 'Risk Level & Audit Detail' : '风险等级与审计说明' }}</th>
               </tr>
             </thead>
             <tbody class="divide-y text-xs" style="--tw-divide-opacity: 1; border-color: var(--border-subtle);">
@@ -275,7 +275,7 @@
                     item.diff_type === 'ADDED' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' :
                     item.diff_type === 'REMOVED' ? 'bg-slate-500/15 text-slate-600 dark:text-slate-300' :
                     'bg-amber-500/15 text-amber-700 dark:text-amber-300']">
-                    {{ item.diff_type === 'ADDED' ? '+ 新增' : item.diff_type === 'REMOVED' ? '- 下线' : '~ 变更' }}
+                    {{ item.diff_type === 'ADDED' ? (locale === 'en-US' ? '+ Added' : '+ 新增') : item.diff_type === 'REMOVED' ? (locale === 'en-US' ? '- Offline' : '- 下线') : (locale === 'en-US' ? '~ Modified' : '~ 变更') }}
                   </span>
                 </td>
                 <td class="p-2 truncate font-mono text-[11px]" :title="item.target_mac || item.base_mac || 'N/A'">
@@ -313,7 +313,7 @@
                       class="text-[11px]"
                       style="color: var(--text-muted);"
                     >
-                      无端口变动
+                      {{ locale === 'en-US' ? 'No port changes' : '无端口变动' }}
                     </span>
                   </div>
                 </td>
@@ -323,7 +323,7 @@
                       item.risk_level === 'HIGH' ? 'bg-rose-600 text-white' :
                       item.risk_level === 'MEDIUM' ? 'bg-amber-500 text-white' :
                       'bg-slate-500/20 text-[var(--text-secondary)]']">
-                      {{ item.risk_level === 'HIGH' ? '高危' : item.risk_level === 'MEDIUM' ? '中危' : '正常' }}
+                      {{ item.risk_level === 'HIGH' ? (locale === 'en-US' ? 'High Risk' : '高危') : item.risk_level === 'MEDIUM' ? (locale === 'en-US' ? 'Medium' : '中危') : (locale === 'en-US' ? 'Normal' : '正常') }}
                     </span>
                     <span class="truncate text-[11px]" style="color: var(--text-secondary);">{{ item.risk_desc }}</span>
                   </div>
@@ -331,7 +331,7 @@
               </tr>
               <tr v-if="filteredDiffItems.length === 0">
                 <td colspan="6" class="p-6 text-center text-xs" style="color: var(--text-muted);">
-                  暂无匹配的差分记录（基准与对比版本在当前过滤条件下完全一致）
+                  {{ locale === 'en-US' ? 'No matching diff records (versions are 100% identical under current filter)' : '暂无匹配的差分记录（基准与对比版本在当前过滤条件下完全一致）' }}
                 </td>
               </tr>
             </tbody>
@@ -346,7 +346,7 @@
         <div class="flex items-center gap-2.5 flex-wrap">
           <span class="font-semibold text-[13px] flex items-center gap-1.5" style="color: var(--text-primary);">
             <AppIcon name="layers" :size="15" class="text-blue-500" />
-            <span>CIDR 分层聚合拓扑下钻 (Zone → /16 → /24 → Host)</span>
+            <span>{{ locale === 'en-US' ? 'CIDR Hierarchy Drill-down (Zone → /16 → /24 → Host)' : 'CIDR 分层聚合拓扑下钻 (Zone → /16 → /24 → Host)' }}</span>
           </span>
           <span class="ui-pill px-2 py-0.5 text-[11px] ui-num">沉淀主机: {{ hierarchyViewport?.total_ingested_hosts ?? 0 }}</span>
           <span class="px-2 py-0.5 rounded-lg bg-blue-500/12 text-blue-600 dark:text-sky-300 text-[11px] ui-num font-medium">可视节点: {{ hierarchyViewport?.rendered_node_count ?? 0 }}</span>
@@ -447,7 +447,7 @@
             class="ui-input px-2 py-0.5 text-[11px] w-44 font-mono"
           />
           <button @click="decodeL2HexSample" :disabled="!l2HexInput.trim()" class="ui-btn-secondary px-2 py-0.5 text-[11px]">解码入图</button>
-          <button v-if="l2Neighbors.length > 0" @click="clearL2Neighbors" class="ui-btn-secondary px-2 py-0.5 text-[11px]">清空</button>
+          <button v-if="l2Neighbors.length > 0" @click="clearL2Neighbors" class="ui-btn-secondary px-2 py-0.5 text-[11px]">{{ locale === 'en-US' ? 'Clear' : '清空' }}</button>
         </div>
       </div>
 
@@ -480,11 +480,11 @@
             <div class="flex items-center gap-1.5 shrink-0" v-if="node.level !== 'Host'">
               <button @click="drillDownNode(node.node_id)" class="ui-btn-primary px-2.5 py-1 text-[11px]">
                 <AppIcon name="chevron-down" :size="12" />
-                <span>下钻</span>
+                <span>{{ locale === 'en-US' ? 'Drill' : '下钻' }}</span>
               </button>
               <button @click="rollUpNode(node.node_id)" class="ui-btn-secondary px-2.5 py-1 text-[11px]">
                 <AppIcon name="chevron-up" :size="12" />
-                <span>折叠</span>
+                <span>{{ locale === 'en-US' ? 'Fold' : '折叠' }}</span>
               </button>
             </div>
           </div>
@@ -530,35 +530,35 @@
               :class="['px-2 py-0.5 rounded-lg font-medium transition-all cursor-pointer',
                 activeRoleCategory === 'ALL' ? 'bg-[var(--accent-primary)] text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']"
             >
-              全部 ({{ assets.length }})
+              {{ locale === 'en-US' ? 'All' : '全部' }} ({{ assets.length }})
             </button>
             <button
               @click="activeRoleCategory = 'GATEWAY'"
               :class="['px-2 py-0.5 rounded-lg font-medium transition-all cursor-pointer',
                 activeRoleCategory === 'GATEWAY' ? 'bg-[var(--accent-primary)] text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']"
             >
-              网关 ({{ gatewayCount }})
+              {{ locale === 'en-US' ? 'Gateways' : '网关' }} ({{ gatewayCount }})
             </button>
             <button
               @click="activeRoleCategory = 'CONTROLLER'"
               :class="['px-2 py-0.5 rounded-lg font-medium transition-all cursor-pointer',
                 activeRoleCategory === 'CONTROLLER' ? 'bg-[var(--accent-primary)] text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']"
             >
-              控制/服务 ({{ controllerCount }})
+              {{ locale === 'en-US' ? 'Controllers/Servers' : '控制/服务' }} ({{ controllerCount }})
             </button>
             <button
               @click="activeRoleCategory = 'TERMINAL'"
               :class="['px-2 py-0.5 rounded-lg font-medium transition-all cursor-pointer',
                 activeRoleCategory === 'TERMINAL' ? 'bg-[var(--accent-primary)] text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]']"
             >
-              终端 ({{ terminalCount }})
+              {{ locale === 'en-US' ? 'Endpoints' : '终端' }} ({{ terminalCount }})
             </button>
             <button
               @click="activeRoleCategory = 'THREAT'"
               :class="['px-2 py-0.5 rounded-lg font-medium transition-all cursor-pointer',
                 activeRoleCategory === 'THREAT' ? 'bg-rose-600 text-white shadow-xs' : 'text-rose-600 dark:text-rose-400 hover:bg-rose-500/10']"
             >
-              高危 ({{ threatCount }})
+              {{ locale === 'en-US' ? 'High Risk' : '高危' }} ({{ threatCount }})
             </button>
           </div>
         </div>
@@ -567,13 +567,13 @@
           <table class="w-full text-left text-xs border-collapse table-fixed">
             <thead class="ui-table-head sticky top-0 z-10 select-none">
               <tr>
-                <th class="p-2.5" :class="viewLayout === 'table' ? 'w-[20%]' : 'w-[27%]'">主机 IP & 名称</th>
-                <th v-if="viewLayout === 'table'" class="p-2.5 w-[14%]">物理 MAC</th>
+                <th class="p-2.5" :class="viewLayout === 'table' ? 'w-[20%]' : 'w-[27%]'">{{ locale === 'en-US' ? 'Host IP & Name' : '主机 IP & 名称' }}</th>
+                <th v-if="viewLayout === 'table'" class="p-2.5 w-[14%]">{{ locale === 'en-US' ? 'MAC Address' : '物理 MAC' }}</th>
                 <th class="p-2.5" :class="viewLayout === 'table' ? 'w-[14%]' : 'hidden xl:table-cell w-[16%]'">硬件厂商</th>
-                <th class="p-2.5" :class="viewLayout === 'table' ? 'w-[11%]' : 'w-[17%]'">网络角色</th>
-                <th class="p-2.5" :class="viewLayout === 'table' ? 'w-[11%]' : 'w-[15%]'">业务规约</th>
-                <th class="p-2.5" :class="viewLayout === 'table' ? 'w-[12%]' : 'w-[18%]'">开放端口</th>
-                <th v-if="viewLayout === 'table'" class="p-2.5 w-[8%]">末次活跃</th>
+                <th class="p-2.5" :class="viewLayout === 'table' ? 'w-[11%]' : 'w-[17%]'">{{ locale === 'en-US' ? 'Role' : '网络角色' }}</th>
+                <th class="p-2.5" :class="viewLayout === 'table' ? 'w-[11%]' : 'w-[15%]'">{{ locale === 'en-US' ? 'Protocol' : '业务规约' }}</th>
+                <th class="p-2.5" :class="viewLayout === 'table' ? 'w-[12%]' : 'w-[18%]'">{{ locale === 'en-US' ? 'Open Ports' : '开放端口' }}</th>
+                <th v-if="viewLayout === 'table'" class="p-2.5 w-[8%]">{{ locale === 'en-US' ? 'Last Active' : '末次活跃' }}</th>
                 <th class="p-2.5 text-center" :class="viewLayout === 'table' ? 'w-[10%]' : 'w-[110px]'">操作</th>
               </tr>
             </thead>
@@ -640,7 +640,7 @@
                   </div>
                 </td>
 
-                <!-- 开放端口 -->
+                <!-- {{ locale === 'en-US' ? 'Open Ports' : '开放端口' }} -->
                 <td class="p-2.5 truncate">
                   <div class="flex items-center gap-1 flex-nowrap truncate">
                     <span
@@ -659,12 +659,12 @@
                       class="text-[11px] px-1.5 py-0.5 rounded-md bg-amber-500/12 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/25 transition-colors cursor-pointer flex items-center gap-1 font-medium shrink-0"
                     >
                       <AppIcon name="zap" :size="11" />
-                      <span>探活</span>
+                      <span>{{ locale === 'en-US' ? 'Probe' : '探活' }}</span>
                     </button>
                   </div>
                 </td>
 
-                <!-- 末次活跃时间 -->
+                <!-- {{ locale === 'en-US' ? 'Last Active' : '末次活跃' }}时间 -->
                 <td v-if="viewLayout === 'table'" class="p-2.5 text-[11px] truncate ui-num" style="color: var(--text-muted);">
                   {{ new Date(asset.last_seen_ts).toLocaleTimeString('zh-CN', { hour12: false }) }}
                 </td>
@@ -716,7 +716,7 @@
                       @click="addAssetToDiffQueue(asset)"
                       class="p-1.5 rounded-lg glass-pill hover:text-purple-500 transition-all cursor-pointer"
                       style="color: var(--text-secondary);"
-                      title="将资产开放端口/规约指纹加入全局多组比对队列"
+                      title="将资产{{ locale === 'en-US' ? 'Open Ports' : '开放端口' }}/规约指纹加入全局多组比对队列"
                     >
                       <AppIcon name="scale" :size="13" />
                     </button>
@@ -745,9 +745,9 @@
       >
         <div class="px-4 py-2 border-b flex items-center justify-between text-xs font-semibold shrink-0" style="border-color: var(--border-subtle); color: var(--text-primary);">
           <div class="flex items-center gap-2">
-            <span>工业网络拓扑图</span>
+            <span>{{ locale === 'en-US' ? 'Industrial Network Topology' : '工业网络拓扑图' }}</span>
             <span class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-500/12 text-blue-600 dark:text-sky-300 border border-blue-500/25">
-              多层次网状 &amp; 同心雷达
+              {{ locale === 'en-US' ? 'Multi-Tier Mesh & Radar' : '多层次网状 &amp; 同心雷达' }}
             </span>
           </div>
           <button
@@ -756,7 +756,7 @@
             class="ui-btn-secondary text-[11px] px-2.5 py-1"
           >
             <AppIcon :name="viewLayout === 'topology' ? 'minimize' : 'layers'" :size="12" />
-            <span>{{ viewLayout === 'topology' ? '还原分屏' : '拓扑全景' }}</span>
+            <span>{{ viewLayout === 'topology' ? (locale === 'en-US' ? 'Split View' : '还原分屏') : (locale === 'en-US' ? 'Full Topology' : '拓扑全景') }}</span>
           </button>
         </div>
         <div class="flex-1 relative overflow-hidden">
@@ -806,7 +806,9 @@ import EmptyState from '../components/EmptyState.vue';
 import { useUniversalDiff } from '../composables/useUniversalDiff';
 import { useI18n } from '../i18n';
 
-const { locale } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 
 const TargetProbeModal = defineAsyncComponent(() => import('../components/TargetProbeModal.vue'));
 
@@ -1215,9 +1217,9 @@ async function doSaveSnapshot() {
     await loadSnapshots();
     selectedBaseSnapshotId.value = res.id;
     emit('appendLog', `[ASSET] ✓ 成功保存全网资产快照: ${res.name} (含 ${res.total_assets} 节点)`);
-    notifySuccess('资产快照保存成功', `已归档全网资产快照: ${res.name} (共 ${res.total_assets} 个节点)`);
+    notifySuccess(locale.value === 'en-US' ? 'Snapshot Saved' : '资产快照保存成功', locale.value === 'en-US' ? `Archived asset snapshot: ${res.name} (${res.total_assets} nodes)` : `已归档全网资产快照: ${res.name} (共 ${res.total_assets} 个节点)`);
   } catch (e: any) {
-    notifyError('保存资产快照受阻', e);
+    notifyError(locale.value === 'en-US' ? 'Save Snapshot Blocked' : '保存资产快照受阻', e);
   } finally {
     isSavingSnapshot.value = false;
   }
@@ -1238,9 +1240,9 @@ async function doDeleteSnapshot(id: string) {
     }
     if (diffReport.value) diffReport.value = null;
     emit('appendLog', `[ASSET] 已移除历史快照 ${id}`);
-    notifyInfo('资产快照已移除', `历史资产快照 ${id} 已被删除`);
+    notifyInfo(locale.value === 'en-US' ? 'Snapshot Removed' : '资产快照已移除', locale.value === 'en-US' ? `Snapshot ${id} deleted` : `历史资产快照 ${id} 已被删除`);
   } catch (e: any) {
-    notifyError('删除快照受阻', e);
+    notifyError(locale.value === 'en-US' ? 'Delete Snapshot Blocked' : '删除快照受阻', e);
   }
 }
 
@@ -1257,7 +1259,7 @@ async function doCompareSnapshots() {
     emit('appendLog', `[ASSET] 资产差分比对完成: 基准 ${res.base_name} vs ${res.target_name} | 发现 ${res.added_count} 新增 / ${res.modified_count} 变动 / ${res.high_risk_count} 高危`);
     notifySuccess('资产差分比对完成', `基准 [${res.base_name}] vs [${res.target_name}]：新增 ${res.added_count}，变动 ${res.modified_count}，高危 ${res.high_risk_count}`);
   } catch (e: any) {
-    notifyError('资产差分比对受阻', e);
+    notifyError(locale.value === 'en-US' ? 'Asset Diff Blocked' : '资产差分比对受阻', e);
   } finally {
     isComparing.value = false;
   }

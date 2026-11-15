@@ -209,9 +209,9 @@ async function saveStreamAsFile() {
   await saveTextViaNativeDesktop(
     `stream_${props.srcIp}_${props.srcPort}_${props.dstIp}_${props.dstPort}.txt`,
     fullText,
-    'TCP 会话重组文本 (*.txt)',
+    locale.value === 'en-US' ? 'TCP Stream Text (*.txt)' : 'TCP 会话重组文本 (*.txt)',
     '*.txt;*.log',
-    '导出 TCP 流重组文本'
+    locale.value === 'en-US' ? 'Export TCP Stream Text' : '导出 TCP 流重组文本'
   );
 }
 </script>

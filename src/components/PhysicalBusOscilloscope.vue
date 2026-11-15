@@ -28,7 +28,7 @@
         <select
           v-model="busScope"
           class="ui-input w-auto px-2 py-0.5 text-[11px] font-medium cursor-pointer"
-          title="筛选分析的物理总线范围"
+          :title="locale === 'en-US' ? 'Filter analyzed physical bus scope' : '筛选分析的物理总线范围'"
         >
           <option value="ALL">All Buses (COM + USB)</option>
           <option value="SERIAL">Serial / MCU Only</option>
@@ -39,10 +39,10 @@
           v-if="activeMode === 'realtime-vs-history' && busScope === 'SERIAL' && selectedSerialPort"
           class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border cursor-pointer bg-[var(--surface-glass-pill)]"
           style="border-color: var(--border-subtle); color: var(--text-secondary);"
-          title="勾选后仅比对当前选中串口的历史记录"
+          :title="locale === 'en-US' ? 'Only compare selected serial port records when checked' : '勾选后仅比对当前选中串口的历史记录'"
         >
           <input type="checkbox" v-model="filterByCurrentPort" class="accent-sky-500" />
-          <span class="ui-num">仅看 {{ selectedSerialPort }}</span>
+          <span class="ui-num">{{ locale === 'en-US' ? 'Only ' + selectedSerialPort : '仅看 ' + selectedSerialPort }}</span>
         </label>
 
         <span class="ui-num px-2 py-0.5 rounded-md border bg-[var(--surface-glass-pill)]" style="border-color: var(--border-subtle); color: var(--text-muted);">
@@ -76,7 +76,7 @@
         <div class="relative rounded-xl border overflow-hidden h-44" style="border-color: var(--border-subtle); background: rgba(15, 23, 42, 0.92);">
           <canvas ref="plotterCanvasRef" class="w-full h-full block"></canvas>
           <div v-if="plotterSeries.channels.length === 0" class="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-            <span class="text-xs font-semibold text-slate-300">尚未提取到 COM 串口多通道数值波形</span>
+            <span class="text-xs font-semibold text-slate-300">{{ locale === 'en-US' ? 'No COM multi-channel numerical waveforms extracted yet' : '尚未提取到 COM 串口多通道数值波形' }}</span>
             <span class="text-[11px] text-slate-400 mt-1 font-mono">
               等待单片机输出如 <code class="text-sky-300">temp:25.4 hum:61.2</code> 或 CSV 行 <code class="text-sky-300">25.4,61.2,3.30</code>
             </span>
@@ -100,12 +100,12 @@
               <strong class="font-mono">{{ ch.latest.toFixed(2) }}</strong>
             </span>
           </div>
-          <span class="ui-num">有效时间点: {{ plotterSeries.pointCount }}</span>
+          <span class="ui-num">{{ locale === 'en-US' ? 'Valid Points: ' : '有效时间点: ' }}{{ plotterSeries.pointCount }}</span>
         </div>
       </div>
 
       <div class="lg:col-span-3 ui-sub-card p-2.5 flex flex-col justify-between gap-2 text-[11px]">
-        <div class="font-semibold" style="color: var(--text-primary);">通道统计摘要</div>
+        <div class="font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Channel Statistics Summary' : '通道统计摘要' }}</div>
         <div class="space-y-1.5 overflow-auto max-h-32 custom-scrollbar ui-num">
           <div v-for="(ch, idx) in plotterSeries.channels" :key="ch.name" class="p-1.5 rounded-lg border bg-[var(--surface-glass-pill)]" style="border-color: var(--border-subtle);">
             <div class="flex items-center justify-between">
@@ -122,7 +122,7 @@
             </div>
           </div>
           <div v-if="plotterSeries.channels.length === 0" class="text-[11px] py-4 text-center" style="color: var(--text-muted);">
-            无活跃传感器通道
+            {{ locale === 'en-US' ? 'No active sensor channels' : '无活跃传感器通道' }}
           </div>
         </div>
         <button
@@ -130,12 +130,12 @@
           :disabled="plotterSeries.channels.length === 0"
           class="ui-btn-secondary w-full py-1 text-[11px] justify-center disabled:opacity-40"
         >
-          导出波形采样 CSV
+          {{ locale === 'en-US' ? 'Export Waveform CSV' : '导出波形采样 CSV' }}
         </button>
       </div>
     </div>
 
-    <!-- 模式 2: 二进制寄存器实时解调 / VOFA+ JustFloat / 自定义 Struct 多通道示波 -->
+    <!-- 模式 2: 二进制寄存器实时解调 / VOFA+ JustFloat / {{ locale === 'en-US' ? 'Custom Struct Multi-Ch' : '自定义 Struct 多通道' }}示波 -->
     <div v-else-if="activeMode === 'binary-scope'" class="grid grid-cols-1 lg:grid-cols-12 gap-2.5 items-stretch">
       <div class="lg:col-span-8 flex flex-col gap-1.5">
         <div class="flex items-center justify-between gap-2 text-[11px] flex-wrap">
@@ -144,23 +144,23 @@
               @click="binaryDecodeMode = 'single'"
               :class="['px-2 py-0.5 rounded cursor-pointer', binaryDecodeMode === 'single' ? 'bg-sky-500 text-white' : '']"
             >
-              单字段高速切片
+              {{ locale === 'en-US' ? 'Single Register Slice' : '单字段高速切片' }}
             </button>
             <button
               @click="binaryDecodeMode = 'justfloat'; refreshStructDecode()"
               :class="['px-2 py-0.5 rounded cursor-pointer', binaryDecodeMode === 'justfloat' ? 'bg-indigo-600 text-white' : '']"
             >
-              VOFA+ JustFloat 多浮点
+              {{ locale === 'en-US' ? 'VOFA+ JustFloat Array' : 'VOFA+ JustFloat 多浮点' }}
             </button>
             <button
               @click="binaryDecodeMode = 'struct'; refreshStructDecode()"
               :class="['px-2 py-0.5 rounded cursor-pointer', binaryDecodeMode === 'struct' ? 'bg-emerald-600 text-white' : '']"
             >
-              自定义 Struct 多通道
+              {{ locale === 'en-US' ? 'Custom Struct Multi-Ch' : '自定义 Struct 多通道' }}
             </button>
           </div>
           <span v-if="binaryDecodeMode !== 'single' && structDecodeRes" class="text-[10px] ui-num" style="color: var(--text-muted);">
-            已解 {{ structDecodeRes.decoded_frame_count }} 帧 ({{ structDecodeRes.channels.length }} 通道) · 跳过 {{ structDecodeRes.skipped_frame_count }} 帧
+            {{ locale === 'en-US' ? `Decoded ${structDecodeRes.decoded_frame_count} frames (${structDecodeRes.channels.length} channels)` : `已解 ${structDecodeRes.decoded_frame_count} 帧 (${structDecodeRes.channels.length} 通道)` }} · 跳过 {{ structDecodeRes.skipped_frame_count }} 帧
           </span>
         </div>
 
@@ -188,16 +188,16 @@
       <div class="lg:col-span-4 ui-sub-card p-2.5 flex flex-col justify-between gap-2 text-[11px]">
         <template v-if="binaryDecodeMode === 'single'">
           <div class="flex items-center justify-between">
-            <span class="font-semibold" style="color: var(--text-primary);">单寄存器切片解码器</span>
+            <span class="font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Single Register Slice Decoder' : '单寄存器切片解码器' }}</span>
             <span class="text-[10px] ui-num" style="color: var(--text-muted);">N={{ binarySeries.length }}</span>
           </div>
           <div class="grid grid-cols-2 gap-1.5">
             <div>
-              <label class="text-[10px] block mb-0.5" style="color: var(--text-muted);">偏移 (Byte)</label>
+              <label class="text-[10px] block mb-0.5" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Offset (Byte)' : '偏移 (Byte)' }}</label>
               <input type="number" v-model.number="binOffset" min="0" max="1024" class="ui-input w-full px-2 py-0.5 text-[11px] ui-num" />
             </div>
             <div>
-              <label class="text-[10px] block mb-0.5" style="color: var(--text-muted);">位宽</label>
+              <label class="text-[10px] block mb-0.5" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Bit Width' : '位宽' }}</label>
               <select v-model.number="binWidth" :disabled="binFloat32" class="ui-input w-full px-1.5 py-0.5 text-[11px] disabled:opacity-50">
                 <option :value="1">8-bit (1B)</option>
                 <option :value="2">16-bit (2B)</option>
@@ -208,11 +208,11 @@
           <div class="flex items-center gap-2.5 text-[11px] flex-wrap">
             <label class="flex items-center gap-1 cursor-pointer">
               <input type="checkbox" v-model="binLittleEndian" class="accent-sky-500" />
-              <span style="color: var(--text-secondary);">小端 (LE)</span>
+              <span style="color: var(--text-secondary);">{{ locale === 'en-US' ? 'Little Endian (LE)' : '小端 (LE)' }}</span>
             </label>
             <label class="flex items-center gap-1 cursor-pointer">
               <input type="checkbox" v-model="binSigned" :disabled="binFloat32" class="accent-sky-500" />
-              <span style="color: var(--text-secondary);">有符号</span>
+              <span style="color: var(--text-secondary);">{{ locale === 'en-US' ? 'Signed' : '有符号' }}</span>
             </label>
             <label class="flex items-center gap-1 cursor-pointer">
               <input type="checkbox" v-model="binFloat32" class="accent-indigo-500" />
@@ -228,7 +228,7 @@
         </template>
 
         <template v-else-if="binaryDecodeMode === 'justfloat'">
-          <div class="font-semibold" style="color: var(--text-primary);">VOFA+ JustFloat 协议解析</div>
+          <div class="font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'VOFA+ JustFloat Dissection' : 'VOFA+ JustFloat 协议解析' }}</div>
           <div class="text-[10px]" style="color: var(--text-muted);">
             自动从连续/分片串口 HEX 流识别尾标 <code class="font-mono">00 00 80 7F</code> 并拆解多通道小端 IEEE-754 Float32。
           </div>
@@ -243,7 +243,7 @@
 
         <template v-else>
           <div class="flex items-center justify-between">
-            <span class="font-semibold" style="color: var(--text-primary);">自定义 Struct 结构模板</span>
+            <span class="font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Custom Struct Template' : '自定义 Struct 结构模板' }}</span>
             <button @click="addStructFieldRow" class="text-[10px] text-sky-500 underline cursor-pointer">+ 字段</button>
           </div>
           <div class="flex items-center gap-1.5">
@@ -277,7 +277,7 @@
       <!-- 黄金波形基线操作与智能比对栏 -->
       <div class="flex items-center justify-between gap-2 flex-wrap px-2.5 py-2 rounded-xl border bg-[var(--surface-glass-pill)] text-[11px]" style="border-color: var(--border-subtle);">
         <div class="flex items-center gap-2 flex-wrap">
-          <span class="font-bold" style="color: var(--text-primary);">目标比对通道:</span>
+          <span class="font-bold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Target Channel:' : '目标比对通道:' }}</span>
           <select v-model="selectedWaveSourceKey" class="ui-input px-2 py-0.5 text-[11px] ui-num">
             <option value="__BINARY__">单寄存器波 (Offset {{ binOffset }}, {{ binFloat32 ? 'Float32' : `${binWidth * 8}-bit` }})</option>
             <option v-for="ch in (structDecodeRes?.channels || [])" :key="'st_' + ch.name" :value="`STRUCT:${ch.name}`">
@@ -289,7 +289,7 @@
           </select>
           <input
             v-model="baselineNameInput"
-            placeholder="基线命名 (如: 空载稳态)"
+            :placeholder="locale === 'en-US' ? 'Baseline name (e.g. No-Load Steady)' : '基线命名 (如: 空载稳态)'"
             class="ui-input w-36 px-2 py-0.5 text-[11px]"
           />
           <button
@@ -298,7 +298,7 @@
             class="px-2.5 py-0.5 rounded-lg font-semibold border cursor-pointer bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 hover:bg-amber-500/25 disabled:opacity-45"
             title="将当前选中通道波形（含均值/标准差/主频）原子固化为黄金基线"
           >
-            固化黄金基线 ({{ activeChannelSamples.length }} 点)
+            {{ locale === 'en-US' ? `Persist Golden Baseline (${activeChannelSamples.length} pts)` : `固化黄金基线 (${activeChannelSamples.length} 点)` }}
           </button>
         </div>
 
@@ -314,7 +314,7 @@
             :disabled="waveOpBusy || !selectedBaselineId || activeChannelSamples.length < 4"
             class="ui-btn-primary px-2.5 py-0.5 text-[11px] disabled:opacity-45"
           >
-            {{ waveOpBusy ? '比对中...' : '智能对比 (DTW+FFT)' }}
+            {{ waveOpBusy ? (locale === 'en-US' ? 'Comparing...' : '比对中...') : (locale === 'en-US' ? 'Smart Diff (DTW+FFT)' : '智能对比 (DTW+FFT)') }}
           </button>
           <button
             v-if="selectedBaselineId"
@@ -322,7 +322,7 @@
             :disabled="waveOpBusy"
             class="ui-btn-danger px-2 py-0.5 text-[11px]"
           >
-            删除基线
+            {{ locale === 'en-US' ? 'Delete Baseline' : '删除基线' }}
           </button>
         </div>
       </div>
@@ -339,7 +339,7 @@
             <div class="ui-sub-card p-2 flex flex-col gap-1">
               <div class="flex items-center justify-between text-[11px]">
                 <span class="font-bold" style="color: var(--text-primary);">
-                  {{ smartWaveResult ? '1. 实时波形 vs 历史黄金基线叠加' : '1. 实时与历史吞吐率对照 (pkt/s)' }}
+                  {{ smartWaveResult ? (locale === 'en-US' ? '1. Real-time Waveform vs Golden Baseline' : '1. 实时波形 vs 历史黄金基线叠加') : (locale === 'en-US' ? '1. Real-time vs Historical Throughput (pkt/s)' : '1. 实时与历史吞吐率对照 (pkt/s)') }}
                 </span>
                 <span class="text-[10px] ui-num" style="color: var(--text-muted);">
                   {{ smartWaveResult ? `对齐 ${smartWaveResult.aligned_length} 点` : `实时 ${realtimeBuckets.length}s / 历史 ${historyData?.trend_points.length || 0}s` }}
@@ -361,7 +361,7 @@
             <!-- ECharts 2: Radix-2 FFT 功率谱对比图 -->
             <div class="ui-sub-card p-2 flex flex-col gap-1">
               <div class="flex items-center justify-between text-[11px]">
-                <span class="font-bold" style="color: var(--text-primary);">2. Cooley-Tukey FFT 功率谱密度</span>
+                <span class="font-bold" style="color: var(--text-primary);">{{ locale === 'en-US' ? '2. Cooley-Tukey FFT Power Spectral Density' : '2. Cooley-Tukey FFT 功率谱密度' }}</span>
                 <span class="text-[10px] ui-num" style="color: var(--text-muted);">
                   {{ smartWaveResult ? `频谱相似 ${(smartWaveResult.spectral_cosine_similarity * 100).toFixed(1)}%` : 'Hann 窗单边谱' }}
                 </span>
@@ -385,7 +385,7 @@
         <div class="lg:col-span-4 ui-sub-card p-2.5 flex flex-col justify-between gap-2 text-[11px] ui-num">
           <template v-if="smartWaveResult">
             <div class="flex items-center justify-between gap-1">
-              <span class="font-semibold" style="color: var(--text-primary);">智能波形对齐量化报告</span>
+              <span class="font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Waveform Alignment Metrics Report' : '智能波形对齐量化报告' }}</span>
               <span
                 :class="['px-1.5 py-0.5 rounded text-[10px] font-bold',
                   smartWaveResult.dtw_similarity_pct >= 80 ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' :
@@ -400,21 +400,21 @@
             </div>
             <div class="grid grid-cols-2 gap-1.5 text-[11px]">
               <div class="p-1.5 rounded-lg border bg-[var(--surface-glass-pill)]" style="border-color: var(--border-subtle);">
-                <div class="text-[10px]" style="color: var(--text-muted);">Pearson 相关系数 r</div>
+                <div class="text-[10px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Pearson Corr r' : 'Pearson 相关系数 r' }}</div>
                 <div class="font-bold mt-0.5" style="color: var(--text-primary);">{{ smartWaveResult.pearson_r.toFixed(3) }}</div>
               </div>
               <div class="p-1.5 rounded-lg border bg-[var(--surface-glass-pill)]" style="border-color: var(--border-subtle);">
-                <div class="text-[10px]" style="color: var(--text-muted);">均方根误差 (RMSE)</div>
+                <div class="text-[10px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'RMSE Error' : '均方根误差 (RMSE)' }}</div>
                 <div class="font-bold mt-0.5 text-amber-600 dark:text-amber-300">{{ smartWaveResult.rmse.toFixed(2) }}</div>
               </div>
               <div class="p-1.5 rounded-lg border bg-[var(--surface-glass-pill)]" style="border-color: var(--border-subtle);">
-                <div class="text-[10px]" style="color: var(--text-muted);">超差采样点数</div>
+                <div class="text-[10px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Out-of-Tolerance Pts' : '超差采样点数' }}</div>
                 <div class="font-bold mt-0.5" :class="smartWaveResult.outlier_point_count > 0 ? 'text-rose-600 dark:text-rose-300' : 'text-emerald-600 dark:text-emerald-300'">
                   {{ smartWaveResult.outlier_point_count }} / {{ smartWaveResult.aligned_length }}
                 </div>
               </div>
               <div class="p-1.5 rounded-lg border bg-[var(--surface-glass-pill)]" style="border-color: var(--border-subtle);">
-                <div class="text-[10px]" style="color: var(--text-muted);">主频迁移 (基→实)</div>
+                <div class="text-[10px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Dominant Freq Shift' : '主频迁移 (基→实)' }}</div>
                 <div class="font-bold mt-0.5" style="color: var(--text-primary);">
                   {{ smartWaveResult.baseline_dominant_freq.toFixed(3) }} → {{ smartWaveResult.realtime_dominant_freq.toFixed(3) }}
                 </div>
@@ -424,7 +424,7 @@
 
           <template v-else>
             <div class="flex items-center justify-between">
-              <span class="font-semibold" style="color: var(--text-primary);">实时 vs 历史归档流量比对</span>
+              <span class="font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Real-time vs Historical Archive Diff' : '实时 vs 历史归档流量比对' }}</span>
               <span
                 v-if="historyData && historyData.matched_packets > 0"
                 :class="['px-1.5 py-0.5 rounded text-[10px] font-bold', deltaRatePct >= 0 ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' : 'bg-rose-500/15 text-rose-700 dark:text-rose-300']"
@@ -450,7 +450,7 @@
                 </div>
               </div>
               <div class="p-1.5 rounded-lg border bg-[var(--surface-glass-pill)]" style="border-color: var(--border-subtle);">
-                <div class="text-[10px]" style="color: var(--text-muted);">已存黄金基线数</div>
+                <div class="text-[10px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Golden Baselines' : '已存黄金基线数' }}</div>
                 <div class="font-bold mt-0.5 text-sky-600 dark:text-sky-300">{{ waveBaselines.length }} 组</div>
               </div>
             </div>
@@ -462,7 +462,7 @@
           <!-- 控制工程 PID 闭环阶跃响应瞬态特性测算区 -->
           <div class="pt-2 border-t space-y-1.5" style="border-color: var(--border-subtle);">
             <div class="flex items-center justify-between gap-1 text-[10px]">
-              <span class="font-bold" style="color: var(--text-primary);">PID 阶跃响应瞬态分析:</span>
+              <span class="font-bold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'PID Step Response Transient Analysis:' : 'PID 阶跃响应瞬态分析:' }}</span>
               <div class="flex items-center gap-1">
                 <input type="number" v-model.number="stepSetpoint" step="0.5" title="目标稳态设定值" class="ui-input w-14 px-1 py-0.5 text-[10px] ui-num" />
                 <input type="number" v-model.number="stepDtMs" min="0.1" step="1" title="采样周期 (ms)" class="ui-input w-12 px-1 py-0.5 text-[10px] ui-num" />
@@ -485,7 +485,7 @@
         <div class="relative rounded-xl border overflow-hidden h-44" style="border-color: var(--border-subtle); background: rgba(15, 23, 42, 0.92);">
           <canvas ref="vcdCanvasRef" class="w-full h-full block"></canvas>
           <div v-if="!vcdResult" class="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-            <span class="text-xs font-semibold text-slate-300">逻辑分析仪 .vcd 数字电平采集视图就绪</span>
+            <span class="text-xs font-semibold text-slate-300">{{ locale === 'en-US' ? 'Logic Analyzer .vcd Digital Waveform View Ready' : '逻辑分析仪 .vcd 数字电平采集视图就绪' }}</span>
             <span class="text-[11px] text-slate-400 mt-1">支持从 Saleae / PulseView 导出的 IEEE 1364 .vcd 波形文件导入并还原 UART 字节流</span>
           </div>
         </div>
@@ -509,13 +509,13 @@
 
       <div class="lg:col-span-3 ui-sub-card p-2.5 flex flex-col justify-between gap-2 text-[11px]">
         <div class="flex items-center justify-between">
-          <span class="font-semibold" style="color: var(--text-primary);">VCD 方波参数配置</span>
+          <span class="font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'VCD Square Wave Config' : 'VCD 方波参数配置' }}</span>
           <span v-if="lastVcdFileName" class="text-[10px] truncate max-w-[110px] ui-num" style="color: var(--text-muted);" :title="lastVcdFileName">{{ lastVcdFileName }}</span>
         </div>
         <div class="space-y-1.5">
           <div class="grid grid-cols-2 gap-1.5">
             <div>
-              <label class="text-[10px] block mb-0.5" style="color: var(--text-muted);">协议解调模式</label>
+              <label class="text-[10px] block mb-0.5" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Protocol Demodulation' : '协议解调模式' }}</label>
               <select v-model="vcdBusMode" @change="redecodeCachedVcd" class="ui-input w-full px-1.5 py-0.5 text-[11px] font-semibold">
                 <option value="UART">UART</option>
                 <option value="I2C">I2C (双线)</option>
@@ -524,7 +524,7 @@
               </select>
             </div>
             <div>
-              <label class="text-[10px] block mb-0.5" style="color: var(--text-muted);">主通道 ($var)</label>
+              <label class="text-[10px] block mb-0.5" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Main Channel ($var)' : '主通道 ($var)' }}</label>
               <select
                 v-if="vcdResult && vcdResult.available_signals.length > 0"
                 v-model="vcdSignalName"
@@ -538,7 +538,7 @@
           </div>
           <div class="grid grid-cols-2 gap-1.5">
             <div>
-              <label class="text-[10px] block mb-0.5" style="color: var(--text-muted);">波特率 (bps)</label>
+              <label class="text-[10px] block mb-0.5" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Baud Rate (bps)' : '波特率 (bps)' }}</label>
               <select v-model.number="vcdBaudRate" @change="redecodeCachedVcd" class="ui-input w-full px-1.5 py-0.5 text-[11px] ui-num">
                 <option :value="9600">9600 bps</option>
                 <option :value="19200">19200 bps</option>
@@ -549,7 +549,7 @@
               </select>
             </div>
             <div>
-              <label class="text-[10px] block mb-0.5" style="color: var(--text-muted);">奇偶校验</label>
+              <label class="text-[10px] block mb-0.5" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Parity' : '奇偶校验' }}</label>
               <select v-model="vcdParity" @change="redecodeCachedVcd" class="ui-input w-full px-1.5 py-0.5 text-[11px]">
                 <option value="NONE">无 (N)</option>
                 <option value="EVEN">偶校验 (E)</option>
@@ -560,7 +560,7 @@
         </div>
         <div v-if="vcdError" class="text-[10px] text-rose-500 break-all">{{ vcdError }}</div>
         <label class="ui-btn-primary w-full py-1.5 text-[11px] justify-center cursor-pointer text-center">
-          <span>导入 .vcd 文件解码方波</span>
+          <span>{{ locale === 'en-US' ? 'Import .vcd File to Decode' : '导入 .vcd 文件解码方波' }}</span>
           <input type="file" accept=".vcd,.txt" class="hidden" @change="onSelectVcdFile" />
         </label>
       </div>
@@ -578,7 +578,9 @@ import { GridComponent, TooltipComponent, LegendComponent, DataZoomComponent } f
 import VChart from 'vue-echarts';
 import AppIcon from './AppIcon.vue';
 import { useI18n } from '../i18n';
-const { t } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 
 use([CanvasRenderer, LineChart, BarChart, GridComponent, TooltipComponent, LegendComponent, DataZoomComponent]);
 
@@ -608,12 +610,12 @@ const emit = defineEmits<{
 
 type ScopeMode = 'serial-plotter' | 'binary-scope' | 'realtime-vs-history' | 'vcd-logic';
 
-const scopeModes: Array<{ id: ScopeMode; label: string }> = [
-  { id: 'serial-plotter', label: '多通道传感曲线' },
-  { id: 'binary-scope', label: '寄存器示波' },
-  { id: 'realtime-vs-history', label: '实时 vs 历史对照' },
-  { id: 'vcd-logic', label: 'VCD 数字方波' },
-];
+const scopeModes = computed<Array<{ id: ScopeMode; label: string }>>(() => [
+  { id: 'serial-plotter', label: locale.value === 'en-US' ? 'Multi-Channel Sensor Plot' : '多通道传感曲线' },
+  { id: 'binary-scope', label: locale.value === 'en-US' ? 'Register Scope' : '寄存器示波' },
+  { id: 'realtime-vs-history', label: locale.value === 'en-US' ? 'Real-time vs History' : '实时 vs 历史对照' },
+  { id: 'vcd-logic', label: locale.value === 'en-US' ? 'VCD Logic Waveforms' : 'VCD 数字方波' },
+]);
 
 const rootRef = ref<HTMLElement | null>(null);
 const activeMode = ref<ScopeMode>('serial-plotter');
@@ -1289,7 +1291,7 @@ async function removeSelectedBaseline() {
     waveOpMsg.value = '已删除选定黄金基线';
     await refreshWaveBaselines();
   } catch (e) {
-    waveOpMsg.value = `删除基线失败: ${String(e)}`;
+    waveOpMsg.value = `{{ locale === 'en-US' ? 'Delete Baseline' : '删除基线' }}失败: ${String(e)}`;
   } finally {
     waveOpBusy.value = false;
   }

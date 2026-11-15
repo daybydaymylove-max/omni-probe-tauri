@@ -102,9 +102,12 @@ export type SecrecyVerdictCode = 'QUALIFIED' | 'CONDITIONALLY_QUALIFIED' | 'DISQ
 export interface SecrecyBmbControlRow {
   clauseId: string;
   standardRef: string;
+  standardRefEn?: string;
   controlTitle: string;
+  controlTitleEn?: string;
   status: 'PASS' | 'WARN' | 'VETO_FAIL' | 'NOT_EXECUTED';
   evidenceSummary: string;
+  evidenceSummaryEn?: string;
 }
 
 export interface SecrecyCanonicalDigest {
@@ -117,11 +120,13 @@ export interface SecrecyCanonicalDigest {
 export interface SecrecyFormalReportVerdict {
   code: SecrecyVerdictCode;
   label: '【合格】' | '【基本合格】' | '【不合格 (触发一票否决)】';
+  labelEn?: string;
   isVetoed: boolean;
   vetoReasons: string[];
   warningReasons: string[];
   bmbMatrix: SecrecyBmbControlRow[];
   summaryText: string;
+  summaryTextEn?: string;
 }
 
 /**
@@ -266,6 +271,7 @@ export interface SecrecyReportParams {
   ole2Report?: SecrecyDeepContentReport | null;
   osUsageReport?: SecrecyOsUsageReport | null;
   appTraceReport?: SecrecyAppTraceReport | null;
+  locale?: string;
 }
 
 const LEGAL_SECRECY_GRADES = new Set(['TOP_SECRET', 'CONFIDENTIAL', 'SECRET']);
@@ -546,27 +552,36 @@ export function evaluateSecrecyBmbVerdict(params: SecrecyReportParams): SecrecyF
   const isVetoed = vetoReasons.length > 0;
   let code: SecrecyVerdictCode = 'QUALIFIED';
   let label: SecrecyFormalReportVerdict['label'] = '【合格】';
+  let labelEn = 'QUALIFIED';
   let summaryText =
     '受检信息系统或终端各项现场物理取证与穿透检测结果均符合 BMB17/BMB20/BMB22 保密标准基线，未发现一机两用外联、非授权 USB 介质交叉及违规涉密标密文件留存。';
+  let summaryTextEn =
+    'All physical forensics and deep inspection results comply with BMB17/BMB20/BMB22 classified standards. Zero illicit external links, unauthorized USB media, or classified document leaks detected.';
 
   if (isVetoed) {
     code = 'DISQUALIFIED_VETOED';
     label = '【不合格 (触发一票否决)】';
+    labelEn = 'DISQUALIFIED (ONE-VOTE VETO)';
     summaryText = `根据国家保密局涉密信息系统分级保护一票否决裁决规约，受检对象命中 ${vetoReasons.length} 项严重违反保密规定红线，判定为不合格，须立即断开物理网络连接并启动违规溯源处置。`;
+    summaryTextEn = `According to statutory one-vote veto criteria, target hit ${vetoReasons.length} critical defect(s). Verdict: Disqualified. Immediate physical disconnection and remediation required.`;
   } else if (warningReasons.length > 0) {
     code = 'CONDITIONALLY_QUALIFIED';
     label = '【基本合格】';
+    labelEn = 'CONDITIONALLY QUALIFIED';
     summaryText = `受检对象暂未检出一票否决级别泄密违规，但存在 ${warningReasons.length} 项未完成核查或预警事项，请补充取证与人工复核后归档确认。`;
+    summaryTextEn = `Zero critical violations detected, but ${warningReasons.length} warning or unverified item(s) require manual review. Verdict: Conditionally Qualified.`;
   }
 
   return {
     code,
     label,
+    labelEn,
     isVetoed,
     vetoReasons,
     warningReasons,
     bmbMatrix,
     summaryText,
+    summaryTextEn,
   };
 }
 
@@ -807,10 +822,31 @@ function appendDeepForensicsMarkdown(lines: string[], params: SecrecyReportParam
  * 空间复杂度: O(L)
  */
 export function generateSecrecyFormalReportMarkdown(params: SecrecyReportParams): string {
+  const isEn = params.locale === 'en-US';
   const verdict = evaluateSecrecyBmbVerdict(params);
   const digest = buildCanonicalSecrecyDigest(params, verdict);
 
-  const lines: string[] = [
+  const lines: string[] = isEn ? [
+    '# Classified Information Security Inspection & Forensic Audit Report',
+    '',
+    `- **Report ID**: ${digest.reportId}`,
+    `- **Target Organization**: ${params.targetUnitName || 'Unspecified Organization'}`,
+    `- **Information System**: ${params.systemName || 'Unspecified System'}`,
+    `- **Classification Level**: ${params.systemClassification}`,
+    `- **Lead Inspector**: ${params.inspectorName || 'On-site Inspector'}`,
+    `- **Inspection Date**: ${params.inspectionTimeIso}`,
+    `- **Forensic SM3 Digest**: \`${digest.sm3Hex}\``,
+    `- **Forensic SHA-256 Digest**: \`${digest.sha256Hex}\``,
+    '',
+    '## 1. Statutory Assessment Verdict & Grounds',
+    '',
+    `**Overall Verdict**: **${verdict.labelEn || verdict.label}**`,
+    '',
+    `**Standard Baseline**: BMB17-2006 / BMB20-2007 / BMB22-2007 / GB/T 9704-2012`,
+    '',
+    `**Verdict Grounds**: ${verdict.summaryTextEn || verdict.summaryText}`,
+    '',
+  ] : [
     '# 涉及国家秘密信息系统保密安全现场勘验技术报告',
     '',
     `- **报告编号**: ${digest.reportId}`,
@@ -1107,13 +1143,14 @@ function buildDeepForensicsHtmlSection(params: SecrecyReportParams): string {
 }
 
 export function generateSecrecyFormalReportHtml(params: SecrecyReportParams): string {
+  const isEn = params.locale === 'en-US';
   const verdict = evaluateSecrecyBmbVerdict(params);
   const digest = buildCanonicalSecrecyDigest(params, verdict);
 
-  const safeUnit = escapeHtml(params.targetUnitName || '未指定受检单位');
-  const safeSystem = escapeHtml(params.systemName || '涉密办公信息系统终端');
+  const safeUnit = escapeHtml(params.targetUnitName || (isEn ? 'Unspecified Unit' : '未指定受检单位'));
+  const safeSystem = escapeHtml(params.systemName || (isEn ? 'Classified Terminal System' : '涉密办公信息系统终端'));
   const safeClass = escapeHtml(params.systemClassification);
-  const safeInspector = escapeHtml(params.inspectorName || '保密检查组现场操作员');
+  const safeInspector = escapeHtml(params.inspectorName || (isEn ? 'On-site Lead Inspector' : '保密检查组现场操作员'));
   const safeTime = escapeHtml(params.inspectionTimeIso);
   const safeReportId = escapeHtml(digest.reportId);
 

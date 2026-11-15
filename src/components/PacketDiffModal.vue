@@ -19,7 +19,7 @@
                 </span>
               </h2>
               <div class="text-[11px] truncate" style="color: var(--text-muted)">
-                {{ activeMode === 'multi' ? (multiResult?.summary || 'Center-Star N 组居中 LCS 严格对齐与跨组熵谱对比') : (diffResult?.summary || '逐字节 LCS 严格对齐、多层规约树逐字段差分与载荷波形分析') }}
+                {{ activeMode === 'multi' ? (multiResult?.summary || (locale === 'en-US' ? 'Center-Star Multi-Group LCS Alignment & Cross-Entropy Spectrum' : 'Center-Star N 组居中 LCS 严格对齐与跨组熵谱对比')) : (diffResult?.summary || (locale === 'en-US' ? 'Byte-by-byte LCS alignment, multi-layer protocol field diff & payload waveform analysis' : '逐字节 LCS 严格对齐、多层规约树逐字段差分与载荷波形分析')) }}
               </div>
             </div>
           </div>
@@ -57,7 +57,7 @@
             </button>
             <button @click="handleClose"
               class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer shrink-0"
-              title="关闭工作台">
+              :title="locale === 'en-US' ? 'Close Workspace' : '关闭工作台'">
               <AppIcon name="close" :size="15" />
             </button>
           </div>
@@ -89,7 +89,7 @@
               activeMode === 'fields' ? 'bg-indigo-600 text-white shadow-xs font-bold' : 'hover:bg-black/5 dark:hover:bg-white/5']"
             :style="activeMode !== 'fields' ? { color: 'var(--text-secondary)' } : undefined">
             <AppIcon name="layers" :size="13" />
-            <span>规约字段差异</span>
+            <span>{{ locale === 'en-US' ? 'Protocol Diff' : '规约字段差异' }}</span>
             <span v-if="differentFieldsCount > 0" class="px-1.5 py-0.5 rounded-full text-[11px] bg-rose-500 text-white ui-num font-bold">
               {{ differentFieldsCount }}
             </span>
@@ -99,7 +99,7 @@
               activeMode === 'wave' ? 'bg-indigo-600 text-white shadow-xs font-bold' : 'hover:bg-black/5 dark:hover:bg-white/5']"
             :style="activeMode !== 'wave' ? { color: 'var(--text-secondary)' } : undefined">
             <AppIcon name="activity" :size="13" />
-            <span>载荷波线与波率</span>
+            <span>{{ locale === 'en-US' ? 'Payload Waveforms' : '载荷波线与波率' }}</span>
             <span v-if="diffResult?.waveform_metrics" class="px-1.5 py-0.5 rounded-full text-[11px] bg-sky-500/15 text-sky-700 dark:text-cyan-300 border border-sky-500/30 ui-num font-bold">
               {{ diffResult.waveform_metrics.mutation_wave_rate.toFixed(0) }}%
             </span>
@@ -109,14 +109,14 @@
               activeMode === 'scratchpad' ? 'bg-indigo-600 text-white shadow-xs font-bold' : 'hover:bg-black/5 dark:hover:bg-white/5']"
             :style="activeMode !== 'scratchpad' ? { color: 'var(--text-secondary)' } : undefined">
             <AppIcon name="document" :size="13" />
-            <span>自由草稿比对</span>
+            <span>{{ locale === 'en-US' ? 'Draft Diff' : '自由草稿比对' }}</span>
           </button>
           <button @click="switchMode('samples')"
             :class="['px-3 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5',
               activeMode === 'samples' ? 'bg-indigo-600 text-white shadow-xs font-bold' : 'hover:bg-black/5 dark:hover:bg-white/5']"
             :style="activeMode !== 'samples' ? { color: 'var(--text-secondary)' } : undefined">
             <AppIcon name="database" :size="13" />
-            <span>样本库</span>
+            <span>{{ locale === 'en-US' ? 'Sample Library' : '样本库' }}</span>
             <span v-if="storedSamples.length > 0" class="px-1.5 py-0.5 rounded-full text-[11px] ui-pill ui-num">
               {{ storedSamples.length }}
             </span>
@@ -126,7 +126,7 @@
               activeMode === 'file_merge' ? 'bg-indigo-600 text-white shadow-xs font-bold' : 'hover:bg-black/5 dark:hover:bg-white/5']"
             :style="activeMode !== 'file_merge' ? { color: 'var(--text-secondary)' } : undefined">
             <AppIcon name="git-branch" :size="13" />
-            <span>大文件 / 目录双向合并</span>
+            <span>{{ locale === 'en-US' ? 'Large File / Dir Diff' : '大文件 / 目录双向合并' }}</span>
           </button>
         </div>
       </header>
@@ -134,42 +134,42 @@
       <!-- 2. 元信息与队列控制条 (双样本对照条 / 多组队列胶囊条) -->
       <div v-if="activeMode === 'multi'" class="px-5 py-2.5 border-b text-xs ui-num shrink-0 flex items-center justify-between gap-3 flex-wrap" style="background: var(--surface-content-alt); border-color: var(--border-subtle)">
         <div class="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-          <span class="text-[11px] font-bold shrink-0" style="color: var(--text-secondary)">比对队列 ({{ diffBus.queueCount.value }} 组):</span>
+          <span class="text-[11px] font-bold shrink-0" style="color: var(--text-secondary)">{{ locale === 'en-US' ? 'Diff Queue' : '比对队列' }} ({{ diffBus.queueCount.value }} 组):</span>
           <div v-for="(item, idx) in diffBus.diffQueue.value" :key="`${idx}-${item.label}`"
             @click="selectMultiAnchor(idx)"
             :class="['flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[11px] cursor-pointer transition-colors max-w-[230px]',
               diffBus.anchorIndex.value === idx
                 ? 'bg-indigo-600 text-white border-indigo-500 shadow-xs font-bold'
                 : 'ui-sub-card hover:border-indigo-500/40']"
-            :title="`点击设为 Anchor 居中基准 | ${item.label} (${item.length || 0} 字节)`">
+            :title="locale === 'en-US' ? `Click to set as Anchor | ${item.label} (${item.length || 0} bytes)` : `点击设为 Anchor 居中基准 | ${item.label} (${item.length || 0} 字节)`">
             <span class="px-1 py-0.2 rounded text-[11px]"
               :class="diffBus.anchorIndex.value === idx ? 'bg-white/20 text-white' : 'bg-indigo-500/12 text-indigo-700 dark:text-indigo-300'">
-              {{ diffBus.anchorIndex.value === idx ? '基准#' + (idx + 1) : '#' + (idx + 1) }}
+              {{ diffBus.anchorIndex.value === idx ? (locale === 'en-US' ? 'Anchor #' : '基准#') + (idx + 1) : '#' + (idx + 1) }}
             </span>
             <span class="truncate">{{ item.label }}</span>
             <span class="opacity-75 shrink-0">{{ item.length || 0 }}B</span>
             <button @click.stop="removeMultiQueueItem(idx)"
               class="ml-0.5 hover:text-rose-400 transition-colors px-1 cursor-pointer"
-              title="从队列移除该组">
+              :title="locale === 'en-US' ? 'Remove from queue' : '从队列移除该组'">
               ×
             </button>
           </div>
           <span v-if="diffBus.queueCount.value === 0" class="text-[11px]" style="color: var(--text-muted)">
-            暂无队列项，可在各业务模块点击【+ 加入比对队列】或载入多组演练样本
+            {{ locale === 'en-US' ? 'Queue is empty. Click [+ Add to Diff Queue] in workbenches or load demo samples.' : '暂无队列项，可在各业务模块点击【+ 加入比对队列】或载入多组演练样本' }}
           </span>
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <button @click="loadMultiPreset3Group"
             class="px-2.5 py-1 rounded-lg bg-emerald-500/12 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[11px] cursor-pointer font-semibold">
-            载入 3 组变长演练
+            {{ locale === 'en-US' ? 'Load 3 Demo Groups' : '载入 3 组变长演练' }}
           </button>
           <button @click="switchMode('scratchpad')"
             class="ui-btn-secondary text-[11px] py-1 px-2.5 rounded-lg">
-            草稿增组
+            {{ locale === 'en-US' ? 'Add Draft Group' : '草稿增组' }}
           </button>
           <button v-if="diffBus.queueCount.value > 0" @click="clearMultiQueue"
             class="ui-btn-danger text-[11px] py-1 px-2.5 rounded-lg">
-            清空队列
+            {{ locale === 'en-US' ? 'Clear Queue' : '清空队列' }}
           </button>
         </div>
       </div>
@@ -179,20 +179,20 @@
         <div class="flex-1 flex items-center justify-between ui-sub-card px-3 py-1.5 min-w-0">
           <div class="flex items-center gap-2 truncate">
             <span class="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[11px] font-bold shrink-0">
-              基准项 A
+              {{ locale === 'en-US' ? 'Baseline A' : '基准项 A' }}
             </span>
-            <span class="font-bold truncate" style="color: var(--text-primary)">{{ effectiveItemA?.label || '未载入项 A' }}</span>
+            <span class="font-bold truncate" style="color: var(--text-primary)">{{ effectiveItemA?.label || (locale === 'en-US' ? 'No Item A' : '未载入项 A') }}</span>
             <span class="truncate text-[11px]" style="color: var(--text-muted)" v-if="effectiveItemA?.src && effectiveItemA?.src !== '-'">
               {{ effectiveItemA.src }} → {{ effectiveItemA.dst || '-' }}
             </span>
           </div>
           <div class="flex items-center gap-2 shrink-0">
-            <span class="text-[11px] font-normal" style="color: var(--text-muted)">{{ effectiveItemA ? `${effectiveItemA.length || 0} 字节` : '' }}</span>
+            <span class="text-[11px] font-normal" style="color: var(--text-muted)">{{ effectiveItemA ? locale === 'en-US' ? `${effectiveItemA.length || 0} Bytes` : `${effectiveItemA.length || 0} 字节` : '' }}</span>
             <button v-if="effectiveItemA && effectiveItemA.payloadHex" @click="doSaveItemSample(effectiveItemA, 'A')"
               class="text-[11px] ui-pill px-2 py-0.5 rounded-lg flex items-center gap-1 cursor-pointer"
-              title="将样本 A 固化存入本地样本库">
+              :title="locale === 'en-US' ? 'Persist Sample A to local library' : '将样本 A 固化存入本地样本库'">
               <AppIcon name="archive" :size="11" />
-              <span>存为样本</span>
+              <span>{{ locale === 'en-US' ? 'Save Sample' : '存为样本' }}</span>
             </button>
           </div>
         </div>
@@ -200,7 +200,7 @@
         <!-- 中间：互换 A <-> B 按钮 -->
         <button @click="swapItems" :disabled="!effectiveItemA || !effectiveItemB"
           class="shrink-0 w-8 h-8 rounded-xl ui-pill flex items-center justify-center cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
-          title="互换基准项 A 与比对项 B 的比对方向">
+          title="互换{{ locale === 'en-US' ? 'Baseline A' : '基准项 A' }} 与{{ locale === 'en-US' ? 'Compare B' : '比对项 B' }} 的比对方向">
           <AppIcon name="refresh" :size="14" />
         </button>
 
@@ -208,20 +208,20 @@
         <div class="flex-1 flex items-center justify-between ui-sub-card px-3 py-1.5 min-w-0">
           <div class="flex items-center gap-2 truncate">
             <span class="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 text-[11px] font-bold shrink-0">
-              比对项 B
+              {{ locale === 'en-US' ? 'Compare B' : '比对项 B' }}
             </span>
-            <span class="font-bold truncate" style="color: var(--text-primary)">{{ effectiveItemB?.label || '未载入项 B' }}</span>
+            <span class="font-bold truncate" style="color: var(--text-primary)">{{ effectiveItemB?.label || (locale === 'en-US' ? 'No Item B' : '未载入项 B') }}</span>
             <span class="truncate text-[11px]" style="color: var(--text-muted)" v-if="effectiveItemB?.src && effectiveItemB?.src !== '-'">
               {{ effectiveItemB.src }} → {{ effectiveItemB.dst || '-' }}
             </span>
           </div>
           <div class="flex items-center gap-2 shrink-0">
-            <span class="text-[11px] font-normal" style="color: var(--text-muted)">{{ effectiveItemB ? `${effectiveItemB.length || 0} 字节` : '' }}</span>
+            <span class="text-[11px] font-normal" style="color: var(--text-muted)">{{ effectiveItemB ? locale === 'en-US' ? `${effectiveItemB.length || 0} Bytes` : `${effectiveItemB.length || 0} 字节` : '' }}</span>
             <button v-if="effectiveItemB && effectiveItemB.payloadHex" @click="doSaveItemSample(effectiveItemB, 'B')"
               class="text-[11px] ui-pill px-2 py-0.5 rounded-lg flex items-center gap-1 cursor-pointer"
-              title="将样本 B 固化存入本地样本库">
+              :title="locale === 'en-US' ? 'Persist Sample B to local library' : '将样本 B 固化存入本地样本库'">
               <AppIcon name="archive" :size="11" />
-              <span>存为样本</span>
+              <span>{{ locale === 'en-US' ? 'Save Sample' : '存为样本' }}</span>
             </button>
           </div>
         </div>
@@ -234,26 +234,26 @@
         <div v-show="activeMode === 'multi'" class="h-full overflow-auto p-5 space-y-5 custom-scrollbar select-text">
           <div v-if="multiError" class="ui-sub-card p-4 border-amber-500/40 bg-amber-500/10 flex items-center justify-between gap-3">
             <div class="text-xs text-amber-800 dark:text-amber-300 font-medium">
-              <strong>多组对齐执行提示：</strong> {{ multiError }}
+              <strong>{{ locale === 'en-US' ? 'Multi-Group Align Prompt: ' : '多组对齐执行提示：' }}</strong> {{ multiError }}
             </div>
-            <button @click="runMultiCompare" class="ui-btn-secondary px-3 py-1 text-xs shrink-0">重试对齐</button>
+            <button @click="runMultiCompare" class="ui-btn-secondary px-3 py-1 text-xs shrink-0">{{ locale === 'en-US' ? 'Retry Alignment' : '重试对齐' }}</button>
           </div>
 
           <div v-else-if="diffBus.queueCount.value < 2" class="h-full flex items-center justify-center">
             <div class="ui-sub-card p-6 max-w-xl w-full text-center space-y-4">
               <EmptyState icon="git-branch"
-                title="Center-Star 多组居中精准比对就绪"
-                :description="`当前比对队列有 ${diffBus.queueCount.value} 组样本（需至少 2 组，支持 3 组、4 组及以上不封顶比对）。您可以在任何工作台点击【加入比对队列】，或下方一键载入多组演练。`" />
+                :title="locale === 'en-US' ? 'Center-Star Multi-Group Alignment Ready' : 'Center-Star 多组居中精准比对就绪'"
+                :description="locale === 'en-US' ? `Queue has ${diffBus.queueCount.value} sample sets (requires at least 2, supports unlimited sets). Click [Add to Queue] in any workspace or load demo below.` : `当前比对队列有 ${diffBus.queueCount.value} 组样本（需至少 2 组，支持 3 组、4 组及以上不封顶比对）。您可以在任何工作台点击【加入比对队列】，或下方一键载入多组演练。`" />
               <div class="flex items-center justify-center gap-2.5 flex-wrap">
                 <button @click="loadMultiPreset3Group" class="ui-btn-primary text-xs py-1.5 px-4 rounded-xl">
                   <AppIcon name="zap" :size="13" />
-                  <span>载入 3 组含前插/尾缺 Modbus 样本</span>
+                  <span>{{ locale === 'en-US' ? 'Load 3 Demo Modbus Sets (Prefix/Suffix Mutations)' : '载入 3 组含前插/尾缺 Modbus 样本' }}</span>
                 </button>
                 <button @click="switchMode('scratchpad')" class="ui-btn-secondary text-xs py-1.5 px-3.5 rounded-xl">
-                  <span>前往自由草稿录入多组</span>
+                  <span>{{ locale === 'en-US' ? 'Go to Draft Input' : '前往自由草稿录入多组' }}</span>
                 </button>
                 <button @click="switchMode('samples')" class="ui-btn-secondary text-xs py-1.5 px-3.5 rounded-xl">
-                  <span>从样本库选取</span>
+                  <span>{{ locale === 'en-US' ? 'Pick from Sample Library' : '从样本库选取' }}</span>
                 </button>
               </div>
             </div>
@@ -263,21 +263,21 @@
             <!-- 多组宏观度量卡组 -->
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 ui-num">
               <div class="ui-sub-card p-3">
-                <div class="text-[11px]" style="color: var(--text-muted)">参与比对样本总数</div>
-                <div class="text-xl font-bold mt-1 text-indigo-700 dark:text-indigo-300">{{ multiResult.sample_count }} 组</div>
+                <div class="text-[11px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Total Samples' : '参与比对样本总数' }}</div>
+                <div class="text-xl font-bold mt-1 text-indigo-700 dark:text-indigo-300">{{ multiResult.sample_count }} {{ locale === 'en-US' ? 'Sets' : '组' }}</div>
               </div>
               <div class="ui-sub-card p-3">
-                <div class="text-[11px]" style="color: var(--text-muted)">居中参照基准 (Anchor)</div>
+                <div class="text-[11px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Reference Anchor' : '居中参照基准 (Anchor)' }}</div>
                 <div class="text-sm font-bold mt-1.5 truncate" style="color: var(--text-primary)">
                   #{{ multiResult.anchor_index + 1 }} · {{ multiResult.samples[multiResult.anchor_index]?.label || '-' }}
                 </div>
               </div>
               <div class="ui-sub-card p-3">
-                <div class="text-[11px]" style="color: var(--text-muted)">Center-Star 全局对齐列数</div>
-                <div class="text-xl font-bold mt-1 text-emerald-700 dark:text-emerald-300">{{ multiResult.aligned_column_count }} <span class="text-xs font-normal">列</span></div>
+                <div class="text-[11px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Aligned Columns' : 'Center-Star 全局对齐列数' }}</div>
+                <div class="text-xl font-bold mt-1 text-emerald-700 dark:text-emerald-300">{{ multiResult.aligned_column_count }} <span class="text-xs font-normal">{{ locale === 'en-US' ? 'Cols' : '列' }}</span></div>
               </div>
               <div class="ui-sub-card p-3">
-                <div class="text-[11px]" style="color: var(--text-muted)">非锚点平均变异率</div>
+                <div class="text-[11px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Avg Mutation Rate' : '非锚点平均变异率' }}</div>
                 <div class="text-xl font-bold mt-1 text-rose-700 dark:text-rose-400">{{ multiAvgMutationRate.toFixed(1) }}%</div>
               </div>
             </div>
@@ -303,7 +303,7 @@
                 <div class="text-right shrink-0">
                   <div class="text-xs font-bold"
                     :class="smp.mutation_rate_vs_anchor > 25 ? 'text-rose-700 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-300'">
-                    变异 {{ smp.mutation_rate_vs_anchor.toFixed(1) }}%
+                    {{ locale === 'en-US' ? 'Mutated' : '变异' }} {{ smp.mutation_rate_vs_anchor.toFixed(1) }}%
                   </div>
                   <div class="text-[11px]" style="color: var(--text-muted)">
                     Cos {{ (smp.cosine_similarity_vs_anchor * 100).toFixed(1) }}%
@@ -317,10 +317,10 @@
               <div class="flex items-center justify-between flex-wrap gap-2 border-b pb-2" style="border-color: var(--border-subtle)">
                 <div class="flex items-center gap-2 text-xs font-bold" style="color: var(--text-primary)">
                   <AppIcon name="code" :size="14" />
-                  <span>Center-Star 多组对齐 Hex 矩阵 (含 "--" 琥珀金缺位插槽)</span>
+                  <span>{{ locale === 'en-US' ? 'Center-Star Aligned Hex Matrix (with gaps)' : 'Center-Star 多组对齐 Hex 矩阵 (含 "--" 琥珀金缺位插槽)' }}</span>
                 </div>
                 <span class="text-[11px] ui-num" style="color: var(--text-muted)">
-                  对齐长度 {{ multiResult.aligned_column_count }} 列 | 分 {{ multiHexBlocks.length }} 块展示
+                  {{ locale === 'en-US' ? `Aligned Length ${multiResult.aligned_column_count} Cols | in ${multiHexBlocks.length} Blocks` : `对齐长度 ${multiResult.aligned_column_count} 列 | 分 ${multiHexBlocks.length} 块展示` }}
                 </span>
               </div>
 
@@ -331,7 +331,7 @@
                   <!-- 块列头 -->
                   <div class="flex items-center px-3 py-1.5 border-b text-[11px] font-bold"
                     style="background: var(--surface-content-alt); border-color: var(--border-subtle); color: var(--text-muted)">
-                    <span class="w-40 shrink-0">对齐偏移 {{ blk.offsetHex }}</span>
+                    <span class="w-40 shrink-0">{{ locale === 'en-US' ? 'Aligned Offset' : '对齐偏移' }} {{ blk.offsetHex }}</span>
                     <div class="flex items-center gap-1 min-w-[420px]">
                       <span v-for="col in blk.colIndices" :key="col"
                         class="w-6 text-center shrink-0"
@@ -339,7 +339,7 @@
                         {{ col.toString(16).toUpperCase().padStart(2, '0') }}
                       </span>
                     </div>
-                    <span class="pl-4 shrink-0">ASCII 投影</span>
+                    <span class="pl-4 shrink-0">{{ locale === 'en-US' ? 'ASCII Projection' : 'ASCII 投影' }}</span>
                   </div>
                   <!-- 各组样本在该块的对齐字节行 -->
                   <div v-for="sRow in blk.sampleRows" :key="sRow.sampleIndex"
@@ -374,15 +374,15 @@
               <div class="flex items-center justify-between flex-wrap gap-2">
                 <span class="text-xs font-bold flex items-center gap-2" style="color: var(--text-primary)">
                   <AppIcon name="activity" :size="14" />
-                  <span>对齐位置变异波率与香农信息熵分布谱 (对齐 {{ multiResult.aligned_column_count }} 列)</span>
+                  <span>{{ locale === 'en-US' ? `Mutation Wave Rate & Shannon Entropy Spectrum (${multiResult.aligned_column_count} columns)` : `对齐位置变异波率与香农信息熵分布谱 (对齐 ${multiResult.aligned_column_count} 列)` }}</span>
                 </span>
                 <div v-if="hoverMultiBin" class="text-[11px] ui-num flex items-center gap-2.5 px-2.5 py-1 rounded-lg border"
                   style="background: var(--surface-content); border-color: var(--border-subtle)">
                   <span style="color: var(--text-primary)">列偏移 <strong>0x{{ hoverMultiBin.offset.toString(16).toUpperCase().padStart(2, '0') }}</strong></span>
-                  <span>支配值: <strong>{{ hoverMultiBin.dominant_hex }}</strong></span>
-                  <span class="text-rose-600 dark:text-rose-400 font-bold">变异率: {{ hoverMultiBin.mutation_rate.toFixed(1) }}%</span>
-                  <span class="text-sky-600 dark:text-cyan-300 font-bold">熵: {{ hoverMultiBin.entropy.toFixed(2) }} bit</span>
-                  <span>异值态: {{ hoverMultiBin.unique_values_count }}</span>
+                  <span>{{ locale === 'en-US' ? 'Dominant: ' : '支配值: ' }}<strong>{{ hoverMultiBin.dominant_hex }}</strong></span>
+                  <span class="text-rose-600 dark:text-rose-400 font-bold">{{ locale === 'en-US' ? 'Mutation: ' : '变异率: ' }}{{ hoverMultiBin.mutation_rate.toFixed(1) }}%</span>
+                  <span class="text-sky-600 dark:text-cyan-300 font-bold">{{ locale === 'en-US' ? 'Entropy: ' : '熵: ' }}{{ hoverMultiBin.entropy.toFixed(2) }} bit</span>
+                  <span>{{ locale === 'en-US' ? 'Unique: ' : '异值态: ' }}{{ hoverMultiBin.unique_values_count }}</span>
                 </div>
               </div>
               <div class="relative w-full h-[170px] rounded-xl overflow-hidden border" style="background: var(--surface-content); border-color: var(--border-subtle)">
@@ -395,23 +395,23 @@
               <div class="flex items-center justify-between flex-wrap gap-2">
                 <span class="text-xs font-bold flex items-center gap-2" style="color: var(--text-primary)">
                   <AppIcon name="layers" :size="14" />
-                  <span>跨多组规约与业务元数据对比矩阵</span>
+                  <span>{{ locale === 'en-US' ? 'Cross-Group Protocol & Metadata Diff Matrix' : '跨多组规约与业务元数据对比矩阵' }}</span>
                 </span>
                 <label class="flex items-center gap-1.5 text-[11px] cursor-pointer" style="color: var(--text-secondary)">
                   <input type="checkbox" v-model="multiOnlyDiffFields" class="accent-indigo-600 rounded" />
-                  <span>仅显示存在差异的字段</span>
+                  <span>{{ locale === 'en-US' ? 'Show Differences Only' : '仅显示存在差异的字段' }}</span>
                 </label>
               </div>
               <div class="overflow-x-auto custom-scrollbar">
                 <table class="w-full text-left border-collapse text-xs ui-num">
                   <thead>
                     <tr class="border-b" style="background: var(--surface-content-alt); border-color: var(--border-subtle); color: var(--text-secondary)">
-                      <th class="py-2 px-3 w-32">分层</th>
-                      <th class="py-2 px-3 w-44">属性 / 字段名</th>
+                      <th class="py-2 px-3 w-32">{{ locale === 'en-US' ? 'Layer' : '分层' }}</th>
+                      <th class="py-2 px-3 w-44">{{ locale === 'en-US' ? 'Field / Property' : '属性 / 字段名' }}</th>
                       <th v-for="smp in multiResult.samples" :key="smp.sample_index" class="py-2 px-3 min-w-[140px]">
                         #{{ smp.sample_index + 1 }} {{ smp.label }}
                       </th>
-                      <th class="py-2 px-3 w-20 text-center">判定</th>
+                      <th class="py-2 px-3 w-20 text-center">{{ locale === 'en-US' ? 'Verdict' : '判定' }}</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y" style="border-color: var(--border-subtle)">
@@ -426,13 +426,13 @@
                         {{ val || '-' }}
                       </td>
                       <td class="py-2 px-3 text-center">
-                        <span v-if="row.has_difference" class="px-2 py-0.5 rounded bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30 text-[11px] font-bold">差异</span>
-                        <span v-else class="px-2 py-0.5 rounded bg-slate-500/12 text-[11px]" style="color: var(--text-muted)">一致</span>
+                        <span v-if="row.has_difference" class="px-2 py-0.5 rounded bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30 text-[11px] font-bold">{{ locale === 'en-US' ? 'Diff' : '差异' }}</span>
+                        <span v-else class="px-2 py-0.5 rounded bg-slate-500/12 text-[11px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Equal' : '一致' }}</span>
                       </td>
                     </tr>
                     <tr v-if="filteredMultiFieldMatrix.length === 0">
                       <td :colspan="multiResult.sample_count + 3" class="py-6 text-center" style="color: var(--text-muted)">
-                        所有展示字段跨组完全一致
+                        {{ locale === 'en-US' ? 'All displayed fields are identical across groups' : '所有展示字段跨组完全一致' }}
                       </td>
                     </tr>
                   </tbody>
@@ -445,7 +445,7 @@
               <div class="flex items-center justify-between flex-wrap gap-2">
                 <span class="text-xs font-bold flex items-center gap-2" style="color: var(--text-primary)">
                   <AppIcon name="code" :size="14" />
-                  <span>基于基准 Anchor 的差异字节段 Patch 汇编与可逆修订脚本</span>
+                  <span>{{ locale === 'en-US' ? 'Anchor-based Diff Patch Assembly & Reversible Script' : '基于基准 Anchor 的差异字节段 Patch 汇编与可逆修订脚本' }}</span>
                 </span>
                 <div class="flex items-center gap-2 flex-wrap">
                   <button
@@ -453,7 +453,7 @@
                     :disabled="isGeneratingPatch"
                     class="ui-btn-primary text-[11px] py-1 px-3 rounded-xl font-bold cursor-pointer disabled:opacity-45"
                   >
-                    {{ isGeneratingPatch ? '聚类分析中...' : '生成差异 Patch 修订脚本' }}
+                    {{ isGeneratingPatch ? (locale === 'en-US' ? 'Analyzing Clusters...' : '聚类分析中...') : (locale === 'en-US' ? 'Generate Diff Patch Script' : '生成差异 Patch 修订脚本') }}
                   </button>
                   <template v-if="multiPatchReport">
                     <div class="flex ui-pill p-0.5 rounded-lg text-[11px]">
@@ -461,17 +461,17 @@
                         @click="patchPreviewFormat = 'hex'"
                         :class="['px-2 py-0.5 rounded-md cursor-pointer', patchPreviewFormat === 'hex' ? 'bg-indigo-600 text-white font-bold' : '']"
                       >
-                        Hex 修订汇编
+                        {{ locale === 'en-US' ? 'Hex Patch ASM' : 'Hex 修订汇编' }}
                       </button>
                       <button
                         @click="patchPreviewFormat = 'python'"
                         :class="['px-2 py-0.5 rounded-md cursor-pointer', patchPreviewFormat === 'python' ? 'bg-indigo-600 text-white font-bold' : '']"
                       >
-                        Python 可逆脚本
+                        {{ locale === 'en-US' ? 'Python Reversible Script' : 'Python 可逆脚本' }}
                       </button>
                     </div>
                     <button @click="copyMultiPatchScript" class="ui-btn-secondary text-[11px] py-1 px-2.5 rounded-lg cursor-pointer">
-                      复制脚本
+                      {{ locale === 'en-US' ? 'Copy Script' : '复制脚本' }}
                     </button>
                     <button @click="downloadMultiPatchScript" class="ui-btn-secondary text-[11px] py-1 px-2.5 rounded-lg cursor-pointer">
                       导出 {{ patchPreviewFormat === 'python' ? '.py' : '.patch' }}
@@ -491,7 +491,7 @@
                   >
                     <div class="flex items-center justify-between font-bold" style="color: var(--text-primary)">
                       <span>Target #{{ sb.sample_index + 1 }}: {{ sb.sample_label }}</span>
-                      <span class="text-indigo-700 dark:text-indigo-300">{{ sb.total_hunks }} 处差异段 ({{ sb.target_byte_length }} B)</span>
+                      <span class="text-indigo-700 dark:text-indigo-300">{{ sb.total_hunks }} {{ locale === 'en-US' ? 'Diff Hunks' : '处差异段' }} ({{ sb.target_byte_length }} B)</span>
                     </div>
                     <div v-for="hk in sb.hunks.slice(0, 6)" :key="hk.hunk_index" class="flex items-center justify-between gap-2 text-[11px]" style="color: var(--text-secondary)">
                       <span>@0x{{ hk.anchor_offset.toString(16).toUpperCase().padStart(4, '0') }} [{{ hk.op_kind }}]: {{ hk.anchor_hex || '--' }} → {{ hk.target_hex || '--' }}</span>
@@ -507,7 +507,7 @@
                 >{{ patchPreviewFormat === 'python' ? multiPatchReport.python_patch_script : multiPatchReport.hex_revision_script }}</pre>
               </div>
               <div v-else class="text-[11px]" style="color: var(--text-muted)">
-                点击右上方【生成差异 Patch 修订脚本】，自动把连续同型字节突变聚合为 OFFSET 修订汇编与可独立校验复现的 Python 3 二进制 Patcher。
+                {{ locale === 'en-US' ? 'Click [Generate Patch Script] on top-right to aggregate mutations into OFFSET assembly and runnable Python 3 patcher.' : '点击右上方【生成差异 Patch 修订脚本】，自动把连续同型字节突变聚合为 OFFSET 修订汇编与可独立校验复现的 Python 3 二进制 Patcher。' }}
               </div>
             </div>
           </template>
@@ -520,8 +520,8 @@
           <div ref="hexScrollA" @scroll="onScrollA"
             class="h-full overflow-y-auto overflow-x-hidden p-4 font-mono-code text-xs select-text custom-scrollbar" style="background: var(--surface-content)">
             <div class="text-[11px] font-bold uppercase tracking-wider mb-2 border-b pb-1 flex justify-between" style="color: var(--text-muted); border-color: var(--border-subtle)">
-              <span>偏移量 | 00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F</span>
-              <span>ASCII 预览</span>
+              <span>{{ locale === 'en-US' ? 'Offset' : '偏移量' }} | 00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F</span>
+              <span>{{ locale === 'en-US' ? 'ASCII Preview' : 'ASCII 预览' }}</span>
             </div>
 
             <div v-if="diffResult?.hex_diff_a?.hex_rows && diffResult.hex_diff_a.hex_rows.length > 0" class="space-y-1">
@@ -556,8 +556,8 @@
               v-else
               class="py-12"
               icon="code"
-              title="等待加载比对基准样本 A"
-              description="请选择报文或切换至自由草稿模式输入十六进制/文本内容。"
+              :title="locale === 'en-US' ? 'Waiting to load baseline Sample A' : '等待加载比对基准样本 A'"
+              :description="locale === 'en-US' ? 'Please select packet or switch to draft mode to input hex/text content.' : '请选择报文或切换至自由草稿模式输入十六进制/文本内容。'"
             />
           </div>
 
@@ -565,8 +565,8 @@
           <div ref="hexScrollB" @scroll="onScrollB"
             class="h-full overflow-y-auto overflow-x-hidden p-4 font-mono-code text-xs select-text custom-scrollbar" style="background: var(--surface-content)">
             <div class="text-[11px] font-bold uppercase tracking-wider mb-2 border-b pb-1 flex justify-between" style="color: var(--text-muted); border-color: var(--border-subtle)">
-              <span>偏移量 | 00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F</span>
-              <span>ASCII 预览</span>
+              <span>{{ locale === 'en-US' ? 'Offset' : '偏移量' }} | 00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F</span>
+              <span>{{ locale === 'en-US' ? 'ASCII Preview' : 'ASCII 预览' }}</span>
             </div>
 
             <div v-if="diffResult?.hex_diff_b?.hex_rows && diffResult.hex_diff_b.hex_rows.length > 0" class="space-y-1">
@@ -601,8 +601,8 @@
               v-else
               class="py-12"
               icon="code"
-              title="等待加载比对目标样本 B"
-              description="请选择报文或切换至自由草稿模式输入对比流。"
+              :title="locale === 'en-US' ? 'Waiting to load target Sample B' : '等待加载比对目标样本 B'"
+              :description="locale === 'en-US' ? 'Please select packet or switch to draft mode to input comparison stream.' : '请选择报文或切换至自由草稿模式输入对比流。'"
             />
           </div>
         </div>
@@ -612,11 +612,11 @@
           <table class="w-full text-left text-xs border-collapse table-fixed">
             <thead class="ui-table-head text-[11px] font-bold uppercase sticky top-0 z-10">
               <tr>
-                <th class="p-2.5 w-[16%]">规约分层</th>
-                <th class="p-2.5 w-[24%]">协议字段名称</th>
-                <th class="p-2.5 w-[24%]">样本 A 取值 (基准)</th>
-                <th class="p-2.5 w-[24%]">样本 B 取值 (比对)</th>
-                <th class="p-2.5 w-[12%] text-center">比对状态</th>
+                <th class="p-2.5 w-[16%]">{{ locale === 'en-US' ? 'Layer' : '规约分层' }}</th>
+                <th class="p-2.5 w-[24%]">{{ locale === 'en-US' ? 'Protocol Field Name' : '协议字段名称' }}</th>
+                <th class="p-2.5 w-[24%]">{{ locale === 'en-US' ? 'Sample A (Baseline)' : '样本 A 取值 (基准)' }}</th>
+                <th class="p-2.5 w-[24%]">{{ locale === 'en-US' ? 'Sample B (Compare)' : '样本 B 取值 (比对)' }}</th>
+                <th class="p-2.5 w-[12%] text-center">{{ locale === 'en-US' ? 'Diff Status' : '比对状态' }}</th>
               </tr>
             </thead>
             <tbody class="divide-y text-[11px] ui-num" style="border-color: var(--border-subtle); color: var(--text-secondary)">
@@ -637,13 +637,13 @@
                     f.diff_type === 'CHANGED' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/35' :
                     f.diff_type === 'ADDED_IN_B' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/35' :
                     'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/35']">
-                    {{ f.diff_type === 'EQUAL' ? '一致' : f.diff_type === 'CHANGED' ? '差异' : f.diff_type === 'ADDED_IN_B' ? 'B 新增' : 'B 缺失' }}
+                    {{ f.diff_type === 'EQUAL' ? (locale === 'en-US' ? 'EQUAL' : '一致') : f.diff_type === 'CHANGED' ? (locale === 'en-US' ? 'DIFF' : '差异') : f.diff_type === 'ADDED_IN_B' ? (locale === 'en-US' ? 'B ADDED' : 'B 新增') : (locale === 'en-US' ? 'B MISSING' : 'B 缺失') }}
                   </span>
                 </td>
               </tr>
               <tr v-if="!diffResult?.field_diffs || diffResult.field_diffs.length === 0">
                 <td colspan="5" class="p-10">
-                  <EmptyState icon="layers" title="暂无元数据与规约字段差异" description="请确保载入的两组样本包含同一协议层的可解构字段。" />
+                  <EmptyState icon="layers" :title="locale === 'en-US' ? 'No metadata or protocol field differences' : '暂无元数据与规约字段差异'" :description="locale === 'en-US' ? 'Ensure loaded samples contain dissectible fields in same protocol layer.' : '请确保载入的两组样本包含同一协议层的可解构字段。'" />
                 </td>
               </tr>
             </tbody>
@@ -656,7 +656,7 @@
             <div class="flex items-center gap-2 text-xs flex-wrap">
               <span class="flex items-center gap-1 font-medium" style="color: var(--text-secondary)">
                 <AppIcon name="zap" :size="13" />
-                <span>快速载入工业规约样本:</span>
+                <span>{{ locale === 'en-US' ? 'Quick Load Samples:' : '快速载入工业规约样本:' }}</span>
               </span>
               <button @click="loadPresetPair('MODBUS')"
                 class="px-2.5 py-1 rounded-lg bg-indigo-500/12 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 text-[11px] ui-num cursor-pointer transition-colors">
@@ -937,7 +937,9 @@ import { useUniversalDiff, normalizeToDiffableItem, type UniversalDiffItem, type
 import { uiConfirm, uiPrompt } from '../composables/useConfirmDialog';
 import AppIcon from './AppIcon.vue';
 import { useI18n } from '../i18n';
-const { t } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 void t;
 import EmptyState from './EmptyState.vue';
 import { invoke } from '@tauri-apps/api/core';
@@ -1416,7 +1418,7 @@ function loadMultiPreset3Group() {
     { label: presetItems[2].label, text: presetItems[2].payload_hex }
   ];
   diffBus.openMultiDiff(presetItems, 0, 'multi');
-  notifySuccess('已载入 3 组变长演练样本', '已按 Center-Star 算法自动对齐前插 0xAA 与尾部缺失 "--" 槽位');
+  notifySuccess(locale.value === 'en-US' ? 'Loaded 3 Demo Groups' : '已载入 3 组变长演练样本', locale.value === 'en-US' ? 'Aligned automatically with Center-Star algorithm' : '已按 Center-Star 算法自动对齐前插 0xAA 与尾部缺失 \"--\" 槽位');
 }
 
 async function loadStoredSamples() {
@@ -1696,7 +1698,7 @@ function drawDiffWaveform() {
     ctx.fillStyle = dark ? '#64748b' : '#475569';
     ctx.font = '12px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('暂无有效载荷波形点位', W / 2, H / 2);
+    ctx.fillText(locale.value === 'en-US' ? 'No Payload Waveform Points' : '暂无有效载荷波形点位', W / 2, H / 2);
     return;
   }
 
@@ -1958,7 +1960,7 @@ function drawMultiSpectrum() {
     ctx.fillStyle = dark ? '#64748b' : '#475569';
     ctx.font = '12px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('暂无多组对齐熵谱数据', W / 2, H / 2);
+    ctx.fillText(locale.value === 'en-US' ? 'No Multi-Group Aligned Entropy Data' : '暂无多组对齐熵谱数据', W / 2, H / 2);
     return;
   }
 
@@ -2029,7 +2031,7 @@ function drawMultiSpectrum() {
   ctx.textAlign = 'left';
   ctx.fillStyle = dark ? '#cbd5e1' : '#334155';
   ctx.font = '11px sans-serif';
-  ctx.fillText('柱条: 偏移列变异波率(%)   折线: 香农信息熵(bit)', padL + 4, 13);
+  ctx.fillText(locale.value === 'en-US' ? 'Bar: Column Mutation Rate (%)   Line: Shannon Entropy (bit)' : '柱条: 偏移列变异波率(%)   折线: 香农信息熵(bit)', padL + 4, 13);
 }
 
 function onMultiSpectrumMouseMove(e: MouseEvent) {

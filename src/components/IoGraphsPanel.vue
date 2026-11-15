@@ -6,7 +6,7 @@
         <div class="flex items-center gap-2 flex-wrap">
           <span class="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
           <h3 class="text-xs font-bold" style="color: var(--text-primary)">
-            IO Graphs 多维流量分析与基线对比引擎
+            {{ locale === 'en-US' ? 'IO Graphs Multi-Dimensional Traffic & Baseline Engine' : 'IO Graphs 多维流量分析与基线对比引擎' }}
           </h3>
           <div class="flex ui-pill p-0.5 rounded-xl text-[11px] font-semibold">
             <button
@@ -17,7 +17,7 @@
               ]"
               :style="activePanelMode !== 'timeseries' ? { color: 'var(--text-secondary)' } : undefined"
             >
-              时序曲线与点阵
+              {{ locale === 'en-US' ? 'Time Series & Scatter' : '时序曲线与点阵' }}
             </button>
             <button
               @click="switchToMultidim"
@@ -27,7 +27,7 @@
               ]"
               :style="activePanelMode !== 'multidim' ? { color: 'var(--text-secondary)' } : undefined"
             >
-              多维统计画像 ({{ totalAnalyzedPackets }})
+              {{ locale === 'en-US' ? `Multi-Dim Profile (${totalAnalyzedPackets})` : `多维统计画像 (${totalAnalyzedPackets})` }}
             </button>
             <button
               @click="activePanelMode = 'compare'"
@@ -37,7 +37,7 @@
               ]"
               :style="activePanelMode !== 'compare' ? { color: 'var(--text-secondary)' } : undefined"
             >
-              基线 / .pcap 对比
+              {{ locale === 'en-US' ? 'Baseline / .pcap Diff' : '基线 / .pcap 对比' }}
             </button>
           </div>
         </div>
@@ -47,41 +47,41 @@
             @click="saveBaseline"
             :disabled="isBaselineBusy || !hasAnyTraffic"
             class="ui-btn-secondary px-2.5 py-1 rounded-xl text-[11px] font-semibold disabled:opacity-45"
-            title="将当前实时流量分布固化为本地黄金基线文件"
+            :title="locale === 'en-US' ? 'Freeze live traffic as local baseline file' : '将当前实时流量分布固化为本地黄金基线文件'"
           >
-            固化网络基线
+            {{ locale === 'en-US' ? 'Freeze Baseline' : '固化网络基线' }}
           </button>
           <button
             @click="compareWithBaseline"
             :disabled="isBaselineBusy || !hasAnyTraffic"
             class="ui-btn-secondary px-2.5 py-1 rounded-xl text-[11px] font-semibold disabled:opacity-45"
-            title="将当前实时流量与已保存的黄金基线进行对比"
+            :title="locale === 'en-US' ? 'Compare live traffic with saved golden baseline' : '将当前实时流量与已保存的黄金基线进行对比'"
           >
-            对比黄金基线
+            {{ locale === 'en-US' ? 'Compare Baseline' : '对比黄金基线' }}
           </button>
           <button
             @click="compareWithPcapFile"
             :disabled="isBaselineBusy || !hasAnyTraffic"
             class="ui-btn-secondary px-2.5 py-1 rounded-xl text-[11px] font-semibold disabled:opacity-45"
-            title="选择本地历史 .pcap 文件与当前实时捕获进行双样本对账"
+            :title="locale === 'en-US' ? 'Select local .pcap to compare with live traffic' : '选择本地历史 .pcap 文件与当前实时捕获进行双样本对账'"
           >
-            导入 .pcap 对比
+            {{ locale === 'en-US' ? 'Import .pcap Diff' : '导入 .pcap 对比' }}
           </button>
           <button
             @click="exportAuditReport('markdown')"
             :disabled="!hasAnyTraffic"
             class="ui-btn-secondary px-2 py-1 rounded-xl text-[11px] font-semibold disabled:opacity-45"
-            title="导出 Markdown 格式网络统计与安全审计报告"
+            :title="locale === 'en-US' ? 'Export Markdown audit report' : '导出 Markdown 格式网络统计与安全审计报告'"
           >
-            导出 MD
+            {{ locale === 'en-US' ? 'Export MD' : '导出 MD' }}
           </button>
           <button
             @click="exportAuditReport('html')"
             :disabled="!hasAnyTraffic"
             class="ui-btn-secondary px-2 py-1 rounded-xl text-[11px] font-semibold disabled:opacity-45"
-            title="导出全转义自包含 HTML 网络统计与安全审计报告"
+            :title="locale === 'en-US' ? 'Export self-contained HTML audit report' : '导出全转义自包含 HTML 网络统计与安全审计报告'"
           >
-            导出 HTML
+            {{ locale === 'en-US' ? 'Export HTML' : '导出 HTML' }}
           </button>
         </div>
       </div>
@@ -108,7 +108,7 @@
               ]"
               :style="activeMetric !== 'bandwidth' ? { color: 'var(--text-secondary)' } : undefined"
             >
-              带宽 (KB/s)
+              {{ locale === 'en-US' ? 'Bandwidth (KB/s)' : '带宽 (KB/s)' }}
             </button>
             <button
               @click="activeMetric = 'rtt'"
@@ -128,7 +128,7 @@
               ]"
               :style="activeMetric !== 'retrans' ? { color: 'var(--text-secondary)' } : undefined"
             >
-              重传异常
+              {{ locale === 'en-US' ? 'Retransmissions' : '重传异常' }}
             </button>
           </div>
 
@@ -136,13 +136,13 @@
             v-model="selectedBusFilter"
             @change="fetchData"
             class="ui-input w-auto px-2.5 py-1 text-xs cursor-pointer"
-            title="选择聚合的物理或网络总线来源"
+            :title="locale === 'en-US' ? 'Select aggregated bus source' : '选择聚合的物理或网络总线来源'"
           >
-            <option value="ALL">全部总线 (综合)</option>
-            <option value="ETHERNET">网卡以太网 (NIC)</option>
-            <option value="SERIAL">COM 物理串口</option>
-            <option value="USB">USB 控制器总线</option>
-            <option value="WIRELESS">Wi-Fi / 蓝牙无线</option>
+            <option value="ALL">{{ locale === 'en-US' ? 'All Buses (Aggregated)' : '全部总线 (综合)' }}</option>
+            <option value="ETHERNET">{{ locale === 'en-US' ? 'Ethernet NIC' : '网卡以太网 (NIC)' }}</option>
+            <option value="SERIAL">{{ locale === 'en-US' ? 'Physical COM Serial' : 'COM 物理串口' }}</option>
+            <option value="USB">{{ locale === 'en-US' ? 'USB Controller Bus' : 'USB 控制器总线' }}</option>
+            <option value="WIRELESS">{{ locale === 'en-US' ? 'Wi-Fi / Bluetooth Wireless' : 'Wi-Fi / 蓝牙无线' }}</option>
           </select>
 
           <select
@@ -150,10 +150,10 @@
             @change="fetchData"
             class="ui-input ui-num w-auto px-2.5 py-1 text-xs cursor-pointer"
           >
-            <option :value="30">近 30 秒</option>
-            <option :value="60">近 60 秒</option>
-            <option :value="120">近 120 秒</option>
-            <option :value="300">近 300 秒</option>
+            <option :value="30">{{ locale === 'en-US' ? 'Last 30s' : '近 30 秒' }}</option>
+            <option :value="60">{{ locale === 'en-US' ? 'Last 60s' : '近 60 秒' }}</option>
+            <option :value="120">{{ locale === 'en-US' ? 'Last 120s' : '近 120 秒' }}</option>
+            <option :value="300">{{ locale === 'en-US' ? 'Last 300s' : '近 300 秒' }}</option>
           </select>
 
           <button
@@ -164,12 +164,12 @@
             ]"
           >
             <span class="w-1.5 h-1.5 rounded-full" :class="isAutoRefreshing ? 'bg-sky-500' : 'bg-slate-400'"></span>
-            <span>{{ isAutoRefreshing ? '自动刷新 (1s)' : '自动刷新: 关' }}</span>
+            <span>{{ isAutoRefreshing ? (locale === 'en-US' ? 'Auto-Refresh (1s)' : '自动刷新 (1s)') : (locale === 'en-US' ? 'Auto-Refresh: Off' : '自动刷新: 关') }}</span>
           </button>
 
           <button @click="refreshAll" :disabled="isLoading" class="ui-btn-secondary px-2.5 py-1 rounded-xl text-xs">
             <AppIcon name="refresh" :size="12" :class="isLoading ? 'animate-spin' : ''" />
-            <span>刷新</span>
+            <span>{{ locale === 'en-US' ? 'Refresh' : '刷新' }}</span>
           </button>
         </div>
 
@@ -181,25 +181,25 @@
       <!-- 4 核心摘要卡片 -->
       <div v-if="seriesData" class="grid grid-cols-2 gap-2 text-xs">
         <div class="ui-sub-card bg-blue-500/8 border-blue-500/25 p-2">
-          <div class="text-[10px] text-blue-700 dark:text-sky-300 font-bold uppercase truncate">窗口吞吐 / 报文总数</div>
+          <div class="text-[10px] text-blue-700 dark:text-sky-300 font-bold uppercase truncate">{{ locale === 'en-US' ? 'Window Throughput / Packets' : '窗口吞吐 / 报文总数' }}</div>
           <div class="text-xs font-bold ui-num mt-0.5 truncate" style="color: var(--text-primary)">
-            {{ formatBytes(summaryStats.totalBytes) }} / {{ summaryStats.totalPackets }} 帧
+            {{ formatBytes(summaryStats.totalBytes) }} / {{ summaryStats.totalPackets }} {{ locale === 'en-US' ? 'frames' : '帧' }}
           </div>
         </div>
         <div class="ui-sub-card bg-emerald-500/8 border-emerald-500/25 p-2">
-          <div class="text-[10px] text-emerald-700 dark:text-emerald-300 font-bold uppercase truncate">包率 (PPS: 均值 / 峰值)</div>
+          <div class="text-[10px] text-emerald-700 dark:text-emerald-300 font-bold uppercase truncate">{{ locale === 'en-US' ? 'Packet Rate (PPS: Mean / Peak)' : '包率 (PPS: 均值 / 峰值)' }}</div>
           <div class="text-xs font-bold ui-num mt-0.5 truncate" style="color: var(--text-primary)">
             {{ summaryStats.avgPps.toFixed(1) }} / <span class="text-emerald-700 dark:text-emerald-400">{{ summaryStats.maxPps }} pps</span>
           </div>
         </div>
         <div class="ui-sub-card bg-indigo-500/8 border-indigo-500/25 p-2">
-          <div class="text-[10px] text-indigo-700 dark:text-indigo-300 font-bold uppercase truncate">带宽 (均值 / 峰值)</div>
+          <div class="text-[10px] text-indigo-700 dark:text-indigo-300 font-bold uppercase truncate">{{ locale === 'en-US' ? 'Bandwidth (Mean / Peak)' : '带宽 (均值 / 峰值)' }}</div>
           <div class="text-xs font-bold ui-num mt-0.5 truncate" style="color: var(--text-primary)">
             {{ formatBytes(summaryStats.avgBps) }}/s / <span class="text-indigo-700 dark:text-indigo-400">{{ formatBytes(summaryStats.maxBps) }}/s</span>
           </div>
         </div>
         <div class="ui-sub-card bg-purple-500/8 border-purple-500/25 p-2">
-          <div class="text-[10px] text-purple-700 dark:text-purple-300 font-bold uppercase truncate">TCP RTT / 包间隔 MAD 抖动</div>
+          <div class="text-[10px] text-purple-700 dark:text-purple-300 font-bold uppercase truncate">{{ locale === 'en-US' ? 'TCP RTT / MAD Jitter' : 'TCP RTT / 包间隔 MAD 抖动' }}</div>
           <div class="text-xs font-bold ui-num mt-0.5 truncate" style="color: var(--text-primary)">
             {{ summaryStats.avgRttMs.toFixed(2) }}ms / <span class="text-purple-700 dark:text-purple-300">{{ trafficStats?.jitter_ms?.toFixed(2) ?? '0.00' }}ms</span>
           </div>
@@ -211,13 +211,13 @@
     <div v-if="activePanelMode === 'timeseries'" class="flex-1 ui-content-card p-3 flex flex-col min-h-0 overflow-hidden">
       <div class="flex items-center justify-between text-xs ui-num mb-2 shrink-0 flex-wrap gap-2" style="color: var(--text-secondary)">
         <div class="flex items-center gap-2 flex-wrap">
-          <span class="text-sky-700 dark:text-sky-400 font-bold">当前曲线: {{ metricTitle }}</span>
+          <span class="text-sky-700 dark:text-sky-400 font-bold">{{ locale === 'en-US' ? 'Metric: ' : '当前曲线: ' }}{{ metricTitle }}</span>
           <span style="color: var(--border-strong)">|</span>
-          <span>时间跨度: {{ selectedWindow }} 秒</span>
+          <span>{{ locale === 'en-US' ? `Window: ${selectedWindow}s` : `时间跨度: ${selectedWindow} 秒` }}</span>
           <span style="color: var(--border-strong)">|</span>
-          <span>采样点: {{ validBuckets.length }} 点</span>
+          <span>{{ locale === 'en-US' ? `Samples: ${validBuckets.length} buckets` : `采样点: ${validBuckets.length} 点` }}</span>
           <span v-if="savedBaseline" class="text-amber-700 dark:text-amber-300 font-semibold">
-            | 黄金基线均值参考已叠加 ({{ savedBaseline.name }})
+            {{ locale === 'en-US' ? `| Baseline Mean Applied (${savedBaseline.name})` : `| 黄金基线均值参考已叠加 (${savedBaseline.name})` }}
           </span>
         </div>
       </div>
@@ -233,21 +233,21 @@
           v-else
           class="h-full py-6"
           icon="activity"
-          title="正在捕获并聚合时序采样点"
-          description="请等待数据包流入并生成 2 个以上连续时间桶，或点击上方【刷新】按钮。"
+          :title="locale === 'en-US' ? 'Aggregating time-series sample buckets' : '正在捕获并聚合时序采样点'"
+          :description="locale === 'en-US' ? 'Awaiting live packets to generate at least 2 consecutive buckets, or click refresh above.' : '请等待数据包流入并生成 2 个以上连续时间桶，或点击上方【刷新】按钮。'"
         />
       </div>
 
       <!-- 底部时序点阵数据明细折叠表 (保持既有交互与检索关键字) -->
       <div class="mt-2 border-t pt-2 shrink-0" style="border-color: var(--border-subtle)">
         <div class="flex items-center justify-between text-[11px] mb-1.5" style="color: var(--text-secondary)">
-          <span class="font-bold">秒级时序点阵明细流水 (最近 {{ validBuckets.length }} 秒桶)</span>
+          <span class="font-bold">{{ locale === 'en-US' ? `Per-Second Bucket Timeline (Last ${validBuckets.length}s)` : `秒级时序点阵明细流水 (最近 ${validBuckets.length} 秒桶)` }}</span>
           <button
             @click="showTable = !showTable"
             class="font-semibold hover:underline cursor-pointer flex items-center gap-1"
             style="color: var(--accent-primary-text)"
           >
-            <span>{{ showTable ? '收起明细' : '展开点阵明细' }}</span>
+            <span>{{ showTable ? (locale === 'en-US' ? 'Collapse Details' : '收起明细') : (locale === 'en-US' ? 'Expand Details' : '展开点阵明细') }}</span>
             <AppIcon :name="showTable ? 'chevron-up' : 'chevron-down'" :size="12" />
           </button>
         </div>
@@ -256,11 +256,11 @@
           <table class="w-full text-left text-[11px] ui-num border-collapse table-fixed">
             <thead class="ui-table-head sticky top-0">
               <tr>
-                <th class="p-1.5 w-[20%]">时间点</th>
-                <th class="p-1.5 w-[20%] text-right">包数量 (PPS)</th>
-                <th class="p-1.5 w-[20%] text-right">吞吐量 (BPS)</th>
+                <th class="p-1.5 w-[20%]">{{ locale === 'en-US' ? 'Timestamp' : '时间点' }}</th>
+                <th class="p-1.5 w-[20%] text-right">{{ locale === 'en-US' ? 'Packets (PPS)' : '包数量 (PPS)' }}</th>
+                <th class="p-1.5 w-[20%] text-right">{{ locale === 'en-US' ? 'Throughput (BPS)' : '吞吐量 (BPS)' }}</th>
                 <th class="p-1.5 w-[20%] text-right">TCP RTT (ms)</th>
-                <th class="p-1.5 w-[20%] text-right">重传计数</th>
+                <th class="p-1.5 w-[20%] text-right">{{ locale === 'en-US' ? 'Retransmissions' : '重传计数' }}</th>
               </tr>
             </thead>
             <tbody class="divide-y" style="border-color: var(--border-subtle); color: var(--text-secondary)">
@@ -291,23 +291,23 @@
         <!-- 统计 KPI 指标条 -->
         <div class="grid grid-cols-2 gap-2 text-xs">
           <div class="ui-sub-card p-2">
-            <div class="text-[10px]" style="color: var(--text-muted)">分析包样本 / 字节</div>
+            <div class="text-[10px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Analyzed Packets / Bytes' : '分析包样本 / 字节' }}</div>
             <div class="font-bold ui-num mt-0.5" style="color: var(--text-primary)">
-              {{ trafficStats.total_packets }} 帧 / {{ formatBytes(trafficStats.total_bytes) }}
+              {{ trafficStats.total_packets }} {{ locale === 'en-US' ? 'frames' : '帧' }} / {{ formatBytes(trafficStats.total_bytes) }}
             </div>
           </div>
           <div class="ui-sub-card p-2">
-            <div class="text-[10px]" style="color: var(--text-muted)">唯一主机节点数</div>
-            <div class="font-bold ui-num mt-0.5 text-sky-700 dark:text-sky-300">{{ trafficStats.unique_ips }} 台</div>
+            <div class="text-[10px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Unique Host Nodes' : '唯一主机节点数' }}</div>
+            <div class="font-bold ui-num mt-0.5 text-sky-700 dark:text-sky-300">{{ trafficStats.unique_ips }} {{ locale === 'en-US' ? 'hosts' : '台' }}</div>
           </div>
           <div class="ui-sub-card p-2">
-            <div class="text-[10px]" style="color: var(--text-muted)">平均帧长 / 信息熵</div>
+            <div class="text-[10px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Mean Length / Entropy' : '平均帧长 / 信息熵' }}</div>
             <div class="font-bold ui-num mt-0.5" style="color: var(--text-primary)">
               {{ trafficStats.avg_packet_len.toFixed(1) }} B / {{ trafficStats.avg_entropy.toFixed(2) }} b/B
             </div>
           </div>
           <div class="ui-sub-card p-2">
-            <div class="text-[10px]" style="color: var(--text-muted)">包间隔均值 / MAD 抖动</div>
+            <div class="text-[10px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Mean Interval / MAD Jitter' : '包间隔均值 / MAD 抖动' }}</div>
             <div class="font-bold ui-num mt-0.5 text-emerald-700 dark:text-emerald-300">
               {{ trafficStats.mean_iat_ms.toFixed(2) }}ms / <span class="text-amber-700 dark:text-amber-300">{{ trafficStats.jitter_ms.toFixed(2) }}ms</span>
             </div>
@@ -317,31 +317,31 @@
         <!-- 三联科研图表（适配侧边抽屉宽度纵向全宽堆叠） -->
         <div class="grid grid-cols-1 gap-2.5">
           <div class="ui-sub-card p-2.5 flex flex-col h-[205px]">
-            <div class="text-[11px] font-bold mb-1" style="color: var(--text-primary)">协议层次占比分布 (字节/包量)</div>
+            <div class="text-[11px] font-bold mb-1" style="color: var(--text-primary)">{{ locale === 'en-US' ? 'Protocol Hierarchy Distribution (Bytes / Packets)' : '协议层次占比分布 (字节/包量)' }}</div>
             <v-chart :option="protocolPieOption" autoresize class="flex-1 w-full min-h-[160px]" />
           </div>
           <div class="ui-sub-card p-2.5 flex flex-col h-[215px]">
-            <div class="text-[11px] font-bold mb-1" style="color: var(--text-primary)">Top Talkers 活跃主机 Tx/Rx 吞吐</div>
+            <div class="text-[11px] font-bold mb-1" style="color: var(--text-primary)">{{ locale === 'en-US' ? 'Top Talkers Host Tx/Rx Throughput' : 'Top Talkers 活跃主机 Tx/Rx 吞吐' }}</div>
             <v-chart :option="topTalkersOption" autoresize class="flex-1 w-full min-h-[170px]" />
           </div>
           <div class="ui-sub-card p-2.5 flex flex-col h-[205px]">
-            <div class="text-[11px] font-bold mb-1" style="color: var(--text-primary)">RFC 2544 标准报文长度七档分布</div>
+            <div class="text-[11px] font-bold mb-1" style="color: var(--text-primary)">{{ locale === 'en-US' ? 'RFC 2544 Standard Frame Length Distribution' : 'RFC 2544 标准报文长度七档分布' }}</div>
             <v-chart :option="lengthDistOption" autoresize class="flex-1 w-full min-h-[160px]" />
           </div>
         </div>
 
         <!-- Top 活跃五元组会话表格 -->
         <div class="ui-sub-card p-2">
-          <div class="text-[11px] font-bold mb-1.5" style="color: var(--text-primary)">Top 10 活跃通信会话 (无向五元组聚合)</div>
+          <div class="text-[11px] font-bold mb-1.5" style="color: var(--text-primary)">{{ locale === 'en-US' ? 'Top 10 Active Sessions (Undirected 5-Tuple Aggregation)' : 'Top 10 活跃通信会话 (无向五元组聚合)' }}</div>
           <div class="max-h-40 overflow-auto custom-scrollbar">
             <table class="w-full text-left text-[11px] ui-num border-collapse">
               <thead class="ui-table-head sticky top-0">
                 <tr>
-                  <th class="p-1.5">通信端点 A</th>
-                  <th class="p-1.5">通信端点 B</th>
-                  <th class="p-1.5">协议</th>
-                  <th class="p-1.5 text-right">帧数</th>
-                  <th class="p-1.5 text-right">双向总字节</th>
+                  <th class="p-1.5">{{ locale === 'en-US' ? 'Endpoint A' : '通信端点 A' }}</th>
+                  <th class="p-1.5">{{ locale === 'en-US' ? 'Endpoint B' : '通信端点 B' }}</th>
+                  <th class="p-1.5">{{ locale === 'en-US' ? 'Protocol' : '协议' }}</th>
+                  <th class="p-1.5 text-right">{{ locale === 'en-US' ? 'Frames' : '帧数' }}</th>
+                  <th class="p-1.5 text-right">{{ locale === 'en-US' ? 'Total Bytes' : '双向总字节' }}</th>
                 </tr>
               </thead>
               <tbody class="divide-y" style="border-color: var(--border-subtle); color: var(--text-secondary)">
@@ -362,8 +362,8 @@
         v-else
         class="h-full py-10"
         icon="layers"
-        title="尚无可用于多维分析的实时抓包样本"
-        description="启动网络抓包或加载数据包后，将自动计算协议分布、Top Talkers 带宽榜、活跃会话与 RFC 2544 包长分布。"
+        :title="locale === 'en-US' ? 'No live packet samples for multi-dim analysis' : '尚无可用于多维分析的实时抓包样本'"
+        :description="locale === 'en-US' ? 'Start packet capture or load file to compute protocol distribution, top talkers, active sessions and RFC 2544 binning.' : '启动网络抓包或加载数据包后，将自动计算协议分布、Top Talkers 带宽榜、活跃会话与 RFC 2544 包长分布。'"
       />
     </div>
 
@@ -380,27 +380,27 @@
               {{ verdictLabel(comparisonReport.anomaly_verdict) }}
             </span>
             <span class="text-xs font-bold" style="color: var(--text-primary)">
-              对比基准: {{ comparisonReport.baseline_name }}
+              {{ locale === 'en-US' ? 'Baseline: ' : '对比基准: ' }}{{ comparisonReport.baseline_name }}
             </span>
             <span class="text-[11px] ui-num" style="color: var(--text-muted)">
-              (基准 {{ comparisonReport.baseline_total_packets }} 帧 vs 当前 {{ comparisonReport.current_total_packets }} 帧)
+              ({{ locale === 'en-US' ? 'Baseline ' : '基准 ' }}{{ comparisonReport.baseline_total_packets }} {{ locale === 'en-US' ? 'frames vs live ' : '帧 vs 当前 ' }}{{ comparisonReport.current_total_packets }} {{ locale === 'en-US' ? 'frames' : '帧' }})
             </span>
           </div>
           <div class="text-[11px] ui-num flex items-center gap-3" style="color: var(--text-secondary)">
-            <span>熵变: <strong>{{ formatSigned(comparisonReport.entropy_delta, 3) }}</strong> b/B</span>
-            <span>抖动差: <strong>{{ formatSigned(comparisonReport.jitter_delta_ms, 2) }}</strong> ms</span>
-            <span>PPS 变化: <strong>{{ formatSigned(comparisonReport.pps_change_pct, 1) }}%</strong></span>
+            <span>{{ locale === 'en-US' ? 'Entropy Δ: ' : '熵变: ' }}<strong>{{ formatSigned(comparisonReport.entropy_delta, 3) }}</strong> b/B</span>
+            <span>{{ locale === 'en-US' ? 'Jitter Δ: ' : '抖动差: ' }}<strong>{{ formatSigned(comparisonReport.jitter_delta_ms, 2) }}</strong> ms</span>
+            <span>{{ locale === 'en-US' ? 'PPS Δ: ' : 'PPS 变化: ' }}<strong>{{ formatSigned(comparisonReport.pps_change_pct, 1) }}%</strong></span>
           </div>
         </div>
 
         <!-- 诊断归因列表 -->
         <div class="ui-sub-card p-2.5 text-xs">
-          <div class="text-[11px] font-bold mb-1" style="color: var(--text-primary)">智能漂移归因诊断</div>
+          <div class="text-[11px] font-bold mb-1" style="color: var(--text-primary)">{{ locale === 'en-US' ? 'Intelligent Drift Diagnosis & Attribution' : '智能漂移归因诊断' }}</div>
           <ul class="list-disc pl-4 space-y-0.5 text-[11px]" style="color: var(--text-secondary)">
             <li v-for="(reason, idx) in comparisonReport.anomaly_reasons" :key="idx">{{ reason }}</li>
           </ul>
           <div v-if="comparisonReport.new_external_ips.length > 0" class="mt-2 pt-2 border-t text-[11px]" style="border-color: var(--border-subtle)">
-            <span class="font-bold text-rose-700 dark:text-rose-300">基线未收录新增活跃 IP ({{ comparisonReport.new_external_ips.length }}): </span>
+            <span class="font-bold text-rose-700 dark:text-rose-300">{{ locale === 'en-US' ? 'Unrecorded Active IPs' : '基线未收录新增活跃 IP' }} ({{ comparisonReport.new_external_ips.length }}): </span>
             <span class="font-mono" style="color: var(--text-secondary)">{{ comparisonReport.new_external_ips.slice(0, 15).join(', ') }}</span>
           </div>
         </div>
@@ -408,11 +408,11 @@
         <!-- 双柱对照 ECharts 视图（全宽纵向排布防侧边抽屉挤压） -->
         <div class="grid grid-cols-1 gap-2.5">
           <div class="ui-sub-card p-2.5 flex flex-col h-[230px]">
-            <div class="text-[11px] font-bold mb-1" style="color: var(--text-primary)">协议占比分布对比 (基线/.pcap vs 实时 %)</div>
+            <div class="text-[11px] font-bold mb-1" style="color: var(--text-primary)">{{ locale === 'en-US' ? 'Protocol Ratio Comparison (Baseline/.pcap vs Live %)' : '协议占比分布对比 (基线/.pcap vs 实时 %)' }}</div>
             <v-chart :option="compareProtoOption" autoresize class="flex-1 w-full min-h-[175px]" />
           </div>
           <div class="ui-sub-card p-2.5 flex flex-col h-[230px]">
-            <div class="text-[11px] font-bold mb-1" style="color: var(--text-primary)">RFC 2544 报文长度分布对比 (基线/.pcap vs 实时 %)</div>
+            <div class="text-[11px] font-bold mb-1" style="color: var(--text-primary)">{{ locale === 'en-US' ? 'RFC 2544 Packet Length Comparison (Baseline/.pcap vs Live %)' : 'RFC 2544 报文长度分布对比 (基线/.pcap vs 实时 %)' }}</div>
             <v-chart :option="compareLengthOption" autoresize class="flex-1 w-full min-h-[175px]" />
           </div>
         </div>
@@ -422,8 +422,8 @@
         v-else
         class="h-full py-10"
         icon="git-compare"
-        title="尚未执行历史基线或 .pcap 对比"
-        description="点击右上角【固化网络基线】保存当前健康态，或点击【对比黄金基线】 / 【导入 .pcap 对比】进行双样本统计对比。"
+        :title="locale === 'en-US' ? 'No historical baseline or .pcap diff executed' : '尚未执行历史基线或 .pcap 对比'"
+        :description="locale === 'en-US' ? 'Click Freeze Baseline to save healthy state, or Compare Baseline / Import .pcap Diff to compare.' : '点击右上角【固化网络基线】保存当前健康态，或点击【对比黄金基线】 / 【导入 .pcap 对比】进行双样本统计对比。'"
       />
     </div>
   </div>
@@ -446,7 +446,9 @@ import VChart from 'vue-echarts';
 import type { EChartsOption } from 'echarts';
 import AppIcon from './AppIcon.vue';
 import { useI18n } from '../i18n';
-const { t } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 import EmptyState from './EmptyState.vue';
 
 use([
@@ -725,10 +727,10 @@ const summaryStats = computed(() => {
 
 const metricTitle = computed(() => {
   switch (activeMetric.value) {
-    case 'pps': return '报文包率 (Packets / Second)';
-    case 'bandwidth': return '吞吐带宽 (KB/s)';
-    case 'rtt': return 'TCP 往返时延 RTT (ms)';
-    case 'retrans': return 'TCP 重传异常计数 (Retransmissions)';
+    case 'pps': return locale.value === 'en-US' ? 'Packet Rate (Packets / Second)' : '报文包率 (Packets / Second)';
+    case 'bandwidth': return locale.value === 'en-US' ? 'Throughput Bandwidth (KB/s)' : '吞吐带宽 (KB/s)';
+    case 'rtt': return locale.value === 'en-US' ? 'TCP RTT (ms)' : 'TCP 往返时延 RTT (ms)';
+    case 'retrans': return locale.value === 'en-US' ? 'TCP Retransmissions' : 'TCP 重传异常计数 (Retransmissions)';
   }
 });
 
@@ -814,13 +816,13 @@ const timeSeriesOption = computed<EChartsOption>(() => {
                 silent: true,
                 symbol: 'none',
                 lineStyle: { type: 'dashed', color: '#f59e0b', width: 1.5 },
-                label: { formatter: `黄金基线均值: ${baselineRefVal}`, color: '#f59e0b', fontSize: 10 },
+                label: { formatter: locale.value === 'en-US' ? `Baseline Mean: ${baselineRefVal}` : `黄金基线均值: ${baselineRefVal}`, color: '#f59e0b', fontSize: 10 },
                 data: [{ yAxis: baselineRefVal }],
               }
             : undefined,
       },
       {
-        name: 'TCP 重传触发点',
+        name: locale.value === 'en-US' ? 'TCP Retrans Trigger' : 'TCP 重传触发点',
         type: 'scatter',
         symbolSize: 9,
         itemStyle: { color: '#e11d48', borderColor: '#fff', borderWidth: 1.5 },
@@ -850,7 +852,7 @@ const protocolPieOption = computed<EChartsOption>(() => {
     },
     series: [
       {
-        name: '协议流量分布',
+        name: locale.value === 'en-US' ? 'Protocol Flow' : '协议流量分布',
         type: 'pie',
         radius: ['42%', '72%'],
         center: ['36%', '52%'],
@@ -888,14 +890,14 @@ const topTalkersOption = computed<EChartsOption>(() => {
     },
     series: [
       {
-        name: 'Tx 发送(B)',
+        name: locale.value === 'en-US' ? 'Tx Sent (B)' : 'Tx 发送(B)',
         type: 'bar',
         stack: 'bw',
         itemStyle: { color: '#0ea5e9' },
         data: list.map((t) => t.tx_bytes),
       },
       {
-        name: 'Rx 接收(B)',
+        name: locale.value === 'en-US' ? 'Rx Recv (B)' : 'Rx 接收(B)',
         type: 'bar',
         stack: 'bw',
         itemStyle: { color: '#10b981' },
@@ -927,7 +929,7 @@ const lengthDistOption = computed<EChartsOption>(() => {
     },
     series: [
       {
-        name: '帧计数',
+        name: locale.value === 'en-US' ? 'Frame Count' : '帧计数',
         type: 'bar',
         itemStyle: { color: '#6366f1', borderRadius: [3, 3, 0, 0] },
         data: list.map((b) => b.packet_count),
@@ -960,13 +962,13 @@ const compareProtoOption = computed<EChartsOption>(() => {
     },
     series: [
       {
-        name: '基准/.pcap (%)',
+        name: locale.value === 'en-US' ? 'Baseline/.pcap (%)' : '基准/.pcap (%)',
         type: 'bar',
         itemStyle: { color: '#94a3b8' },
         data: list.map((d) => d.baseline_pct),
       },
       {
-        name: '当前实时 (%)',
+        name: locale.value === 'en-US' ? 'Live (%)' : '当前实时 (%)',
         type: 'bar',
         itemStyle: { color: '#0ea5e9' },
         data: list.map((d) => d.current_pct),
@@ -999,13 +1001,13 @@ const compareLengthOption = computed<EChartsOption>(() => {
     },
     series: [
       {
-        name: '基准/.pcap (%)',
+        name: locale.value === 'en-US' ? 'Baseline/.pcap (%)' : '基准/.pcap (%)',
         type: 'bar',
         itemStyle: { color: '#94a3b8' },
         data: list.map((d) => d.baseline_pct),
       },
       {
-        name: '当前实时 (%)',
+        name: locale.value === 'en-US' ? 'Live (%)' : '当前实时 (%)',
         type: 'bar',
         itemStyle: { color: '#10b981' },
         data: list.map((d) => d.current_pct),
@@ -1027,9 +1029,9 @@ function formatSigned(val: number, digits: number): string {
 }
 
 function verdictLabel(v: string): string {
-  if (v === 'SIGNIFICANT_ANOMALY') return '显著偏移异常';
-  if (v === 'DRIFT_WARNING') return '轻度分布漂移';
-  return '符合历史基线';
+  if (v === 'SIGNIFICANT_ANOMALY') return locale.value === 'en-US' ? 'Significant Anomaly' : '显著偏移异常';
+  if (v === 'DRIFT_WARNING') return locale.value === 'en-US' ? 'Slight Drift Warning' : '轻度分布漂移';
+  return locale.value === 'en-US' ? 'Compliant with Baseline' : '符合历史基线';
 }
 
 function verdictBadgeClass(v: string): string {
@@ -1102,15 +1104,17 @@ async function saveBaseline() {
   isBaselineBusy.value = true;
   try {
     const res = await invoke<NetworkTrafficBaseline>('save_network_baseline_cmd', {
-      name: `黄金基线-${new Date().toLocaleTimeString()}`,
+      name: locale.value === 'en-US' ? `Golden-Baseline-${new Date().toLocaleTimeString()}` : `黄金基线-${new Date().toLocaleTimeString()}`,
       samples: fallbackSamplesIfNeeded(),
       buckets: currentBucketInputs(),
       useBackendFull: true,
     });
     savedBaseline.value = res;
-    actionNotice.value = `已固化网络基线 (${res.stats.total_packets} 帧)`;
+    actionNotice.value = locale.value === 'en-US'
+      ? `Baseline frozen (${res.stats.total_packets} frames)`
+      : `已固化网络基线 (${res.stats.total_packets} 帧)`;
   } catch (e) {
-    actionNotice.value = `固化基线失败: ${String(e)}`;
+    actionNotice.value = locale.value === 'en-US' ? `Freeze baseline failed: ${String(e)}` : `固化基线失败: ${String(e)}`;
   } finally {
     isBaselineBusy.value = false;
   }
@@ -1126,9 +1130,11 @@ async function compareWithBaseline() {
     });
     comparisonReport.value = res;
     activePanelMode.value = 'compare';
-    actionNotice.value = `基线对比完成: ${verdictLabel(res.anomaly_verdict)}`;
+    actionNotice.value = locale.value === 'en-US'
+      ? `Baseline comparison complete: ${verdictLabel(res.anomaly_verdict)}`
+      : `基线对比完成: ${verdictLabel(res.anomaly_verdict)}`;
   } catch (e) {
-    actionNotice.value = `基线对比失败: ${String(e)}`;
+    actionNotice.value = locale.value === 'en-US' ? `Baseline comparison failed: ${String(e)}` : `基线对比失败: ${String(e)}`;
   } finally {
     isBaselineBusy.value = false;
   }
@@ -1145,10 +1151,12 @@ async function compareWithPcapFile() {
     if (res) {
       comparisonReport.value = res;
       activePanelMode.value = 'compare';
-      actionNotice.value = `离线 .pcap 对照完成: ${verdictLabel(res.anomaly_verdict)}`;
+      actionNotice.value = locale.value === 'en-US'
+        ? `Offline .pcap comparison complete: ${verdictLabel(res.anomaly_verdict)}`
+        : `离线 .pcap 对照完成: ${verdictLabel(res.anomaly_verdict)}`;
     }
   } catch (e) {
-    actionNotice.value = `导入 .pcap 对比失败: ${String(e)}`;
+    actionNotice.value = locale.value === 'en-US' ? `Import .pcap comparison failed: ${String(e)}` : `导入 .pcap 对比失败: ${String(e)}`;
   } finally {
     isBaselineBusy.value = false;
   }
@@ -1157,17 +1165,17 @@ async function compareWithPcapFile() {
 async function exportAuditReport(format: 'markdown' | 'html') {
   try {
     const savedPath = await invoke<string | null>('export_network_audit_report_cmd', {
-      title: 'Omni-Probe 网络深度流量统计与安全审计报告',
+      title: locale.value === 'en-US' ? 'Omni-Probe Network Traffic Stats & Security Audit Report' : 'Omni-Probe 网络深度流量统计与安全审计报告',
       format,
       samples: fallbackSamplesIfNeeded(),
       comparison: comparisonReport.value,
       useBackendFull: true,
     });
     if (savedPath) {
-      actionNotice.value = `报告已导出: ${savedPath}`;
+      actionNotice.value = locale.value === 'en-US' ? `Report exported: ${savedPath}` : `报告已导出: ${savedPath}`;
     }
   } catch (e) {
-    actionNotice.value = `报告导出失败: ${String(e)}`;
+    actionNotice.value = locale.value === 'en-US' ? `Report export failed: ${String(e)}` : `报告导出失败: ${String(e)}`;
   }
 }
 

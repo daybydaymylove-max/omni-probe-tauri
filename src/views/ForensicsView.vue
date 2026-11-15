@@ -11,13 +11,13 @@
           </div>
           <div class="min-w-0">
             <div class="flex items-center gap-2 flex-wrap">
-              <h2 class="text-[13px] font-semibold tracking-tight" style="color: var(--text-primary);">网络电子数据司法取证与保管链系统</h2>
+              <h2 class="text-[13px] font-semibold tracking-tight" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Electronic Data Forensics & Chain of Custody' : '网络电子数据司法取证与保管链系统' }}</h2>
               <span class="ui-pill px-2 py-0.5 rounded-full text-[11px] font-medium">
                 GB/T 29360 · ISO/IEC 27037
               </span>
             </div>
             <p class="text-[11px] mt-0.5 truncate" style="color: var(--text-muted);">
-              国密 SM3 + SHA-256 双哈希封存 · PCAPNG 原生规约 · Npcap 丢包采集 · WORM 防篡改锁定
+              {{ locale === 'en-US' ? 'SM3 + SHA-256 Dual-Hash Seal · PCAPNG Native · Npcap Zero-Loss · WORM Immutable' : '国密 SM3 + SHA-256 双哈希封存 · PCAPNG 原生规约 · Npcap 丢包采集 · WORM 防篡改锁定' }}
             </p>
           </div>
         </div>
@@ -25,22 +25,22 @@
         <div class="flex items-center gap-2 flex-wrap">
           <button @click="triggerManualSeal" :disabled="loading" class="ui-btn-secondary px-3 py-1.5 text-xs">
             <AppIcon name="lock" :size="14" />
-            <span>双哈希封存</span>
+            <span>{{ locale === 'en-US' ? 'Dual-Hash Seal' : '双哈希封存' }}</span>
           </button>
 
           <button @click="verifyEvidence" :disabled="loading" class="ui-btn-secondary px-3 py-1.5 text-xs">
             <AppIcon name="check" :size="14" />
-            <span>完整性验真</span>
+            <span>{{ locale === 'en-US' ? 'Verify Chain' : '完整性验真' }}</span>
           </button>
 
           <button @click="exportPcapng" :disabled="loading" class="ui-btn-secondary px-3 py-1.5 text-xs">
             <AppIcon name="download" :size="14" />
-            <span>导出 PCAPNG</span>
+            <span>{{ locale === 'en-US' ? 'Export PCAPNG' : '导出 PCAPNG' }}</span>
           </button>
 
           <button @click="openReportModal" class="ui-btn-primary px-3 py-1.5 text-xs">
             <AppIcon name="document" :size="14" />
-            <span>出具 GB/T 29360 报告</span>
+            <span>{{ locale === 'en-US' ? 'Issue GB/T 29360' : '出具 GB/T 29360 报告' }}</span>
           </button>
         </div>
       </div>
@@ -49,7 +49,7 @@
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
         <div class="ui-sub-card p-3 flex items-center justify-between gap-2">
           <div>
-            <div class="text-[11px] font-medium" style="color: var(--text-muted);">证据链完整性评级</div>
+            <div class="text-[11px] font-medium" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Chain Integrity Rating' : '证据链完整性评级' }}</div>
             <div
               class="text-sm font-semibold ui-num mt-1 flex items-center gap-1.5"
               :class="verificationReport?.overall_status === 'PASS' ? 'text-emerald-600 dark:text-emerald-400' : (verificationReport?.overall_status === 'APPENDED' ? 'text-amber-600 dark:text-amber-400' : 'text-[var(--text-primary)]')"
@@ -58,22 +58,22 @@
                 class="w-2 h-2 rounded-full"
                 :class="verificationReport?.overall_status === 'PASS' ? 'bg-emerald-500' : (verificationReport?.overall_status === 'APPENDED' ? 'bg-amber-500' : 'bg-slate-400')"
               ></span>
-              <span>{{ verificationReport?.overall_status || '待核验' }}</span>
+              <span>{{ verificationReport?.overall_status || (locale === 'en-US' ? 'Pending' : '待核验') }}</span>
             </div>
           </div>
           <div class="ui-pill text-[11px] px-2 py-0.5 rounded-full ui-num">
-            {{ verificationReport?.items.length || 0 }} 文件
+            {{ verificationReport?.items.length || 0 }} {{ locale === 'en-US' ? 'files' : '文件' }}
           </div>
         </div>
 
         <div class="ui-sub-card p-3 flex items-center justify-between gap-2">
           <div class="min-w-0">
-            <div class="text-[11px] font-medium" style="color: var(--text-muted);">密码学摘要体制</div>
+            <div class="text-[11px] font-medium" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Digest Cryptosystem' : '密码学摘要体制' }}</div>
             <div class="text-xs font-semibold mt-1" style="color: var(--text-primary);">
-              国密 SM3 + SHA-256
+              SM3 + SHA-256 (GB/T 32918)
             </div>
             <div class="text-[11px] ui-num truncate mt-0.5" style="color: var(--text-muted);">
-              最近封存: {{ verificationReport?.last_sealed_at || '未封存' }}
+              {{ locale === 'en-US' ? 'Last sealed: ' : '最近封存: ' }}{{ verificationReport?.last_sealed_at || (locale === 'en-US' ? 'Unsealed' : '未封存') }}
             </div>
           </div>
           <div class="w-8 h-8 rounded-xl bg-[var(--surface-glass-pill)] text-[var(--text-secondary)] flex items-center justify-center shrink-0">
@@ -83,7 +83,7 @@
 
         <div class="ui-sub-card p-3 flex items-center justify-between gap-2">
           <div class="min-w-0">
-            <div class="text-[11px] font-medium" style="color: var(--text-muted);">物理捕获保真度</div>
+            <div class="text-[11px] font-medium" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Capture Fidelity' : '物理捕获保真度' }}</div>
             <div
               class="text-sm font-semibold ui-num mt-1 flex items-center gap-1.5"
               :class="!fidelity || fidelity.packets_received === 0 ? 'text-[var(--text-secondary)]' : (fidelity.is_lossless_certified ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400')"
@@ -92,25 +92,25 @@
                 class="w-2 h-2 rounded-full shrink-0"
                 :class="!fidelity || fidelity.packets_received === 0 ? 'bg-slate-400' : (fidelity.is_lossless_certified ? 'bg-emerald-500' : 'bg-amber-500')"
               ></span>
-              <span class="truncate">{{ fidelity ? fidelity.fidelity_grade : '就绪待机' }}</span>
+              <span class="truncate">{{ fidelity ? fidelity.fidelity_grade : (locale === 'en-US' ? 'Standby Ready' : '就绪待机') }}</span>
             </div>
             <div class="text-[11px] ui-num truncate mt-0.5" style="color: var(--text-muted);">
-              {{ fidelity ? `丢包: ${fidelity.drop_rate_percentage.toFixed(4)}%` : '等待抓包会话统计' }}
+              {{ fidelity ? (locale === 'en-US' ? `Drop: ${fidelity.drop_rate_percentage.toFixed(4)}%` : `丢包: ${fidelity.drop_rate_percentage.toFixed(4)}%`) : (locale === 'en-US' ? 'Awaiting session stats' : '等待抓包会话统计') }}
             </div>
           </div>
           <span
             class="text-[11px] px-2 py-0.5 rounded-full border shrink-0 font-medium"
             :class="!fidelity || fidelity.packets_received === 0 ? 'ui-pill' : (fidelity.is_lossless_certified ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/12 border-emerald-500/25' : 'text-amber-700 dark:text-amber-300 bg-amber-500/12 border-amber-500/25')"
           >
-            {{ fidelity && fidelity.packets_received > 0 ? (fidelity.is_lossless_certified ? '零丢包' : '存在丢包') : '待捕获' }}
+            {{ fidelity && fidelity.packets_received > 0 ? (fidelity.is_lossless_certified ? (locale === 'en-US' ? 'Zero Loss' : '零丢包') : (locale === 'en-US' ? 'Drop Occurred' : '存在丢包')) : (locale === 'en-US' ? 'Pending' : '待捕获') }}
           </span>
         </div>
 
         <div class="ui-sub-card p-3 flex items-center justify-between gap-2">
           <div>
-            <div class="text-[11px] font-medium" style="color: var(--text-muted);">保管链存证节点</div>
+            <div class="text-[11px] font-medium" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Chain Custody Nodes' : '保管链存证节点' }}</div>
             <div class="text-lg ui-num font-bold mt-0.5 leading-tight" style="color: var(--text-primary);">
-              {{ chainOfCustody.length }} <span class="text-[11px] font-normal" style="color: var(--text-muted);">节点</span>
+              {{ chainOfCustody.length }} <span class="text-[11px] font-normal" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'nodes' : '节点' }}</span>
             </div>
           </div>
           <div class="w-8 h-8 rounded-xl bg-[var(--surface-glass-pill)] text-[var(--text-secondary)] flex items-center justify-center shrink-0">
@@ -127,12 +127,12 @@
       <div class="lg:col-span-7 ui-content-card p-3 flex flex-col overflow-hidden min-h-0">
         <div class="flex items-center justify-between mb-2 shrink-0">
           <div class="flex items-center gap-2">
-            <h3 class="text-[13px] font-semibold" style="color: var(--text-primary);">司法证据档案柜 (Evidence Vault)</h3>
-            <span class="text-[11px]" style="color: var(--text-muted);">实时文件防篡改与 WORM 状态</span>
+            <h3 class="text-[13px] font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Forensics Evidence Vault' : '司法证据档案柜 (Evidence Vault)' }}</h3>
+            <span class="text-[11px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Real-time WORM & Anti-Tamper Status' : '实时文件防篡改与 WORM 状态' }}</span>
           </div>
           <button @click="loadForensicVault" class="ui-btn-secondary px-2.5 py-1 text-[11px]">
             <AppIcon name="refresh" :size="12" />
-            <span>刷新状态</span>
+            <span>{{ locale === 'en-US' ? 'Refresh Status' : '刷新状态' }}</span>
           </button>
         </div>
 
@@ -140,12 +140,12 @@
           <table class="w-full text-left border-collapse text-xs">
             <thead class="ui-table-head sticky top-0 select-none">
               <tr>
-                <th class="p-2.5">证据文件名</th>
-                <th class="p-2.5">大小</th>
-                <th class="p-2.5">SHA-256 / SM3 摘要</th>
-                <th class="p-2.5 text-center">状态</th>
+                <th class="p-2.5">{{ locale === 'en-US' ? 'Evidence File' : '证据文件名' }}</th>
+                <th class="p-2.5">{{ locale === 'en-US' ? 'Size' : '大小' }}</th>
+                <th class="p-2.5">{{ locale === 'en-US' ? 'SHA-256 / SM3 Digest' : 'SHA-256 / SM3 摘要' }}</th>
+                <th class="p-2.5 text-center">{{ locale === 'en-US' ? 'Status' : '状态' }}</th>
                 <th class="p-2.5 text-center">WORM</th>
-                <th class="p-2.5 text-right">操作</th>
+                <th class="p-2.5 text-right">{{ locale === 'en-US' ? 'Actions' : '操作' }}</th>
               </tr>
             </thead>
             <tbody class="divide-y" style="border-color: var(--border-subtle);">
@@ -185,9 +185,9 @@
                 <td class="p-2.5 text-center">
                   <span v-if="item.is_worm_locked" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] bg-purple-500/15 text-purple-700 dark:text-purple-300 font-semibold">
                     <AppIcon name="lock" :size="11" />
-                    <span>只读锁定</span>
+                    <span>{{ locale === 'en-US' ? 'Read-only Locked' : '只读锁定' }}</span>
                   </span>
-                  <span v-else class="text-[11px]" style="color: var(--text-muted);">可读写</span>
+                  <span v-else class="text-[11px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Read-Write' : '可读写' }}</span>
                 </td>
 
                 <td class="p-2.5 text-right whitespace-nowrap">
@@ -197,7 +197,7 @@
                       @click="setWormLock(item.file_name)"
                       class="px-2 py-0.5 rounded bg-purple-500/12 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 text-[11px] cursor-pointer border border-purple-500/25"
                     >
-                      加锁
+                      {{ locale === 'en-US' ? 'Lock' : '加锁' }}
                     </button>
                     <button
                       @click="stampTsa(item.file_name)"
@@ -208,9 +208,9 @@
                     <button
                       @click="addEvidenceToDiffQueue(item)"
                       class="px-2 py-0.5 rounded bg-emerald-500/12 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold cursor-pointer border border-emerald-500/25"
-                      title="将证据文件双哈希指纹及尺寸纳入多组比对队列"
+                      :title="locale === 'en-US' ? 'Queue dual-hash digest into diff workbench' : '将证据文件双哈希指纹及尺寸纳入多组比对队列'"
                     >
-                      + 入队
+                      {{ locale === 'en-US' ? '+ Queue' : '+ 入队' }}
                     </button>
                   </div>
                 </td>
@@ -218,7 +218,7 @@
 
               <tr v-if="evidenceVault.length === 0">
                 <td colspan="6" class="p-8 text-center text-xs" style="color: var(--text-muted);">
-                  暂无证据文件登记，点击上方【双哈希封存】进行初始固化
+                  {{ locale === 'en-US' ? 'No evidence files registered. Click [Dual-Hash Seal] above to initialize.' : '暂无证据文件登记，点击上方【双哈希封存】进行初始固化' }}
                 </td>
               </tr>
             </tbody>
@@ -228,9 +228,9 @@
         <div class="ui-sub-card mt-2.5 p-2.5 text-[11px] leading-relaxed" style="color: var(--text-secondary);">
           <div class="flex items-center gap-1.5 font-semibold mb-1" style="color: var(--text-primary);">
             <span class="w-1.5 h-1.5 rounded-full" :class="fidelity?.is_lossless_certified ? 'bg-emerald-500' : 'bg-slate-400'"></span>
-            <span>硬件层丢包审计证明 (Npcap / ISB 统计规范)</span>
+            <span>{{ locale === 'en-US' ? 'Hardware Loss Audit Certificate (Npcap / ISB)' : '硬件层丢包审计证明 (Npcap / ISB 统计规范)' }}</span>
           </div>
-          <p>{{ fidelity?.statement || '尚未获取实时捕获统计或处于只读浏览模式，启动底层网卡捕获或执行验真后将在此显示真实物理丢包审计结论。' }}</p>
+          <p>{{ fidelity?.statement || (locale === 'en-US' ? 'No live capture stats acquired. Start capture or verify chain to display physical loss audit statement.' : '尚未获取实时捕获统计或处于只读浏览模式，启动底层网卡捕获或执行验真后将在此显示真实物理丢包审计结论。') }}</p>
         </div>
       </div>
 
@@ -238,10 +238,10 @@
       <div class="lg:col-span-5 ui-content-card p-3 flex flex-col overflow-hidden min-h-0">
         <div class="flex items-center justify-between mb-2 shrink-0">
           <div class="flex items-center gap-2">
-            <h3 class="text-[13px] font-semibold" style="color: var(--text-primary);">司法保管链流水 (Chain of Custody)</h3>
-            <span class="text-[11px]" style="color: var(--text-muted);">不可逆链式防篡改</span>
+            <h3 class="text-[13px] font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Chain of Custody Timeline' : '司法保管链流水 (Chain of Custody)' }}</h3>
+            <span class="text-[11px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Irreversible Hash Chain' : '不可逆链式防篡改' }}</span>
           </div>
-          <span class="text-[11px] ui-num" style="color: var(--text-muted);">共 {{ chainOfCustody.length }} 条记录</span>
+          <span class="text-[11px] ui-num" style="color: var(--text-muted);">{{ locale === 'en-US' ? `${chainOfCustody.length} records total` : `共 ${chainOfCustody.length} 条记录` }}</span>
         </div>
 
         <div class="flex-1 overflow-y-auto custom-scrollbar border rounded-xl p-2.5 flex flex-col gap-2" style="border-color: var(--border-subtle); background: var(--surface-content-alt);">
@@ -251,30 +251,30 @@
               <div class="flex items-center gap-1.5">
                 <span class="text-[11px]">{{ rec.timestamp }}</span>
                 <button @click="addCustodyToDiffQueue(rec)" class="px-1.5 py-0.5 rounded bg-emerald-500/12 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-[11px] font-semibold cursor-pointer">
-                  + 入队
+                  {{ locale === 'en-US' ? '+ Queue' : '+ 入队' }}
                 </button>
               </div>
             </div>
 
             <div class="text-[11px] mt-0.5" style="color: var(--text-secondary);">
-              <span style="color: var(--text-muted);">目标:</span> <span class="font-semibold font-mono" style="color: var(--text-primary);">{{ rec.evidence_target }}</span>
+              <span style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Target:' : '目标:' }}</span> <span class="font-semibold font-mono" style="color: var(--text-primary);">{{ rec.evidence_target }}</span>
               <span class="mx-1.5 opacity-40">|</span>
-              <span style="color: var(--text-muted);">经手:</span> {{ rec.operator_id }} / {{ rec.reviewer_id }}
+              <span style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Custodians:' : '经手:' }}</span> {{ rec.operator_id }} / {{ rec.reviewer_id }}
             </div>
 
             <div class="text-[11px] p-2 rounded-lg border mt-0.5 font-mono" style="background: var(--surface-content); border-color: var(--border-subtle); color: var(--text-secondary);">
               <div>{{ rec.reason_or_memo }}</div>
               <div class="truncate mt-0.5" style="color: var(--text-muted);">
-                上一哈希: {{ rec.prev_record_hash }}
+                {{ locale === 'en-US' ? 'Prev Hash: ' : '上一哈希: ' }}{{ rec.prev_record_hash }}
               </div>
               <div class="text-indigo-600 dark:text-indigo-300 truncate">
-                当前哈希: {{ rec.current_record_hash }}
+                {{ locale === 'en-US' ? 'Current Hash: ' : '当前哈希: ' }}{{ rec.current_record_hash }}
               </div>
             </div>
           </div>
 
           <div v-if="chainOfCustody.length === 0" class="p-8 text-center text-xs" style="color: var(--text-muted);">
-            尚未产生司法保管链记录
+            {{ locale === 'en-US' ? 'No chain of custody records generated yet' : '尚未产生司法保管链记录' }}
           </div>
         </div>
       </div>
@@ -285,9 +285,9 @@
       <div class="ui-modal-surface rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden select-text">
         <div class="p-3.5 border-b flex items-center justify-between" style="border-color: var(--border-subtle);">
           <div class="flex items-center gap-2 flex-wrap">
-            <h3 class="text-sm font-semibold" style="color: var(--text-primary);">司法鉴定检验报告 (GB/T 29360-2012)</h3>
+            <h3 class="text-sm font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Forensic Inspection Report (GB/T 29360-2012)' : '司法鉴定检验报告 (GB/T 29360-2012)' }}</h3>
             <span class="px-2 py-0.5 rounded text-[11px] bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-semibold border border-indigo-500/25">
-              法庭抗辩级存证
+              {{ locale === 'en-US' ? 'Court-Admissible Evidence' : '法庭抗辩级存证' }}
             </span>
           </div>
           <button @click="showReportModal = false" class="p-1.5 rounded-lg hover:bg-[var(--surface-hover)] cursor-pointer" style="color: var(--text-secondary);">
@@ -298,21 +298,21 @@
         <div class="p-4 flex-1 overflow-y-auto custom-scrollbar text-xs space-y-4">
           <div class="ui-sub-card grid grid-cols-1 sm:grid-cols-3 gap-2.5 p-3">
             <div>
-              <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">主取证人员:</label>
+              <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Primary Examiner:' : '主取证人员:' }}</label>
               <input v-model="reportInvestigator" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono" />
             </div>
             <div>
-              <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">复核人员:</label>
+              <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Reviewing Examiner:' : '复核人员:' }}</label>
               <input v-model="reportReviewer" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono" />
             </div>
             <div>
-              <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">案事件编号:</label>
+              <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Case Number:' : '案事件编号:' }}</label>
               <input v-model="reportCaseNumber" class="ui-input w-full px-2.5 py-1.5 text-xs font-mono" />
             </div>
           </div>
 
           <button @click="generateReport" :disabled="loading" class="ui-btn-primary w-full py-2 text-xs justify-center">
-            重新生成报告文本
+            {{ locale === 'en-US' ? 'Regenerate Report' : '重新生成报告文本' }}
           </button>
 
           <div
@@ -326,13 +326,13 @@
 
         <div class="p-3 border-t flex items-center justify-between flex-wrap gap-2" style="border-color: var(--border-subtle);">
           <span class="text-[11px]" style="color: var(--text-muted);">
-            遵循 GB/T 29360-2012 电子数据取证检验通用技术规范
+            {{ locale === 'en-US' ? 'Compliant with GB/T 29360-2012 Electronic Data Forensics Standard' : '遵循 GB/T 29360-2012 电子数据取证检验通用技术规范' }}
           </span>
           <div class="flex items-center gap-2">
             <button v-if="generatedReport" @click="copyReport" class="ui-btn-secondary px-3 py-1.5 text-xs">
-              复制报告全文
+              {{ locale === 'en-US' ? 'Copy Full Report' : '复制报告全文' }}
             </button>
-            <button @click="showReportModal = false" class="ui-btn-primary px-4 py-1.5 text-xs">完成</button>
+            <button @click="showReportModal = false" class="ui-btn-primary px-4 py-1.5 text-xs">{{ locale === 'en-US' ? 'Done' : '完成' }}</button>
           </div>
         </div>
       </div>
@@ -342,6 +342,9 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from '../i18n';
+const { locale, t } = useI18n();
+void t;
 import { notifySuccess, notifyError } from '../composables/useNotification';
 import { ref, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
@@ -354,7 +357,7 @@ function addEvidenceToDiffQueue(item: FileIntegrityResult) {
   const digestText = `FILE=${item.file_name};STATUS=${item.status};SIZE=${item.current_size};SHA256=${item.current_hash};SM3=${item.current_sm3}`;
   diffBus.addToQueue({
     id: `FOR_FILE_${item.file_name}`,
-    label: `[证据] ${item.file_name} (${item.status})`,
+    label: locale.value === 'en-US' ? `[Evidence] ${item.file_name} (${item.status})` : `[证据] ${item.file_name} (${item.status})`,
     protocol: 'FORENSICS-VAULT',
     src: item.file_name,
     dst: item.is_worm_locked ? 'WORM-LOCKED' : 'RW',
@@ -372,14 +375,14 @@ function addEvidenceToDiffQueue(item: FileIntegrityResult) {
       sealed_size: String(item.sealed_size),
       status: item.status
     }
-  }, `证据 ${item.file_name}`, false);
+  }, locale.value === 'en-US' ? `Evidence ${item.file_name}` : `证据 ${item.file_name}`, false);
 }
 
 function addCustodyToDiffQueue(rec: ChainOfCustodyRecord) {
   const custodyText = `#${rec.index}|${rec.action}|TARGET=${rec.evidence_target}|PREV=${rec.prev_record_hash}|CURR=${rec.current_record_hash}`;
   diffBus.addToQueue({
     id: `FOR_COC_${rec.index}`,
-    label: `[保管链 #${rec.index}] ${rec.action}`,
+    label: locale.value === 'en-US' ? `[Custody #${rec.index}] ${rec.action}` : `[保管链 #${rec.index}] ${rec.action}`,
     timestamp: rec.timestamp,
     protocol: 'CHAIN-OF-CUSTODY',
     src: rec.operator_id,
@@ -398,7 +401,7 @@ function addCustodyToDiffQueue(rec: ChainOfCustodyRecord) {
       prev_record_hash: rec.prev_record_hash,
       current_record_hash: rec.current_record_hash
     }
-  }, `保管链 #${rec.index}`, false);
+  }, locale.value === 'en-US' ? `Custody #${rec.index}` : `保管链 #${rec.index}`, false);
 }
 
 interface FileIntegrityResult {
@@ -517,11 +520,11 @@ async function triggerManualSeal() {
   loading.value = true;
   try {
     const res = await invoke<string>('manual_seal_cmd');
-    notifySuccess('数字证据链封存成功', res);
+    notifySuccess(locale.value === 'en-US' ? 'Evidence Chain Sealed' : '数字证据链封存成功', res);
     await verifyEvidence();
     await loadChainOfCustody();
   } catch (e) {
-    notifyError('数字证据封存受阻', e);
+    notifyError(locale.value === 'en-US' ? 'Failed to Seal Evidence' : '数字证据封存受阻', e);
   } finally {
     loading.value = false;
   }
@@ -532,10 +535,10 @@ async function verifyEvidence() {
   try {
     verificationReport.value = await invoke<EvidenceVerificationReport>('verify_evidence_chain_cmd');
     evidenceVault.value = verificationReport.value.items;
-    notifySuccess('证据链验真通过', `共校验 ${verificationReport.value.items.length} 份数字物证，哈希链自洽无篡改`);
+    notifySuccess(locale.value === 'en-US' ? 'Verification Passed' : '证据链验真通过', locale.value === 'en-US' ? `Verified ${verificationReport.value.items.length} evidence files with consistent hash chain` : `共校验 ${verificationReport.value.items.length} 份数字物证，哈希链自洽无篡改`);
     await loadChainOfCustody();
   } catch (e) {
-    notifyError('证据链完整性验真受阻', e);
+    notifyError(locale.value === 'en-US' ? 'Verification Failed' : '证据链完整性验真受阻', e);
   } finally {
     loading.value = false;
   }
@@ -545,11 +548,11 @@ async function exportPcapng() {
   loading.value = true;
   try {
     const res = await invoke<string>('export_pcapng_cmd', { ifName: 'All Active Interfaces' });
-    notifySuccess('取证 PCAPNG 导出完成', res);
+    notifySuccess(locale.value === 'en-US' ? 'PCAPNG Exported' : '取证 PCAPNG 导出完成', res);
     await loadForensicVault();
     await loadChainOfCustody();
   } catch (e) {
-    notifyError('导出 PCAPNG 失败', e);
+    notifyError(locale.value === 'en-US' ? 'Failed to Export PCAPNG' : '导出 PCAPNG 失败', e);
   } finally {
     loading.value = false;
   }
@@ -558,21 +561,21 @@ async function exportPcapng() {
 async function setWormLock(fileName: string) {
   try {
     await invoke<boolean>('set_worm_lock_cmd', { fileName });
-    notifySuccess('WORM 防篡改锁定生效', `已对证据文件 ${fileName} 施加底层只读防篡改属性`);
+    notifySuccess(locale.value === 'en-US' ? 'WORM Immutable Lock Active' : 'WORM 防篡改锁定生效', locale.value === 'en-US' ? `Applied read-only immutable attribute to ${fileName}` : `已对证据文件 ${fileName} 施加底层只读防篡改属性`);
     await loadForensicVault();
     await loadChainOfCustody();
   } catch (e) {
-    notifyError('WORM 锁定受阻', e);
+    notifyError(locale.value === 'en-US' ? 'Failed to Apply WORM Lock' : 'WORM 锁定受阻', e);
   }
 }
 
 async function stampTsa(fileName: string) {
   try {
     const token = await invoke<any>('generate_tsa_timestamp_cmd', { fileName });
-    notifySuccess('本地双哈希时间自证封装成功', `状态: ${token.status} | 序列号: ${token.serial_number} | 打标时间: ${token.stamped_at}`);
+    notifySuccess(locale.value === 'en-US' ? 'Dual-Hash Timestamp Sealed' : '本地双哈希时间自证封装成功', locale.value === 'en-US' ? `Status: ${token.status} | Serial: ${token.serial_number} | Time: ${token.stamped_at}` : `状态: ${token.status} | 序列号: ${token.serial_number} | 打标时间: ${token.stamped_at}`);
     await loadChainOfCustody();
   } catch (e) {
-    notifyError('本地时间戳封装受阻', e);
+    notifyError(locale.value === 'en-US' ? 'Failed to Seal Timestamp' : '本地时间戳封装受阻', e);
   }
 }
 
@@ -590,7 +593,7 @@ async function generateReport() {
       caseNumber: reportCaseNumber.value,
     });
   } catch (e) {
-    notifyError('生成司法鉴定报告受阻', e);
+    notifyError(locale.value === 'en-US' ? 'Failed to Generate Report' : '生成司法鉴定报告受阻', e);
   } finally {
     loading.value = false;
   }
@@ -599,7 +602,7 @@ async function generateReport() {
 function copyReport() {
   if (generatedReport.value) {
     navigator.clipboard.writeText(generatedReport.value.markdown_report);
-    notifySuccess('报告已复制', '司法取证鉴定报告 Markdown 全文已成功复制到剪贴板');
+    notifySuccess(locale.value === 'en-US' ? 'Report Copied' : '报告已复制', locale.value === 'en-US' ? 'Forensic report markdown copied to clipboard' : '司法取证鉴定报告 Markdown 全文已成功复制到剪贴板');
   }
 }
 

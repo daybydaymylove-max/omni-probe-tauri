@@ -23,19 +23,19 @@
       <div v-if="subMode === 'text'" class="flex items-center gap-3 flex-wrap text-[11px]" style="color: var(--text-secondary)">
         <label class="flex items-center gap-1.5 cursor-pointer select-none">
           <input type="checkbox" v-model="options.ignore_whitespace" class="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer" />
-          <span>忽略空白符</span>
+          <span>{{ locale === 'en-US' ? 'Ignore Whitespace' : '忽略空白符' }}</span>
         </label>
         <label class="flex items-center gap-1.5 cursor-pointer select-none">
           <input type="checkbox" v-model="options.ignore_case" class="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer" />
-          <span>忽略大小写</span>
+          <span>{{ locale === 'en-US' ? 'Ignore Case' : '忽略大小写' }}</span>
         </label>
         <label class="flex items-center gap-1.5 cursor-pointer select-none">
           <input type="checkbox" v-model="options.ignore_line_endings" class="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer" />
-          <span>忽略 CRLF/LF</span>
+          <span>{{ locale === 'en-US' ? 'Ignore Line Endings' : '忽略 CRLF/LF' }}</span>
         </label>
         <label class="flex items-center gap-1.5 cursor-pointer select-none">
           <input type="checkbox" v-model="onlyDiffHunks" class="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer" />
-          <span>仅看差异块</span>
+          <span>{{ locale === 'en-US' ? 'Diff Hunks Only' : '仅看差异块' }}</span>
         </label>
       </div>
 
@@ -43,19 +43,19 @@
       <div v-else-if="subMode === 'directory'" class="flex items-center gap-3 flex-wrap text-[11px]" style="color: var(--text-secondary)">
         <label class="flex items-center gap-1.5 cursor-pointer select-none">
           <input type="checkbox" v-model="verifyEqualSizeBytes" class="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer" />
-          <span>同字节大小文件逐字节校验 (≤50MB)</span>
+          <span>{{ locale === 'en-US' ? 'Byte-by-byte check for same size (≤50MB)' : '同字节大小文件逐字节校验 (≤50MB)' }}</span>
         </label>
         <label class="flex items-center gap-1.5 cursor-pointer select-none">
           <input type="checkbox" v-model="onlyDirDiffs" class="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer" />
-          <span>仅显示差异条目</span>
+          <span>{{ locale === 'en-US' ? 'Show Differences Only' : '仅显示差异条目' }}</span>
         </label>
       </div>
 
       <!-- 二进制滚动锚点模式切换 -->
       <div v-else class="flex items-center gap-3 flex-wrap text-[11px]" style="color: var(--text-secondary)">
-        <label class="flex items-center gap-1.5 cursor-pointer select-none" title="Gear-Hash 16KB 变长内容切分 + Myers 块锚点再对齐，有效消除前文插删引起的全场偏移雪崩">
+        <label class="flex items-center gap-1.5 cursor-pointer select-none" :title="locale === 'en-US' ? 'Gear-Hash 16KB content-defined chunking + Myers anchor realignment' : 'Gear-Hash 16KB 变长内容切分 + Myers 块锚点再对齐，有效消除前文插删引起的全场偏移雪崩'">
           <input type="checkbox" v-model="useFastCdcMode" class="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer" />
-          <span>启用 Gear-Hash FastCDC 滚动锚点再对齐 (抗字节偏移错位)</span>
+          <span>{{ locale === 'en-US' ? 'Enable Gear-Hash FastCDC Rolling Re-alignment' : '启用 Gear-Hash FastCDC 滚动锚点再对齐 (抗字节偏移错位)' }}</span>
         </label>
       </div>
     </div>
@@ -64,28 +64,28 @@
     <div class="ui-sub-card p-3 grid grid-cols-1 lg:grid-cols-12 gap-2.5 items-center shrink-0">
       <div class="lg:col-span-5 flex flex-col gap-1">
         <label class="text-[11px] font-semibold" style="color: var(--text-muted)">
-          {{ subMode === 'directory' ? '左侧基准目录路径 (支持文件拖入或浏览)' : '左侧基准文件磁盘路径 (支持文件拖入或浏览)' }}
+          {{ subMode === 'directory' ? (locale === 'en-US' ? 'Left Baseline Directory (Drag & Drop or Browse)' : '左侧基准目录路径 (支持文件拖入或浏览)') : (locale === 'en-US' ? 'Left Baseline File (Drag & Drop or Browse)' : '左侧基准文件磁盘路径 (支持文件拖入或浏览)') }}
         </label>
         <div class="flex items-center gap-1.5">
           <input
             v-model="leftPath"
             type="text"
-            :placeholder="subMode === 'directory' ? '点击右侧浏览按钮或直接拖拽文件夹进窗口...' : '点击右侧浏览按钮或直接拖拽文件进窗口...'"
+            :placeholder="locale === 'en-US' ? (subMode === 'directory' ? 'Click browse on right or drag folder here...' : 'Click browse on right or drag file here...') : (subMode === 'directory' ? '点击右侧浏览按钮或直接拖拽文件夹进窗口...' : '点击右侧浏览按钮或直接拖拽文件进窗口...')"
             class="ui-input px-2.5 py-1.5 text-xs ui-num flex-1 min-w-0"
           />
           <button
             @click="browsePath('left')"
             class="ui-btn-secondary px-2.5 py-1.5 text-[11px] shrink-0 cursor-pointer"
-            title="打开操作系统原生文件/目录选择框"
+            :title="locale === 'en-US' ? 'Open native file/folder picker' : '打开操作系统原生文件/目录选择框'"
           >
-            浏览...
+            {{ locale === 'en-US' ? 'Browse...' : '浏览...' }}
           </button>
         </div>
       </div>
 
       <div class="lg:col-span-5 flex flex-col gap-1">
         <label class="text-[11px] font-semibold" style="color: var(--text-muted)">
-          {{ subMode === 'directory' ? '右侧比对目录路径 (支持文件拖入或浏览)' : '右侧比对文件磁盘路径 (支持文件拖入或浏览)' }}
+          {{ subMode === 'directory' ? (locale === 'en-US' ? 'Right Comparison Directory (Drag & Drop or Browse)' : '右侧比对目录路径 (支持文件拖入或浏览)') : (locale === 'en-US' ? 'Right Comparison File (Drag & Drop or Browse)' : '右侧比对文件磁盘路径 (支持文件拖入或浏览)') }}
         </label>
         <div class="flex items-center gap-1.5">
           <input
@@ -108,7 +108,7 @@
         <button
           @click="swapLeftRightPaths"
           class="ui-btn-secondary px-2.5 py-1.5 text-xs shrink-0"
-          title="互换左右路径"
+          :title="locale === 'en-US' ? 'Swap Left & Right Paths' : '互换左右路径'"
         >
           ⇄
         </button>
@@ -117,7 +117,7 @@
           :disabled="isLoading || !leftPath.trim() || !rightPath.trim()"
           class="ui-btn-primary px-3 py-1.5 text-xs font-bold flex-1 lg:flex-initial shrink-0 disabled:opacity-45"
         >
-          {{ isLoading ? '流式计算中...' : '执行比对' }}
+          {{ isLoading ? (locale === 'en-US' ? 'Comparing...' : '流式计算中...') : (locale === 'en-US' ? 'Compare' : '执行比对') }}
         </button>
       </div>
     </div>
@@ -138,18 +138,18 @@
       <!-- 指标与合并存盘操作条 -->
       <div v-if="textReport" class="ui-sub-card px-3 py-2 flex flex-wrap items-center justify-between gap-2.5 shrink-0">
         <div class="flex items-center gap-3 flex-wrap text-[11px] ui-num" style="color: var(--text-secondary)">
-          <span>左: <strong>{{ textReport.left_total_lines.toLocaleString() }}</strong> 行 ({{ formatBytes(textReport.left_size_bytes) }})</span>
-          <span>右: <strong>{{ textReport.right_total_lines.toLocaleString() }}</strong> 行 ({{ formatBytes(textReport.right_size_bytes) }})</span>
+          <span>{{ locale === 'en-US' ? 'Left:' : '左:' }} <strong>{{ textReport.left_total_lines.toLocaleString() }}</strong> {{ locale === 'en-US' ? 'lines' : '行' }} ({{ formatBytes(textReport.left_size_bytes) }})</span>
+          <span>{{ locale === 'en-US' ? 'Right:' : '右:' }} <strong>{{ textReport.right_total_lines.toLocaleString() }}</strong> {{ locale === 'en-US' ? 'lines' : '行' }} ({{ formatBytes(textReport.right_size_bytes) }})</span>
           <span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-semibold">
-            相似度 {{ textReport.similarity_percent.toFixed(1) }}%
+            {{ locale === 'en-US' ? 'Similarity' : '相似度' }} {{ textReport.similarity_percent.toFixed(1) }}%
           </span>
           <span class="text-rose-700 dark:text-rose-300">
-            差异块: <strong>{{ textReport.diff_hunks_count }}</strong> (+{{ textReport.inserted_lines }} / -{{ textReport.deleted_lines }})
+            {{ locale === 'en-US' ? 'Hunks:' : '差异块:' }} <strong>{{ textReport.diff_hunks_count }}</strong> (+{{ textReport.inserted_lines }} / -{{ textReport.deleted_lines }})
           </span>
-          <span>耗时 {{ textReport.elapsed_ms }} ms</span>
+          <span>{{ locale === 'en-US' ? 'Elapsed' : '耗时' }} {{ textReport.elapsed_ms }} ms</span>
           <span v-if="textReport.is_binary_suspected" class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-800 dark:text-amber-200 font-semibold">
-            检测到大量 NULL 字节，建议切换至「大二进制分块页对比」
-            <button @click="switchToBinaryFromWarning" class="underline ml-1 cursor-pointer">立即切换</button>
+            {{ locale === 'en-US' ? 'Large amount of NULL bytes detected; recommend switching to Binary Chunk Mode' : '检测到大量 NULL 字节，建议切换至「大二进制分块页对比」' }}
+            <button @click="switchToBinaryFromWarning" class="underline ml-1 cursor-pointer">{{ locale === 'en-US' ? 'Switch Now' : '立即切换' }}</button>
           </span>
         </div>
 
@@ -158,7 +158,7 @@
           <input
             v-model="mergeOutputPath"
             type="text"
-            placeholder="Merge 保存目标文件路径..."
+            :placeholder="locale === 'en-US' ? 'Merge output destination path...' : 'Merge 保存目标文件路径...'"
             class="ui-input px-2.5 py-1 text-[11px] w-56 ui-num"
           />
           <label class="flex items-center gap-1 text-[11px] cursor-pointer" style="color: var(--text-secondary)" title="覆盖已有文件时自动创建 .omni_bak 备份">
@@ -168,38 +168,38 @@
           <button
             @click="applyBulkMergeChoice('KeepLeft')"
             class="ui-btn-secondary px-2 py-1 text-[11px]"
-            title="全部差异块默认采用左侧"
+            :title="locale === 'en-US' ? 'Default all hunks to keep left side' : '全部差异块默认采用左侧'"
           >
-            全采左
+            {{ locale === 'en-US' ? 'Keep Left All' : '全采左' }}
           </button>
           <button
             @click="applyBulkMergeChoice('KeepRight')"
             class="ui-btn-secondary px-2 py-1 text-[11px]"
-            title="全部差异块默认采用右侧"
+            :title="locale === 'en-US' ? 'Default all hunks to keep right side' : '全部差异块默认采用右侧'"
           >
-            全采右
+            {{ locale === 'en-US' ? 'Keep Right All' : '全采右' }}
           </button>
           <button
             @click="exportPatch"
             class="ui-btn-secondary px-2.5 py-1 text-[11px]"
-            title="导出 GNU Unified Diff (.patch) 文件"
+            :title="locale === 'en-US' ? 'Export GNU Unified Diff (.patch) file' : '导出 GNU Unified Diff (.patch) 文件'"
           >
-            导出 .patch
+            {{ locale === 'en-US' ? 'Export .patch' : '导出 .patch' }}
           </button>
           <button
             @click="saveMergedFile"
             :disabled="isSavingMerge || !mergeOutputPath.trim()"
             class="ui-btn-primary px-3 py-1 text-[11px] font-bold disabled:opacity-45"
           >
-            {{ isSavingMerge ? '原子写入中...' : '保存 Merge 结果' }}
+            {{ isSavingMerge ? (locale === 'en-US' ? 'Saving...' : '原子写入中...') : (locale === 'en-US' ? 'Save Merge' : '保存 Merge 结果') }}
           </button>
           <button
             v-if="lastMergedSavedPath"
             @click="revealInDesktopExplorer(lastMergedSavedPath)"
             class="ui-btn-secondary px-2 py-1 text-[11px] cursor-pointer"
-            title="在操作系统文件管理器中定位显示产物"
+            :title="locale === 'en-US' ? 'Reveal file in native system file manager' : '在操作系统文件管理器中定位显示产物'"
           >
-            打开所在目录
+            {{ locale === 'en-US' ? 'Open Directory' : '打开所在目录' }}
           </button>
         </div>
       </div>
@@ -209,8 +209,8 @@
         <EmptyState
           v-if="!textReport"
           icon="document"
-          title="Beyond Compare 级流式文本差异与双向合并工作台"
-          description="输入左右两份磁盘文件路径（支持十万行级大日志或源代码）后点击【执行比对】，可逐差异块选择采纳左/右或双侧合并并原子写盘。"
+          :title="locale === 'en-US' ? 'Beyond Compare grade text diff & bidirectional merge workbench' : 'Beyond Compare 级流式文本差异与双向合并工作台'"
+          :description="locale === 'en-US' ? 'Enter left and right disk file paths then click [Execute Diff] to inspect differences and perform atomic write-back.' : '输入左右两份磁盘文件路径（支持十万行级大日志或源代码）后点击【执行比对】，可逐差异块选择采纳左/右或双侧合并并原子写盘。'"
         />
 
         <template v-else>
@@ -219,14 +219,14 @@
             class="py-12 text-center text-xs"
             style="color: var(--text-muted)"
           >
-            两份文本文件在当前比较规则下 100% 一致，无任何差异区块。
+            {{ locale === 'en-US' ? 'Both text files are 100% identical under current rules. No differences found.' : '两份文本文件在当前比较规则下 100% 一致，无任何差异区块。' }}
           </div>
 
           <div
             v-if="textReport.truncated_preview"
             class="px-3 py-1.5 rounded-xl border border-amber-500/35 bg-amber-500/10 text-amber-800 dark:text-amber-200 text-[11px]"
           >
-            注意：差异块总数超出 400 块实时预览窗口；未单独修改的后段区块将在保存 Merge 时统一采用当前全量策略（{{ defaultMergeChoice === 'KeepLeft' ? '全采左' : '全采右' }}）。
+            注意：差异块总数超出 400 块实时预览窗口；未单独修改的后段区块将在保存 Merge 时统一采用当前全量策略（{{ defaultMergeChoice === 'KeepLeft' ? (locale === 'en-US' ? 'Keep Left' : '全采左') : (locale === 'en-US' ? 'Keep Right' : '全采右') }}）。
           </div>
 
           <div
@@ -253,13 +253,13 @@
                   {{ hunkOpLabel(h.op) }}
                 </span>
                 <span style="color: var(--text-secondary)">
-                  Hunk #{{ h.hunk_id }} · 左 L{{ h.left_start_line }} ({{ h.left_line_count }}行) ↔ 右 L{{ h.right_start_line }} ({{ h.right_line_count }}行)
+                  Hunk #{{ h.hunk_id }} · {{ locale === 'en-US' ? 'Left' : '左' }} L{{ h.left_start_line }} ({{ h.left_line_count }} {{ locale === 'en-US' ? 'lines' : '行' }}) ↔ {{ locale === 'en-US' ? 'Right' : '右' }} L{{ h.right_start_line }} ({{ h.right_line_count }} {{ locale === 'en-US' ? 'lines' : '行' }})
                 </span>
               </div>
 
               <!-- 差异块交互式双向 Merge 策略按钮组 -->
               <div v-if="h.op !== 'equal'" class="flex items-center gap-1.5">
-                <span class="text-[11px]" style="color: var(--text-muted)">合并决策:</span>
+                <span class="text-[11px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Merge Decision:' : '合并决策:' }}</span>
                 <button
                   v-for="opt in mergeChoiceOptions"
                   :key="opt.id"
@@ -294,7 +294,7 @@
                   <span style="color: var(--text-primary)">{{ line }}</span>
                 </div>
                 <div v-if="h.left_lines.length === 0" class="italic opacity-60 px-2" style="color: var(--text-muted)">
-                  [此区域在左侧文件中无对应行]
+                  {{ locale === 'en-US' ? '[No corresponding line in left file]' : '[此区域在左侧文件中无对应行]' }}
                 </div>
               </div>
 
@@ -314,7 +314,7 @@
                   <span style="color: var(--text-primary)">{{ line }}</span>
                 </div>
                 <div v-if="h.right_lines.length === 0" class="italic opacity-60 px-2" style="color: var(--text-muted)">
-                  [此区域在右侧文件中已删除]
+                  {{ locale === 'en-US' ? '[Deleted in right file]' : '[此区域在右侧文件中已删除]' }}
                 </div>
               </div>
             </div>
@@ -329,44 +329,44 @@
     <template v-else-if="subMode === 'binary'">
       <div v-if="useFastCdcMode && cdcReport" class="ui-sub-card px-3 py-2 flex flex-wrap items-center justify-between gap-2 shrink-0 text-[11px] ui-num">
         <div class="flex items-center gap-3 flex-wrap" style="color: var(--text-secondary)">
-          <span>左: <strong>{{ formatBytes(cdcReport.left_size_bytes) }}</strong> ({{ cdcReport.left_chunks_count }} 变长块)</span>
-          <span>右: <strong>{{ formatBytes(cdcReport.right_size_bytes) }}</strong> ({{ cdcReport.right_chunks_count }} 变长块)</span>
-          <span class="text-emerald-700 dark:text-emerald-300 font-semibold">同址一致: {{ formatBytes(cdcReport.identical_bytes) }}</span>
-          <span class="text-sky-700 dark:text-sky-300 font-semibold">偏移再对齐: {{ formatBytes(cdcReport.shifted_aligned_bytes) }}</span>
-          <span class="text-rose-700 dark:text-rose-300 font-bold">修改区: -{{ formatBytes(cdcReport.modified_left_bytes) }} / +{{ formatBytes(cdcReport.modified_right_bytes) }}</span>
+          <span>{{ locale === 'en-US' ? 'Left:' : '左:' }} <strong>{{ formatBytes(cdcReport.left_size_bytes) }}</strong> ({{ cdcReport.left_chunks_count }} {{ locale === 'en-US' ? 'variable chunks' : '变长块' }})</span>
+          <span>{{ locale === 'en-US' ? 'Right:' : '右:' }} <strong>{{ formatBytes(cdcReport.right_size_bytes) }}</strong> ({{ cdcReport.right_chunks_count }} {{ locale === 'en-US' ? 'variable chunks' : '变长块' }})</span>
+          <span class="text-emerald-700 dark:text-emerald-300 font-semibold">{{ locale === 'en-US' ? 'In-place Identical:' : '同址一致:' }} {{ formatBytes(cdcReport.identical_bytes) }}</span>
+          <span class="text-sky-700 dark:text-sky-300 font-semibold">{{ locale === 'en-US' ? 'Shift-aligned:' : '偏移再对齐:' }} {{ formatBytes(cdcReport.shifted_aligned_bytes) }}</span>
+          <span class="text-rose-700 dark:text-rose-300 font-bold">{{ locale === 'en-US' ? 'Modified Zone:' : '修改区:' }} -{{ formatBytes(cdcReport.modified_left_bytes) }} / +{{ formatBytes(cdcReport.modified_right_bytes) }}</span>
           <span class="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-bold">
-            内容重对齐率 {{ cdcReport.similarity_percent.toFixed(2) }}%
+            {{ locale === 'en-US' ? 'Realignment Ratio' : '内容重对齐率' }} {{ cdcReport.similarity_percent.toFixed(2) }}%
           </span>
-          <span>耗时 {{ cdcReport.elapsed_ms }} ms</span>
+          <span>{{ locale === 'en-US' ? 'Elapsed' : '耗时' }} {{ cdcReport.elapsed_ms }} ms</span>
         </div>
-        <span style="color: var(--text-muted)">点击左侧区间自动按左右独立校准偏移 Seek 对照</span>
+        <span style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Click segment on left to seek aligned offsets independently' : '点击左侧区间自动按左右独立校准偏移 Seek 对照' }}</span>
       </div>
 
       <div v-else-if="!useFastCdcMode && binSummary" class="ui-sub-card px-3 py-2 flex flex-wrap items-center justify-between gap-2 shrink-0 text-[11px] ui-num">
         <div class="flex items-center gap-3 flex-wrap" style="color: var(--text-secondary)">
-          <span>左文件: <strong>{{ formatBytes(binSummary.left_size_bytes) }}</strong></span>
-          <span>右文件: <strong>{{ formatBytes(binSummary.right_size_bytes) }}</strong></span>
-          <span>总块数 ({{ formatBytes(binSummary.chunk_size_bytes) }}/块): <strong>{{ binSummary.total_chunks }}</strong></span>
-          <span class="text-emerald-700 dark:text-emerald-300">一致块: <strong>{{ binSummary.identical_chunks }}</strong></span>
+          <span>{{ locale === 'en-US' ? 'Left File:' : '左文件:' }} <strong>{{ formatBytes(binSummary.left_size_bytes) }}</strong></span>
+          <span>{{ locale === 'en-US' ? 'Right File:' : '右文件:' }} <strong>{{ formatBytes(binSummary.right_size_bytes) }}</strong></span>
+          <span>{{ locale === 'en-US' ? 'Total Chunks' : '总块数' }} ({{ formatBytes(binSummary.chunk_size_bytes) }}/{{ locale === 'en-US' ? 'chunk' : '块' }}): <strong>{{ binSummary.total_chunks }}</strong></span>
+          <span class="text-emerald-700 dark:text-emerald-300">{{ locale === 'en-US' ? 'Identical Chunks:' : '一致块:' }} <strong>{{ binSummary.identical_chunks }}</strong></span>
           <span class="text-rose-700 dark:text-rose-300 font-bold">差异块: <strong>{{ binSummary.different_chunks_count }}</strong></span>
-          <span>扫描耗时 {{ binSummary.elapsed_ms }} ms</span>
+          <span>{{ locale === 'en-US' ? 'Elapsed' : '扫描耗时' }} {{ binSummary.elapsed_ms }} ms</span>
         </div>
-        <span style="color: var(--text-muted)">点击左侧任意差异块即可从磁盘流式 Seek 检视逐字节偏差</span>
+        <span style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Click any diff chunk on left to stream seek byte deviations from disk' : '点击左侧任意差异块即可从磁盘流式 Seek 检视逐字节偏差' }}</span>
       </div>
 
       <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-3 overflow-hidden">
         <!-- 左: FastCDC 内容锚点区段表 或 定长 64KB 差异索引表 -->
         <div class="lg:col-span-4 ui-content-card p-3 flex flex-col overflow-hidden">
           <div class="text-xs font-bold mb-2 pb-1.5 border-b shrink-0" style="border-color: var(--border-subtle); color: var(--text-primary)">
-            {{ useFastCdcMode ? 'FastCDC 滚动锚点分段索引表' : '64 KB 定长差异块 CRC32 索引列表' }}
+            {{ useFastCdcMode ? (locale === 'en-US' ? 'FastCDC Rolling Anchor Segment Index' : 'FastCDC 滚动锚点分段索引表') : (locale === 'en-US' ? '64 KB Fixed Chunk CRC32 Index List' : '64 KB 定长差异块 CRC32 索引列表') }}
           </div>
           <div class="flex-1 overflow-auto space-y-1.5 custom-scrollbar">
             <template v-if="useFastCdcMode">
               <EmptyState
                 v-if="!cdcReport"
                 icon="database"
-                title="Gear-Hash FastCDC 滚动锚点流式比对"
-                description="选择两份大二进制固件、PCAP 或镜像文件点击【执行比对】，自动抗插删错位重新对齐后续块。"
+                :title="locale === 'en-US' ? 'Gear-Hash FastCDC Rolling Anchor Stream Diff' : 'Gear-Hash FastCDC 滚动锚点流式比对'"
+                :description="locale === 'en-US' ? 'Select two large binary firmwares, PCAP or disk images and click [Execute Diff] to auto-realign against insertions/deletions.' : '选择两份大二进制固件、PCAP 或镜像文件点击【执行比对】，自动抗插删错位重新对齐后续块。'"
               />
               <button
                 v-for="seg in (cdcReport?.segments ?? [])"
@@ -380,7 +380,7 @@
                 ]"
               >
                 <div class="flex items-center justify-between gap-1">
-                  <span>Seg #{{ seg.segment_index }} · {{ seg.chunk_count }} 块</span>
+                  <span>Seg #{{ seg.segment_index }} · {{ seg.chunk_count }} {{ locale === 'en-US' ? 'chunks' : '块' }}</span>
                   <span
                     class="px-1.5 py-0.5 rounded font-semibold"
                     :class="seg.status === 'Modified'
@@ -389,7 +389,7 @@
                         ? 'bg-sky-500/15 text-sky-700 dark:text-sky-300'
                         : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'"
                   >
-                    {{ seg.status === 'Modified' ? '真实变更' : seg.status === 'ShiftedIdentical' ? `再对齐 (${seg.shift_delta_bytes >= 0 ? '+' : ''}${seg.shift_delta_bytes}B)` : '同址一致' }}
+                    {{ seg.status === 'Modified' ? (locale === 'en-US' ? 'Modified' : '真实变更') : seg.status === 'ShiftedIdentical' ? (locale === 'en-US' ? `Realigned (${seg.shift_delta_bytes >= 0 ? '+' : ''}${seg.shift_delta_bytes}B)` : `再对齐 (${seg.shift_delta_bytes >= 0 ? '+' : ''}${seg.shift_delta_bytes}B)`) : (locale === 'en-US' ? 'In-place Identical' : '同址一致') }}
                   </span>
                 </div>
                 <div class="opacity-80 mt-0.5">
@@ -402,11 +402,11 @@
               <EmptyState
                 v-if="!binSummary"
                 icon="database"
-                title="大二进制文件流式对比"
-                description="选择两份二进制固件、PCAP 或大体积镜像文件点击执行比对。"
+                :title="locale === 'en-US' ? 'Large Binary File Stream Diff' : '大二进制文件流式对比'"
+                :description="locale === 'en-US' ? 'Select two binary firmwares, PCAP or disk image files and click Execute Diff.' : '选择两份二进制固件、PCAP 或大体积镜像文件点击执行比对。'"
               />
               <div v-else-if="binSummary.different_chunks.length === 0" class="py-8 text-center text-xs text-emerald-600 dark:text-emerald-400">
-                两份二进制文件按 64 KB 流式逐字节完全一致！
+                {{ locale === 'en-US' ? 'Both binary files are byte-for-byte identical across all 64 KB chunks!' : '两份二进制文件按 64 KB 流式逐字节完全一致！' }}
               </div>
               <button
                 v-for="c in (binSummary?.different_chunks ?? [])"
@@ -420,7 +420,7 @@
                 ]"
               >
                 <div class="flex items-center justify-between">
-                  <span>Chunk #{{ c.chunk_index }} · 偏移 0x{{ c.byte_offset.toString(16).toUpperCase() }}</span>
+                  <span>Chunk #{{ c.chunk_index }} · {{ locale === 'en-US' ? 'Offset' : '偏移' }} 0x{{ c.byte_offset.toString(16).toUpperCase() }}</span>
                   <span class="px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-700 dark:text-rose-300">{{ c.status }}</span>
                 </div>
                 <div class="opacity-75 mt-0.5">
@@ -435,7 +435,7 @@
         <div class="lg:col-span-8 ui-content-card p-3 flex flex-col overflow-hidden">
           <div class="flex items-center justify-between pb-1.5 mb-2 border-b shrink-0 flex-wrap gap-2" style="border-color: var(--border-subtle)">
             <span class="text-xs font-bold ui-num" style="color: var(--text-primary)">
-              字节窗口对照 {{ binaryPage ? `(L@0x${activeBinaryOffset.toString(16).toUpperCase()} / R@0x${activeBinaryRightOffset.toString(16).toUpperCase()}, 窗口 ${binaryPage.page_size}B, 差异 ${binaryPage.diff_bytes_in_page}B)` : '' }}
+              {{ locale === 'en-US' ? 'Byte Window Diff' : '字节窗口对照' }} {{ binaryPage ? `(L@0x${activeBinaryOffset.toString(16).toUpperCase()} / R@0x${activeBinaryRightOffset.toString(16).toUpperCase()}, ${locale === 'en-US' ? 'Window' : '窗口'} ${binaryPage.page_size}B, ${locale === 'en-US' ? 'Diff' : '差异'} ${binaryPage.diff_bytes_in_page}B)` : '' }}
             </span>
             <div v-if="binaryPage" class="flex items-center gap-1.5">
               <button
@@ -443,20 +443,20 @@
                 :disabled="activeBinaryOffset === 0 && activeBinaryRightOffset === 0"
                 class="ui-btn-secondary px-2 py-0.5 text-[11px] disabled:opacity-40"
               >
-                ← 上 512B
+                {{ locale === 'en-US' ? '← Prev 512B' : '← 上 512B' }}
               </button>
               <button
                 @click="loadDualOffsetBinaryPage(activeBinaryOffset + 512, activeBinaryRightOffset + 512)"
                 class="ui-btn-secondary px-2 py-0.5 text-[11px]"
               >
-                下 512B →
+                {{ locale === 'en-US' ? 'Next 512B →' : '下 512B →' }}
               </button>
             </div>
           </div>
 
           <div class="flex-1 overflow-auto custom-scrollbar">
             <div v-if="!binaryPage" class="py-12 text-center text-xs" style="color: var(--text-muted)">
-              请在左侧点击任意差异 Chunk，实时流式读取 512 字节十六进制对照窗格。
+              {{ locale === 'en-US' ? 'Click any difference chunk on the left to stream 512-byte hex comparison view.' : '请在左侧点击任意差异 Chunk，实时流式读取 512 字节十六进制对照窗格。' }}
             </div>
             <div v-else class="grid grid-cols-8 md:grid-cols-[repeat(16,minmax(0,1fr))] gap-1 font-mono text-[11px] ui-num">
               <div
@@ -485,31 +485,31 @@
     <template v-else-if="subMode === 'directory'">
       <div v-if="dirReport" class="ui-sub-card px-3 py-2 flex flex-wrap items-center justify-between gap-2 shrink-0 text-[11px] ui-num">
         <div class="flex items-center gap-3 flex-wrap" style="color: var(--text-secondary)">
-          <span>共扫描 <strong>{{ dirReport.total_entries }}</strong> 项</span>
-          <span class="text-rose-700 dark:text-rose-300 font-bold">修改 Modified: {{ dirReport.modified_count }}</span>
-          <span class="text-sky-700 dark:text-sky-300 font-bold">仅左侧: {{ dirReport.left_only_count }}</span>
-          <span class="text-emerald-700 dark:text-emerald-300 font-bold">仅右侧: {{ dirReport.right_only_count }}</span>
-          <span>相同: {{ dirReport.identical_count }}</span>
-          <span>耗时 {{ dirReport.elapsed_ms }} ms</span>
+          <span>{{ locale === 'en-US' ? 'Total Scanned:' : '共扫描' }} <strong>{{ dirReport.total_entries }}</strong> {{ locale === 'en-US' ? 'items' : '项' }}</span>
+          <span class="text-rose-700 dark:text-rose-300 font-bold">{{ locale === 'en-US' ? 'Modified:' : '修改 Modified:' }} {{ dirReport.modified_count }}</span>
+          <span class="text-sky-700 dark:text-sky-300 font-bold">{{ locale === 'en-US' ? 'Left Only:' : '仅左侧:' }} {{ dirReport.left_only_count }}</span>
+          <span class="text-emerald-700 dark:text-emerald-300 font-bold">{{ locale === 'en-US' ? 'Right Only:' : '仅右侧:' }} {{ dirReport.right_only_count }}</span>
+          <span>{{ locale === 'en-US' ? 'Identical:' : '相同:' }} {{ dirReport.identical_count }}</span>
+          <span>{{ locale === 'en-US' ? 'Elapsed' : '耗时' }} {{ dirReport.elapsed_ms }} ms</span>
         </div>
-        <span style="color: var(--text-muted)">点击任意“Modified”行直接进入源码双向 Merge 或二进制核验</span>
+        <span style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Click any "Modified" entry to enter source dual merge or binary inspection' : '点击任意“Modified”行直接进入源码双向 Merge 或二进制核验' }}</span>
       </div>
 
       <div class="flex-1 min-h-0 overflow-auto ui-content-card p-3 custom-scrollbar">
         <EmptyState
           v-if="!dirReport"
           icon="layers"
-          title="双目录结构递归比对 (Beyond Compare 目录视图)"
-          description="输入两份工程文件夹或配置文件目录，点击【执行比对】即可自动跳过 .git / target / node_modules 扫描全目录差异。"
+          :title="locale === 'en-US' ? 'Recursive Dual Directory Comparison (Beyond Compare style)' : '双目录结构递归比对 (Beyond Compare 目录视图)'"
+          :description="locale === 'en-US' ? 'Enter two project or config folders and click [Execute Diff] to scan differences (skips .git, target, node_modules).' : '输入两份工程文件夹或配置文件目录，点击【执行比对】即可自动跳过 .git / target / node_modules 扫描全目录差异。'"
         />
         <table v-else class="w-full text-left border-collapse text-xs">
           <thead>
             <tr class="border-b text-[11px] sticky top-0" style="background: var(--surface-content-alt); border-color: var(--border-subtle); color: var(--text-muted)">
-              <th class="py-2 px-3">相对路径 (Relative Path)</th>
-              <th class="py-2 px-3 w-28">状态</th>
-              <th class="py-2 px-3 w-28 text-right">左侧大小</th>
-              <th class="py-2 px-3 w-28 text-right">右侧大小</th>
-              <th class="py-2 px-3 w-36 text-right">快捷操作</th>
+              <th class="py-2 px-3">{{ locale === 'en-US' ? 'Relative Path' : '相对路径 (Relative Path)' }}</th>
+              <th class="py-2 px-3 w-28">{{ locale === 'en-US' ? 'Status' : '状态' }}</th>
+              <th class="py-2 px-3 w-28 text-right">{{ locale === 'en-US' ? 'Left Size' : '左侧大小' }}</th>
+              <th class="py-2 px-3 w-28 text-right">{{ locale === 'en-US' ? 'Right Size' : '右侧大小' }}</th>
+              <th class="py-2 px-3 w-36 text-right">{{ locale === 'en-US' ? 'Actions' : '快捷操作' }}</th>
             </tr>
           </thead>
           <tbody class="divide-y ui-num" style="border-color: var(--border-subtle)">
@@ -539,7 +539,7 @@
                   @click="drillIntoTextCompare(entry)"
                   class="ui-btn-secondary px-2 py-0.5 text-[11px] cursor-pointer"
                 >
-                  打开双边合并
+                  {{ locale === 'en-US' ? 'Open Dual Merge' : '打开双边合并' }}
                 </button>
               </td>
             </tr>
@@ -555,7 +555,9 @@ import { ref, computed, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import AppIcon from './AppIcon.vue';
 import { useI18n } from '../i18n';
-const { t } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 void t;
 import EmptyState from './EmptyState.vue';
 import { notifySuccess, notifyError, notifyWarning } from '../composables/useNotification';
@@ -701,15 +703,15 @@ interface DirectoryCompareReport {
 type FileSubMode = 'text' | 'binary' | 'directory';
 
 const subModes: Array<{ id: FileSubMode; label: string; icon: string }> = [
-  { id: 'text', label: '大文件 Myers 行比对与双向合并', icon: 'document' },
-  { id: 'binary', label: 'GB 级二进制流式 CRC32 分页对比', icon: 'database' },
-  { id: 'directory', label: '文件夹树递归对比', icon: 'layers' },
+  { id: 'text', label: locale.value === 'en-US' ? 'Myers Line Diff & Dual Merge' : '大文件 Myers 行比对与双向合并', icon: 'document' },
+  { id: 'binary', label: locale.value === 'en-US' ? 'Streaming Binary CRC32 Diff' : 'GB 级二进制流式 CRC32 分页对比', icon: 'database' },
+  { id: 'directory', label: locale.value === 'en-US' ? 'Recursive Directory Diff' : '文件夹树递归对比', icon: 'layers' },
 ];
 
 const mergeChoiceOptions: Array<{ id: MergeChoice; label: string }> = [
-  { id: 'KeepLeft', label: '采左' },
-  { id: 'KeepRight', label: '采右' },
-  { id: 'KeepBothLeftFirst', label: '双留(左→右)' },
+  { id: 'KeepLeft', label: locale.value === 'en-US' ? 'Left' : '采左' },
+  { id: 'KeepRight', label: locale.value === 'en-US' ? 'Right' : '采右' },
+  { id: 'KeepBothLeftFirst', label: locale.value === 'en-US' ? 'Both (L→R)' : '双留(左→右)' },
 ];
 
 const diffBus = useUniversalDiff();
@@ -807,14 +809,14 @@ function setHunkDecision(hunkId: number, choice: MergeChoice) {
 function applyBulkMergeChoice(choice: MergeChoice) {
   defaultMergeChoice.value = choice;
   hunkDecisions.value = {};
-  notifySuccess('已批量应用默认合并策略', `所有差异块已设为：${choice === 'KeepLeft' ? '采纳左侧' : '采纳右侧'}`);
+  notifySuccess(locale.value === 'en-US' ? 'Applied default merge strategy' : '已批量应用默认合并策略', locale.value === 'en-US' ? `All hunks configured to: ${choice === 'KeepLeft' ? 'Keep Left' : 'Keep Right'}` : `所有差异块已设为：${choice === 'KeepLeft' ? '采纳左侧' : '采纳右侧'}`);
 }
 
 function hunkOpLabel(op: string): string {
-  if (op === 'equal') return '一致';
-  if (op === 'insert') return '右侧新增';
-  if (op === 'delete') return '左侧删除';
-  return '差异替换';
+  if (op === 'equal') return locale.value === 'en-US' ? 'Equal' : '一致';
+  if (op === 'insert') return locale.value === 'en-US' ? 'Right Added' : '右侧新增';
+  if (op === 'delete') return locale.value === 'en-US' ? 'Left Deleted' : '左侧删除';
+  return locale.value === 'en-US' ? 'Modified' : '差异替换';
 }
 
 function hunkBadgeClass(op: string): string {
@@ -849,7 +851,7 @@ async function executeCompare() {
         mergeOutputPath.value = leftPath.value.trim();
       }
       if (rep.is_binary_suspected) {
-        notifyWarning('文件包含大量 NULL 字节', '建议点击提示栏切换为二进制 64KB 流式对比模式');
+        notifyWarning(locale.value === 'en-US' ? 'File contains large amount of NULL bytes' : '文件包含大量 NULL 字节', locale.value === 'en-US' ? 'Recommend switching to 64KB Binary Stream Diff Mode' : '建议点击提示栏切换为二进制 64KB 流式对比模式');
       }
     } else if (subMode.value === 'binary') {
       binaryPage.value = null;
@@ -883,8 +885,8 @@ async function executeCompare() {
       dirReport.value = rep;
     }
   } catch (e) {
-    errorMsg.value = `比对执行失败: ${String(e)}`;
-    notifyError('磁盘文件/目录比对受阻', String(e));
+    errorMsg.value = locale.value === 'en-US' ? `Diff execution failed: ${String(e)}` : `比对执行失败: ${String(e)}`;
+    notifyError(locale.value === 'en-US' ? 'Disk diff hindered' : '磁盘文件/目录比对受阻', String(e));
   } finally {
     isLoading.value = false;
   }
@@ -902,7 +904,7 @@ async function loadDualOffsetBinaryPage(leftOff: number, rightOff: number) {
       pageSize: 512,
     });
   } catch (e) {
-    notifyError('读取二进制双指针窗口失败', String(e));
+    notifyError(locale.value === 'en-US' ? 'Failed to read binary window' : '读取二进制双指针窗口失败', String(e));
   }
 }
 
@@ -927,9 +929,9 @@ async function saveMergedFile() {
       createBackup: createBackup.value,
     });
     lastMergedSavedPath.value = out.output_path;
-    notifySuccess('双向 Merge 原子保存成功', out.message);
+    notifySuccess(locale.value === 'en-US' ? 'Dual merge saved atomically' : '双向 Merge 原子保存成功', out.message);
   } catch (e) {
-    notifyError('Merge 落盘失败', String(e));
+    notifyError(locale.value === 'en-US' ? 'Failed to write merge result' : 'Merge 落盘失败', String(e));
   } finally {
     isSavingMerge.value = false;
   }
@@ -945,9 +947,9 @@ async function exportPatch() {
       patchOutputPath: targetPatch,
       options: options.value,
     });
-    notifySuccess('Unified Patch 已生成', msg);
+    notifySuccess(locale.value === 'en-US' ? 'Unified patch generated' : 'Unified Patch 已生成', msg);
   } catch (e) {
-    notifyError('导出补丁失败', String(e));
+    notifyError(locale.value === 'en-US' ? 'Failed to export patch' : '导出补丁失败', String(e));
   }
 }
 

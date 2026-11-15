@@ -13,13 +13,13 @@
           </div>
           <div class="min-w-0">
             <div class="flex items-center gap-2 flex-wrap">
-              <h2 class="text-[13px] font-semibold tracking-tight" style="color: var(--text-primary);">网络流量全息解密与调试透视</h2>
+              <h2 class="text-[13px] font-semibold tracking-tight" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Network Traffic Holographic Decryption & Debug Inspection' : '网络流量全息解密与调试透视' }}</h2>
               <span class="ui-pill px-2 py-0.5 rounded-full text-[11px] font-medium">
-                透明透传 · 无损解密
+                {{ locale === 'en-US' ? 'Transparent Tunnel · Lossless Decrypt' : '透明透传 · 无损解密' }}
               </span>
             </div>
             <p class="text-[11px] mt-0.5 truncate" style="color: var(--text-muted);">
-              双向通信透明穿透 · 应用层明文解密 · NSS 密钥动态关联
+              {{ locale === 'en-US' ? 'Transparent Tunnel · L7 Plaintext Decryption · Dynamic NSS Key Association' : '双向通信透明穿透 · 应用层明文解密 · NSS 密钥动态关联' }}
             </p>
           </div>
         </div>
@@ -27,7 +27,7 @@
         <!-- 代理控制与配置 (strict nowrap) -->
         <div class="flex items-center gap-2 flex-wrap shrink-0">
           <div class="ui-pill rounded-xl flex items-center gap-1.5 px-2 py-1 shrink-0 whitespace-nowrap">
-            <span class="text-[11px] font-semibold whitespace-nowrap shrink-0" style="color: var(--text-muted);">监听端口</span>
+            <span class="text-[11px] font-semibold whitespace-nowrap shrink-0" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Port' : '监听端口' }}</span>
             <input
               v-model.number="proxyPort"
               :disabled="proxyStatus.is_running"
@@ -41,22 +41,22 @@
               :class="proxyStatus.is_running ? 'ui-btn-danger px-3 py-1 text-xs' : 'ui-btn-primary px-3 py-1 text-xs'"
             >
               <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="proxyStatus.is_running ? 'bg-current' : 'bg-white'"></span>
-              <span>{{ proxyStatus.is_running ? '停止代理' : '启动代理解密' }}</span>
+              <span>{{ proxyStatus.is_running ? (locale === 'en-US' ? 'Stop Proxy' : '停止代理') : (locale === 'en-US' ? 'Start Proxy' : '启动代理解密') }}</span>
             </button>
           </div>
 
           <button @click="showCaModal = true" class="ui-btn-secondary px-3 py-1.5 text-xs">
             <AppIcon name="shield" :size="14" />
-            <span>CA 根证书</span>
+            <span>{{ locale === 'en-US' ? 'CA Root Cert' : 'CA 根证书' }}</span>
           </button>
 
           <button @click="showPassiveModal = true" class="ui-btn-secondary px-3 py-1.5 text-xs">
             <AppIcon name="key" :size="14" />
-            <span>被动解密</span>
+            <span>{{ locale === 'en-US' ? 'Passive Decrypt' : '被动解密' }}</span>
           </button>
 
           <button @click="clearDecryptedLogs" class="ui-btn-danger px-3 py-1.5 text-xs">
-            <span>清空流水</span>
+            <span>{{ locale === 'en-US' ? 'Clear Logs' : '清空流水' }}</span>
           </button>
         </div>
       </div>
@@ -65,13 +65,13 @@
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
         <div class="ui-sub-card p-3 flex items-center justify-between gap-2">
           <div class="min-w-0">
-            <div class="text-[11px] font-medium" style="color: var(--text-muted);">代理解密服务</div>
+            <div class="text-[11px] font-medium" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Proxy Decryption Service' : '代理解密服务' }}</div>
             <div
               class="text-sm font-semibold ui-num mt-1 flex items-center gap-1.5 truncate"
               :class="proxyStatus.is_running ? 'text-emerald-600 dark:text-emerald-400' : 'text-[var(--text-secondary)]'"
             >
               <span class="w-2 h-2 rounded-full shrink-0" :class="proxyStatus.is_running ? 'bg-emerald-500' : 'bg-slate-400'"></span>
-              <span class="truncate">{{ proxyStatus.is_running ? `监听端口 :${proxyStatus.listen_port}` : '未启动' }}</span>
+              <span class="truncate">{{ proxyStatus.is_running ? (locale === 'en-US' ? `Port :${proxyStatus.listen_port}` : `监听端口 :${proxyStatus.listen_port}`) : (locale === 'en-US' ? 'Inactive' : '未启动') }}</span>
             </div>
           </div>
           <span class="ui-pill text-[11px] px-2 py-0.5 rounded-full shrink-0">HTTP/S</span>
@@ -79,7 +79,7 @@
 
         <div class="ui-sub-card p-3 flex items-center justify-between gap-2">
           <div>
-            <div class="text-[11px] font-medium" style="color: var(--text-muted);">累计解密会话</div>
+            <div class="text-[11px] font-medium" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Decrypted Sessions' : '累计解密会话' }}</div>
             <div class="text-lg ui-num font-bold mt-0.5 leading-tight" style="color: var(--text-primary);">
               {{ proxyStatus.total_requests.toLocaleString() }}
             </div>
@@ -91,7 +91,7 @@
 
         <div class="ui-sub-card p-3 flex items-center justify-between gap-2">
           <div>
-            <div class="text-[11px] font-medium" style="color: var(--text-muted);">通信传输模式</div>
+            <div class="text-[11px] font-medium" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Transmission Mode' : '通信传输模式' }}</div>
             <div
               class="text-sm font-semibold mt-1 flex items-center gap-1.5"
               :class="!proxyStatus.is_running
@@ -111,10 +111,10 @@
               <span>
                 {{
                   !proxyStatus.is_running
-                    ? '本地旁路待命'
+                    ? (locale === 'en-US' ? 'Local Standby' : '本地旁路待命')
                     : proxyStatus.active_blocking_enforced
-                      ? '策略阻断生效'
-                      : 'MITM 透明镜像'
+                      ? (locale === 'en-US' ? 'Active Blocking' : '策略阻断生效')
+                      : (locale === 'en-US' ? 'MITM Mirroring' : 'MITM 透明镜像')
                 }}
               </span>
             </div>
@@ -125,28 +125,28 @@
             :class="proxyStatus.active_blocking_enforced
               ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40'
               : 'hover:bg-[var(--surface-hover)]'"
-            title="切换 WAF / 敏感外传规则：纯审计放行 vs 返回 HTTP 403 主动阻断"
+            :title="locale === 'en-US' ? 'Toggle WAF: Audit Only vs Active Block (HTTP 403)' : '切换 WAF / 敏感外传规则：纯审计放行 vs 返回 HTTP 403 主动阻断'"
           >
             {{
               proxyStatus.active_blocking_enforced
-                ? `已阻断 ${proxyStatus.blocked_requests} (点击切回放行)`
-                : '只读审计 (点击开阻断)'
+                ? (locale === 'en-US' ? `Blocked ${proxyStatus.blocked_requests} (click to pass)` : `已阻断 ${proxyStatus.blocked_requests} (点击切回放行)`)
+                : (locale === 'en-US' ? 'Audit Only (click to block)' : '只读审计 (点击开阻断)')
             }}
           </button>
         </div>
 
         <div class="ui-sub-card p-3 flex items-center justify-between gap-2">
           <div class="truncate min-w-0">
-            <div class="text-[11px] font-medium" style="color: var(--text-muted);">SSLKEYLOGFILE 密钥库</div>
+            <div class="text-[11px] font-medium" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'SSLKEYLOGFILE Key Store' : 'SSLKEYLOGFILE 密钥库' }}</div>
             <div class="text-xs ui-num font-semibold mt-1 truncate" style="color: var(--text-primary);" :title="keylogStatus.active_file_path || '未加载'">
-              {{ keylogStatus.total_keys }} 组密钥 (匹配 {{ keylogStatus.matched_sessions_count }})
+              {{ keylogStatus.total_keys }} {{ locale === 'en-US' ? 'Keys (Matched ' : '组密钥 (匹配 ' }}{{ keylogStatus.matched_sessions_count }})
             </div>
           </div>
           <button
             @click="triggerKeylogSelect"
             class="ui-btn-secondary px-2.5 py-1 text-[11px] shrink-0"
           >
-            导入 KeyLog
+            {{ locale === 'en-US' ? 'Import KeyLog' : '导入 KeyLog' }}
           </button>
         </div>
       </div>
@@ -161,7 +161,7 @@
               activeProtocolTab === 'tls' ? 'bg-[var(--accent-primary)] text-white shadow-xs font-semibold' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             ]"
           >
-            <span>TLS / HTTP 明文流水</span>
+            <span>{{ locale === 'en-US' ? 'TLS / HTTP Plaintext Stream' : 'TLS / HTTP 明文流水' }}</span>
             <span class="px-1.5 py-0.5 rounded-full text-[11px] ui-num" :class="activeProtocolTab === 'tls' ? 'bg-white/20 text-white' : 'bg-[var(--surface-glass-pill)]'">{{ decryptedLogs.length }}</span>
           </button>
           <button
@@ -171,7 +171,7 @@
               activeProtocolTab === 'quic' ? 'bg-[var(--accent-primary)] text-white shadow-xs font-semibold' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             ]"
           >
-            <span>QUIC / HTTP/3 自动解密流</span>
+            <span>{{ locale === 'en-US' ? 'QUIC / HTTP/3 Decrypted Stream' : 'QUIC / HTTP/3 自动解密流' }}</span>
             <span class="px-1.5 py-0.5 rounded-full text-[11px] ui-num" :class="activeProtocolTab === 'quic' ? 'bg-white/20 text-white' : 'bg-[var(--surface-glass-pill)]'">{{ quicTelemetry.total_quic_packets_decrypted }}</span>
           </button>
           <button
@@ -181,7 +181,7 @@
               activeProtocolTab === 'fingerprint' ? 'bg-[var(--accent-primary)] text-white shadow-xs font-semibold' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             ]"
           >
-            <span>TLS 指纹 (JA3/JA4 &amp; C2 碰撞)</span>
+            <span>{{ locale === 'en-US' ? 'TLS Fingerprints (JA3/JA4 & C2 Collision)' : 'TLS 指纹 (JA3/JA4 &amp; C2 碰撞)' }}</span>
             <span
               class="px-1.5 py-0.5 rounded-full text-[11px] ui-num font-semibold"
               :class="tlsFpTelemetry.threat_hit_count > 0 ? 'bg-rose-600 text-white' : 'bg-black/15 dark:bg-white/15'"
@@ -192,19 +192,19 @@
         </div>
 
         <div v-if="activeProtocolTab === 'quic'" class="flex items-center gap-3 text-[11px] ui-num" style="color: var(--text-muted);">
-          <span>RFC 9001 Initial 自动派生: <b class="text-indigo-600 dark:text-indigo-300">{{ quicTelemetry.initial_auto_decrypted_count }}</b> 帧</span>
-          <span>活跃重组流: <b class="text-emerald-600 dark:text-emerald-400">{{ quicTelemetry.total_active_streams }}</b> 条</span>
+          <span>{{ locale === 'en-US' ? 'RFC 9001 Initial Auto-derived:' : 'RFC 9001 Initial 自动派生:' }} <b class="text-indigo-600 dark:text-indigo-300">{{ quicTelemetry.initial_auto_decrypted_count }}</b> {{ locale === 'en-US' ? 'frames' : '帧' }}</span>
+          <span>{{ locale === 'en-US' ? 'Active Streams:' : '活跃重组流:' }} <b class="text-emerald-600 dark:text-emerald-400">{{ quicTelemetry.total_active_streams }}</b></span>
           <button @click="fetchQuicState" class="ui-btn-secondary px-2.5 py-1 text-[11px]">
             <AppIcon name="refresh" :size="12" />
-            <span>刷新 QUIC</span>
+            <span>{{ locale === 'en-US' ? 'Refresh QUIC' : '刷新 QUIC' }}</span>
           </button>
         </div>
         <div v-else-if="activeProtocolTab === 'fingerprint'" class="flex items-center gap-3 text-[11px] ui-num" style="color: var(--text-muted);">
-          <span>内置威胁指纹库: <b style="color: var(--text-primary);">{{ tlsFpTelemetry.builtin_threat_signatures }}</b> 类</span>
-          <span>恶意 C2 碰撞命中: <b :class="tlsFpTelemetry.threat_hit_count > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'">{{ tlsFpTelemetry.threat_hit_count }}</b> 次</span>
+          <span>{{ locale === 'en-US' ? 'Built-in Threat Signatures:' : '内置威胁指纹库:' }} <b style="color: var(--text-primary);">{{ tlsFpTelemetry.builtin_threat_signatures }}</b></span>
+          <span>{{ locale === 'en-US' ? 'Malicious C2 Collisions:' : '恶意 C2 碰撞命中:' }} <b :class="tlsFpTelemetry.threat_hit_count > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'">{{ tlsFpTelemetry.threat_hit_count }}</b></span>
           <button @click="fetchTlsFingerprints" class="ui-btn-secondary px-2.5 py-1 text-[11px]">
             <AppIcon name="refresh" :size="12" />
-            <span>刷新指纹</span>
+            <span>{{ locale === 'en-US' ? 'Refresh FP' : '刷新指纹' }}</span>
           </button>
         </div>
       </div>
@@ -218,11 +218,11 @@
         <div class="flex items-center justify-between gap-2 mb-2 shrink-0">
           <input
             v-model="filterKeyword"
-            placeholder="搜索 URL / 域名 / 请求方法..."
+            :placeholder="locale === 'en-US' ? 'Search URL / Host / Method...' : '搜索 URL / 域名 / 请求方法...'"
             class="ui-input flex-1 px-2.5 py-1.5 text-xs"
           />
           <span class="text-[11px] ui-num shrink-0" style="color: var(--text-muted);">
-            {{ filteredLogs.length }} / {{ decryptedLogs.length }} 会话
+            {{ filteredLogs.length }} / {{ decryptedLogs.length }} {{ locale === 'en-US' ? 'Sessions' : '会话' }}
           </span>
         </div>
 
@@ -231,10 +231,10 @@
             <thead class="ui-table-head sticky top-0 z-10 select-none">
               <tr>
                 <th class="py-2 px-2 w-10 text-center">ID</th>
-                <th class="py-2 px-2 w-16">方法</th>
-                <th class="py-2 px-2">请求目标 &amp; 路径</th>
-                <th class="py-2 px-2 w-14 text-center">状态</th>
-                <th class="py-2 px-2 w-16 text-right">大小</th>
+                <th class="py-2 px-2 w-16">{{ locale === 'en-US' ? 'Method' : '方法' }}</th>
+                <th class="py-2 px-2">{{ locale === 'en-US' ? 'Target & Path' : '请求目标 &amp; 路径' }}</th>
+                <th class="py-2 px-2 w-14 text-center">{{ locale === 'en-US' ? 'Status' : '状态' }}</th>
+                <th class="py-2 px-2 w-16 text-right">{{ locale === 'en-US' ? 'Size' : '大小' }}</th>
               </tr>
             </thead>
             <tbody class="divide-y" style="border-color: var(--border-subtle);">
@@ -281,7 +281,7 @@
               </tr>
               <tr v-if="filteredLogs.length === 0">
                 <td colspan="5" class="py-12 text-center text-xs" style="color: var(--text-muted);">
-                  暂无解密流量记录 (请确保客户端/浏览器已配置代理 http://127.0.0.1:{{ proxyPort }})
+                  {{ locale === 'en-US' ? `No decrypted traffic records (please verify client/browser proxy http://127.0.0.1:${proxyPort})` : `暂无解密流量记录 (请确保客户端/浏览器已配置代理 http://127.0.0.1:${proxyPort})` }}
                 </td>
               </tr>
             </tbody>
@@ -305,36 +305,36 @@
             <div class="flex items-center gap-1.5 shrink-0 flex-wrap">
               <span class="ui-num text-[11px]" style="color: var(--text-muted);">{{ selectedItem.timestamp }}</span>
               <span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-semibold text-[11px]">
-                全面放行解密
+                {{ locale === 'en-US' ? 'Full Pass Decrypt' : '全面放行解密' }}
               </span>
               <button
                 @click="compareDecryptedReqResp(selectedItem)"
                 class="ui-btn-primary px-2.5 py-1 text-[11px]"
-                title="对比此笔会话解密请求体与响应体的差分与波形"
+                :title="locale === 'en-US' ? 'Compare request & response payload diff and waveform' : '对比此笔会话解密请求体与响应体的差分与波形'"
               >
                 <AppIcon name="scale" :size="12" />
-                <span>请求 vs 响应</span>
+                <span>{{ locale === 'en-US' ? 'Req vs Resp' : '请求 vs 响应' }}</span>
               </button>
               <button
                 @click="setDiffSlotA(selectedItem)"
                 class="px-2 py-1 rounded-lg bg-blue-500/12 hover:bg-blue-500/20 text-blue-700 dark:text-sky-300 border border-blue-500/25 font-semibold text-[11px] cursor-pointer transition-colors"
-                title="将此会话明文载荷存入全局比对槽位 A"
+                :title="locale === 'en-US' ? 'Store decrypted payload into Slot A' : '将此会话明文载荷存入全局比对槽位 A'"
               >
-                设为 A
+                {{ locale === 'en-US' ? 'Set Slot A' : '设为 A' }}
               </button>
               <button
                 @click="setDiffSlotB(selectedItem)"
                 class="px-2 py-1 rounded-lg bg-purple-500/12 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/25 font-semibold text-[11px] cursor-pointer transition-colors"
-                title="将此会话明文载荷存入全局比对槽位 B 并启动比对"
+                :title="locale === 'en-US' ? 'Store decrypted payload into Slot B and start diff' : '将此会话明文载荷存入全局比对槽位 B 并启动比对'"
               >
-                设为 B
+                {{ locale === 'en-US' ? 'Set Slot B' : '设为 B' }}
               </button>
               <button
                 @click="addDecryptedToDiffQueue(selectedItem)"
                 class="px-2 py-1 rounded-lg bg-emerald-500/12 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 font-semibold text-[11px] cursor-pointer transition-colors"
-                title="加入全局多组 Center-Star 比对队列"
+                :title="locale === 'en-US' ? 'Add to global multi-sample Center-Star diff queue' : '加入全局多组 Center-Star 比对队列'"
               >
-                + 入队比对
+                {{ locale === 'en-US' ? '+ Enqueue Diff' : '+ 入队比对' }}
               </button>
             </div>
           </div>
@@ -343,8 +343,8 @@
           <div class="flex-1 grid grid-rows-2 gap-2.5 overflow-hidden min-h-0">
             <div class="border rounded-xl p-3 flex flex-col overflow-hidden min-h-0" style="border-color: var(--border-subtle); background: var(--surface-content-alt);">
               <div class="flex items-center justify-between mb-1.5 shrink-0 border-b pb-1.5" style="border-color: var(--border-subtle);">
-                <span class="text-xs font-semibold" style="color: var(--text-primary);">HTTP 请求明文 (Request Headers &amp; Payload)</span>
-                <span class="text-[11px] ui-num" style="color: var(--text-muted);">{{ Object.keys(selectedItem.request_headers).length }} 个头部</span>
+                <span class="text-xs font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'HTTP Plaintext Request (Headers & Payload)' : 'HTTP 请求明文 (Request Headers &amp; Payload)' }}</span>
+                <span class="text-[11px] ui-num" style="color: var(--text-muted);">{{ Object.keys(selectedItem.request_headers).length }} {{ locale === 'en-US' ? 'headers' : '个头部' }}</span>
               </div>
 
               <div class="flex-1 overflow-y-auto custom-scrollbar font-mono text-[11px] space-y-2">
@@ -356,7 +356,7 @@
                 </div>
 
                 <div v-if="selectedItem.request_body_snippet">
-                  <div class="text-[11px] font-semibold mb-1" style="color: var(--text-muted);">请求载荷主体 (Payload Body)</div>
+                  <div class="text-[11px] font-semibold mb-1" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Request Payload Body' : '请求载荷主体 (Payload Body)' }}</div>
                   <pre class="p-2.5 rounded-lg overflow-x-auto text-[11px] leading-relaxed whitespace-pre-wrap border text-emerald-700 dark:text-emerald-400" style="background: var(--surface-input); border-color: var(--border-subtle);">{{ formatPayload(selectedItem.request_body_snippet) }}</pre>
                 </div>
               </div>
@@ -364,12 +364,12 @@
 
             <div class="border rounded-xl p-3 flex flex-col overflow-hidden min-h-0" style="border-color: var(--border-subtle); background: var(--surface-content-alt);">
               <div class="flex items-center justify-between mb-1.5 shrink-0 border-b pb-1.5" style="border-color: var(--border-subtle);">
-                <span class="text-xs font-semibold" style="color: var(--text-primary);">HTTP 响应明文 (Response Headers &amp; Body)</span>
-                <span class="text-[11px] ui-num" style="color: var(--text-muted);">状态码: {{ selectedItem.response_status }}</span>
+                <span class="text-xs font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'HTTP Plaintext Response (Headers & Body)' : 'HTTP 响应明文 (Response Headers &amp; Body)' }}</span>
+                <span class="text-[11px] ui-num" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Status:' : '状态码:' }} {{ selectedItem.response_status }}</span>
               </div>
 
               <div class="flex-1 overflow-y-auto custom-scrollbar font-mono text-[11px] space-y-2">
-                <pre class="p-2.5 rounded-lg overflow-x-auto text-[11px] leading-relaxed whitespace-pre-wrap border" style="background: var(--surface-input); border-color: var(--border-subtle); color: var(--text-primary);">{{ selectedItem.response_body_snippet || '(空响应体)' }}</pre>
+                <pre class="p-2.5 rounded-lg overflow-x-auto text-[11px] leading-relaxed whitespace-pre-wrap border" style="background: var(--surface-input); border-color: var(--border-subtle); color: var(--text-primary);">{{ selectedItem.response_body_snippet || (locale === 'en-US' ? '(Empty Response Body)' : '(空响应体)') }}</pre>
               </div>
             </div>
           </div>
@@ -378,8 +378,8 @@
         <div v-else class="h-full flex items-center justify-center">
           <EmptyState
             icon="search"
-            title="未选择解密流量记录"
-            description="在左侧列表中点击任意流量记录，即可在此查看双向完整解密明文。"
+            :title="locale === 'en-US' ? 'No decrypted traffic selected' : '未选择解密流量记录'"
+            :description="locale === 'en-US' ? 'Click any traffic record in the left table to inspect bidirectional decrypted plaintext.' : '在左侧列表中点击任意流量记录，即可在此查看双向完整解密明文。'"
           />
         </div>
       </div>
@@ -394,9 +394,9 @@
               CA
             </div>
             <div>
-              <h3 class="text-[13px] font-semibold" style="color: var(--text-primary);">Omni-Probe 专属受信任根证书 (Root CA)</h3>
+              <h3 class="text-[13px] font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Omni-Probe Dedicated Trusted Root CA' : 'Omni-Probe 专属受信任根证书 (Root CA)' }}</h3>
               <p class="text-[11px] mt-0.5" style="color: var(--text-muted);">
-                用于拦截 HTTPS CONNECT 隧道并动态签发目标域名中间证书以实现应用层解密
+                {{ locale === 'en-US' ? 'Used to intercept HTTPS CONNECT tunnels and dynamically issue target leaf certificates for L7 decryption' : '用于拦截 HTTPS CONNECT 隧道并动态签发目标域名中间证书以实现应用层解密' }}
               </p>
             </div>
           </div>
@@ -412,9 +412,9 @@
 
           <div>
             <div class="flex items-center justify-between mb-1.5">
-              <span class="text-[11px] font-semibold" style="color: var(--text-muted);">根证书 PEM 文本</span>
+              <span class="text-[11px] font-semibold" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Root CA PEM Content' : '根证书 PEM 文本' }}</span>
               <button @click="copyCaPem" class="text-purple-600 dark:text-purple-300 hover:underline text-[11px] font-medium cursor-pointer">
-                一键复制 PEM
+                {{ locale === 'en-US' ? 'Copy PEM' : '一键复制 PEM' }}
               </button>
             </div>
             <textarea
@@ -427,7 +427,7 @@
         </div>
 
         <div class="px-5 py-3 border-t flex justify-end" style="border-color: var(--border-subtle);">
-          <button @click="showCaModal = false" class="ui-btn-primary px-4 py-1.5 text-xs">完成</button>
+          <button @click="showCaModal = false" class="ui-btn-primary px-4 py-1.5 text-xs">{{ locale === 'en-US' ? 'Done' : '完成' }}</button>
         </div>
       </div>
     </div>
@@ -437,7 +437,7 @@
       <div class="ui-modal-surface rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden select-text">
         <div class="p-3.5 border-b flex items-center justify-between" style="border-color: var(--border-subtle);">
           <div class="flex items-center gap-2 flex-wrap">
-            <h3 class="text-sm font-semibold" style="color: var(--text-primary);">被动 TLS 记录层流式解密器</h3>
+            <h3 class="text-sm font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Passive TLS Record Stream Decryptor' : '被动 TLS 记录层流式解密器' }}</h3>
             <span class="px-2 py-0.5 rounded text-[11px] bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-semibold border border-indigo-500/25">
               RFC 8446 / RFC 5246 · 对齐 Wireshark
             </span>
@@ -454,7 +454,7 @@
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">客户端 TCP 载荷 (Hex):</label>
+              <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Client TCP Payload (Hex):' : '客户端 TCP 载荷 (Hex):' }}</label>
               <textarea
                 v-model="passiveClientHex"
                 rows="5"
@@ -463,7 +463,7 @@
               ></textarea>
             </div>
             <div>
-              <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">服务端 TCP 载荷 (Hex):</label>
+              <label class="text-[11px] font-semibold block mb-1" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Server TCP Payload (Hex):' : '服务端 TCP 载荷 (Hex):' }}</label>
               <textarea
                 v-model="passiveServerHex"
                 rows="5"
@@ -475,16 +475,16 @@
 
           <div class="flex items-center justify-between pt-1">
             <span class="text-[11px] ui-num" style="color: var(--text-muted);">
-              当前 NSS 密钥库已就绪: {{ keylogStatus.total_keys }} 组密钥
+              {{ locale === 'en-US' ? 'NSS Key Store Ready:' : '当前 NSS 密钥库已就绪:' }} {{ keylogStatus.total_keys }} {{ locale === 'en-US' ? 'keys' : '组密钥' }}
             </span>
             <button @click="executePassiveDecrypt" :disabled="passiveLoading" class="ui-btn-primary px-4 py-2 text-xs">
-              <span>{{ passiveLoading ? '正在解密中...' : '执行被动 AEAD 解密' }}</span>
+              <span>{{ passiveLoading ? (locale === 'en-US' ? 'Decrypting...' : '正在解密中...') : (locale === 'en-US' ? 'Execute Passive AEAD Decrypt' : '执行被动 AEAD 解密') }}</span>
             </button>
           </div>
 
           <div v-if="passiveResults.length > 0" class="space-y-2 pt-2">
             <div class="text-xs font-semibold" style="color: var(--text-primary);">
-              解密还原出的应用层明文记录 ({{ passiveResults.length }} 条):
+              {{ locale === 'en-US' ? 'Restored L7 Plaintext Records' : '解密还原出的应用层明文记录' }} ({{ passiveResults.length }} {{ locale === 'en-US' ? 'records' : '条' }}):
             </div>
 
             <div v-for="(item, idx) in passiveResults" :key="idx" class="ui-sub-card p-2.5 flex flex-col gap-1.5">
@@ -500,7 +500,7 @@
         </div>
 
         <div class="p-3 border-t flex justify-end" style="border-color: var(--border-subtle);">
-          <button @click="showPassiveModal = false" class="ui-btn-secondary px-4 py-1.5 text-xs">关闭</button>
+          <button @click="showPassiveModal = false" class="ui-btn-secondary px-4 py-1.5 text-xs">{{ locale === 'en-US' ? 'Close' : '关闭' }}</button>
         </div>
       </div>
     </div>
@@ -509,17 +509,17 @@
     <section v-if="activeProtocolTab === 'quic'" class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-2.5 overflow-hidden min-h-0 select-text">
       <div class="lg:col-span-5 ui-content-card p-3 flex flex-col overflow-hidden min-h-0">
         <div class="flex items-center justify-between mb-2 shrink-0">
-          <div class="text-[13px] font-semibold" style="color: var(--text-primary);">QUIC / HTTP/3 多流重组列表</div>
-          <span class="text-[11px] ui-num" style="color: var(--text-muted);">{{ quicStreams.length }} 条流</span>
+          <div class="text-[13px] font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'QUIC / HTTP/3 Multi-Stream Assembly List' : 'QUIC / HTTP/3 多流重组列表' }}</div>
+          <span class="text-[11px] ui-num" style="color: var(--text-muted);">{{ quicStreams.length }} {{ locale === 'en-US' ? 'Streams' : '条流' }}</span>
         </div>
         <div class="flex-1 overflow-y-auto custom-scrollbar border rounded-xl" style="border-color: var(--border-subtle); background: var(--surface-content-alt);">
           <table class="w-full text-left border-collapse text-xs">
             <thead class="ui-table-head sticky top-0 select-none">
               <tr>
                 <th class="py-2 px-2.5">Stream ID</th>
-                <th class="py-2 px-2.5">状态</th>
-                <th class="py-2 px-2.5 text-right">重组字节</th>
-                <th class="py-2 px-2.5 text-right">H3 帧数</th>
+                <th class="py-2 px-2.5">{{ locale === 'en-US' ? 'Status' : '状态' }}</th>
+                <th class="py-2 px-2.5 text-right">{{ locale === 'en-US' ? 'Assembled Bytes' : '重组字节' }}</th>
+                <th class="py-2 px-2.5 text-right">{{ locale === 'en-US' ? 'H3 Frames' : 'H3 帧数' }}</th>
               </tr>
             </thead>
             <tbody class="divide-y" style="border-color: var(--border-subtle);">
@@ -558,24 +558,24 @@
       <div class="lg:col-span-7 ui-content-card p-3 flex flex-col gap-3 overflow-hidden min-h-0">
         <div class="ui-sub-card p-3 flex flex-col gap-2 shrink-0">
           <div class="flex items-center justify-between gap-2 flex-wrap">
-            <span class="text-xs font-semibold" style="color: var(--text-primary);">RFC 9001 QUIC Initial 单包 AEAD 解密与首部去保护验证</span>
+            <span class="text-xs font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'RFC 9001 QUIC Initial Packet AEAD Decryption & Header Deprotection' : 'RFC 9001 QUIC Initial 单包 AEAD 解密与首部去保护验证' }}</span>
             <button @click="executeManualQuicDecrypt" :disabled="quicManualLoading" class="ui-btn-primary px-3 py-1 text-xs">
-              {{ quicManualLoading ? '解密中...' : '执行 QUIC Initial 解密' }}
+              {{ quicManualLoading ? (locale === 'en-US' ? 'Decrypting...' : '解密中...') : (locale === 'en-US' ? 'Execute QUIC Initial Decrypt' : '执行 QUIC Initial 解密') }}
             </button>
           </div>
           <textarea
             v-model="manualQuicHex"
             rows="2"
-            placeholder="粘贴 UDP 443 原始 QUIC Initial 载荷十六进制字节流 (例如 c00000000108...)..."
+            :placeholder="locale === 'en-US' ? 'Paste raw UDP 443 QUIC Initial payload hex bytes (e.g. c00000000108...)...' : '粘贴 UDP 443 原始 QUIC Initial 载荷十六进制字节流 (例如 c00000000108...)...'"
             class="ui-input w-full p-2 text-[11px] font-mono resize-none"
           ></textarea>
           <div v-if="manualQuicResult" class="p-2.5 rounded-lg border text-[11px] font-mono space-y-1 max-h-36 overflow-y-auto custom-scrollbar" style="background: var(--surface-input); border-color: var(--border-subtle);">
             <div class="flex items-center justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
-              <span>包类型: {{ manualQuicResult.packet_type }} | Packet Number: {{ manualQuicResult.packet_number }} (PN长: {{ manualQuicResult.pn_bytes_len }}B)</span>
-              <span>解密帧数: {{ manualQuicResult.parsed_frames.length }}</span>
+              <span>{{ locale === 'en-US' ? 'Packet Type:' : '包类型:' }} {{ manualQuicResult.packet_type }} | Packet Number: {{ manualQuicResult.packet_number }} ({{ locale === 'en-US' ? 'PN Len:' : 'PN长:' }} {{ manualQuicResult.pn_bytes_len }}B)</span>
+              <span>{{ locale === 'en-US' ? 'Decrypted Frames:' : '解密帧数:' }} {{ manualQuicResult.parsed_frames.length }}</span>
             </div>
             <div style="color: var(--text-muted);">Header Hex: {{ bytesToHexSnippet(manualQuicResult.header_bytes) }}</div>
-            <div class="text-blue-600 dark:text-sky-300">QUIC 明文帧: {{ manualQuicResult.parsed_frames.map(formatRustEnum).join(' · ') || '空/Padding' }}</div>
+            <div class="text-blue-600 dark:text-sky-300">{{ locale === 'en-US' ? 'QUIC Plaintext Frames:' : 'QUIC 明文帧:' }} {{ manualQuicResult.parsed_frames.map(formatRustEnum).join(' · ') || (locale === 'en-US' ? 'Empty/Padding' : '空/Padding') }}</div>
           </div>
         </div>
 
@@ -585,15 +585,15 @@
               {{ selectedQuicStream ? `Stream #${selectedQuicStream.stream_id} HTTP/3 应用层帧解析 (RFC 9114)` : 'HTTP/3 应用层帧解析详情' }}
             </span>
             <span v-if="selectedQuicStream" class="text-[11px] ui-num" style="color: var(--text-muted);">
-              共 {{ selectedQuicStream.http3_frames.length }} 帧 · {{ selectedQuicStream.bytes_assembled }} 字节
+              {{ selectedQuicStream.http3_frames.length }} {{ locale === 'en-US' ? 'frames' : '帧' }} · {{ selectedQuicStream.bytes_assembled }} {{ locale === 'en-US' ? 'Bytes' : '字节' }}
             </span>
           </div>
           <div class="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
             <div v-if="!selectedQuicStream" class="h-full flex items-center justify-center text-xs" style="color: var(--text-muted);">
-              请从左侧列表中选择一条 QUIC 重组流以观察解析出的 HTTP/3 帧结构
+              {{ locale === 'en-US' ? 'Select a QUIC reassembled stream from the left to view parsed HTTP/3 frames' : '请从左侧列表中选择一条 QUIC 重组流以观察解析出的 HTTP/3 帧结构' }}
             </div>
             <div v-else-if="selectedQuicStream.http3_frames.length === 0" class="p-4 text-center text-xs" style="color: var(--text-muted);">
-              该流当前尚无完整 HTTP/3 应用帧（可能仍处于 CRYPTO 握手阶段或等待后续 STREAM 分片）
+              {{ locale === 'en-US' ? 'No complete HTTP/3 application frames in this stream yet (may be in CRYPTO handshake or awaiting STREAM chunks)' : '该流当前尚无完整 HTTP/3 应用帧（可能仍处于 CRYPTO 握手阶段或等待后续 STREAM 分片）' }}
             </div>
             <div v-else v-for="(h3, idx) in selectedQuicStream.http3_frames" :key="idx" class="ui-sub-card p-2.5 text-xs font-mono">
               <div class="text-indigo-600 dark:text-indigo-300 font-semibold">#{{ idx + 1 }} · {{ formatRustEnum(h3) }}</div>
@@ -606,18 +606,18 @@
     <!-- TLS JA3/JA4 指纹与已知 C2 威胁实时碰撞视图 -->
     <section v-if="activeProtocolTab === 'fingerprint'" class="flex-1 ui-content-card p-3 flex flex-col overflow-hidden min-h-0 select-text">
       <div class="flex items-center justify-between mb-2 shrink-0">
-        <div class="text-[13px] font-semibold" style="color: var(--text-primary);">TLS ClientHello 原生 JA3 / JA4 指纹采集与恶意家族碰撞日志</div>
-        <span class="text-[11px] ui-num" style="color: var(--text-muted);">累计分析 {{ tlsFpTelemetry.total_client_hellos }} 次握手 (保留最新 {{ tlsFpTelemetry.recent_sessions.length }} 条)</span>
+        <div class="text-[13px] font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'TLS ClientHello Native JA3 / JA4 Fingerprint Capture & Malicious Collision Log' : 'TLS ClientHello 原生 JA3 / JA4 指纹采集与恶意家族碰撞日志' }}</div>
+        <span class="text-[11px] ui-num" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Analyzed' : '累计分析' }} {{ tlsFpTelemetry.total_client_hellos }} {{ locale === 'en-US' ? 'handshakes (retaining latest' : '次握手 (保留最新' }} {{ tlsFpTelemetry.recent_sessions.length }} {{ locale === 'en-US' ? 'items)' : '条)' }}</span>
       </div>
       <div class="flex-1 overflow-y-auto custom-scrollbar border rounded-xl" style="border-color: var(--border-subtle); background: var(--surface-content-alt);">
         <table class="w-full text-left border-collapse text-xs">
           <thead class="ui-table-head sticky top-0 select-none">
             <tr>
-              <th class="py-2 px-3">捕获时间</th>
-              <th class="py-2 px-3">通信五元组 (源 → 宿)</th>
-              <th class="py-2 px-3">JA3 MD5 指纹</th>
-              <th class="py-2 px-3">FoxIO JA4 指纹</th>
-              <th class="py-2 px-3 text-right">恶意家族碰撞</th>
+              <th class="py-2 px-3">{{ locale === 'en-US' ? 'Capture Time' : '捕获时间' }}</th>
+              <th class="py-2 px-3">{{ locale === 'en-US' ? '5-Tuple (Src → Dst)' : '通信五元组 (源 → 宿)' }}</th>
+              <th class="py-2 px-3">{{ locale === 'en-US' ? 'JA3 MD5' : 'JA3 MD5 指纹' }}</th>
+              <th class="py-2 px-3">{{ locale === 'en-US' ? 'FoxIO JA4' : 'FoxIO JA4 指纹' }}</th>
+              <th class="py-2 px-3 text-right">{{ locale === 'en-US' ? 'Malware Hit' : '恶意家族碰撞' }}</th>
             </tr>
           </thead>
           <tbody class="divide-y" style="border-color: var(--border-subtle);">
@@ -636,13 +636,13 @@
                   <span>{{ s.threat_name }}</span>
                 </span>
                 <span v-else class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[11px]">
-                  常规指纹
+                  {{ locale === 'en-US' ? 'Regular FP' : '常规指纹' }}
                 </span>
               </td>
             </tr>
             <tr v-if="tlsFpTelemetry.recent_sessions.length === 0">
               <td colspan="5" class="py-12 text-center text-xs" style="color: var(--text-muted);">
-                尚未在真实 TCP 抓包流中捕获到 TLS ClientHello (0x16 0x03) 握手报文；启动网卡嗅探后将自动计算 JA3 / JA4 指纹。
+                {{ locale === 'en-US' ? 'No TLS ClientHello (0x16 0x03) handshake packets captured yet in live TCP stream; JA3/JA4 fingerprints will be calculated once sniffing is active.' : '尚未在真实 TCP 抓包流中捕获到 TLS ClientHello (0x16 0x03) 握手报文；启动网卡嗅探后将自动计算 JA3 / JA4 指纹。' }}
               </td>
             </tr>
           </tbody>
@@ -655,6 +655,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useI18n } from '../i18n';
 import { useUniversalDiff } from '../composables/useUniversalDiff';
 import { notifySuccess, notifyWarning, notifyError } from '../composables/useNotification';
 import { uiPrompt } from '../composables/useConfirmDialog';
@@ -662,6 +663,10 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import AppIcon from '../components/AppIcon.vue';
 import EmptyState from '../components/EmptyState.vue';
+
+const { t, locale } = useI18n();
+void t;
+void locale;
 
 export interface DecryptedTlsPayload {
   stream_id: string;
@@ -929,7 +934,7 @@ const switchToFingerprintTab = async () => {
 const executeManualQuicDecrypt = async () => {
   const cleaned = manualQuicHex.value.trim().replace(/\s+/g, '');
   if (!cleaned || cleaned.length % 2 !== 0 || !/^[0-9a-fA-F]+$/.test(cleaned)) {
-    notifyWarning('十六进制输入无效', '请输入偶数位合法十六进制 QUIC UDP 原始载荷');
+    notifyWarning(locale.value === 'en-US' ? 'Invalid hex input' : '十六进制输入无效', locale.value === 'en-US' ? 'Please enter even-length valid hex bytes of QUIC UDP payload' : '请输入偶数位合法十六进制 QUIC UDP 原始载荷');
     return;
   }
   const packetBytes: number[] = [];
@@ -941,10 +946,10 @@ const executeManualQuicDecrypt = async () => {
     manualQuicResult.value = await invoke<DecryptedQuicPacket>('inspect_and_decrypt_quic_packet_cmd', {
       packetBytes,
     });
-    notifySuccess('QUIC Initial AEAD 解密成功', `Packet #${manualQuicResult.value.packet_number} | 解出 ${manualQuicResult.value.parsed_frames.length} 帧`);
+    notifySuccess(locale.value === 'en-US' ? 'QUIC Initial AEAD decrypt success' : 'QUIC Initial AEAD 解密成功', `Packet #${manualQuicResult.value.packet_number} | ${locale.value === 'en-US' ? 'Decoded' : '解出'} ${manualQuicResult.value.parsed_frames.length} ${locale.value === 'en-US' ? 'frames' : '帧'}`);
     await fetchQuicState();
   } catch (e) {
-    notifyError('QUIC 解密失败', e);
+    notifyError(locale.value === 'en-US' ? 'QUIC decrypt failed' : 'QUIC 解密失败', e);
   } finally {
     quicManualLoading.value = false;
   }
@@ -952,7 +957,7 @@ const executeManualQuicDecrypt = async () => {
 
 const executePassiveDecrypt = async () => {
   if (!passiveClientHex.value.trim() || !passiveServerHex.value.trim()) {
-    notifyWarning('输入参数不完整', '请同时输入客户端与服务端 TCP 载荷十六进制数据');
+    notifyWarning(locale.value === 'en-US' ? 'Incomplete input parameters' : '输入参数不完整', locale.value === 'en-US' ? 'Please input both client and server TCP payload hex' : '请同时输入客户端与服务端 TCP 载荷十六进制数据');
     return;
   }
   passiveLoading.value = true;
@@ -963,10 +968,10 @@ const executePassiveDecrypt = async () => {
       streamId: 'MANUAL_PASSIVE_STREAM',
     });
     if (passiveResults.value.length === 0) {
-      notifyWarning('解密未命中', '未解密出应用层明文记录，请检查 ClientHello 是否完整以及 NSS 密钥库中是否存在对应的 ClientRandom 密钥。');
+      notifyWarning(locale.value === 'en-US' ? 'No decrypt match' : '解密未命中', locale.value === 'en-US' ? 'No L7 plaintext records decrypted; please verify ClientHello and NSS key store.' : '未解密出应用层明文记录，请检查 ClientHello 是否完整以及 NSS 密钥库中是否存在对应的 ClientRandom 密钥。');
     }
   } catch (e) {
-    notifyError('被动解密执行受阻', e);
+    notifyError(locale.value === 'en-US' ? 'Passive decrypt failed' : '被动解密执行受阻', e);
   } finally {
     passiveLoading.value = false;
   }
@@ -1087,7 +1092,7 @@ const clearDecryptedLogs = async () => {
 
 const copyCaPem = () => {
   navigator.clipboard.writeText(caCertPem.value);
-  notifySuccess('根证书已复制', 'CA 根证书 PEM 文本已成功复制到系统剪贴板');
+  notifySuccess(locale.value === 'en-US' ? 'Root CA copied' : '根证书已复制', locale.value === 'en-US' ? 'CA root certificate PEM copied to clipboard' : 'CA 根证书 PEM 文本已成功复制到系统剪贴板');
 };
 
 const triggerKeylogSelect = async () => {
@@ -1103,10 +1108,10 @@ const triggerKeylogSelect = async () => {
   if (path && path.trim()) {
     try {
       const count = await invoke<number>('load_sslkeylog_file_cmd', { filePath: path.trim() });
-      notifySuccess('SSL 密钥导入成功', `成功导入 ${count} 组 SSL/TLS 会话主密钥`);
+      notifySuccess(locale.value === 'en-US' ? 'SSL keys imported' : 'SSL 密钥导入成功', locale.value === 'en-US' ? `Successfully imported ${count} SSL/TLS session master keys` : `成功导入 ${count} 组 SSL/TLS 会话主密钥`);
       await fetchStatus();
     } catch (e) {
-      notifyError('导入 SSL 会话密钥受阻', e);
+      notifyError(locale.value === 'en-US' ? 'Failed to import SSL session keys' : '导入 SSL 会话密钥受阻', e);
     }
   }
 };

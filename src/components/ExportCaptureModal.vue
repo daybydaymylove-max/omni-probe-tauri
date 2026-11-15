@@ -99,20 +99,20 @@
         <!-- 司法级存证附加注释 (PCAPng 专属) -->
         <div v-if="exportFormat === 'pcapng'" class="ui-sub-card border-teal-500/30 p-3 rounded-xl space-y-1.5 animate-in fade-in duration-150">
           <div class="flex items-center justify-between text-teal-700 dark:text-teal-300 font-bold text-xs">
-            <span>司法链存证注释 (Section Header Comment):</span>
+            <span>{{ locale === 'en-US' ? 'Section Header Comment (Forensics Chain):' : '司法链存证注释 (Section Header Comment):' }}</span>
             <span class="text-[11px] text-(--text-muted) font-mono-code font-normal">Option Code 0x0001</span>
           </div>
           <input v-model="forensicComment"
-            placeholder="例: Omni-Probe Judicial Certified Forensics Chain Hash Verified"
+            :placeholder="locale === 'en-US' ? 'e.g. Omni-Probe Judicial Certified Forensics Chain Hash Verified' : '例: Omni-Probe Judicial Certified Forensics Chain Hash Verified'"
             class="ui-input w-full px-2.5 py-1.5 text-xs font-mono-code">
         </div>
 
         <!-- 导出路径与文件名 -->
         <div>
-          <label class="block font-bold text-(--text-primary) mb-1">3. 保存文件绝对路径 (File Path):</label>
+          <label class="block font-bold text-(--text-primary) mb-1">{{ locale === 'en-US' ? '3. Absolute File Path:' : '3. 保存文件绝对路径 (File Path):' }}</label>
           <input v-model="targetFilePath"
             class="ui-input w-full px-3 py-2 text-xs font-mono-code select-text">
-          <p class="text-[11px] text-(--text-muted) mt-1">支持自定义绝对路径，默认保存至当前系统目录</p>
+          <p class="text-[11px] text-(--text-muted) mt-1">{{ locale === 'en-US' ? 'Custom absolute path supported, default saves to system directory' : '支持自定义绝对路径，默认保存至当前系统目录' }}</p>
         </div>
 
         <!-- 状态反馈 -->
@@ -191,13 +191,13 @@ watch(
 
 async function doExport() {
   if (selectedTargetPackets.value.length === 0) {
-    exportStatus.value = '错误: 待导出的报文数量为 0';
+    exportStatus.value = locale.value === 'en-US' ? 'Error: Packet count to export is 0' : '错误: 待导出的报文数量为 0';
     isError.value = true;
     return;
   }
 
   isExporting.value = true;
-  exportStatus.value = '正在编码并写入文件...';
+  exportStatus.value = locale.value === 'en-US' ? 'Encoding and writing to file...' : '正在编码并写入文件...';
   isError.value = false;
 
   const packetsToExport = selectedTargetPackets.value.map(p => ({
@@ -251,11 +251,11 @@ async function doExport() {
       });
     }
 
-    exportStatus.value = `导出成功! 共写入 ${count} 帧至 ${targetFilePath.value}`;
+    exportStatus.value = locale.value === 'en-US' ? `Export successful! Wrote ${count} frames to ${targetFilePath.value}` : `导出成功! 共写入 ${count} 帧至 ${targetFilePath.value}`;
     emit('log', `[EXPORT] 成功导出 ${count} 帧至 ${targetFilePath.value}`);
   } catch (e: any) {
     isError.value = true;
-    exportStatus.value = `导出失败: ${e}`;
+    exportStatus.value = locale.value === 'en-US' ? `Export failed: ${e}` : `导出失败: ${e}`;
     emit('log', `[ERROR] 导出失败: ${e}`);
   } finally {
     isExporting.value = false;

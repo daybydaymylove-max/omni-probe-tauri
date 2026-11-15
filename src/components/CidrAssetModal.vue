@@ -79,10 +79,10 @@
                   </span>
                   <span :class="[
                     'px-1.5 py-0.5 rounded text-[11px] font-bold border',
-                    rule.security_level === '核心' ? 'bg-rose-500/12 text-rose-700 dark:text-rose-300 border-rose-500/30' :
-                    rule.security_level === '重要' ? 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/30' : 'ui-pill text-(--text-secondary)'
+                    (rule.security_level === '核心' || rule.security_level === 'Core') ? 'bg-rose-500/12 text-rose-700 dark:text-rose-300 border-rose-500/30' :
+                    (rule.security_level === '重要' || rule.security_level === 'Important') ? 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/30' : 'ui-pill text-(--text-secondary)'
                   ]">
-                    {{ rule.security_level }}
+                    {{ locale === 'en-US' ? (rule.security_level === '核心' ? 'Core' : rule.security_level === '重要' ? 'Important' : rule.security_level === '普通' ? 'Standard' : rule.security_level) : rule.security_level }}
                   </span>
                 </div>
                 <div class="text-[11px] text-(--text-muted) select-text">{{ rule.description || t('cidrAsset.noDesc') }}</div>
@@ -129,7 +129,9 @@ import { useI18n } from '../i18n';
 import AppIcon from './AppIcon.vue';
 import EmptyState from './EmptyState.vue';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 
 interface CidrRule {
   cidr: string;
@@ -150,7 +152,7 @@ const isSaving = ref(false);
 const newRule = ref<CidrRule>({
   cidr: '',
   zone_name: '',
-  security_level: '重要',
+  security_level: locale.value === 'en-US' ? 'Important' : '重要',
   description: '',
 });
 
@@ -177,7 +179,7 @@ function addRule() {
   newRule.value = {
     cidr: '',
     zone_name: '',
-    security_level: '重要',
+    security_level: locale.value === 'en-US' ? 'Important' : '重要',
     description: '',
   };
 }

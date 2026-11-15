@@ -138,8 +138,8 @@
                 v-else
                 class="flex-1 py-6"
                 icon="check"
-                title="暂无高风险归因柱状条目"
-                description="检出可疑隧道方式后将自动绘制证据分布。"
+                :title="locale === 'en-US' ? 'No high-risk attribution bars' : '暂无高风险归因柱状条目'"
+                :description="locale === 'en-US' ? 'Evidence distribution will render once suspicious tunnels are detected.' : '检出可疑隧道方式后将自动绘制证据分布。'"
               />
             </div>
 
@@ -161,14 +161,14 @@
                     <span class="font-bold text-rose-700 dark:text-rose-300">{{ m.method_name }}</span>
                     <div class="flex items-center gap-2 text-[11px] ui-num">
                       <span class="px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-700 dark:text-rose-300 font-bold">
-                        置信度 {{ m.confidence_pct }}%
+                        {{ locale === 'en-US' ? 'Confidence: ' : '置信度 ' }}{{ m.confidence_pct }}%
                       </span>
-                      <span style="color: var(--text-muted)">{{ m.evidence_count }} 项依据</span>
+                      <span style="color: var(--text-muted)">{{ m.evidence_count }} {{ locale === 'en-US' ? 'evidence items' : '项依据' }}</span>
                     </div>
                   </div>
                   <div class="text-[11px]" style="color: var(--text-secondary)">{{ m.rationale }}</div>
                   <div v-if="m.primary_endpoints.length > 0" class="text-[10px] font-mono truncate" style="color: var(--text-muted)">
-                    样本/细节: {{ m.primary_endpoints.join(' | ') }}
+                    {{ locale === 'en-US' ? 'Endpoints/Details: ' : '样本/细节: ' }}{{ m.primary_endpoints.join(' | ') }}
                   </div>
                 </div>
 
@@ -199,36 +199,36 @@
                   <span v-if="report.local_env.system_proxy_enabled" class="text-amber-700 dark:text-amber-300 font-bold">
                     {{ t('vpnModal.enabled') }} ({{ report.local_env.system_proxy_server || report.local_env.system_pac_url }})
                   </span>
-                  <span v-else class="text-emerald-700 dark:text-emerald-300">未开启</span>
+                  <span v-else class="text-emerald-700 dark:text-emerald-300">{{ locale === 'en-US' ? 'Disabled' : '未开启' }}</span>
                 </div>
                 <div>
-                  <strong>路由表分流接管 (0.0.0.0/1 + 128.0.0.0/1): </strong>
+                  <strong>{{ locale === 'en-US' ? 'Split Routing (0.0.0.0/1 + 128.0.0.0/1): ' : '路由表分流接管 (0.0.0.0/1 + 128.0.0.0/1): ' }}</strong>
                   <span :class="report.local_env.has_split_default_route ? 'text-rose-700 dark:text-rose-300 font-bold' : 'text-emerald-700 dark:text-emerald-300'">
-                    {{ report.local_env.has_split_default_route ? '已接管全局路由' : '正常默认网关路由' }}
+                    {{ report.local_env.has_split_default_route ? (locale === 'en-US' ? 'Global Route Hijacked' : '已接管全局路由') : (locale === 'en-US' ? 'Normal Default Gateway' : '正常默认网关路由') }}
                   </span>
                 </div>
                 <div v-if="report.local_env.virtual_adapters.length > 0">
-                  <strong>虚拟 TUN/TAP 接口: </strong>
+                  <strong>{{ locale === 'en-US' ? 'Virtual TUN/TAP Interfaces: ' : '虚拟 TUN/TAP 接口: ' }}</strong>
                   <span>
                     {{ report.local_env.virtual_adapters.map((a) => `${a.name}[MTU=${a.mtu ?? '-'},IP=${a.ipv4 || '-'}]`).join('; ') }}
                   </span>
                 </div>
                 <div v-if="report.local_env.open_proxy_ports.length > 0">
-                  <strong>本地开放代理端口: </strong>
+                  <strong>{{ locale === 'en-US' ? 'Local Open Proxy Ports: ' : '本地开放代理端口: ' }}</strong>
                   <span>
                     {{ report.local_env.open_proxy_ports.map((p) => `127.0.0.1:${p.port}(${p.verified_protocol})`).join(', ') }}
                   </span>
                 </div>
                 <div v-if="report.local_env.matched_processes.length > 0">
-                  <strong>代理/VPN 进程: </strong>
+                  <strong>{{ locale === 'en-US' ? 'Proxy / VPN Processes: ' : '代理/VPN 进程: ' }}</strong>
                   <span>{{ report.local_env.matched_processes.join(', ') }}</span>
                 </div>
                 <div v-if="report.local_env.kernel_tunnel_drivers.length > 0">
-                  <strong>内核隧道驱动: </strong>
+                  <strong>{{ locale === 'en-US' ? 'Kernel Tunnel Drivers: ' : '内核隧道驱动: ' }}</strong>
                   <span>{{ report.local_env.kernel_tunnel_drivers.join(', ') }}</span>
                 </div>
                 <div v-if="report.local_env.suspicious_root_certs.length > 0">
-                  <strong>代理类自定义根证书: </strong>
+                  <strong>{{ locale === 'en-US' ? 'Custom Root Certificates: ' : '代理类自定义根证书: ' }}</strong>
                   <span>{{ report.local_env.suspicious_root_certs.join('; ') }}</span>
                 </div>
               </div>
@@ -236,22 +236,22 @@
 
             <!-- 链路层遥测统计 + 可控主动代理探测 -->
             <div class="ui-content-card p-3.5 space-y-2.5 text-xs">
-              <div class="font-bold" style="color: var(--text-primary)">链路 DPI/DFI/MSS 遥测与主动代理探测</div>
+              <div class="font-bold" style="color: var(--text-primary)">{{ locale === 'en-US' ? 'Link DPI/DFI/MSS Telemetry & Active Proxy Probe' : '链路 DPI/DFI/MSS 遥测与主动代理探测' }}</div>
               <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] ui-num">
                 <div class="ui-sub-card p-2">
-                  <div style="color: var(--text-muted)">最小 TCP SYN MSS</div>
+                  <div style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Min Observed TCP SYN MSS' : '最小 TCP SYN MSS' }}</div>
                   <div class="font-bold mt-0.5" :class="(report.link_telemetry.min_observed_syn_mss ?? 1500) <= 1410 ? 'text-rose-600 dark:text-rose-300' : ''" style="color: var(--text-primary)">
-                    {{ report.link_telemetry.min_observed_syn_mss ? `${report.link_telemetry.min_observed_syn_mss} B` : '未捕获 SYN' }}
+                    {{ report.link_telemetry.min_observed_syn_mss ? `${report.link_telemetry.min_observed_syn_mss} B` : (locale === 'en-US' ? 'No SYN Captured' : '未捕获 SYN') }}
                   </div>
                 </div>
                 <div class="ui-sub-card p-2">
-                  <div style="color: var(--text-muted)">高熵均匀流 (χ²)</div>
+                  <div style="color: var(--text-muted)">{{ locale === 'en-US' ? 'High-Entropy Uniform Stream (χ²)' : '高熵均匀流 (χ²)' }}</div>
                   <div class="font-bold mt-0.5" style="color: var(--text-primary)">
-                    {{ report.link_telemetry.uniform_random_cipher_hits }} 帧 / {{ report.link_telemetry.high_entropy_flows }} 流
+                    {{ report.link_telemetry.uniform_random_cipher_hits }} {{ locale === 'en-US' ? 'pkts / ' : '帧 / ' }}{{ report.link_telemetry.high_entropy_flows }} {{ locale === 'en-US' ? 'flows' : '流' }}
                   </div>
                 </div>
                 <div class="ui-sub-card p-2">
-                  <div style="color: var(--text-muted)">Fake-IP / DoH / DNS错位</div>
+                  <div style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Fake-IP / DoH / DNS Dislocation' : 'Fake-IP / DoH / DNS错位' }}</div>
                   <div class="font-bold mt-0.5" style="color: var(--text-primary)">
                     {{ report.link_telemetry.fake_ip_connections }} / {{ report.link_telemetry.doh_dot_bypass_hits }} / {{ report.link_telemetry.dns_geo_mismatch_hits }}
                   </div>
@@ -260,12 +260,12 @@
 
               <!-- 主动协议探针 (SOCKS5 / HTTP CONNECT / RFC TLS) -->
               <div class="ui-sub-card p-2.5 space-y-2">
-                <div class="text-[11px] font-bold" style="color: var(--text-primary)">可疑端口主动协议与 TLS 行为探测 (SOCKS5 / CONNECT / TLS)</div>
+                <div class="text-[11px] font-bold" style="color: var(--text-primary)">{{ locale === 'en-US' ? 'Active Protocol & TLS Behavioral Probe (SOCKS5 / CONNECT / TLS)' : '可疑端口主动协议与 TLS 行为探测 (SOCKS5 / CONNECT / TLS)' }}</div>
                 <div class="flex items-center gap-2 flex-wrap">
                   <input v-model="probeHost" placeholder="127.0.0.1" class="ui-input ui-num w-36 px-2.5 py-1 text-xs" />
                   <input v-model.number="probePort" type="number" min="1" max="65535" placeholder="7890" class="ui-input ui-num w-24 px-2.5 py-1 text-xs" />
                   <button @click="runActiveProxyProbe" :disabled="isProbingEndpoint" class="ui-btn-primary px-3 py-1 rounded-lg text-xs">
-                    {{ isProbingEndpoint ? '探测中...' : '验证代理/TLS 响应' }}
+                    {{ isProbingEndpoint ? (locale === 'en-US' ? 'Probing...' : '探测中...') : (locale === 'en-US' ? 'Verify Proxy/TLS Response' : '验证代理/TLS 响应') }}
                   </button>
                 </div>
                 <div v-if="activeProbeResult" class="text-[11px] ui-num" style="color: var(--text-secondary)">
@@ -281,7 +281,7 @@
           <div class="ui-content-card p-3.5 space-y-2">
             <div class="flex items-center justify-between flex-wrap gap-2">
               <span class="text-xs font-bold" style="color: var(--text-primary)">
-                全量跨维证据链台账 ({{ filteredEvidences.length }})
+                {{ locale === 'en-US' ? `Cross-Dimensional Evidence Ledger (${filteredEvidences.length})` : `全量跨维证据链台账 (${filteredEvidences.length})` }}
               </span>
               <div class="flex items-center gap-1 ui-pill p-0.5 rounded-xl text-[11px]">
                 <button
@@ -300,11 +300,11 @@
               <table class="w-full text-left text-[11px] ui-num border-collapse">
                 <thead class="ui-table-head sticky top-0">
                   <tr>
-                    <th class="p-2">维度</th>
-                    <th class="p-2">置信度</th>
-                    <th class="p-2">归属方式</th>
-                    <th class="p-2">实证摘要</th>
-                    <th class="p-2">技术细节</th>
+                    <th class="p-2">{{ locale === 'en-US' ? 'Dimension' : '维度' }}</th>
+                    <th class="p-2">{{ locale === 'en-US' ? 'Confidence' : '置信度' }}</th>
+                    <th class="p-2">{{ locale === 'en-US' ? 'Method' : '归属方式' }}</th>
+                    <th class="p-2">{{ locale === 'en-US' ? 'Evidence Summary' : '实证摘要' }}</th>
+                    <th class="p-2">{{ locale === 'en-US' ? 'Technical Details' : '技术细节' }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y" style="border-color: var(--border-subtle); color: var(--text-secondary)">
@@ -319,7 +319,7 @@
                   </tr>
                   <tr v-if="filteredEvidences.length === 0">
                     <td colspan="5" class="p-6 text-center text-xs" style="color: var(--text-muted)">
-                      当前筛选维度下暂无风险或隧道证据
+                      {{ locale === 'en-US' ? 'No risk or tunnel evidence under current dimension filter' : '当前筛选维度下暂无风险或隧道证据' }}
                     </td>
                   </tr>
                 </tbody>
@@ -332,8 +332,8 @@
           v-else
           class="py-12"
           icon="radar"
-          title="正在初始化 VPN / 代理隧道多维侦测引擎"
-          description="请点击右上角【执行四维交叉侦测】开始全环境扫描。"
+          :title="locale === 'en-US' ? 'Initializing VPN/Proxy tunnel detection engine' : '正在初始化 VPN / 代理隧道多维侦测引擎'"
+          :description="locale === 'en-US' ? 'Click Run 4D Cross Detection in the top right to start full environment scan.' : '请点击右上角【执行四维交叉侦测】开始全环境扫描。'"
         />
       </div>
     </div>
@@ -447,7 +447,9 @@ const props = defineProps<{
 
 defineEmits(['close']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 
 const isDarkTheme = ref(!document.documentElement.classList.contains('theme-apple-light'));
 let themeObserver: MutationObserver | null = null;
@@ -458,11 +460,11 @@ const noticeMsg = ref('');
 
 const activeDimFilter = ref<'ALL' | 'HOST_LOCAL' | 'LINK_DPI' | 'DFI_STAT_MSS' | 'GEO_DNS_RISK'>('ALL');
 const dimFilters = [
-  { id: 'ALL', label: '全部维度' },
-  { id: 'HOST_LOCAL', label: '终端本地' },
-  { id: 'LINK_DPI', label: '链路 DPI' },
+  { id: 'ALL', label: locale.value === 'en-US' ? 'All Dimensions' : '全部维度' },
+  { id: 'HOST_LOCAL', label: locale.value === 'en-US' ? 'Host Local' : '终端本地' },
+  { id: 'LINK_DPI', label: locale.value === 'en-US' ? 'Link DPI' : '链路 DPI' },
   { id: 'DFI_STAT_MSS', label: 'DFI & MSS' },
-  { id: 'GEO_DNS_RISK', label: '机房 & DoH' },
+  { id: 'GEO_DNS_RISK', label: locale.value === 'en-US' ? 'DC & DoH' : '机房 & DoH' },
 ] as const;
 
 const probeHost = ref('127.0.0.1');
@@ -485,10 +487,10 @@ const radarOption = computed<EChartsOption>(() => {
     radar: {
       radius: '64%',
       indicator: [
-        { name: '终端本地环境', max: 100 },
-        { name: '链路 DPI 指纹', max: 100 },
-        { name: 'DFI 熵与 MSS', max: 100 },
-        { name: '机房/DNS 错位', max: 100 },
+        { name: locale.value === 'en-US' ? 'Host Local' : '终端本地环境', max: 100 },
+        { name: locale.value === 'en-US' ? 'Link DPI' : '链路 DPI 指纹', max: 100 },
+        { name: locale.value === 'en-US' ? 'DFI Entropy & MSS' : 'DFI 熵与 MSS', max: 100 },
+        { name: locale.value === 'en-US' ? 'DC / DNS Dislocation' : '机房/DNS 错位', max: 100 },
       ],
       axisName: { color: labelColor, fontSize: 11 },
       splitLine: { lineStyle: { color: splitLineColor } },
@@ -496,7 +498,7 @@ const radarOption = computed<EChartsOption>(() => {
     },
     series: [
       {
-        name: '四维风险评分',
+        name: locale.value === 'en-US' ? '4D Risk Score' : '四维风险评分',
         type: 'radar',
         areaStyle: { color: 'rgba(244, 63, 94, 0.25)' },
         lineStyle: { color: '#f43f5e', width: 2 },
@@ -509,7 +511,7 @@ const radarOption = computed<EChartsOption>(() => {
               s?.dfi_entropy_mss_score ?? 0,
               s?.geo_dns_mismatch_score ?? 0,
             ],
-            name: '检出维度得分',
+            name: locale.value === 'en-US' ? 'Detected Dimension Score' : '检出维度得分',
           },
         ],
       },
@@ -537,14 +539,14 @@ const methodBarOption = computed<EChartsOption>(() => {
     },
     series: [
       {
-        name: '归因置信度',
+        name: locale.value === 'en-US' ? 'Confidence' : '归因置信度',
         type: 'bar',
         barWidth: 12,
         data: list.map((m) => m.confidence_pct),
         itemStyle: { color: '#f43f5e', borderRadius: [0, 4, 4, 0] },
       },
       {
-        name: '实证证据条数',
+        name: locale.value === 'en-US' ? 'Evidence Count' : '实证证据条数',
         type: 'bar',
         barWidth: 8,
         data: list.map((m) => Math.min(100, m.evidence_count * 10)),
@@ -555,9 +557,9 @@ const methodBarOption = computed<EChartsOption>(() => {
 });
 
 function verdictLabel(v: string): string {
-  if (v === 'CONFIRMED_VPN_OR_PROXY') return '已实证存在 VPN / 代理隧道';
-  if (v === 'SUSPECTED_TUNNEL') return '高度疑似存在加密代理通道';
-  return '未检出明显 VPN / 代理特征';
+  if (v === 'CONFIRMED_VPN_OR_PROXY') return locale.value === 'en-US' ? 'Confirmed VPN / Proxy Tunnel' : '已实证存在 VPN / 代理隧道';
+  if (v === 'SUSPECTED_TUNNEL') return locale.value === 'en-US' ? 'Suspected Encrypted Proxy Tunnel' : '高度疑似存在加密代理通道';
+  return locale.value === 'en-US' ? 'No Significant VPN/Proxy Profile Detected' : '未检出明显 VPN / 代理特征';
 }
 
 function verdictClass(v: string): string {
@@ -573,7 +575,7 @@ async function runFullAudit() {
   try {
     report.value = await invoke<VpnDetectionReport>('run_vpn_environment_audit_cmd');
   } catch (e: unknown) {
-    noticeMsg.value = `侦测执行异常: ${String(e)}`;
+    noticeMsg.value = locale.value === 'en-US' ? `Detection execution exception: ${String(e)}` : `侦测执行异常: ${String(e)}`;
   } finally {
     isScanning.value = false;
   }
@@ -587,10 +589,10 @@ async function auditOfflinePcap() {
     const res = await invoke<VpnDetectionReport | null>('audit_vpn_pcap_file_cmd', { includeLocalEnv: false });
     if (res) {
       report.value = res;
-      noticeMsg.value = '已完成离线 .pcap/.cap 抓包文件的纯链路层 VPN/代理四维侦测';
+      noticeMsg.value = locale.value === 'en-US' ? 'Offline .pcap link-layer 4D detection completed' : '已完成离线 .pcap/.cap 抓包文件的纯链路层 VPN/代理四维侦测';
     }
   } catch (e: unknown) {
-    noticeMsg.value = `离线抓包侦测失败: ${String(e)}`;
+    noticeMsg.value = locale.value === 'en-US' ? `Offline capture detection failed: ${String(e)}` : `离线抓包侦测失败: ${String(e)}`;
   } finally {
     isScanning.value = false;
   }
@@ -599,10 +601,10 @@ async function auditOfflinePcap() {
 async function resetLinkStats() {
   try {
     await invoke('reset_vpn_audit_stats_cmd');
-    noticeMsg.value = '已重置链路层 VPN/代理统计状态';
+    noticeMsg.value = locale.value === 'en-US' ? 'Reset link-layer VPN/proxy statistics' : '已重置链路层 VPN/代理统计状态';
     await runFullAudit();
   } catch (e: unknown) {
-    noticeMsg.value = `重置失败: ${String(e)}`;
+    noticeMsg.value = locale.value === 'en-US' ? `Reset failed: ${String(e)}` : `重置失败: ${String(e)}`;
   }
 }
 
@@ -616,7 +618,7 @@ async function runActiveProxyProbe() {
       timeoutMs: 1200,
     });
   } catch (e: unknown) {
-    noticeMsg.value = `主动探测失败: ${String(e)}`;
+    noticeMsg.value = locale.value === 'en-US' ? `Active probe failed: ${String(e)}` : `主动探测失败: ${String(e)}`;
   } finally {
     isProbingEndpoint.value = false;
   }
@@ -630,10 +632,10 @@ async function exportReport(format: 'markdown' | 'html') {
       format,
     });
     if (path) {
-      noticeMsg.value = `审计报告已导出: ${path}`;
+      noticeMsg.value = locale.value === 'en-US' ? `Audit report exported: ${path}` : `审计报告已导出: ${path}`;
     }
   } catch (e: unknown) {
-    noticeMsg.value = `导出报告失败: ${String(e)}`;
+    noticeMsg.value = locale.value === 'en-US' ? `Failed to export report: ${String(e)}` : `导出报告失败: ${String(e)}`;
   }
 }
 

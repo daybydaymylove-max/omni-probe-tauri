@@ -58,7 +58,9 @@ import { invoke } from '@tauri-apps/api/core';
 import AppIcon from './AppIcon.vue';
 import { useI18n } from '../i18n';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 
 defineProps<{
   isOpen: boolean;
@@ -74,12 +76,12 @@ const isError = ref(false);
 async function doImport() {
   if (!filePath.value.trim()) return;
   isImporting.value = true;
-  statusMsg.value = '正在解析 PCAP 文件...';
+  statusMsg.value = locale.value === 'en-US' ? 'Parsing PCAP file...' : '正在解析 PCAP 文件...';
   isError.value = false;
 
   try {
     const list = await invoke<any[]>('import_pcap_file_cmd', { filePath: filePath.value.trim() });
-    statusMsg.value = `解析成功! 共提取 ${list.length} 个数据帧`;
+    statusMsg.value = locale.value === 'en-US' ? `Parsed successfully! Extracted ${list.length} frames` : `解析成功! 共提取 ${list.length} 个数据帧`;
     emit('log', `[PCAP-IMPORT] 成功从 ${filePath.value} 导入 ${list.length} 个离线报文`);
     emit('imported', list);
     setTimeout(() => {
@@ -87,7 +89,7 @@ async function doImport() {
     }, 1000);
   } catch (e: any) {
     isError.value = true;
-    statusMsg.value = `导入失败: ${e}`;
+    statusMsg.value = locale.value === 'en-US' ? `Import failed: ${e}` : `导入失败: ${e}`;
     emit('log', `[ERROR] PCAP 导入失败: ${e}`);
   } finally {
     isImporting.value = false;

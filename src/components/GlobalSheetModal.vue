@@ -56,7 +56,7 @@
               class="ui-btn-secondary"
               @click="cancelActiveDialog"
             >
-              {{ currentDialog.cancelText || '取消' }}
+              {{ currentDialog.cancelText || (locale === 'en-US' ? 'Cancel' : '取消') }}
             </button>
             <button
               ref="confirmBtnRef"
@@ -64,7 +64,7 @@
               :class="currentDialog.danger ? 'ui-btn-danger' : 'ui-btn-primary'"
               @click="submitActiveDialog"
             >
-              {{ currentDialog.confirmText || '确定' }}
+              {{ currentDialog.confirmText || (locale === 'en-US' ? 'Confirm' : '确定') }}
             </button>
           </div>
         </div>
@@ -78,7 +78,9 @@ import { watch, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import { useConfirmDialogState } from '../composables/useConfirmDialog';
 import AppIcon from './AppIcon.vue';
 import { useI18n } from '../i18n';
-const { t } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 void t;
 
 const { currentDialog, submitActiveDialog, cancelActiveDialog } = useConfirmDialogState();

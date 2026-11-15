@@ -46,9 +46,9 @@
         <div class="liquid-panel rounded-full h-9 pl-1.5 pr-3 flex items-center gap-2">
           <span class="lens-edge-lip" aria-hidden="true"></span>
           <button @click="toggleDockPinned"
-            :title="isDockExpanded ? '收起左侧导航栏' : '展开左侧导航栏'"
+            :title="isDockExpanded ? t('topbar.sidebarCollapse') : t('topbar.sidebarExpand')"
             class="w-7 h-7 rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-glass-pill-hover)] transition-colors cursor-pointer"
-            aria-label="切换侧栏">
+            :aria-label="t('topbar.sidebarToggle')">
             <AppIcon :name="isDockExpanded ? 'chevron-left' : 'chevron-right'" :size="14" />
           </button>
 
@@ -80,7 +80,7 @@
             class="h-7 flex items-center gap-1.5 px-2.5 rounded-full hover:bg-[var(--surface-glass-pill-hover)] text-[12px] max-w-[155px] 2xl:max-w-[205px] whitespace-nowrap cursor-pointer transition-colors"
             :aria-expanded="isIfaceMenuOpen"
             aria-haspopup="listbox"
-            :title="`当前物理接口: ${selectedIface || t('topbar.autoNic')}`">
+            :title="t('topbar.nicTitle', { iface: selectedIface || t('topbar.autoNic') })">
             <span class="w-2 h-2 rounded-full shrink-0"
               :style="{ background: isRunning ? (isPaused ? 'var(--accent-amber)' : 'var(--accent-green)') : 'var(--text-muted)' }"></span>
             <span class="font-medium text-[var(--text-primary)] truncate">{{ selectedIface || t('topbar.autoNic') }}</span>
@@ -157,7 +157,7 @@
             @click.stop="toggleInspector"
             :aria-expanded="inspectorOpen"
             class="flex items-center gap-2 liquid-panel rounded-full h-9 px-2.5 md:px-3 text-[11px] ui-num cursor-pointer hover:bg-[var(--surface-glass-pill-hover)] transition-colors whitespace-nowrap"
-            :title="`环形缓冲: ${ringBufferUsageText} | 运行环境就绪度: ${envScore ?? '--'}%，点击展开环境检查器`">
+            :title="t('topbar.ringEnvTitle', { ring: ringBufferUsageText, score: envScore ?? '--' })">
             <span class="lens-edge-lip" aria-hidden="true"></span>
             <span class="text-[var(--text-secondary)] hidden xl:inline">{{ ringBufferUsageText }}</span>
             <span class="h-3 w-px bg-[var(--border-subtle)] hidden xl:inline-block"></span>
@@ -165,7 +165,7 @@
               <span class="w-1.5 h-1.5 rounded-full"
                 :class="hasActiveDownload ? 'animate-pulse' : ''"
                 :style="{ background: (envScore ?? 0) >= 90 ? 'var(--accent-green)' : (envScore ?? 0) >= 50 ? 'var(--accent-amber)' : 'var(--accent-muted, var(--text-muted))' }"></span>
-              <span class="hidden sm:inline">环境 {{ envScore ?? '--' }}%</span>
+              <span class="hidden sm:inline">{{ t('topbar.envShort', { score: envScore ?? '--' }) }}</span>
             </span>
           </button>
 
@@ -349,10 +349,10 @@
               isDockExpanded ? 'justify-between px-2.5 w-full' : 'justify-center w-9 mx-auto px-1']"
             :title="t('nav.fourBusTooltip')">
             <div class="grid grid-cols-2 gap-1 shrink-0" :class="isDockExpanded ? 'flex items-center gap-1.5' : ''">
-              <span class="w-1.5 h-1.5 rounded-full" :style="{ background: isRunning ? (isPaused ? 'var(--accent-amber)' : 'var(--accent-green)') : 'var(--text-muted)' }" title="网卡 NIC"></span>
-              <span class="w-1.5 h-1.5 rounded-full" :style="{ background: isSerialRunning ? 'var(--accent-primary)' : 'var(--text-muted)' }" title="串口 COM"></span>
-              <span class="w-1.5 h-1.5 rounded-full" :style="{ background: isUsbRunning ? 'var(--accent-purple)' : 'var(--text-muted)' }" title="USB 总线"></span>
-              <span class="w-1.5 h-1.5 rounded-full" :style="{ background: isHoneypotRunning ? 'var(--accent-amber)' : 'var(--text-muted)' }" title="诱饵蜜罐"></span>
+              <span class="w-1.5 h-1.5 rounded-full" :style="{ background: isRunning ? (isPaused ? 'var(--accent-amber)' : 'var(--accent-green)') : 'var(--text-muted)' }" :title="t('common.busNic')"></span>
+              <span class="w-1.5 h-1.5 rounded-full" :style="{ background: isSerialRunning ? 'var(--accent-primary)' : 'var(--text-muted)' }" :title="t('common.busCom')"></span>
+              <span class="w-1.5 h-1.5 rounded-full" :style="{ background: isUsbRunning ? 'var(--accent-purple)' : 'var(--text-muted)' }" :title="t('common.busUsb')"></span>
+              <span class="w-1.5 h-1.5 rounded-full" :style="{ background: isHoneypotRunning ? 'var(--accent-amber)' : 'var(--text-muted)' }" :title="t('common.busHoneypot')"></span>
             </div>
             <span v-show="isDockExpanded" class="text-[11px] text-[var(--text-secondary)] font-medium truncate">
               {{ t('nav.honeypotFourBus') }}
@@ -701,10 +701,10 @@ const domainAssetTabs: WorkbenchTab[] = [
   { id: 'geo_map', label: '全球网络地图', labelKey: 'nav.geo_map', icon: 'globe' },
 ];
 
-const auditComplianceBadge = ref('待检');
+const auditComplianceBadge = ref('');
 
 const domainComplianceTabs = computed<WorkbenchTab[]>(() => [
-  { id: 'audit', label: '等保基线审计', labelKey: 'nav.audit', badge: auditComplianceBadge.value, icon: 'shield' },
+  { id: 'audit', label: '等保基线审计', labelKey: 'nav.audit', badge: computed(() => auditComplianceBadge.value || t('audit.pending')), icon: 'shield' },
   { id: 'web_audit', label: '上网行为审计', labelKey: 'nav.web_audit', icon: 'eye' },
   { id: 'security_review', label: '四维安全审查', labelKey: 'nav.security_review', icon: 'layers' },
 ]);
@@ -787,8 +787,8 @@ const threatCount = computed(() => {
 });
 
 async function triggerEmergencyCutoff() {
-  addLog('[SECURITY] [紧急停机] 用户触发一键紧急切断与嗅探停机响应');
-  notifyWarning('一键紧急停机响应', '已触发应急防护机制，全线切断嗅探引擎与物理总线');
+  addLog('[SECURITY] ' + t('app.emergencyLog'));
+  notifyWarning(t('app.emergencyCutoffTitle'), t('app.emergencyCutoffDesc'));
   await stopCapture();
 }
 
@@ -944,12 +944,12 @@ const isNetToolboxOpen = ref(false);
 // 启动自检状态（由全局单例 Composable useEnvironmentInspector 驱动）
 const isInitializing = ref(true);
 const initProgress = ref(15);
-const initStatusMessage = ref('正在初始化底层通信总线与内存池...');
+const initStatusMessage = ref(t('app.initializing'));
 const initSteps = ref([
-  { label: '内核旁路与环形缓冲池', done: false },
-  { label: '物理网络适配器探测', done: false },
-  { label: '工业现场总线与串口', done: false },
-  { label: '工控规约解剖矩阵', done: false },
+  { label: t('app.step1'), done: false },
+  { label: t('app.step2'), done: false },
+  { label: t('app.step3'), done: false },
+  { label: t('app.step4'), done: false },
 ]);
 
 async function refreshAuditComplianceRate(): Promise<void> {
@@ -959,7 +959,7 @@ async function refreshAuditComplianceRate(): Promise<void> {
       auditComplianceBadge.value = `${snap.level3_rate_pct.toFixed(0)}%`;
     }
   } catch (e) {
-    console.warn('[AUDIT_SNAPSHOT] 获取等保实测达成率失败:', e);
+    console.warn('[AUDIT_SNAPSHOT] ' + t('app.auditFetchFailed'), e);
   }
 }
 
@@ -972,7 +972,7 @@ function handleOpenGlobalDossier(ip: string) {
   if (!ip) return;
   globalDossierIp.value = ip;
   isGlobalDossierOpen.value = true;
-  addLog(`[DOSSIER] 跨工作台唤起全息 IP 画像档案: ${ip}`);
+  addLog(`[DOSSIER] ${t('app.dossierAwaken')}: ${ip}`);
 }
 
 function addLog(msg: string) {
@@ -990,11 +990,11 @@ async function startCapture() {
     await invoke('start_capture', { iface: selectedIface.value, bpfFilter: bpfFilter.value || null });
     isRunning.value = true;
     isPaused.value = false;
-    addLog(`[PROBE] 网卡嗅探已启动 → ${selectedIface.value || 'auto'} BPF="${bpfFilter.value || 'none'}"`);
-    notifySuccess('网卡嗅探引擎已就绪', `已绑定网卡 [${selectedIface.value || 'auto'}]，过滤规则: ${bpfFilter.value || '全量捕获'}`);
+    addLog(`[PROBE] ${t('app.probeStarted')} → ${selectedIface.value || 'auto'} BPF="${bpfFilter.value || 'none'}"`);
+    notifySuccess(t('app.probeReadyTitle'), t('app.probeReadyDesc', { iface: selectedIface.value || 'auto', filter: bpfFilter.value || t('app.fullCapture') }));
   } catch (e) {
-    addLog(`[ERROR] 网卡引擎启动失败: ${e}`);
-    notifyError('网卡抓包引擎启动受阻', e);
+    addLog(`[ERROR] ${t('app.probeStartFailed')}: ${e}`);
+    notifyError(t('app.probeStartBlocked'), e);
   }
 }
 
@@ -1002,11 +1002,11 @@ async function pauseCapture() {
   try {
     await invoke('pause_capture');
     isPaused.value = true;
-    addLog('[PROBE] ⏸️ 网卡嗅探已挂起暂停（数据流暂停，网卡驱动保持热备）');
-    notifyInfo('网卡嗅探已挂起', '数据流捕获已暂停，网卡驱动保持热备状态');
+    addLog('[PROBE] ' + t('app.probePausedLog'));
+    notifyInfo(t('app.probePausedTitle'), t('app.probePausedDesc'));
   } catch (e) {
-    addLog(`[ERROR] 暂停嗅探失败: ${e}`);
-    notifyError('暂停嗅探失败', e);
+    addLog(`[ERROR] ${t('app.probePauseFailed')}: ${e}`);
+    notifyError(t('app.probePauseFailed'), e);
   }
 }
 
@@ -1014,11 +1014,11 @@ async function resumeCapture() {
   try {
     await invoke('resume_capture');
     isPaused.value = false;
-    addLog('[PROBE] ▶️ 网卡嗅探已恢复（毫秒级无缝继续抓包）');
-    notifySuccess('网卡嗅探已恢复', '毫秒级无缝继续捕获实时数据流');
+    addLog('[PROBE] ' + t('app.probeResumedLog'));
+    notifySuccess(t('app.probeResumedTitle'), t('app.probeResumedDesc'));
   } catch (e) {
-    addLog(`[ERROR] 恢复嗅探失败: ${e}`);
-    notifyError('恢复嗅探失败', e);
+    addLog(`[ERROR] ${t('app.probeResumeFailed')}: ${e}`);
+    notifyError(t('app.probeResumeFailed'), e);
   }
 }
 
@@ -1031,11 +1031,11 @@ async function stopCapture() {
     activeSerialPorts.value = [];
     isUsbRunning.value = false;
     captureCapability.value = { external_ready: true, scope: 'IDLE', reason: '', targets: [] };
-    addLog('[PROBE] 探针主引擎及全部物理总线已安全停止');
-    notifyInfo('捕获引擎已安全停止', '主引擎、物理串口及 USB 外设嗅探均已安全停机');
+    addLog('[PROBE] ' + t('app.probeStoppedLog'));
+    notifyInfo(t('app.probeStoppedTitle'), t('app.probeStoppedDesc'));
   } catch (e) {
-    addLog(`[ERROR] 停止失败: ${e}`);
-    notifyError('停止捕获引擎失败', e);
+    addLog(`[ERROR] ${t('app.stopFailed')}: ${e}`);
+    notifyError(t('app.stopFailed'), e);
   }
 }
 
@@ -1043,8 +1043,8 @@ async function startSerialCapture(port?: string, baudRate?: number) {
   const p = port || selectedSerial.value;
   const b = baudRate || serialPortBaudRates.value[p] || serialBaudRate.value || 9600;
   if (!p) {
-    addLog('[SERIAL] 启动失败: 未选择可用串口');
-    notifyWarning('启动串口监听失败', '请先选择目标物理/虚拟 COM 端口');
+    addLog('[SERIAL] ' + t('app.serialNoPort'));
+    notifyWarning(t('app.serialStartFailed'), t('app.serialSelectPort'));
     return;
   }
   try {
@@ -1058,7 +1058,7 @@ async function startSerialCapture(port?: string, baudRate?: number) {
     serialBaudRate.value = b;
     addLog(res);
   } catch (e) {
-    addLog(`[ERROR] 串口 ${p} 监听启动失败: ${e}`);
+    addLog(`[ERROR] ${t('app.serialListenFailed', { port: p })}: ${e}`);
   }
 }
 
@@ -1073,7 +1073,7 @@ async function stopSerialCapture(port?: string) {
     isSerialRunning.value = activeSerialPorts.value.length > 0;
     addLog(res);
   } catch (e) {
-    addLog(`[ERROR] 停止串口监听失败: ${e}`);
+    addLog(`[ERROR] ${t('app.serialStopFailed')}: ${e}`);
   }
 }
 
@@ -1085,14 +1085,14 @@ async function startUsbCapture(hubDevice?: string) {
     isUsbRunning.value = true;
     addLog(res);
     await refreshUsbDevices();
-    if (res.includes('降级') || res.includes('0 帧')) {
-      notifyInfo('USB 总线嗅探提示', res);
+    if (res.includes('降级') || res.includes('0 帧') || res.toLowerCase().includes('fallback') || res.toLowerCase().includes('0 frame')) {
+      notifyInfo(t('app.usbPrompt'), res);
     } else {
-      notifySuccess('USB 总线探针已就绪', res);
+      notifySuccess(t('app.usbReady'), res);
     }
   } catch (e) {
-    addLog(`[ERROR] USB 嗅探启动失败: ${e}`);
-    notifyError('USB 嗅探启动受阻', e);
+    addLog(`[ERROR] ${t('app.usbStartFailed')}: ${e}`);
+    notifyError(t('app.usbBlocked'), e);
   }
 }
 
@@ -1102,7 +1102,7 @@ async function stopUsbCapture() {
     isUsbRunning.value = false;
     addLog(res);
   } catch (e) {
-    addLog(`[ERROR] 停止 USB 嗅探失败: ${e}`);
+    addLog(`[ERROR] ${t('app.usbStopFailed')}: ${e}`);
   }
 }
 
@@ -1115,17 +1115,17 @@ async function clearData() {
       invoke('reset_vpn_audit_stats_cmd'),
     ]);
   } catch (e) {
-    addLog(`[ERROR] 清空内核日志与统计状态失败: ${e}`);
+    addLog(`[ERROR] ${t('app.cleanupFailed')}: ${e}`);
   }
-  addLog('[CLEANUP] 数据沙箱、流量统计累加器与内核日志已同步清空');
-  notifyInfo('数据沙箱已重置', '抓包流量缓存、实时统计累加器与内核日志已全部清空');
+  addLog('[CLEANUP] ' + t('app.cleanupDoneLog'));
+  notifyInfo(t('app.cleanupDoneTitle'), t('app.cleanupDoneDesc'));
 }
 
 function handleImportedPackets(importedList: any[]) {
   if (importedList && importedList.length > 0) {
     packets.value = [...importedList, ...packets.value];
-    addLog(`[TRAFFIC] 成功载入 ${importedList.length} 个离线报文至全局数据总线`);
-    notifySuccess('PCAP 数据包导入成功', `成功解析并载入 ${importedList.length} 帧离线流量报文至分析工作台`);
+    addLog(`[TRAFFIC] ${t('app.pcapImportedLog', { count: importedList.length })}`);
+    notifySuccess(t('app.pcapImportedTitle'), t('app.pcapImportedDesc', { count: importedList.length }));
   }
 }
 
@@ -1145,7 +1145,7 @@ async function refreshSerialPorts() {
       selectedSerial.value = bestUsb?.port_name || anyUsb?.port_name || anyAvail?.port_name || serialPorts.value[0] || '';
     }
   } catch (e) {
-    addLog(`[ERROR] 刷新物理串口拓扑失败: ${e}`);
+    addLog(`[ERROR] ${t('app.refreshSerialFailed')}: ${e}`);
   }
 }
 
@@ -1156,7 +1156,7 @@ async function refreshAssets() {
       discoveredAssets.value = fresh;
     }
   } catch (e) {
-    addLog(`[ERROR] 刷新局域网资产失败: ${e}`);
+    addLog(`[ERROR] ${t('app.refreshAssetsFailed')}: ${e}`);
   }
 }
 
@@ -1164,20 +1164,20 @@ async function clearAssets() {
   try {
     await invoke('clear_discovered_assets_cmd');
     discoveredAssets.value = [];
-    addLog('[ASSETS] 已清空所有局域网已感知资产记录');
+    addLog('[ASSETS] ' + t('app.clearAssetsLog'));
   } catch (e) {
-    addLog(`[ERROR] 清空资产失败: ${e}`);
+    addLog(`[ERROR] ${t('app.clearAssetsFailed')}: ${e}`);
   }
 }
 
 async function triggerAssetScan() {
   if (isScanningAssets.value) return;
   isScanningAssets.value = true;
-  addLog('[ASSETS] 发起局域网物理网段主动并发扫描...');
+  addLog('[ASSETS] ' + t('app.scanStartLog'));
   try {
     await invoke('trigger_asset_scan_cmd');
   } catch (e) {
-    addLog(`[ERROR] 扫描失败: ${e}`);
+    addLog(`[ERROR] ${t('app.scanFailed')}: ${e}`);
   } finally {
     setTimeout(() => { isScanningAssets.value = false; }, 3000);
   }
@@ -1186,28 +1186,28 @@ async function triggerAssetScan() {
 async function probeAllAssets() {
   if (isProbingAll.value) return;
   isProbingAll.value = true;
-  addLog('[PORT-SCAN] 启动全局资产高频端口探活...');
+  addLog('[PORT-SCAN] ' + t('app.portScanGlobalLog'));
   try {
     await invoke('probe_all_assets_cmd');
   } catch (e) {
-    addLog(`[ERROR] 端口探活异常: ${e}`);
+    addLog(`[ERROR] ${t('app.portScanError')}: ${e}`);
   } finally {
     setTimeout(() => { isProbingAll.value = false; }, 3000);
   }
 }
 
 async function probeAssetPorts(ip: string) {
-  addLog(`[PORT-SCAN] 正在对资产 ${ip} 进行高频端口探活...`);
+  addLog(`[PORT-SCAN] ${t('app.portScanningAssetLog', { ip })}`);
   try {
     const openPorts = await invoke<number[]>('probe_asset_ports_cmd', { ip });
     if (openPorts.length > 0) {
-      addLog(`[PORT-SCAN] 资产 ${ip} 发现开放端口: [${openPorts.join(', ')}]`);
+      addLog(`[PORT-SCAN] ${t('app.portFoundLog', { ip, ports: openPorts.join(', ') })}`);
     } else {
-      addLog(`[PORT-SCAN] 资产 ${ip} 未响应常见端口探活`);
+      addLog(`[PORT-SCAN] ${t('app.portNoRespLog', { ip })}`);
     }
     await refreshAssets();
   } catch (e) {
-    addLog(`[ERROR] 端口探活失败: ${e}`);
+    addLog(`[ERROR] ${t('app.portScanFailed')}: ${e}`);
   }
 }
 
@@ -1215,7 +1215,7 @@ async function refreshUsbDevices() {
   try {
     usbDevices.value = await invoke<any[]>('list_usb_devices');
   } catch (e) {
-    addLog(`[ERROR] 获取 USB 设备列表失败: ${e}`);
+    addLog(`[ERROR] ${t('app.getUsbFailed')}: ${e}`);
   }
 }
 
@@ -1223,7 +1223,7 @@ async function replayPacket(pkt: any) {
   if (!pkt.payload_hex) return;
   const targetIp = pkt.dst_ip || '';
   if (!targetIp) {
-    addLog(`[REPLAY] #${pkt.id} 重放中止: 目标 IP 为空`);
+    addLog(`[REPLAY] ${t('app.replayAbortedLog', { id: pkt.id })}`);
     return;
   }
   try {
@@ -1235,7 +1235,7 @@ async function replayPacket(pkt: any) {
     });
     addLog(`[REPLAY] #${pkt.id} ${r}`);
   } catch (e) {
-    addLog(`[ERROR] 重放失败: ${e}`);
+    addLog(`[ERROR] ${t('app.replayFailed')}: ${e}`);
   }
 }
 
@@ -1245,10 +1245,10 @@ async function savePacketAsBaseline(pkt: any) {
     const list = await invoke<string[]>('load_baseline_payloads_cmd');
     if (!list.includes(pkt.payload_hex)) list.push(pkt.payload_hex);
     await invoke<number>('save_baseline_payloads_cmd', { payloads: list });
-    addLog(`[BASELINE] 成功将报文 #${pkt.id} 固化至基线库`);
-    notifySuccess('基线固化成功', `报文 #${pkt.id} 的协议特征已固化至基线白名单`);
+    addLog(`[BASELINE] ${t('app.baselineSuccessLog', { id: pkt.id })}`);
+    notifySuccess(t('app.baselineSuccessTitle'), t('app.baselineSuccessDesc', { id: pkt.id }));
   } catch (e) {
-    addLog(`[ERROR] 固化基线失败: ${e}`);
+    addLog(`[ERROR] ${t('app.baselineFailed')}: ${e}`);
   }
 }
 
@@ -1279,7 +1279,7 @@ function handleFilterTraffic(ip: string) {
   if (!ip) return;
   bpfFilter.value = ip;
   activeWorkbench.value = 'traffic';
-  addLog(`[TRAFFIC] 已按 IP 快速过滤流量: ${ip}`);
+  addLog(`[TRAFFIC] ${t('app.filterIpLog', { ip })}`);
 }
 
 onMounted(() => {
@@ -1297,7 +1297,7 @@ onMounted(() => {
   setTimeout(() => {
     initSteps.value[0].done = true;
     initProgress.value = Math.max(initProgress.value, 35);
-    initStatusMessage.value = '内核旁路与环形缓冲池已就绪...';
+    initStatusMessage.value = t('app.initStatusKernel');
   }, 120);
 
   let isFinished = false;
@@ -1307,10 +1307,10 @@ onMounted(() => {
     clearInterval(progressTimer);
     initSteps.value.forEach(s => s.done = true);
     initProgress.value = 100;
-    initStatusMessage.value = '系统自检就绪，全息分析仪已启动';
+    initStatusMessage.value = t('app.initStatusReady');
     setTimeout(() => {
       isInitializing.value = false;
-      notifySuccess('探针主引擎已就绪', selectedIface.value ? `已挂载适配器: ${selectedIface.value}` : '多轨自愈引擎已就绪');
+      notifySuccess(t('app.engineReadyTitle'), selectedIface.value ? t('app.engineMounted', { iface: selectedIface.value }) : t('app.engineSelfHealing'));
       setTimeout(() => {
         notifyDegradedIfNeeded();
       }, 450);
@@ -1345,7 +1345,7 @@ onMounted(() => {
     initProgress.value = Math.max(initProgress.value, 65);
     checkAllReady();
   }).catch((e) => {
-    addLog(`[ERROR] 获取网卡列表失败: ${e}`);
+    addLog(`[ERROR] ${t('app.getNicFailed')}: ${e}`);
   });
 
   invoke<SerialPortDetail[]>('list_serial_ports_detail').then((details) => {
@@ -1359,7 +1359,7 @@ onMounted(() => {
     checkAllReady();
   }).catch((e) => {
     console.warn('[App] list_serial_ports_detail failed:', e);
-    addLog(`[WARN] 枚举物理串口列表受阻: ${e}`);
+    addLog(`[WARN] ${t('app.enumSerialBlocked')}: ${e}`);
     initSteps.value[2].done = true;
     initProgress.value = Math.max(initProgress.value, 85);
     checkAllReady();
@@ -1370,7 +1370,7 @@ onMounted(() => {
     isSerialRunning.value = activeSerialPorts.value.length > 0;
   }).catch((e) => {
     console.warn('[App] list_active_serial_probes failed:', e);
-    addLog(`[WARN] 查询活动串口探测状态失败: ${e}`);
+    addLog(`[WARN] ${t('app.querySerialStatusFailed')}: ${e}`);
   });
 
   refreshAssets();
@@ -1392,10 +1392,10 @@ onMounted(() => {
       const paths = event.payload.paths;
       if (paths.length >= 2) {
         diffBus.openFileMergeWithPaths(paths[0], paths[1]);
-        notifySuccess('桌面拖放文件已载入对比', `左: ${paths[0]} | 右: ${paths[1]}`);
+        notifySuccess(t('app.dropLoadedTitle'), t('app.dropLoadedDesc', { left: paths[0], right: paths[1] }));
       } else {
         diffBus.openFileMergeWithPaths(paths[0], undefined);
-        notifyInfo('已从桌面拖入左侧基准文件', `请继续拖入或浏览右侧比对文件: ${paths[0]}`);
+        notifyInfo(t('app.dropLeftTitle'), t('app.dropLeftDesc', { path: paths[0] }));
       }
     }
   }).then((fn) => { unlistenDragDrop = fn; }).catch(() => {});
@@ -1414,10 +1414,10 @@ onMounted(() => {
   });
 
   listen<SerialPortDetail>('serial-inserted', ({ payload }) => {
-    addLog(`[SERIAL] 检测到新物理串口接入: ${payload.description} [${payload.port_name}]`);
+    addLog(`[SERIAL] ${t('app.serialPluggedLog', { desc: payload.description, port: payload.port_name })}`);
     if (payload.is_usb) {
       selectedSerial.value = payload.port_name;
-      notifyInfo('物理串口已接入并自动选中', `${payload.port_name} (${payload.product || payload.description})`);
+      notifyInfo(t('app.serialPluggedTitle'), t('app.serialPluggedDesc', { port: payload.port_name, desc: payload.product || payload.description }));
     }
     refreshSerialPorts();
   });
@@ -1430,29 +1430,29 @@ onMounted(() => {
     const newUsb = newlyAdded.find(p => p.is_usb);
     if (newUsb) {
       selectedSerial.value = newUsb.port_name;
-      notifyInfo('物理串口已接入并自动选中', `${newUsb.port_name} (${newUsb.product || newUsb.description})`);
+      notifyInfo(t('app.serialPluggedTitle'), t('app.serialPluggedDesc', { port: newUsb.port_name, desc: newUsb.product || newUsb.description }));
     }
-    addLog(`[SERIAL] 物理串口拓扑自动更新: 当前检测到 ${payload.length} 个通信端口`);
+    addLog(`[SERIAL] ${t('app.serialTopologyUpdatedLog', { count: payload.length })}`);
   });
 
   listen<string>('serial-disconnected', ({ payload }) => {
     activeSerialPorts.value = activeSerialPorts.value.filter(p => p !== payload);
     isSerialRunning.value = activeSerialPorts.value.length > 0;
-    addLog(`[SERIAL] 物理串口 ${payload} 已断开，监听引擎已自动安全注销`);
+    addLog(`[SERIAL] ${t('app.serialDisconnectedLog', { port: payload })}`);
   });
 
   listen<any[]>('usb-devices-changed', ({ payload }) => {
     usbDevices.value = payload;
-    addLog(`[USB] 物理 USB 外设拓扑变更: 当前在线 ${payload.length} 个物理设备`);
+    addLog(`[USB] ${t('app.usbTopologyChangedLog', { count: payload.length })}`);
   });
 
   listen<any>('hardware-alert', ({ payload }) => {
     if (typeof payload === 'string') {
-      addLog(`[HARDWARE] 物理总线告警: ${payload}`);
-      notifyWarning('物理总线安全告警', payload);
+      addLog(`[HARDWARE] ${t('app.hardwareBusAlertLog', { msg: payload })}`);
+      notifyWarning(t('app.hardwareBusAlertTitle'), payload);
       return;
     }
-    addLog(`[HARDWARE] 物理总线变更: ${payload.alert_type} - ${payload.device_name || ''}`);
+    addLog(`[HARDWARE] ${t('app.hardwareBusChangedLog', { type: payload.alert_type, name: payload.device_name || '' })}`);
   });
 
   let pendingPackets: any[] = [];
@@ -1486,7 +1486,7 @@ onMounted(() => {
     const now = Date.now();
     if (now - lastThreatToastMs > 2000) {
       lastThreatToastMs = now;
-      notifyWarning('实时载荷威胁命中告警', `${payload.name} (${payload.severity})`);
+      notifyWarning(t('app.threatPayloadTitle'), t('app.threatPayloadDesc', { name: payload.name, severity: payload.severity }));
     }
   });
 
@@ -1499,11 +1499,11 @@ onMounted(() => {
     reason: string;
   }
   listen<IcsAclViolationPayload>('ics-acl-violation', ({ payload }) => {
-    addLog(`[ICS-ACL] 越权拦截 #${payload.packet_id}: ${payload.src_ip} -> ${payload.dst_ip} | ${payload.reason}`);
+    addLog(`[ICS-ACL] ${t('app.icsAclBlockedLog', { id: payload.packet_id, src: payload.src_ip, dst: payload.dst_ip, reason: payload.reason })}`);
     const now = Date.now();
     if (now - lastThreatToastMs > 2000) {
       lastThreatToastMs = now;
-      notifyWarning('工控访问控制越权告警', `${payload.src_ip} → ${payload.dst_ip}: ${payload.reason}`);
+      notifyWarning(t('app.icsAclBlockedTitle'), t('app.icsAclBlockedDesc', { src: payload.src_ip, dst: payload.dst_ip, reason: payload.reason }));
     }
   });
 
@@ -1536,17 +1536,17 @@ onMounted(() => {
   listen<any>('honeypot-received', ({ payload }) => {
     honeypotPackets.value.unshift(payload);
     if (honeypotPackets.value.length > 5000) honeypotPackets.value.pop();
-    addLog(`[HONEYPOT] 诱捕命中: ${payload.src_ip}:${payload.src_port} → :${payload.dst_port}`);
+    addLog(`[HONEYPOT] ${t('app.honeypotHitLog', { src: payload.src_ip, sport: payload.src_port, dport: payload.dst_port })}`);
   });
 
   listen<string>('ai-alert', ({ payload }) => {
-    addLog(`[SECURITY] 告警: ${payload}`);
-    notifyWarning('安全威胁检测告警', payload);
+    addLog(`[SECURITY] ${t('app.securityAlertLog', { msg: payload })}`);
+    notifyWarning(t('app.securityAlertTitle'), payload);
   });
 
   listen<any>('baseline-drift-alert', ({ payload }) => {
     addLog(`[BASELINE-ALERT] [${payload.drift_type}] ${payload.description}`);
-    notifyWarning('等保基线漂移告警', `[${payload.drift_type}] ${payload.description}`);
+    notifyWarning(t('app.baselineDriftTitle'), t('app.baselineDriftDesc', { type: payload.drift_type, desc: payload.description }));
   });
 
   listen<string>('system-log', ({ payload }) => {
@@ -1556,7 +1556,7 @@ onMounted(() => {
   listen<CaptureCapabilityPayload>('capture-capability-warning', ({ payload }) => {
     captureCapability.value = payload;
     if (!payload.external_ready && payload.reason) {
-      notifyWarning('外网捕获受限：当前仅局域网雷达模式', payload.reason);
+      notifyWarning(t('app.radarModeRestricted'), payload.reason);
     }
   });
 
@@ -1564,7 +1564,7 @@ onMounted(() => {
     isHoneypotRunning.value = hpRunning;
   }).catch((e) => {
     console.warn('[App] is_honeypot_running_cmd failed:', e);
-    addLog(`[WARN] 查询诱饵哨兵状态失败: ${e}`);
+    addLog(`[WARN] ${t('app.querySentinelFailed')}: ${e}`);
   });
 });
 </script>

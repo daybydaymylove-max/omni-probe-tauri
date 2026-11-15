@@ -205,7 +205,9 @@ const props = defineProps<{
 
 const emit = defineEmits(['close', 'log']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+void t;
+void locale;
 
 interface DbStatus {
   loaded: boolean;
@@ -225,7 +227,7 @@ const dbStatus = ref<DbStatus>({
 
 const downloadUrl = ref('auto');
 const isDownloading = ref(false);
-const downloadStatusText = ref('准备就绪');
+const downloadStatusText = ref('ready');
 const downloadProgress = ref({
   status: 'idle',
   downloaded_bytes: 0,
@@ -260,7 +262,7 @@ function formatDate(ts: number): string {
 
 async function startDownload() {
   isDownloading.value = true;
-  downloadStatusText.value = '正在连接下载通道并检测可用性...';
+  downloadStatusText.value = locale.value === 'en-US' ? 'Connecting to download channel...' : '正在连接下载通道并检测可用性...';
   downloadProgress.value = {
     status: 'connecting',
     downloaded_bytes: 0,
@@ -271,7 +273,7 @@ async function startDownload() {
 
   try {
     const res = await invoke<string>('download_ip_db_cmd', { customUrl: downloadUrl.value === 'auto' ? null : downloadUrl.value });
-    downloadStatusText.value = '下载完成并已热加载!';
+    downloadStatusText.value = locale.value === 'en-US' ? 'Download completed and hot-loaded!' : '下载完成并已热加载!';
     emit('log', `[IP-DB] ${res}`);
     await refreshStatus();
   } catch (e: any) {
@@ -326,15 +328,15 @@ onMounted(async () => {
       downloadProgress.value = event.payload;
       const s = event.payload.status || '';
       if (s.startsWith('connecting')) {
-        downloadStatusText.value = `正在连接网络源 (${s})...`;
+        downloadStatusText.value = locale.value === 'en-US' ? `Connecting to source (${s})...` : `正在连接网络源 (${s})...`;
       } else if (s.startsWith('downloading')) {
-        downloadStatusText.value = `正在高速下载数据流 (${event.payload.speed_kbps} KB/s)...`;
+        downloadStatusText.value = locale.value === 'en-US' ? `Downloading stream (${event.payload.speed_kbps} KB/s)...` : `正在高速下载数据流 (${event.payload.speed_kbps} KB/s)...`;
       } else if (s === 'fallback') {
-        downloadStatusText.value = event.payload.error || '正在自动尝试下一个备选源...';
+        downloadStatusText.value = event.payload.error || (locale.value === 'en-US' ? 'Trying next fallback source...' : '正在自动尝试下一个备选源...');
       } else if (s === 'completed') {
-        downloadStatusText.value = '下载完成，已安全热重载进入全局内存！';
+        downloadStatusText.value = locale.value === 'en-US' ? 'Download completed, hot-reloaded into memory!' : '下载完成，已安全热重载进入全局内存！';
       } else if (s === 'error') {
-        downloadStatusText.value = `下载出错: ${event.payload.error || '未知网络错误'}`;
+        downloadStatusText.value = locale.value === 'en-US' ? `Download error: ${event.payload.error || 'Unknown error'}` : `下载出错: ${event.payload.error || '未知网络错误'}`;
       }
     });
   } catch (err) {
