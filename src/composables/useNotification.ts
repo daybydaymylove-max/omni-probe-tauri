@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import { t } from '../i18n';
+import { t, activeLocale } from '../i18n';
 
 export type NotificationType = 'success' | 'info' | 'warning' | 'error';
 
@@ -125,6 +125,53 @@ export function formatFriendlyError(err: unknown, defaultTitle: string = t('erro
 }
 
 /**
+ * 后端 Rust 错误/状态消息智能转译表 (Chinese -> English)
+ * 彻底消除底层未改造 Command 直出中文引起的界面中英混血
+ * 时间复杂度: O(M) (M <= 30)
+ * 空间复杂度: O(1)
+ */
+const BACKEND_MSG_MAP: Array<[RegExp, string]> = [
+  [/未检测到可用网卡/i, 'No available network adapters detected'],
+  [/打开设备失败|打开网卡失败/i, 'Failed to open network capture device'],
+  [/打开串口失败/i, 'Failed to open serial port'],
+  [/设备已被占用|串口已被占用|端口被占用/i, 'Device or serial port is already in use'],
+  [/WFP.*提权受限|WFP.*权限不足|需要管理员权限/i, 'Administrator privileges required for WFP filter engine'],
+  [/PCAP.*导出受阻|导出.*PCAP.*失败/i, 'Failed to export PCAP packet dump'],
+  [/保存.*成功/i, 'Saved successfully'],
+  [/操作成功/i, 'Operation completed successfully'],
+  [/参数错误|非法参数/i, 'Invalid parameters specified'],
+  [/设备未连接|未发现设备/i, 'Device not connected or unreachable'],
+  [/数据包解析错误|解码异常/i, 'Packet dissection exception'],
+  [/等保.*合规阻断|权限不足/i, 'Access denied by compliance security policy'],
+  [/抓包已启动|已启动抓包/i, 'Packet capture started'],
+  [/已停止抓包|抓包已停止/i, 'Packet capture stopped'],
+  [/已复制.*剪贴板|已复制/i, 'Copied to clipboard'],
+  [/正在探测/i, 'Probing in progress...'],
+  [/探测完成|扫描完成/i, 'Probe completed successfully'],
+  [/连接超时|请求超时/i, 'Connection or request timed out'],
+  [/连接被拒绝|对端拒绝/i, 'Connection refused by remote host'],
+  [/网络不可达/i, 'Network unreachable'],
+  [/文件不存在|找不到指定文件/i, 'File not found or inaccessible'],
+  [/写入失败|磁盘空间不足/i, 'Write operation failed or disk full'],
+  [/校验码错误|CRC错误/i, 'Checksum / CRC verification failed'],
+  [/重放已终止|重放受阻/i, 'Packet replay aborted'],
+  [/注入失败/i, 'Frame injection failed'],
+  [/解密失败/i, 'Decryption failed'],
+  [/重构失败/i, 'Reconstruction failed'],
+];
+
+export function translateBackendMessage(msg: string): string {
+  if (!msg || activeLocale.value !== 'en-US') return msg;
+  let translated = msg;
+  for (const [pattern, enText] of BACKEND_MSG_MAP) {
+    if (pattern.test(translated)) {
+      translated = translated.replace(pattern, enText);
+    }
+  }
+  return translated;
+}
+
+/**
  * 触发通用全局通知 (支持自动防抖与暴风雨抑制)
  * 时间复杂度: O(N) (N <= 4)
  * 空间复杂度: O(1)
@@ -132,8 +179,15 @@ export function formatFriendlyError(err: unknown, defaultTitle: string = t('erro
 export function notify(options: NotifyOptions): string {
   const type = options.type || 'info';
   const duration = options.duration !== undefined ? options.duration : DEFAULT_DURATION_MAP[type];
-  const title = options.title.trim();
-  const message = (options.message || '').trim();
+  let title = options.title.trim();
+  let message = (options.message || '').trim();
+
+  // 若处于英文环境，自动将底层未处理的中文错误与状态转译为标准英文
+  if (activeLocale.value === 'en-US') {
+    title = translateBackendMessage(title);
+    message = translateBackendMessage(message);
+  }
+
   const now = Date.now();
 
   // 风暴抑制：检查队列中是否有 1.5 秒内相同类型和标题的通知，若有则进行合并与频次累加
@@ -217,6 +271,7 @@ export function useNotification() {
     notifyWarning,
     notifyError,
     formatFriendlyError,
+    translateBackendMessage,
     removeNotification,
     clearAllNotifications,
   };

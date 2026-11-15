@@ -187,7 +187,7 @@
               <span v-if="continuousRunning" class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-500/12 px-2 py-0.5 rounded-lg border border-emerald-500/25">{{ t('targetProbe.running') }}</span>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
-              <input v-model.number="continuousInterval" type="number" min="1" max="3600" title="探测周期（秒）"
+              <input v-model.number="continuousInterval" type="number" min="1" max="3600" :title="locale === 'en-US' ? 'Probe Interval (s)' : '探测周期（秒）'"
                 class="w-16 ui-input ui-num px-2 py-1 text-xs" />
               <span class="text-[11px]" style="color: var(--text-muted)">{{ t('targetProbe.secPerTime') }}</span>
               <div class="flex-1"></div>
@@ -210,7 +210,7 @@
               <span v-if="pullRunning" class="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-500/12 px-2 py-0.5 rounded-lg border border-indigo-500/25">{{ t('targetProbe.pulling') }}</span>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
-              <input v-model.number="pullReconnect" type="number" min="1" max="600" title="断线重连间隔（秒）"
+              <input v-model.number="pullReconnect" type="number" min="1" max="600" :title="locale === 'en-US' ? 'Reconnect Interval (s)' : '断线重连间隔（秒）'"
                 class="w-16 ui-input ui-num px-2 py-1 text-xs" />
               <span class="text-[11px]" style="color: var(--text-muted)">{{ t('targetProbe.secReconnect') }}</span>
               <div class="flex-1"></div>
@@ -250,7 +250,7 @@
       <footer class="px-6 py-3 border-t flex items-center justify-between shrink-0 text-xs ui-num" style="background: var(--surface-content-alt); border-color: var(--border-subtle); color: var(--text-muted)">
         <span>{{ t('targetProbe.footerSummary') }}</span>
         <button @click="$emit('close')" class="ui-btn-secondary px-4 py-1.5 rounded-xl font-semibold">
-          关闭
+          {{ locale === 'en-US' ? 'Close' : '关闭' }}
         </button>
       </footer>
 
@@ -273,7 +273,7 @@ import EmptyState from './EmptyState.vue';
 
 use([CanvasRenderer, BarChart, GridComponent, TooltipComponent]);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 interface ProbeResult {
   id: number;
@@ -374,7 +374,7 @@ const rttChartOption = computed<EChartsOption>(() => {
     },
     series: [
       {
-        name: '开放端口数',
+        name: locale.value === 'en-US' ? 'Open Ports' : '开放端口数',
         type: 'bar',
         itemStyle: { color: '#0ea5e9', borderRadius: [3, 3, 0, 0] },
         data: hist.map((b) => b.count),
@@ -420,7 +420,7 @@ async function doBatchBannerScan() {
   if (!spec || !portSpec) return;
 
   isProbing.value = true;
-  appendLog(`[*] 正在启动并发扫描: 目标=[${spec}], 端口=[${portSpec}] (信号量限流=64, 附只读 Banner 提取)...`, 'text-sky-700 dark:text-sky-300');
+  appendLog(locale.value === 'en-US' ? `[*] Starting concurrent scan: Target=[${spec}], Ports=[${portSpec}] (Semaphore=64, Readonly Banner)...` : `[*] 正在启动并发扫描: 目标=[${spec}], 端口=[${portSpec}] (信号量限流=64, 附只读 Banner 提取)...`, 'text-sky-700 dark:text-sky-300');
 
   try {
     const res = await invoke<NetworkPortScanSummary>('run_network_port_scan_cmd', {
@@ -432,7 +432,7 @@ async function doBatchBannerScan() {
     });
     scanSummary.value = res;
     appendLog(
-      `[+] 扫描完成: 共探测 ${res.total_probes} 项, 开放 ${res.open_count} 个, 高危 ${res.high_risk_count} 个, 耗时 ${res.duration_ms}ms`,
+      locale.value === 'en-US' ? `[+] Scan complete: Probed ${res.total_probes} items, ${res.open_count} open, ${res.high_risk_count} high-risk, Elapsed ${res.duration_ms}ms` : `[+] 扫描完成: 共探测 ${res.total_probes} 项, 开放 ${res.open_count} 个, 高危 ${res.high_risk_count} 个, 耗时 ${res.duration_ms}ms`,
       res.high_risk_count > 0 ? 'text-amber-700 dark:text-amber-300 font-bold' : 'text-emerald-700 dark:text-emerald-300 font-bold'
     );
     for (const item of res.open_items.slice(0, 12)) {
@@ -444,7 +444,7 @@ async function doBatchBannerScan() {
       );
     }
   } catch (e: unknown) {
-    appendLog(`[-] 并发扫描中止: ${String(e)}`, 'text-rose-700 dark:text-rose-400');
+    appendLog(locale.value === 'en-US' ? `[-] Concurrent scan aborted: ${String(e)}` : `[-] 并发扫描中止: ${String(e)}`, 'text-rose-700 dark:text-rose-400');
   } finally {
     isProbing.value = false;
   }
@@ -454,22 +454,22 @@ async function doPing() {
   const ip = firstIp();
   if (!ip) return;
   isProbing.value = true;
-  appendLog(`[*] 正在向 ${ip} 发射 ICMP 回显探针 (真实物理层 Ping)...`, 'text-sky-700 dark:text-sky-300');
+  appendLog(locale.value === 'en-US' ? `[*] Transmitting ICMP echo probe to ${ip} (L3 Ping)...` : `[*] 正在向 ${ip} 发射 ICMP 回显探针 (真实物理层 Ping)...`, 'text-sky-700 dark:text-sky-300');
 
   try {
     const res = await invoke<ProbeResult>('run_icmp_ping_cmd', { targetIp: ip, timeoutMs: 3000 });
     if (res.status === 'ONLINE') {
-      appendLog(`[+] ICMP 应答成功: ${res.target} 存活 (RTT: ${res.latency_ms.toFixed(1)}ms)`, 'text-emerald-700 dark:text-emerald-300 font-bold');
+      appendLog(locale.value === 'en-US' ? `[+] ICMP Echo reply: ${res.target} alive (RTT: ${res.latency_ms.toFixed(1)}ms)` : `[+] ICMP 应答成功: ${res.target} 存活 (RTT: ${res.latency_ms.toFixed(1)}ms)`, 'text-emerald-700 dark:text-emerald-300 font-bold');
       if (res.payload_hex) {
-        appendLog(`    应答载荷: ${res.payload_hex}`, 'text-[var(--text-secondary)]');
+        appendLog(locale.value === 'en-US' ? `    Reply Payload: ${res.payload_hex}` : `    应答载荷: ${res.payload_hex}`, 'text-[var(--text-secondary)]');
       }
     } else if (res.status === 'TIMEOUT') {
-      appendLog(`[!] ICMP 探针超时: ${ip} 无应答 (目标离线或防火墙丢弃回显)`, 'text-amber-700 dark:text-amber-300');
+      appendLog(locale.value === 'en-US' ? `[!] ICMP Probe timeout: ${ip} no response (Target offline or firewall filtered)` : `[!] ICMP 探针超时: ${ip} 无应答 (目标离线或防火墙丢弃回显)`, 'text-amber-700 dark:text-amber-300');
     } else {
-      appendLog(`[-] ICMP 探测失败: ${ip} 状态=${res.status} (RTT: ${res.latency_ms.toFixed(1)}ms)`, 'text-rose-700 dark:text-rose-400');
+      appendLog(locale.value === 'en-US' ? `[-] ICMP Probe failed: ${ip} status=${res.status} (RTT: ${res.latency_ms.toFixed(1)}ms)` : `[-] ICMP 探测失败: ${ip} 状态=${res.status} (RTT: ${res.latency_ms.toFixed(1)}ms)`, 'text-rose-700 dark:text-rose-400');
     }
   } catch (e: unknown) {
-    appendLog(`[-] ICMP 探测异常: ${String(e)}`, 'text-rose-700 dark:text-rose-400');
+    appendLog(locale.value === 'en-US' ? `[-] ICMP Probe exception: ${String(e)}` : `[-] ICMP 探测异常: ${String(e)}`, 'text-rose-700 dark:text-rose-400');
   } finally {
     isProbing.value = false;
   }
@@ -482,19 +482,19 @@ async function doTcpProbe() {
 
   const ports = portStr.split(',').map((p) => parseInt(p.trim(), 10)).filter((p) => !isNaN(p) && p > 0 && p <= 65535);
   if (ports.length === 0) {
-    appendLog(`[!] 单目标模式请使用逗号分隔纯数字端口，或点击【并发网段与 Banner 扫描】支持区间与模板`, 'text-amber-700 dark:text-amber-300');
+    appendLog(locale.value === 'en-US' ? `[!] Single target mode requires comma-separated numeric ports, or use Concurrent Scan for ranges.` : `[!] 单目标模式请使用逗号分隔纯数字端口，或点击【并发网段与 Banner 扫描】支持区间与模板`, 'text-amber-700 dark:text-amber-300');
     return;
   }
 
   isProbing.value = true;
-  appendLog(`[*] 正在向 ${ip} 目标端口 [${ports.join(', ')}] 发起 TCP 三次握手事件探测...`, 'text-sky-700 dark:text-sky-300');
+  appendLog(locale.value === 'en-US' ? `[*] Probing TCP 3-way handshake on ${ip} ports [${ports.join(', ')}]...` : `[*] 正在向 ${ip} 目标端口 [${ports.join(', ')}] 发起 TCP 三次握手事件探测...`, 'text-sky-700 dark:text-sky-300');
 
   const targets = ports.map((port) => ({ ip, port }));
   try {
     await invoke('run_target_scan_cmd', { targets, timeoutMs: 2500 });
-    appendLog(`[*] 靶向握手探测指令已下发，请留意系统日志流中的实时握手回执...`, 'text-[var(--text-secondary)]');
+    appendLog(locale.value === 'en-US' ? `[*] Handshake probe dispatched, observing receipts in event stream...` : `[*] 靶向握手探测指令已下发，请留意系统日志流中的实时握手回执...`, 'text-[var(--text-secondary)]');
   } catch (e: unknown) {
-    appendLog(`[-] 端口探测失败: ${String(e)}`, 'text-rose-700 dark:text-rose-400');
+    appendLog(locale.value === 'en-US' ? `[-] Port probe failed: ${String(e)}` : `[-] 端口探测失败: ${String(e)}`, 'text-rose-700 dark:text-rose-400');
   } finally {
     isProbing.value = false;
   }
@@ -504,7 +504,7 @@ async function startContinuous() {
   const ip = firstIp();
   const port = firstPort();
   if (!ip || !port) {
-    appendLog(`[!] 错误: 请先填写有效的单目标 IP 与端口`, 'text-rose-700 dark:text-rose-400');
+    appendLog(locale.value === 'en-US' ? `[!] Error: Specify valid single target IP and port first` : `[!] 错误: 请先填写有效的单目标 IP 与端口`, 'text-rose-700 dark:text-rose-400');
     return;
   }
   try {
@@ -516,7 +516,7 @@ async function startContinuous() {
     continuousRunning.value = true;
     appendLog(res, 'text-emerald-700 dark:text-emerald-300 font-bold');
   } catch (e: unknown) {
-    appendLog(`[-] 心跳探针启动失败: ${String(e)}`, 'text-rose-700 dark:text-rose-400');
+    appendLog(locale.value === 'en-US' ? `[-] Heartbeat probe failed to start: ${String(e)}` : `[-] 心跳探针启动失败: ${String(e)}`, 'text-rose-700 dark:text-rose-400');
   }
 }
 
@@ -524,7 +524,7 @@ async function startPull() {
   const ip = firstIp();
   const port = firstPort();
   if (!ip || !port) {
-    appendLog(`[!] 错误: 请先填写有效的单目标 IP 与端口`, 'text-rose-700 dark:text-rose-400');
+    appendLog(locale.value === 'en-US' ? `[!] Error: Specify valid single target IP and port first` : `[!] 错误: 请先填写有效的单目标 IP 与端口`, 'text-rose-700 dark:text-rose-400');
     return;
   }
   try {
@@ -536,7 +536,7 @@ async function startPull() {
     pullRunning.value = true;
     appendLog(res, 'text-indigo-700 dark:text-indigo-300 font-bold');
   } catch (e: unknown) {
-    appendLog(`[-] 拉流引擎启动失败: ${String(e)}`, 'text-rose-700 dark:text-rose-400');
+    appendLog(locale.value === 'en-US' ? `[-] Pull stream engine failed to start: ${String(e)}` : `[-] 拉流引擎启动失败: ${String(e)}`, 'text-rose-700 dark:text-rose-400');
   }
 }
 
@@ -546,7 +546,7 @@ async function stopAllEngines() {
       const res = await invoke<string>('stop_continuous_probe_cmd');
       appendLog(res, 'text-[var(--text-secondary)]');
     } catch (e: unknown) {
-      appendLog(`[-] 停止心跳探针失败: ${String(e)}`, 'text-rose-700 dark:text-rose-400');
+      appendLog(locale.value === 'en-US' ? `[-] Failed to stop heartbeat probe: ${String(e)}` : `[-] 停止心跳探针失败: ${String(e)}`, 'text-rose-700 dark:text-rose-400');
     }
     continuousRunning.value = false;
   }
@@ -555,7 +555,7 @@ async function stopAllEngines() {
       const res = await invoke<string>('stop_stream_pull_cmd');
       appendLog(res, 'text-[var(--text-secondary)]');
     } catch (e: unknown) {
-      appendLog(`[-] 停止拉流失败: ${String(e)}`, 'text-rose-700 dark:text-rose-400');
+      appendLog(locale.value === 'en-US' ? `[-] Failed to stop stream pull: ${String(e)}` : `[-] 停止拉流失败: ${String(e)}`, 'text-rose-700 dark:text-rose-400');
     }
     pullRunning.value = false;
   }

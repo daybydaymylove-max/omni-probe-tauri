@@ -180,7 +180,7 @@
 import { useI18n } from '../i18n';
 import AppIcon from './AppIcon.vue';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 defineProps<{
   packet: any | null;
@@ -200,22 +200,23 @@ function protocolBadgeColor(proto: string): string {
 }
 
 function formatFieldLabel(key: string): string {
+  const isEn = locale.value === 'en-US';
   const map: Record<string, string> = {
-    telemetry_station_bcd: '遥测站测站地址 (BCD)',
-    function_code: '规约功能码 (Function Code)',
-    function_name: '报文功能释义 (Function Meaning)',
-    center_address: '中心站地址 (Center Addr)',
-    center_password_hex: '中心站密码 (Password Hex)',
-    crc16: 'CRC16 校验码 (Checksum)',
-    sl651_frame_bytes: 'SL651 帧总长度 (Bytes)',
-    slave_id: 'Modbus 单元标识 (Slave ID)',
-    modbus_function: 'Modbus 功能码',
-    register_address: '起始寄存器地址',
-    register_count: '寄存器数量',
-    topic: 'MQTT 主题 (Topic)',
-    http_method: 'HTTP 请求方法',
-    http_path: 'HTTP 请求路径',
-    status_code: '响应状态码',
+    telemetry_station_bcd: isEn ? 'Telemetry Station Address (BCD)' : '遥测站测站地址 (BCD)',
+    function_code: isEn ? 'Protocol Function Code' : '规约功能码 (Function Code)',
+    function_name: isEn ? 'Function Meaning' : '报文功能释义 (Function Meaning)',
+    center_address: isEn ? 'Center Station Address' : '中心站地址 (Center Addr)',
+    center_password_hex: isEn ? 'Center Password (Hex)' : '中心站密码 (Password Hex)',
+    crc16: isEn ? 'CRC16 Checksum' : 'CRC16 校验码 (Checksum)',
+    sl651_frame_bytes: isEn ? 'SL651 Frame Length (Bytes)' : 'SL651 帧总长度 (Bytes)',
+    slave_id: isEn ? 'Modbus Slave ID' : 'Modbus 单元标识 (Slave ID)',
+    modbus_function: isEn ? 'Modbus Function Code' : 'Modbus 功能码',
+    register_address: isEn ? 'Start Register Address' : '起始寄存器地址',
+    register_count: isEn ? 'Register Count' : '寄存器数量',
+    topic: isEn ? 'MQTT Topic' : 'MQTT 主题 (Topic)',
+    http_method: isEn ? 'HTTP Method' : 'HTTP 请求方法',
+    http_path: isEn ? 'HTTP Request Path' : 'HTTP 请求路径',
+    status_code: isEn ? 'Response Status Code' : '响应状态码',
   };
   return map[key] || key.replace(/_/g, ' ');
 }

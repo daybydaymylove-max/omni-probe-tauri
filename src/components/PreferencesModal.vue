@@ -208,12 +208,12 @@
                   <button @click="saveSnaplenMode('full')"
                     class="px-3 py-1 rounded-lg font-semibold transition-colors cursor-pointer"
                     :class="snaplenMode === 'full' ? 'bg-sky-500 text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'">
-                    全量完整包 (Full)
+                    {{ locale === 'en-US' ? 'Full Packet (Full)' : '全量完整包 (Full)' }}
                   </button>
                   <button @click="saveSnaplenMode('header_only')"
                     class="px-3 py-1 rounded-lg font-semibold transition-colors cursor-pointer"
                     :class="snaplenMode === 'header_only' ? 'bg-sky-500 text-white shadow-xs' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'">
-                    仅抓头 (96B)
+                    {{ locale === 'en-US' ? 'Header Only (96B)' : '仅抓头 (96B)' }}
                   </button>
                 </div>
               </div>
@@ -223,8 +223,8 @@
             <div class="p-4 ui-sub-card space-y-3">
               <div class="flex items-center justify-between gap-3">
                 <div>
-                  <div class="text-xs font-bold" style="color: var(--text-primary)">自动切卷与磁盘配额 (Rolling PCAP)</div>
-                  <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">按单卷体积与总磁盘容量配额自动轮转落盘。</div>
+                  <div class="text-xs font-bold" style="color: var(--text-primary)">{{ locale === 'en-US' ? 'Rolling PCAP & Disk Quotas' : '自动切卷与磁盘配额 (Rolling PCAP)' }}</div>
+                  <div class="text-[11px] mt-0.5" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Automatically rotate dumps based on volume size and disk capacity limits.' : '按单卷体积与总磁盘容量配额自动轮转落盘。' }}</div>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer shrink-0">
                   <input type="checkbox" v-model="rollingCfg.enabled" class="sr-only peer">
@@ -234,15 +234,15 @@
 
               <div v-if="rollingCfg.enabled" class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
                 <div>
-                  <div class="text-[10px] mb-1" style="color: var(--text-muted)">输出存储目录</div>
+                  <div class="text-[10px] mb-1" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Dump Directory' : '输出存储目录' }}</div>
                   <input v-model.trim="rollingCfg.output_dir" type="text" class="ui-input w-full px-2 py-1 text-xs" />
                 </div>
                 <div>
-                  <div class="text-[10px] mb-1" style="color: var(--text-muted)">单卷上限 (MB)</div>
+                  <div class="text-[10px] mb-1" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Volume Max (MB)' : '单卷上限 (MB)' }}</div>
                   <input v-model.number="rollingCfg.max_size_mb" type="number" min="1" max="4096" class="ui-input w-full px-2 py-1 text-xs" />
                 </div>
                 <div>
-                  <div class="text-[10px] mb-1" style="color: var(--text-muted)">总磁盘配额 (GB)</div>
+                  <div class="text-[10px] mb-1" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Total Disk Quota (GB)' : '总磁盘配额 (GB)' }}</div>
                   <input v-model.number="rollingCfg.max_quota_gb" type="number" min="1" max="1024" class="ui-input w-full px-2 py-1 text-xs" />
                 </div>
               </div>
@@ -255,8 +255,8 @@
 
             <div class="p-3.5 rounded-2xl bg-rose-500/8 border border-rose-500/25 flex items-center justify-between gap-4">
               <div>
-                <div class="text-xs font-bold text-rose-700 dark:text-rose-300">清空捕获缓冲池与内核日志</div>
-                <div class="text-[11px] mt-0.5" style="color: var(--text-secondary)">释放内存中已解码报文与日志缓存，不影响磁盘持久化 PCAP。</div>
+                <div class="text-xs font-bold text-rose-700 dark:text-rose-300">{{ locale === 'en-US' ? 'Flush Buffer Pool & Kernel Logs' : '清空捕获缓冲池与内核日志' }}</div>
+                <div class="text-[11px] mt-0.5" style="color: var(--text-secondary)">{{ locale === 'en-US' ? 'Releases in-memory decoded frames and log buffers without affecting disk PCAPs.' : '释放内存中已解码报文与日志缓存，不影响磁盘持久化 PCAP。' }}</div>
               </div>
               <button @click="$emit('clearData')" class="ui-btn-danger px-3.5 py-1.5 rounded-xl font-bold text-xs shrink-0">
                 {{ t('common.clear') }}
@@ -287,7 +287,7 @@
                     <div class="text-xs font-bold" :class="locale === 'zh-CN' ? 'text-sky-700 dark:text-sky-300' : 'text-[var(--text-primary)]'">
                       {{ t('preferences.language.zhCN') }}
                     </div>
-                    <div class="text-[11px]" style="color: var(--text-muted)">工业级标准技术词汇 · 符合公文规约</div>
+                    <div class="text-[11px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Standard industrial technical vocabulary' : '工业级标准技术词汇 · 符合公文规约' }}</div>
                   </div>
                   <span v-if="locale === 'zh-CN'" class="w-2.5 h-2.5 rounded-full bg-sky-500 shrink-0"></span>
                 </button>
@@ -320,7 +320,7 @@
 
       <!-- 底栏 -->
       <footer class="px-6 py-3 border-t flex items-center justify-between shrink-0 text-xs ui-num" style="background: var(--surface-content-alt); border-color: var(--border-subtle); color: var(--text-muted)">
-        <span>Ctrl+, 随时呼出偏好设置</span>
+        <span>{{ locale === 'en-US' ? 'Ctrl+, open preferences anytime' : 'Ctrl+, 随时呼出偏好设置' }}</span>
         <button @click="$emit('close')" class="ui-btn-primary px-4 py-1.5 rounded-xl font-semibold">
           {{ t('common.close') }}
         </button>
@@ -384,7 +384,7 @@ function toggleStartupEnvReminder() {
 const autoCheckUpdate = ref(localStorage.getItem('omni_probe_auto_check_update') !== 'false');
 function saveAutoCheckUpdate() {
   localStorage.setItem('omni_probe_auto_check_update', autoCheckUpdate.value ? 'true' : 'false');
-  notifySuccess('更新策略已保存', autoCheckUpdate.value ? '已开启开机自动检查新版本' : '已关闭开机自动检查更新');
+  notifySuccess(locale.value === 'en-US' ? 'Update policy saved' : '更新策略已保存', autoCheckUpdate.value ? (locale.value === 'en-US' ? 'Enabled auto check on startup' : '已开启开机自动检查新版本') : (locale.value === 'en-US' ? 'Disabled auto check on startup' : '已关闭开机自动检查更新'));
 }
 
 const isCheckingUpdate = ref(false);
@@ -396,12 +396,12 @@ async function checkForUpdates() {
     const res: any = await invoke('check_app_update_cmd');
     updateResult.value = res;
     if (res.has_update) {
-      notifySuccess('发现新版本发布', `最新版本 ${res.latest_version} 已就绪，可一键下载更新`);
+      notifySuccess(locale.value === 'en-US' ? 'New release discovered' : '发现新版本发布', locale.value === 'en-US' ? `Release ${res.latest_version} is available for download` : `最新版本 ${res.latest_version} 已就绪，可一键下载更新`);
     } else {
-      notifyInfo('版本检查完成', '当前探针系统已是最新稳定版本');
+      notifyInfo(locale.value === 'en-US' ? 'Version check complete' : '版本检查完成', locale.value === 'en-US' ? 'Omni-Probe is already running the latest stable release' : '当前探针系统已是最新稳定版本');
     }
   } catch (e: any) {
-    notifyError('检查更新受阻', e || '无法连接 GitHub Releases API，请检查网络');
+    notifyError(locale.value === 'en-US' ? 'Update check blocked' : '检查更新受阻', e || (locale.value === 'en-US' ? 'Cannot connect to GitHub Releases API, please check network' : '无法连接 GitHub Releases API，请检查网络'));
   } finally {
     isCheckingUpdate.value = false;
   }
@@ -412,7 +412,7 @@ async function openLink(url: string) {
   try {
     await openUrl(url);
   } catch (e) {
-    notifyError('无法唤起系统浏览器打开链接', String(e));
+    notifyError(locale.value === 'en-US' ? 'Failed to launch system browser' : '无法唤起系统浏览器打开链接', String(e));
   }
 }
 
@@ -455,9 +455,9 @@ async function saveSnaplenMode(mode: 'full' | 'header_only') {
   try {
     snaplenMode.value = mode;
     const msg = await invoke<string>('set_snaplen_mode_cmd', { mode, limit: mode === 'header_only' ? 96 : null });
-    notifySuccess('抓包截断策略已更新', msg);
+    notifySuccess(locale.value === 'en-US' ? 'Truncation policy updated' : '抓包截断策略已更新', msg);
   } catch (e) {
-    notifyError('设置 Snaplen 失败', String(e));
+    notifyError(locale.value === 'en-US' ? 'Failed to set snaplen' : '设置 Snaplen 失败', String(e));
   }
 }
 
@@ -470,9 +470,9 @@ async function saveRollingPcapConfig() {
       maxDurationSecs: Math.max(60, Number(rollingCfg.value.max_duration_secs) || 3600),
       maxQuotaGb: Math.max(1, Number(rollingCfg.value.max_quota_gb) || 2),
     });
-    notifySuccess('滚动落盘配置已生效', msg);
+    notifySuccess(locale.value === 'en-US' ? 'Rolling PCAP configuration applied' : '滚动落盘配置已生效', msg);
   } catch (e) {
-    notifyError('更新滚动落盘配置失败', String(e));
+    notifyError(locale.value === 'en-US' ? 'Failed to update rolling config' : '更新滚动落盘配置失败', String(e));
   }
 }
 

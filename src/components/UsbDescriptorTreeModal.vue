@@ -65,7 +65,7 @@
             <div class="flex items-center justify-between border-b border-(--border-subtle) pb-2 gap-2">
               <div class="flex items-center gap-2">
                 <span class="px-2 py-0.5 bg-purple-500/12 text-purple-700 dark:text-purple-300 border border-purple-500/30 rounded font-bold text-[11px]">DEVICE (0x01)</span>
-                <span class="font-bold text-(--text-primary) font-sans">设备描述符 (Device Descriptor)</span>
+                <span class="font-bold text-(--text-primary) font-sans">{{ locale === 'en-US' ? 'Device Descriptor' : '设备描述符 (Device Descriptor)' }}</span>
               </div>
               <span class="text-purple-600 dark:text-purple-400 font-bold text-xs ui-num select-text">
                 VID: {{ descriptorTree.device.vendor_id }} | PID: {{ descriptorTree.device.product_id }}
@@ -73,14 +73,14 @@
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px] text-(--text-secondary) ui-sub-card p-2.5 rounded-xl ui-num select-text">
-              <div>USB 规范版本: <strong class="text-(--text-primary)">{{ descriptorTree.device.bcd_usb }}</strong></div>
-              <div>设备类别代码: <strong class="text-(--text-primary)">0x{{ descriptorTree.device.device_class.toString(16).padStart(2, '0').toUpperCase() }}</strong></div>
-              <div>子类别: <strong class="text-(--text-primary)">0x{{ descriptorTree.device.device_subclass.toString(16).padStart(2, '0').toUpperCase() }}</strong></div>
-              <div>协议代码: <strong class="text-(--text-primary)">0x{{ descriptorTree.device.device_protocol.toString(16).padStart(2, '0').toUpperCase() }}</strong></div>
-              <div>EP0 最大包长: <strong class="text-(--text-primary)">{{ descriptorTree.device.max_packet_size0 }} 字节</strong></div>
-              <div>设备版本号: <strong class="text-(--text-primary)">{{ descriptorTree.device.bcd_device }}</strong></div>
-              <div>配置描述符数: <strong class="text-purple-600 dark:text-purple-400 font-bold">{{ descriptorTree.device.num_configurations }}</strong></div>
-              <div>厂商/产品/串号: <span class="text-(--text-muted)">i{{ descriptorTree.device.manufacturer_idx }}/i{{ descriptorTree.device.product_idx }}/i{{ descriptorTree.device.serial_idx }}</span></div>
+              <div>{{ locale === 'en-US' ? 'USB Spec Version:' : 'USB 规范版本:' }} <strong class="text-(--text-primary)">{{ descriptorTree.device.bcd_usb }}</strong></div>
+              <div>{{ locale === 'en-US' ? 'Device Class:' : '设备类别代码:' }} <strong class="text-(--text-primary)">0x{{ descriptorTree.device.device_class.toString(16).padStart(2, '0').toUpperCase() }}</strong></div>
+              <div>{{ locale === 'en-US' ? 'Subclass:' : '子类别:' }} <strong class="text-(--text-primary)">0x{{ descriptorTree.device.device_subclass.toString(16).padStart(2, '0').toUpperCase() }}</strong></div>
+              <div>{{ locale === 'en-US' ? 'Protocol Code:' : '协议代码:' }} <strong class="text-(--text-primary)">0x{{ descriptorTree.device.device_protocol.toString(16).padStart(2, '0').toUpperCase() }}</strong></div>
+              <div>{{ locale === 'en-US' ? 'EP0 Max Packet Size:' : 'EP0 最大包长:' }} <strong class="text-(--text-primary)">{{ descriptorTree.device.max_packet_size0 }} {{ locale === 'en-US' ? 'Bytes' : '字节' }}</strong></div>
+              <div>{{ locale === 'en-US' ? 'Device Revision:' : '设备版本号:' }} <strong class="text-(--text-primary)">{{ descriptorTree.device.bcd_device }}</strong></div>
+              <div>{{ locale === 'en-US' ? 'Configurations:' : '配置描述符数:' }} <strong class="text-purple-600 dark:text-purple-400 font-bold">{{ descriptorTree.device.num_configurations }}</strong></div>
+              <div>{{ locale === 'en-US' ? 'MFG/Prod/Serial Str:' : '厂商/产品/串号:' }} <span class="text-(--text-muted)">i{{ descriptorTree.device.manufacturer_idx }}/i{{ descriptorTree.device.product_idx }}/i{{ descriptorTree.device.serial_idx }}</span></div>
             </div>
           </div>
 
@@ -90,17 +90,17 @@
             <div class="flex items-center justify-between border-b border-(--border-subtle) pb-2 gap-2">
               <div class="flex items-center gap-2">
                 <span class="px-2 py-0.5 bg-sky-500/12 text-sky-700 dark:text-sky-300 border border-sky-500/30 rounded font-bold text-[11px]">CONFIG (0x02)</span>
-                <span class="font-bold text-(--text-primary) font-sans">配置描述符 #{{ cfg.config_descriptor.config_value }}</span>
+                <span class="font-bold text-(--text-primary) font-sans">{{ locale === 'en-US' ? 'Configuration Descriptor #' : '配置描述符 #' }}{{ cfg.config_descriptor.config_value }}</span>
               </div>
               <span class="text-sky-600 dark:text-sky-400 font-bold text-xs ui-num select-text">
-                总长度: {{ cfg.config_descriptor.total_length }} 字节 | 接口数: {{ cfg.config_descriptor.num_interfaces }}
+                {{ locale === 'en-US' ? 'Total Length:' : '总长度:' }} {{ cfg.config_descriptor.total_length }} {{ locale === 'en-US' ? 'Bytes' : '字节' }} | {{ locale === 'en-US' ? 'Interfaces:' : '接口数:' }} {{ cfg.config_descriptor.num_interfaces }}
               </span>
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-3 gap-2 text-[11px] text-(--text-secondary) ui-sub-card p-2.5 rounded-xl ui-num select-text">
-              <div>供电属性: <strong class="text-(--text-primary)">0x{{ cfg.config_descriptor.attributes.toString(16).padStart(2, '0').toUpperCase() }} ({{ (cfg.config_descriptor.attributes & 0x40) ? '自供电' : '总线供电' }})</strong></div>
-              <div>最大功耗: <strong class="text-sky-600 dark:text-sky-400">{{ cfg.config_descriptor.max_power_ma }} mA</strong></div>
-              <div>配置索引: <span class="text-(--text-muted)">i{{ cfg.config_descriptor.config_str_idx }}</span></div>
+              <div>{{ locale === 'en-US' ? 'Power Attributes:' : '供电属性:' }} <strong class="text-(--text-primary)">0x{{ cfg.config_descriptor.attributes.toString(16).padStart(2, '0').toUpperCase() }} ({{ (cfg.config_descriptor.attributes & 0x40) ? (locale === 'en-US' ? 'Self-Powered' : '自供电') : (locale === 'en-US' ? 'Bus-Powered' : '总线供电') }})</strong></div>
+              <div>{{ locale === 'en-US' ? 'Max Power:' : '最大功耗:' }} <strong class="text-sky-600 dark:text-sky-400">{{ cfg.config_descriptor.max_power_ma }} mA</strong></div>
+              <div>{{ locale === 'en-US' ? 'Config String Idx:' : '配置索引:' }} <span class="text-(--text-muted)">i{{ cfg.config_descriptor.config_str_idx }}</span></div>
             </div>
 
             <!-- 3. Interface Descriptors (三级节点) -->
@@ -109,10 +109,10 @@
               <div class="flex items-center justify-between border-b border-(--border-subtle) pb-1.5 gap-2">
                 <div class="flex items-center gap-2">
                   <span class="px-2 py-0.5 bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 rounded font-bold text-[11px]">INTERFACE (0x04)</span>
-                  <span class="font-bold text-(--text-primary) font-sans">接口 #{{ iface.interface_descriptor.interface_number }} (Alt {{ iface.interface_descriptor.alternate_setting }})</span>
+                  <span class="font-bold text-(--text-primary) font-sans">{{ locale === 'en-US' ? 'Interface #' : '接口 #' }}{{ iface.interface_descriptor.interface_number }} (Alt {{ iface.interface_descriptor.alternate_setting }})</span>
                 </div>
                 <span class="text-emerald-600 dark:text-emerald-400 font-bold text-xs ui-num select-text">
-                  端点数: {{ iface.interface_descriptor.num_endpoints }} | 类别: 0x{{ iface.interface_descriptor.interface_class.toString(16).padStart(2, '0').toUpperCase() }}
+                  {{ locale === 'en-US' ? 'Endpoints:' : '端点数:' }} {{ iface.interface_descriptor.num_endpoints }} | {{ locale === 'en-US' ? 'Class:' : '类别:' }} 0x{{ iface.interface_descriptor.interface_class.toString(16).padStart(2, '0').toUpperCase() }}
                 </span>
               </div>
 
@@ -124,15 +124,15 @@
                     <span class="w-2 h-2 rounded-full" :class="ep.direction === 'IN' ? 'bg-sky-500' : 'bg-emerald-500'"></span>
                     <div>
                       <div class="font-bold text-(--text-primary) text-xs ui-num select-text">
-                        端点 0x{{ ep.endpoint_address.toString(16).padStart(2, '0').toUpperCase() }} [{{ ep.direction }}]
+                        {{ locale === 'en-US' ? 'Endpoint' : '端点' }} 0x{{ ep.endpoint_address.toString(16).padStart(2, '0').toUpperCase() }} [{{ ep.direction }}]
                       </div>
                       <div class="text-[11px] text-(--text-muted) ui-num">
-                        类型: {{ ep.transfer_type }} | 间隔: {{ ep.interval_ms }}ms
+                        {{ locale === 'en-US' ? 'Type:' : '类型:' }} {{ ep.transfer_type }} | {{ locale === 'en-US' ? 'Interval:' : '间隔:' }} {{ ep.interval_ms }}ms
                       </div>
                     </div>
                   </div>
                   <div class="text-right ui-num">
-                    <div class="font-bold text-xs text-(--text-primary)">{{ ep.max_packet_size }} 字节</div>
+                    <div class="font-bold text-xs text-(--text-primary)">{{ ep.max_packet_size }} {{ locale === 'en-US' ? 'Bytes' : '字节' }}</div>
                     <div class="text-[11px] text-(--text-muted)">Max Packet</div>
                   </div>
                 </div>
@@ -145,7 +145,7 @@
       <!-- 底部操作 -->
       <div class="px-6 py-3 border-t border-(--border-subtle) bg-(--surface-content-alt) flex items-center justify-end shrink-0">
         <button @click="$emit('close')" class="ui-btn-secondary px-4 py-1.5 text-xs font-semibold cursor-pointer">
-          关闭
+          {{ locale === 'en-US' ? 'Close' : '关闭' }}
         </button>
       </div>
     </div>
@@ -261,7 +261,7 @@ async function doParseTree() {
     });
     descriptorTree.value = res;
   } catch (err: any) {
-    errorMsg.value = `{{ t('usbTree.descHierarchy') }}失败: ${err?.message || String(err)}`;
+    errorMsg.value = locale.value === 'en-US' ? `Failed to query descriptor hierarchy: ${err?.message || String(err)}` : `获取描述符层级失败: ${err?.message || String(err)}`;
   } finally {
     isParsing.value = false;
   }
@@ -275,7 +275,7 @@ function addDescriptorToDiffQueue() {
     : 'RAW_DESC';
   diffBus.addToQueue({
     id: `USB_DESC_${vidPid}_${Date.now()}`,
-    label: `[USB描述符] ${vidPid}`,
+    label: `[USB ${locale.value === 'en-US' ? 'Descriptor' : '描述符'}] ${vidPid}`, 
     protocol: 'USB-DESCRIPTOR',
     src: vidPid,
     dst: `USB ${descriptorTree.value?.device.bcd_usb || '2.0'}`,
@@ -289,7 +289,7 @@ function addDescriptorToDiffQueue() {
       max_packet_size0: String(descriptorTree.value.device.max_packet_size0),
       num_configurations: String(descriptorTree.value.device.num_configurations)
     } : {}
-  }, `USB 描述符 ${vidPid}`, false);
+  }, locale.value === 'en-US' ? `USB Descriptor ${vidPid}` : `USB 描述符 ${vidPid}`, false);
 }
 
 onMounted(() => {

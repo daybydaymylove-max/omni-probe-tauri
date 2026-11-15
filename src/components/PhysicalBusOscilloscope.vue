@@ -46,7 +46,7 @@
         </label>
 
         <span class="ui-num px-2 py-0.5 rounded-md border bg-[var(--surface-glass-pill)]" style="border-color: var(--border-subtle); color: var(--text-muted);">
-          Samples: <strong style="color: var(--text-primary);">{{ filteredPackets.length }}</strong> 帧
+          Samples: <strong style="color: var(--text-primary);">{{ filteredPackets.length }}</strong> {{ locale === 'en-US' ? 'frames' : '帧' }}
         </span>
 
         <button
@@ -78,7 +78,7 @@
           <div v-if="plotterSeries.channels.length === 0" class="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
             <span class="text-xs font-semibold text-slate-300">{{ locale === 'en-US' ? 'No COM multi-channel numerical waveforms extracted yet' : '尚未提取到 COM 串口多通道数值波形' }}</span>
             <span class="text-[11px] text-slate-400 mt-1 font-mono">
-              等待单片机输出如 <code class="text-sky-300">temp:25.4 hum:61.2</code> 或 CSV 行 <code class="text-sky-300">25.4,61.2,3.30</code>
+              {{ locale === 'en-US' ? 'Awaiting MCU output like ' : '等待单片机输出如 ' }}<code class="text-sky-300">temp:25.4 hum:61.2</code> {{ locale === 'en-US' ? 'or CSV rows ' : '或 CSV 行 ' }}<code class="text-sky-300">25.4,61.2,3.30</code>
             </span>
           </div>
         </div>
@@ -167,8 +167,8 @@
         <div v-if="binaryDecodeMode === 'single'" class="relative rounded-xl border overflow-hidden h-44" style="border-color: var(--border-subtle); background: rgba(15, 23, 42, 0.92);">
           <canvas ref="binaryCanvasRef" class="w-full h-full block"></canvas>
           <div v-if="binarySeries.length === 0" class="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-            <span class="text-xs font-semibold text-slate-300">尚未捕获到满足字节偏移长度的物理载荷</span>
-            <span class="text-[11px] text-slate-400 mt-1 ui-num">需存在字节长度 ≥ {{ Math.max(0, Math.floor(binOffset)) + (binFloat32 ? 4 : binWidth) }}B 的串口或 USB 载荷帧</span>
+            <span class="text-xs font-semibold text-slate-300">{{ locale === 'en-US' ? 'No physical payload matching required byte offset yet' : '尚未捕获到满足字节偏移长度的物理载荷' }}</span>
+            <span class="text-[11px] text-slate-400 mt-1 ui-num">{{ locale === 'en-US' ? 'Requires serial or USB payload frame length ≥ ' : '需存在字节长度 ≥ ' }}{{ Math.max(0, Math.floor(binOffset)) + (binFloat32 ? 4 : binWidth) }}B</span>
           </div>
         </div>
 
@@ -180,7 +180,7 @@
             class="w-full h-full"
           />
           <div v-else class="w-full h-full flex items-center justify-center text-center text-[11px] px-4" style="color: var(--text-muted);">
-            {{ binaryDecodeMode === 'justfloat' ? '等待符合 VOFA+ JustFloat (小端 Float32 数组 + 00 00 80 7F 帧尾) 的串口流数据' : '暂无匹配结构模板的二进制帧，可在右侧检查帧头魔数与字段偏移配置后点击重新解构' }}
+            {{ binaryDecodeMode === 'justfloat' ? (locale === 'en-US' ? 'Awaiting VOFA+ JustFloat stream (Little-Endian Float32 array + 00 00 80 7F tail)' : '等待符合 VOFA+ JustFloat (小端 Float32 数组 + 00 00 80 7F 帧尾) 的串口流数据') : (locale === 'en-US' ? 'No binary frame matching struct schema. Verify magic header and field offsets on the right.' : '暂无匹配结构模板的二进制帧，可在右侧检查帧头魔数与字段偏移配置后点击重新解构') }}
           </div>
         </div>
       </div>
@@ -230,29 +230,29 @@
         <template v-else-if="binaryDecodeMode === 'justfloat'">
           <div class="font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'VOFA+ JustFloat Dissection' : 'VOFA+ JustFloat 协议解析' }}</div>
           <div class="text-[10px]" style="color: var(--text-muted);">
-            自动从连续/分片串口 HEX 流识别尾标 <code class="font-mono">00 00 80 7F</code> 并拆解多通道小端 IEEE-754 Float32。
+            {{ locale === 'en-US' ? 'Auto-identifies trailer ' : '自动从连续/分片串口 HEX 流识别尾标 ' }}<code class="font-mono">00 00 80 7F</code> {{ locale === 'en-US' ? 'from stream and dissects multi-channel IEEE-754 Float32.' : '并拆解多通道小端 IEEE-754 Float32。' }}
           </div>
           <div v-if="structDecodeRes && structDecodeRes.channels.length > 0" class="max-h-24 overflow-y-auto space-y-1">
             <div v-for="ch in structDecodeRes.channels" :key="ch.name" class="px-2 py-0.5 rounded border text-[10px] ui-num flex justify-between" style="border-color: var(--border-subtle);">
               <span class="font-bold">{{ ch.name }}</span>
-              <span>现值={{ ch.latest.toFixed(3) }} · [{{ ch.min.toFixed(2) }}..{{ ch.max.toFixed(2) }}]</span>
+              <span>{{ locale === 'en-US' ? 'Val=' : '现值=' }}{{ ch.latest.toFixed(3) }} · [{{ ch.min.toFixed(2) }}..{{ ch.max.toFixed(2) }}]</span>
             </div>
           </div>
-          <button @click="refreshStructDecode" class="ui-btn-secondary w-full py-1 text-[11px] justify-center">立即重解 VOFA 帧</button>
+          <button @click="refreshStructDecode" class="ui-btn-secondary w-full py-1 text-[11px] justify-center">{{ locale === 'en-US' ? 'Re-decode VOFA Frames' : '立即重解 VOFA 帧' }}</button>
         </template>
 
         <template v-else>
           <div class="flex items-center justify-between">
             <span class="font-semibold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Custom Struct Template' : '自定义 Struct 结构模板' }}</span>
-            <button @click="addStructFieldRow" class="text-[10px] text-sky-500 underline cursor-pointer">+ 字段</button>
+            <button @click="addStructFieldRow" class="text-[10px] text-sky-500 underline cursor-pointer">{{ locale === 'en-US' ? '+ Field' : '+ 字段' }}</button>
           </div>
           <div class="flex items-center gap-1.5">
-            <span class="text-[10px] shrink-0" style="color: var(--text-muted);">同步头(HEX):</span>
-            <input v-model="structHeaderHex" placeholder="空则全帧匹配 (如 AA 55)" class="ui-input w-full px-1.5 py-0.5 text-[10px] font-mono" />
+            <span class="text-[10px] shrink-0" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Sync Header (HEX):' : '同步头(HEX):' }}</span>
+            <input v-model="structHeaderHex" :placeholder="locale === 'en-US' ? 'Match all if empty (e.g. AA 55)' : '空则全帧匹配 (如 AA 55)'" class="ui-input w-full px-1.5 py-0.5 text-[10px] font-mono" />
           </div>
           <div class="max-h-24 overflow-y-auto space-y-1">
             <div v-for="(f, fIdx) in structFields" :key="fIdx" class="grid grid-cols-[54px_48px_34px_38px_16px] gap-1 items-center text-[10px]">
-              <input v-model="f.name" placeholder="名" class="ui-input px-1 py-0.5" />
+              <input v-model="f.name" :placeholder="locale === 'en-US' ? 'Name' : '名'" class="ui-input px-1 py-0.5" />
               <select v-model="f.field_type" class="ui-input px-0.5 py-0.5">
                 <option value="U8">U8</option>
                 <option value="I8">I8</option>
@@ -262,12 +262,12 @@
                 <option value="I32">I32</option>
                 <option value="F32">F32</option>
               </select>
-              <input type="number" v-model.number="f.offset" min="0" title="偏移" class="ui-input px-1 py-0.5 ui-num" />
-              <input type="number" v-model.number="f.scale" step="0.1" title="比例系数" class="ui-input px-1 py-0.5 ui-num" />
+              <input type="number" v-model.number="f.offset" min="0" :title="locale === 'en-US' ? 'Byte Offset' : '偏移'" class="ui-input px-1 py-0.5 ui-num" />
+              <input type="number" v-model.number="f.scale" step="0.1" :title="locale === 'en-US' ? 'Scale Factor' : '比例系数'" class="ui-input px-1 py-0.5 ui-num" />
               <button v-if="structFields.length > 1" @click="structFields.splice(fIdx, 1)" class="text-rose-500 cursor-pointer">×</button>
             </div>
           </div>
-          <button @click="refreshStructDecode" class="ui-btn-primary w-full py-1 text-[11px] justify-center">解析多通道 Struct 波形</button>
+          <button @click="refreshStructDecode" class="ui-btn-primary w-full py-1 text-[11px] justify-center">{{ locale === 'en-US' ? 'Parse Multi-Channel Struct Wave' : '解析多通道 Struct 波形' }}</button>
         </template>
       </div>
     </div>
@@ -279,12 +279,12 @@
         <div class="flex items-center gap-2 flex-wrap">
           <span class="font-bold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'Target Channel:' : '目标比对通道:' }}</span>
           <select v-model="selectedWaveSourceKey" class="ui-input px-2 py-0.5 text-[11px] ui-num">
-            <option value="__BINARY__">单寄存器波 (Offset {{ binOffset }}, {{ binFloat32 ? 'Float32' : `${binWidth * 8}-bit` }})</option>
+            <option value="__BINARY__">{{ locale === 'en-US' ? 'Single Register Wave' : '单寄存器波' }} (Offset {{ binOffset }}, {{ binFloat32 ? 'Float32' : `${binWidth * 8}-bit` }})</option>
             <option v-for="ch in (structDecodeRes?.channels || [])" :key="'st_' + ch.name" :value="`STRUCT:${ch.name}`">
-              Struct/VOFA 通道: {{ ch.name }} ({{ ch.samples.length }} 点)
+              {{ locale === 'en-US' ? 'Struct/VOFA Channel:' : 'Struct/VOFA 通道:' }} {{ ch.name }} ({{ ch.samples.length }} {{ locale === 'en-US' ? 'pts' : '点' }})
             </option>
             <option v-for="ch in plotterSeries.channels" :key="ch.name" :value="`CH:${ch.name}`">
-              文本传感器通道: {{ ch.name }} ({{ ch.samples.length }} 点)
+              {{ locale === 'en-US' ? 'Text Sensor Channel:' : '文本传感器通道:' }} {{ ch.name }} ({{ ch.samples.length }} {{ locale === 'en-US' ? 'pts' : '点' }})
             </option>
           </select>
           <input
@@ -296,7 +296,7 @@
             @click="saveCurrentAsGoldenBaseline"
             :disabled="waveOpBusy || activeChannelSamples.length < 4"
             class="px-2.5 py-0.5 rounded-lg font-semibold border cursor-pointer bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 hover:bg-amber-500/25 disabled:opacity-45"
-            title="将当前选中通道波形（含均值/标准差/主频）原子固化为黄金基线"
+            :title="locale === 'en-US' ? 'Atomically save current channel wave (with mean/stddev/dominant freq) as golden baseline' : '将当前选中通道波形（含均值/标准差/主频）原子固化为黄金基线'"
           >
             {{ locale === 'en-US' ? `Persist Golden Baseline (${activeChannelSamples.length} pts)` : `固化黄金基线 (${activeChannelSamples.length} 点)` }}
           </button>
@@ -304,9 +304,9 @@
 
         <div class="flex items-center gap-2 flex-wrap">
           <select v-model="selectedBaselineId" class="ui-input w-48 px-2 py-0.5 text-[11px] ui-num">
-            <option value="">-- 选择已存黄金波形基线 ({{ waveBaselines.length }}) --</option>
+            <option value="">-- {{ locale === 'en-US' ? 'Select Saved Golden Wave Baseline' : '选择已存黄金波形基线' }} ({{ waveBaselines.length }}) --</option>
             <option v-for="b in waveBaselines" :key="b.id" :value="b.id">
-              {{ b.name }} [{{ b.channel_name }} · {{ b.samples.length }}点]
+              {{ b.name }} [{{ b.channel_name }} · {{ b.samples.length }}{{ locale === 'en-US' ? 'pts' : '点' }}]
             </option>
           </select>
           <button
@@ -342,7 +342,7 @@
                   {{ smartWaveResult ? (locale === 'en-US' ? '1. Real-time Waveform vs Golden Baseline' : '1. 实时波形 vs 历史黄金基线叠加') : (locale === 'en-US' ? '1. Real-time vs Historical Throughput (pkt/s)' : '1. 实时与历史吞吐率对照 (pkt/s)') }}
                 </span>
                 <span class="text-[10px] ui-num" style="color: var(--text-muted);">
-                  {{ smartWaveResult ? `对齐 ${smartWaveResult.aligned_length} 点` : `实时 ${realtimeBuckets.length}s / 历史 ${historyData?.trend_points.length || 0}s` }}
+                  {{ smartWaveResult ? (locale === 'en-US' ? `Aligned ${smartWaveResult.aligned_length} pts` : `对齐 ${smartWaveResult.aligned_length} 点`) : (locale === 'en-US' ? `Live ${realtimeBuckets.length}s / Hist ${historyData?.trend_points.length || 0}s` : `实时 ${realtimeBuckets.length}s / 历史 ${historyData?.trend_points.length || 0}s`) }}
                 </span>
               </div>
               <div class="h-44 w-full relative">
@@ -353,7 +353,7 @@
                   class="w-full h-full"
                 />
                 <div v-else class="w-full h-full flex items-center justify-center text-[11px]" style="color: var(--text-muted);">
-                  请点击右上「读取 JSONL 历史归档」或监听串口/USB 获取采样波形
+                  {{ locale === 'en-US' ? 'Click top-right [Read JSONL Archive] or monitor Serial/USB for sampled waves' : '请点击右上「读取 JSONL 历史归档」或监听串口/USB 获取采样波形' }}
                 </div>
               </div>
             </div>
@@ -363,7 +363,7 @@
               <div class="flex items-center justify-between text-[11px]">
                 <span class="font-bold" style="color: var(--text-primary);">{{ locale === 'en-US' ? '2. Cooley-Tukey FFT Power Spectral Density' : '2. Cooley-Tukey FFT 功率谱密度' }}</span>
                 <span class="text-[10px] ui-num" style="color: var(--text-muted);">
-                  {{ smartWaveResult ? `频谱相似 ${(smartWaveResult.spectral_cosine_similarity * 100).toFixed(1)}%` : 'Hann 窗单边谱' }}
+                  {{ smartWaveResult ? (locale === 'en-US' ? `Spectral Cosine ${(smartWaveResult.spectral_cosine_similarity * 100).toFixed(1)}%` : `频谱相似 ${(smartWaveResult.spectral_cosine_similarity * 100).toFixed(1)}%`) : (locale === 'en-US' ? 'Hann Window Single-Sided Spectrum' : 'Hann 窗单边谱') }}
                 </span>
               </div>
               <div class="h-44 w-full relative">
@@ -374,7 +374,7 @@
                   class="w-full h-full"
                 />
                 <div v-else class="w-full h-full flex items-center justify-center text-[11px]" style="color: var(--text-muted);">
-                  需要至少 4 个传感器或寄存器采样点后计算频谱
+                  {{ locale === 'en-US' ? 'Requires at least 4 sensor or register samples to compute FFT spectrum' : '需要至少 4 个传感器或寄存器采样点后计算频谱' }}
                 </div>
               </div>
             </div>
@@ -429,29 +429,29 @@
                 v-if="historyData && historyData.matched_packets > 0"
                 :class="['px-1.5 py-0.5 rounded text-[10px] font-bold', deltaRatePct >= 0 ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' : 'bg-rose-500/15 text-rose-700 dark:text-rose-300']"
               >
-                吞吐偏差 {{ deltaRatePct >= 0 ? '+' : '' }}{{ deltaRatePct.toFixed(1) }}%
+                {{ locale === 'en-US' ? 'Throughput Delta' : '吞吐偏差' }} {{ deltaRatePct >= 0 ? '+' : '' }}{{ deltaRatePct.toFixed(1) }}%
               </span>
             </div>
             <div class="grid grid-cols-2 gap-1.5 text-[11px]">
               <div class="p-1.5 rounded-lg border bg-[var(--surface-glass-pill)]" style="border-color: var(--border-subtle);">
-                <div class="text-[10px]" style="color: var(--text-muted);">实时 / 历史包长</div>
+                <div class="text-[10px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Live / Hist Packet Len' : '实时 / 历史包长' }}</div>
                 <div class="font-bold mt-0.5" style="color: var(--text-primary);">{{ realtimeAvgLen.toFixed(1) }} / {{ (historyData?.avg_packet_size || 0).toFixed(1) }} B</div>
               </div>
               <div class="p-1.5 rounded-lg border bg-[var(--surface-glass-pill)]" style="border-color: var(--border-subtle);">
-                <div class="text-[10px]" style="color: var(--text-muted);">实时 / 历史信息熵</div>
+                <div class="text-[10px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Live / Hist Entropy' : '实时 / 历史信息熵' }}</div>
                 <div class="font-bold mt-0.5" style="color: var(--text-primary);">
                   {{ realtimeAvgEntropy.toFixed(2) }} / <span class="text-amber-600 dark:text-amber-300">{{ (historyData?.avg_entropy || 0).toFixed(2) }}</span>
                 </div>
               </div>
               <div class="p-1.5 rounded-lg border bg-[var(--surface-glass-pill)]" style="border-color: var(--border-subtle);">
-                <div class="text-[10px]" style="color: var(--text-muted);">历史命中 / 损坏行</div>
+                <div class="text-[10px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Hist Hit / Corrupted Lines' : '历史命中 / 损坏行' }}</div>
                 <div class="font-bold mt-0.5" style="color: var(--text-primary);">
                   {{ historyData?.matched_packets || 0 }} / <span class="text-rose-500">{{ historyData?.corrupted_lines || 0 }}</span>
                 </div>
               </div>
               <div class="p-1.5 rounded-lg border bg-[var(--surface-glass-pill)]" style="border-color: var(--border-subtle);">
                 <div class="text-[10px]" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Golden Baselines' : '已存黄金基线数' }}</div>
-                <div class="font-bold mt-0.5 text-sky-600 dark:text-sky-300">{{ waveBaselines.length }} 组</div>
+                <div class="font-bold mt-0.5 text-sky-600 dark:text-sky-300">{{ waveBaselines.length }} {{ locale === 'en-US' ? 'Sets' : '组' }}</div>
               </div>
             </div>
             <div class="text-[10px] truncate" style="color: var(--text-muted);" v-if="historyData?.diagnostic_message">
@@ -464,10 +464,10 @@
             <div class="flex items-center justify-between gap-1 text-[10px]">
               <span class="font-bold" style="color: var(--text-primary);">{{ locale === 'en-US' ? 'PID Step Response Transient Analysis:' : 'PID 阶跃响应瞬态分析:' }}</span>
               <div class="flex items-center gap-1">
-                <input type="number" v-model.number="stepSetpoint" step="0.5" title="目标稳态设定值" class="ui-input w-14 px-1 py-0.5 text-[10px] ui-num" />
-                <input type="number" v-model.number="stepDtMs" min="0.1" step="1" title="采样周期 (ms)" class="ui-input w-12 px-1 py-0.5 text-[10px] ui-num" />
+                <input type="number" v-model.number="stepSetpoint" step="0.5" :title="locale === 'en-US' ? 'Target Steady State Setpoint' : '目标稳态设定值'" class="ui-input w-14 px-1 py-0.5 text-[10px] ui-num" />
+                <input type="number" v-model.number="stepDtMs" min="0.1" step="1" :title="locale === 'en-US' ? 'Sample Period (ms)' : '采样周期 (ms)'" class="ui-input w-12 px-1 py-0.5 text-[10px] ui-num" />
                 <button @click="runStepResponseEval" :disabled="activeChannelSamples.length < 4" class="px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 font-semibold cursor-pointer disabled:opacity-45">
-                  测算
+                  {{ locale === 'en-US' ? 'Compute' : '测算' }}
                 </button>
               </div>
             </div>
@@ -486,7 +486,7 @@
           <canvas ref="vcdCanvasRef" class="w-full h-full block"></canvas>
           <div v-if="!vcdResult" class="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
             <span class="text-xs font-semibold text-slate-300">{{ locale === 'en-US' ? 'Logic Analyzer .vcd Digital Waveform View Ready' : '逻辑分析仪 .vcd 数字电平采集视图就绪' }}</span>
-            <span class="text-[11px] text-slate-400 mt-1">支持从 Saleae / PulseView 导出的 IEEE 1364 .vcd 波形文件导入并还原 UART 字节流</span>
+            <span class="text-[11px] text-slate-400 mt-1">{{ locale === 'en-US' ? 'Supports importing IEEE 1364 .vcd waveforms exported from Saleae / PulseView to restore UART stream' : '支持从 Saleae / PulseView 导出的 IEEE 1364 .vcd 波形文件导入并还原 UART 字节流' }}</span>
           </div>
         </div>
         <div v-if="vcdMultiSummary" class="text-[11px] ui-num px-2 py-1 rounded border border-indigo-500/30 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300">
@@ -494,15 +494,15 @@
         </div>
         <div v-if="vcdResult" class="flex items-center justify-between text-[11px] ui-num flex-wrap gap-2" style="color: var(--text-muted);">
           <span class="truncate max-w-lg" style="color: var(--text-primary);" :title="`HEX: ${vcdResult.decoded_hex}`">
-            解码文本: <code class="font-mono text-emerald-600 dark:text-emerald-300">{{ vcdResult.decoded_text || '(无有效字符)' }}</code>
+            {{ locale === 'en-US' ? 'Decoded Text:' : '解码文本:' }} <code class="font-mono text-emerald-600 dark:text-emerald-300">{{ vcdResult.decoded_text || (locale === 'en-US' ? '(No valid chars)' : '(无有效字符)') }}</code>
             <span v-if="vcdResult.decoded_hex" class="ml-2 text-[10px]" style="color: var(--text-muted);">[HEX: {{ vcdResult.decoded_hex.slice(0, 32) }}{{ vcdResult.decoded_hex.length > 32 ? '...' : '' }}]</span>
           </span>
           <span>
-            精度: <strong class="text-sky-500">{{ vcdResult.detected_timescale }}</strong> |
-            跳变点: {{ vcdResult.transitions.length }} | 总时长: {{ vcdResult.total_sample_duration_us }} us | 帧错误:
+            {{ locale === 'en-US' ? 'Timescale:' : '精度:' }} <strong class="text-sky-500">{{ vcdResult.detected_timescale }}</strong> |
+            {{ locale === 'en-US' ? 'Transitions:' : '跳变点:' }} {{ vcdResult.transitions.length }} | {{ locale === 'en-US' ? 'Duration:' : '总时长:' }} {{ vcdResult.total_sample_duration_us }} us | {{ locale === 'en-US' ? 'Frame Errors:' : '帧错误:' }}
             <strong :class="vcdResult.framing_errors > 0 ? 'text-rose-500' : 'text-emerald-500'">{{ vcdResult.framing_errors }}</strong> |
-            校验错: <strong :class="vcdResult.parity_errors > 0 ? 'text-rose-500' : 'text-emerald-500'">{{ vcdResult.parity_errors }}</strong> |
-            毛刺: <strong :class="vcdResult.glitch_count > 0 ? 'text-amber-500' : 'text-emerald-500'">{{ vcdResult.glitch_count }}</strong>
+            {{ locale === 'en-US' ? 'Parity Errors:' : '校验错:' }} <strong :class="vcdResult.parity_errors > 0 ? 'text-rose-500' : 'text-emerald-500'">{{ vcdResult.parity_errors }}</strong> |
+            {{ locale === 'en-US' ? 'Glitches:' : '毛刺:' }} <strong :class="vcdResult.glitch_count > 0 ? 'text-amber-500' : 'text-emerald-500'">{{ vcdResult.glitch_count }}</strong>
           </span>
         </div>
       </div>
@@ -518,9 +518,9 @@
               <label class="text-[10px] block mb-0.5" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Protocol Demodulation' : '协议解调模式' }}</label>
               <select v-model="vcdBusMode" @change="redecodeCachedVcd" class="ui-input w-full px-1.5 py-0.5 text-[11px] font-semibold">
                 <option value="UART">UART</option>
-                <option value="I2C">I2C (双线)</option>
-                <option value="SPI">SPI (三线)</option>
-                <option value="CAN">CAN (位填充)</option>
+                <option value="I2C">I2C ({{ locale === 'en-US' ? '2-Wire' : '双线' }})</option>
+                <option value="SPI">SPI ({{ locale === 'en-US' ? '3-Wire' : '三线' }})</option>
+                <option value="CAN">CAN ({{ locale === 'en-US' ? 'Bit-Stuffing' : '位填充' }})</option>
               </select>
             </div>
             <div>
@@ -533,7 +533,7 @@
               >
                 <option v-for="sig in vcdResult.available_signals" :key="sig" :value="sig">{{ sig }}</option>
               </select>
-              <input v-else v-model="vcdSignalName" type="text" placeholder="如 TX / SCL" class="ui-input w-full px-1.5 py-0.5 text-[11px] font-mono" />
+              <input v-else v-model="vcdSignalName" type="text" :placeholder="locale === 'en-US' ? 'e.g. TX / SCL' : '如 TX / SCL'" class="ui-input w-full px-1.5 py-0.5 text-[11px] font-mono" />
             </div>
           </div>
           <div class="grid grid-cols-2 gap-1.5">
@@ -551,9 +551,9 @@
             <div>
               <label class="text-[10px] block mb-0.5" style="color: var(--text-muted);">{{ locale === 'en-US' ? 'Parity' : '奇偶校验' }}</label>
               <select v-model="vcdParity" @change="redecodeCachedVcd" class="ui-input w-full px-1.5 py-0.5 text-[11px]">
-                <option value="NONE">无 (N)</option>
-                <option value="EVEN">偶校验 (E)</option>
-                <option value="ODD">奇校验 (O)</option>
+                <option value="NONE">{{ locale === 'en-US' ? 'None (N)' : '无 (N)' }}</option>
+                <option value="EVEN">{{ locale === 'en-US' ? 'Even (E)' : '偶校验 (E)' }}</option>
+                <option value="ODD">{{ locale === 'en-US' ? 'Odd (O)' : '奇校验 (O)' }}</option>
               </select>
             </div>
           </div>
@@ -1170,7 +1170,7 @@ async function runStepResponseEval() {
       tolerancePct: 2.0,
     });
   } catch (e) {
-    waveOpMsg.value = `阶跃响应测算受阻: ${String(e)}`;
+    waveOpMsg.value = locale.value === 'en-US' ? `Step response calculation failed: ${String(e)}` : `阶跃响应测算受阻: ${String(e)}`;
   }
 }
 
@@ -1232,26 +1232,26 @@ async function computeLiveFft() {
 async function saveCurrentAsGoldenBaseline() {
   const samples = activeChannelSamples.value;
   if (samples.length < 4) {
-    waveOpMsg.value = '当前通道采样点数不足 4 点，无法建立基线';
+    waveOpMsg.value = locale.value === 'en-US' ? 'Insufficient samples (< 4) on active channel to establish baseline' : '当前通道采样点数不足 4 点，无法建立基线';
     return;
   }
   waveOpBusy.value = true;
   try {
     const saved = await invoke<WaveformBaselineSnapshot>('save_waveform_baseline_cmd', {
-      name: baselineNameInput.value.trim() || `${activeChannelLabel.value} 黄金标准`,
+      name: baselineNameInput.value.trim() || `${activeChannelLabel.value} ${locale.value === 'en-US' ? 'Golden Standard' : '黄金标准'}`,
       busType: busScope.value,
       sourcePort: props.selectedSerialPort || busScope.value,
       channelName: activeChannelLabel.value,
       sampleRateHz: 100.0,
       samples,
     });
-    waveOpMsg.value = `已固化黄金波形基线: ${saved.name} (${saved.samples.length} 点, μ=${saved.mean.toFixed(2)}, σ=${saved.stddev.toFixed(2)})`;
+    waveOpMsg.value = locale.value === 'en-US' ? `Saved Golden Wave Baseline: ${saved.name} (${saved.samples.length} pts, μ=${saved.mean.toFixed(2)}, σ=${saved.stddev.toFixed(2)})` : `已固化黄金波形基线: ${saved.name} (${saved.samples.length} 点, μ=${saved.mean.toFixed(2)}, σ=${saved.stddev.toFixed(2)})`;
     baselineNameInput.value = '';
     await refreshWaveBaselines();
     selectedBaselineId.value = saved.id;
     await runSmartWaveformComparison();
   } catch (e) {
-    waveOpMsg.value = `保存黄金基线失败: ${String(e)}`;
+    waveOpMsg.value = locale.value === 'en-US' ? `Failed to save golden baseline: ${String(e)}` : `保存黄金基线失败: ${String(e)}`;
   } finally {
     waveOpBusy.value = false;
   }
@@ -1261,7 +1261,7 @@ async function runSmartWaveformComparison() {
   if (!selectedBaselineId.value) return;
   const samples = activeChannelSamples.value;
   if (samples.length < 4) {
-    waveOpMsg.value = '当前实时样本不足 4 点，请先采集物理波形';
+    waveOpMsg.value = locale.value === 'en-US' ? 'Live samples < 4 points, capture physical waveforms first' : '当前实时样本不足 4 点，请先采集物理波形';
     return;
   }
   waveOpBusy.value = true;
@@ -1275,7 +1275,7 @@ async function runSmartWaveformComparison() {
     waveOpMsg.value = res.diagnostic_summary;
     emit('waveCompared', res);
   } catch (e) {
-    waveOpMsg.value = `智能比对失败: ${String(e)}`;
+    waveOpMsg.value = locale.value === 'en-US' ? `Smart comparison failed: ${String(e)}` : `智能比对失败: ${String(e)}`;
   } finally {
     waveOpBusy.value = false;
   }
@@ -1288,7 +1288,7 @@ async function removeSelectedBaseline() {
     await invoke('delete_waveform_baseline_cmd', { baselineId: selectedBaselineId.value });
     selectedBaselineId.value = '';
     smartWaveResult.value = null;
-    waveOpMsg.value = '已删除选定黄金基线';
+    waveOpMsg.value = locale.value === 'en-US' ? 'Selected golden baseline deleted' : '已删除选定黄金基线';
     await refreshWaveBaselines();
   } catch (e) {
     waveOpMsg.value = `{{ locale === 'en-US' ? 'Delete Baseline' : '删除基线' }}失败: ${String(e)}`;
@@ -1317,7 +1317,7 @@ const compareWaveEchartOption = computed(() => {
       yAxis: { type: 'value', axisLabel: { color: textMuted, fontSize: 9 }, splitLine: { lineStyle: { color: splitLine, type: 'dashed' } } },
       series: [
         {
-          name: '实时序列',
+          name: locale.value === 'en-US' ? 'Live Sequence' : '实时序列',
           type: 'line',
           smooth: true,
           showSymbol: false,
@@ -1326,7 +1326,7 @@ const compareWaveEchartOption = computed(() => {
           itemStyle: { color: '#38bdf8' },
         },
         {
-          name: `黄金基线 (${wf.baseline_name})`,
+          name: locale.value === 'en-US' ? `Golden Baseline (${wf.baseline_name})` : `黄金基线 (${wf.baseline_name})`,
           type: 'line',
           smooth: true,
           showSymbol: false,
@@ -1335,7 +1335,7 @@ const compareWaveEchartOption = computed(() => {
           itemStyle: { color: '#f59e0b' },
         },
         {
-          name: '逐点残差',
+          name: locale.value === 'en-US' ? 'Point Residual' : '逐点残差',
           type: 'bar',
           data: wf.pointwise_error,
           itemStyle: { color: 'rgba(244, 63, 94, 0.35)' },
@@ -1357,7 +1357,7 @@ const compareWaveEchartOption = computed(() => {
     yAxis: { type: 'value', minInterval: 1, axisLabel: { color: textMuted, fontSize: 9 }, splitLine: { lineStyle: { color: splitLine, type: 'dashed' } } },
     series: [
       {
-        name: '实时包速率',
+        name: locale.value === 'en-US' ? 'Live Packet Rate' : '实时包速率',
         type: 'line',
         smooth: true,
         data: rt.map(b => b.count),
@@ -1365,7 +1365,7 @@ const compareWaveEchartOption = computed(() => {
         itemStyle: { color: '#38bdf8' },
       },
       {
-        name: '历史归档序列',
+        name: locale.value === 'en-US' ? 'Historical Archive' : '历史归档序列',
         type: 'line',
         smooth: true,
         data: hist.map(h => h.packet_count),
@@ -1389,7 +1389,7 @@ const fftEchartOption = computed(() => {
   const xLabels = rtBins.map(b => b.normalized_freq.toFixed(3));
   const series: Array<Record<string, unknown>> = [
     {
-      name: '实时频谱幅值',
+      name: locale.value === 'en-US' ? 'Live Spectrum Magnitude' : '实时频谱幅值',
       type: 'bar',
       data: rtBins.map(b => b.magnitude),
       itemStyle: { color: 'rgba(56, 189, 248, 0.78)', borderRadius: [3, 3, 0, 0] },
@@ -1397,7 +1397,7 @@ const fftEchartOption = computed(() => {
   ];
   if (baseBins.length > 0) {
     series.push({
-      name: '黄金基线频谱',
+      name: locale.value === 'en-US' ? 'Golden Baseline Spectrum' : '黄金基线频谱',
       type: 'line',
       smooth: true,
       showSymbol: false,

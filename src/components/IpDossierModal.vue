@@ -56,17 +56,17 @@
 
           <button @click="isTracerouteOpen = true"
             class="px-3 py-1.5 rounded-xl bg-sky-500/12 hover:bg-sky-500/20 text-sky-700 dark:text-cyan-300 border border-sky-500/30 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
-            title="启动测地线可视路由追踪，绘制该 IP 在地球上的大圆物理路由">
+            :title="locale === 'en-US' ? 'Start geodesic traceroute, visualize physical great-circle route on 3D globe' : '启动测地线可视路由追踪，绘制该 IP 在地球上的大圆物理路由'">
             <AppIcon name="globe" :size="13" />
             <span>{{ locale === 'en-US' ? 'Geodesic Trace' : '测地追踪' }}</span>
           </button>
           <button @click="filterInTrafficList"
             class="ui-btn-primary text-xs px-3 py-1.5 rounded-xl"
-            title="在主流量分析列表中即时过滤以该 IP 为源或目的的全部会话">
+            :title="locale === 'en-US' ? 'Filter all sessions with this IP as source or destination in traffic analyzer' : '在主流量分析列表中即时过滤以该 IP 为源或目的的全部会话'">
             <AppIcon name="search" :size="13" />
             <span>{{ locale === 'en-US' ? 'Filter Flow' : '流量穿透' }}</span>
           </button>
-          <button @click="$emit('close')" class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer" title="关闭">
+          <button @click="$emit('close')" class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer" :title="locale === 'en-US' ? 'Close' : '关闭'">
             <AppIcon name="close" :size="15" />
           </button>
         </div>
@@ -92,7 +92,7 @@
             <span>{{ locale === 'en-US' ? 'Live Activity & Traffic Flow' : '实时活动追踪与数据出入' }}</span>
             <span class="px-1.5 py-0.5 rounded-full text-[11px] ui-num font-bold"
               :class="activeTab === 'stream' ? 'bg-white/20 text-white' : 'bg-sky-500/15 text-sky-700 dark:text-sky-300'">
-              {{ targetPackets.length }} 帧
+              {{ targetPackets.length }} {{ locale === 'en-US' ? 'frames' : '帧' }}
             </span>
           </button>
           <button
@@ -103,14 +103,14 @@
             <AppIcon name="shield" :size="13" />
             <span>{{ locale === 'en-US' ? 'Compliance & Threat Verdict' : '等保合规与威胁研判' }}</span>
             <span :class="['px-1.5 py-0.5 rounded-full text-[11px] font-bold ui-num border', riskAssessment.badgeClass]">
-              {{ riskAssessment.score }}分
+              {{ riskAssessment.score }} {{ locale === 'en-US' ? 'pts' : '分' }}
             </span>
           </button>
         </div>
 
         <div class="text-[11px] ui-num" style="color: var(--text-muted)">
           <span>{{ locale === 'en-US' ? 'Total Packets: ' : '累计出入: ' }}</span>
-          <strong style="color: var(--text-primary)">{{ stats.rxPackets + stats.txPackets }} 帧</strong>
+          <strong style="color: var(--text-primary)">{{ stats.rxPackets + stats.txPackets }} {{ locale === 'en-US' ? 'frames' : '帧' }}</strong>
           <span class="mx-1">|</span>
           <span>{{ locale === 'en-US' ? 'Total Volume: ' : '总吞吐: ' }}</span>
           <strong style="color: var(--text-primary)">{{ formatBytes(stats.rxBytes + stats.txBytes) }}</strong>
@@ -124,32 +124,32 @@
         <template v-if="activeTab === 'dossier'">
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 ui-sub-card p-3.5 ui-num">
             <div>
-              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">地理与运营商 (ISP)</span>
-              <div class="font-semibold truncate" style="color: var(--text-primary)" :title="intel?.geo_summary || '本地局域网私网网段'">
+              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Geo & ISP' : '地理与运营商 (ISP)' }}</span>
+              <div class="font-semibold truncate" style="color: var(--text-primary)" :title="intel?.geo_summary || (locale === 'en-US' ? 'Local Private Subnet' : '本地局域网私网网段')">
                 {{ intel?.geo_summary || (locale === 'en-US' ? 'Local Private Subnet' : '本地局域网私网网段') }}
               </div>
             </div>
             <div>
-              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">物理 MAC / 链路地址</span>
-              <div class="font-semibold truncate" style="color: var(--text-primary)" :title="matchedAsset?.mac || '跨三层路由未知'">
+              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Physical MAC / Link Address' : '物理 MAC / 链路地址' }}</span>
+              <div class="font-semibold truncate" style="color: var(--text-primary)" :title="matchedAsset?.mac || (locale === 'en-US' ? 'Unknown across L3 route' : '跨三层路由未知')">
                 {{ matchedAsset?.mac || (locale === 'en-US' ? 'L3 Routed Unknown' : '跨三层路由未知') }}
               </div>
             </div>
             <div>
-              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">设备厂商画像 (OUI)</span>
-              <div class="font-semibold truncate" style="color: var(--text-primary)" :title="matchedAsset?.vendor || '通用网络节点'">
+              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Device Vendor Profile (OUI)' : '设备厂商画像 (OUI)' }}</span>
+              <div class="font-semibold truncate" style="color: var(--text-primary)" :title="matchedAsset?.vendor || (locale === 'en-US' ? 'Generic Network Node' : '通用网络节点')">
                 {{ matchedAsset?.vendor || (locale === 'en-US' ? 'Generic Network Host' : '通用网络节点') }}
               </div>
             </div>
             <div>
-              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">网络角色推断</span>
+              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Inferred Network Role' : '网络角色推断' }}</span>
               <div class="text-indigo-700 dark:text-indigo-300 font-bold truncate">
                 {{ matchedAsset?.role || inferRoleFallback(targetIp) }}
               </div>
             </div>
 
             <div>
-              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">被动操作系统指纹 (TTL)</span>
+              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Passive OS Fingerprint (TTL)' : '被动操作系统指纹 (TTL)' }}</span>
               <div class="font-bold truncate flex items-center gap-1" style="color: var(--text-primary)" :title="osFingerprint.details">
                 <span>{{ osFingerprint.osName }}</span>
                 <span v-if="osFingerprint.observedTtl" class="text-[11px] font-normal" style="color: var(--text-muted)">
@@ -158,27 +158,27 @@
               </div>
             </div>
             <div>
-              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">网络路由跳数推导 (Hops)</span>
+              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Inferred Routing Hops' : '网络路由跳数推导 (Hops)' }}</span>
               <div class="font-semibold truncate" style="color: var(--text-primary)">
                 <span v-if="osFingerprint.hopCount !== null" class="text-emerald-700 dark:text-emerald-400 font-bold">
-                  约 {{ osFingerprint.hopCount }} 跳
+                  {{ locale === 'en-US' ? '~' + osFingerprint.hopCount + ' hops' : '约 ' + osFingerprint.hopCount + ' 跳' }}
                 </span>
                 <span v-else style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Direct link or no egress captured' : '本地直连或未捕获出向' }}</span>
               </div>
             </div>
             <div>
-              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">主机名 / 计算机名</span>
-              <div class="font-semibold truncate flex items-center justify-between gap-1" style="color: var(--text-primary)" :title="hostnameInfo?.hostname || '未注册或未响应'">
-                <span class="truncate">{{ hostnameInfo?.hostname || '未注册或未响应' }}</span>
+              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Hostname / Machine Name' : '主机名 / 计算机名' }}</span>
+              <div class="font-semibold truncate flex items-center justify-between gap-1" style="color: var(--text-primary)" :title="hostnameInfo?.hostname || (locale === 'en-US' ? 'Unregistered / No response' : '未注册或未响应')">
+                <span class="truncate">{{ hostnameInfo?.hostname || (locale === 'en-US' ? 'Unregistered / No Response' : '未注册或未响应') }}</span>
                 <button @click="fetchHostname" :disabled="isResolvingHostname"
-                  class="text-[11px] hover:underline shrink-0 cursor-pointer flex items-center" style="color: var(--accent-primary-text)" title="重新解析主机名">
+                  class="text-[11px] hover:underline shrink-0 cursor-pointer flex items-center" style="color: var(--accent-primary-text)" :title="locale === 'en-US' ? 'Re-resolve Hostname' : '重新解析主机名'">
                   <AppIcon name="refresh" :size="12" :class="isResolvingHostname ? 'animate-spin' : ''" />
                 </button>
               </div>
             </div>
             <div>
-              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">反向 PTR 域名 (RFC 1035)</span>
-              <div class="font-semibold truncate" style="color: var(--text-primary)" :title="hostnameInfo?.reverse_ptr || '无 PTR 记录'">
+              <span class="text-[11px] uppercase font-bold block mb-0.5 font-sans" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Reverse PTR Domain (RFC 1035)' : '反向 PTR 域名 (RFC 1035)' }}</span>
+              <div class="font-semibold truncate" style="color: var(--text-primary)" :title="hostnameInfo?.reverse_ptr || (locale === 'en-US' ? 'No PTR record' : '无 PTR 记录')">
                 {{ hostnameInfo?.reverse_ptr || (locale === 'en-US' ? 'No PTR Record' : '无 PTR 记录') }}
               </div>
             </div>
@@ -187,29 +187,29 @@
           <div class="space-y-2.5 ui-num">
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div class="ui-content-card p-3.5">
-                <span class="text-[11px] uppercase font-bold block mb-1 font-sans" style="color: var(--text-muted)">入向数据出入 (RX)</span>
-                <div class="text-base font-bold text-sky-700 dark:text-sky-400">{{ stats.rxPackets }} <span class="text-xs font-normal" style="color: var(--text-muted)">帧</span></div>
+                <span class="text-[11px] uppercase font-bold block mb-1 font-sans" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Inbound Ingress (RX)' : '入向数据出入 (RX)' }}</span>
+                <div class="text-base font-bold text-sky-700 dark:text-sky-400">{{ stats.rxPackets }} <span class="text-xs font-normal" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'frames' : '帧' }}</span></div>
                 <div class="text-[11px] mt-0.5" style="color: var(--text-secondary)">{{ formatBytes(stats.rxBytes) }}</div>
               </div>
 
               <div class="ui-content-card p-3.5">
-                <span class="text-[11px] uppercase font-bold block mb-1 font-sans" style="color: var(--text-muted)">出向数据出入 (TX)</span>
-                <div class="text-base font-bold text-emerald-700 dark:text-emerald-400">{{ stats.txPackets }} <span class="text-xs font-normal" style="color: var(--text-muted)">帧</span></div>
+                <span class="text-[11px] uppercase font-bold block mb-1 font-sans" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Outbound Egress (TX)' : '出向数据出入 (TX)' }}</span>
+                <div class="text-base font-bold text-emerald-700 dark:text-emerald-400">{{ stats.txPackets }} <span class="text-xs font-normal" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'pkts' : '帧' }}</span></div>
                 <div class="text-[11px] mt-0.5" style="color: var(--text-secondary)">{{ formatBytes(stats.txBytes) }}</div>
               </div>
 
               <div class="ui-content-card p-3.5">
-                <span class="text-[11px] uppercase font-bold block mb-1 font-sans" style="color: var(--text-muted)">首现与末次活跃</span>
-                <div class="text-[11px] truncate" style="color: var(--text-secondary)" :title="stats.firstSeen || 'N/A'">首现: {{ stats.firstSeen || '本次未捕获' }}</div>
-                <div class="text-[11px] truncate mt-0.5" style="color: var(--text-secondary)" :title="stats.lastSeen || 'N/A'">末次: {{ stats.lastSeen || '本次未捕获' }}</div>
+                <span class="text-[11px] uppercase font-bold block mb-1 font-sans" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'First & Last Seen' : '首现与末次活跃' }}</span>
+                <div class="text-[11px] truncate" style="color: var(--text-secondary)" :title="stats.firstSeen || 'N/A'">{{ locale === 'en-US' ? 'First:' : '首现:' }} {{ stats.firstSeen || (locale === 'en-US' ? 'Not captured' : '本次未捕获') }}</div>
+                <div class="text-[11px] truncate mt-0.5" style="color: var(--text-secondary)" :title="stats.lastSeen || 'N/A'">{{ locale === 'en-US' ? 'Last:' : '末次:' }} {{ stats.lastSeen || (locale === 'en-US' ? 'Not captured' : '本次未捕获') }}</div>
               </div>
             </div>
 
             <div class="ui-content-card p-3">
               <div class="flex items-center justify-between text-[11px] font-semibold mb-1.5">
-                <span class="text-sky-700 dark:text-sky-400">入向接收 (RX): {{ rxRatioText }}%</span>
-                <span class="font-normal" style="color: var(--text-secondary)">通信形态: <strong style="color: var(--text-primary)">{{ trafficRoleText }}</strong></span>
-                <span class="text-emerald-700 dark:text-emerald-400">出向发送 (TX): {{ txRatioText }}%</span>
+                <span class="text-sky-700 dark:text-sky-400">{{ locale === 'en-US' ? 'Inbound (RX):' : '入向接收 (RX):' }} {{ rxRatioText }}%</span>
+                <span class="font-normal" style="color: var(--text-secondary)">{{ locale === 'en-US' ? 'Pattern:' : '通信形态:' }} <strong style="color: var(--text-primary)">{{ trafficRoleText }}</strong></span>
+                <span class="text-emerald-700 dark:text-emerald-400">{{ locale === 'en-US' ? 'Outbound (TX):' : '出向发送 (TX):' }} {{ txRatioText }}%</span>
               </div>
               <div class="w-full h-2 rounded-full overflow-hidden flex" style="background: var(--surface-elevated)">
                 <div class="bg-sky-500 h-full transition-all duration-300" :style="{ width: rxRatioText + '%' }"></div>
@@ -219,12 +219,12 @@
           </div>
 
           <div class="ui-content-card p-3.5 space-y-2">
-            <span class="text-[11px] uppercase font-bold block" style="color: var(--text-muted)">涉及网络规约分布 (Protocol Fingerprints)</span>
+            <span class="text-[11px] uppercase font-bold block" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Protocol Fingerprints' : '涉及网络规约分布 (Protocol Fingerprints)' }}</span>
             <div class="flex items-center gap-1.5 flex-wrap">
               <div v-for="(cnt, pr) in stats.protocolCounts" :key="pr"
                 class="flex items-center gap-1.5 ui-pill px-2.5 py-1 rounded-xl text-xs font-semibold">
                 <span class="font-bold text-blue-700 dark:text-sky-300">{{ pr }}</span>
-                <span class="text-[11px] px-1.5 py-0.5 rounded-md ui-num" style="background: var(--surface-content); color: var(--text-secondary)">{{ cnt }} 帧</span>
+                <span class="text-[11px] px-1.5 py-0.5 rounded-md ui-num" style="background: var(--surface-content); color: var(--text-secondary)">{{ cnt }} {{ locale === 'en-US' ? 'frames' : '帧' }}</span>
               </div>
               <div v-if="Object.keys(stats.protocolCounts).length === 0" class="text-xs py-1" style="color: var(--text-muted)">
                 {{ locale === 'en-US' ? 'No protocol data recorded yet' : '暂未沉淀规约数据' }}
@@ -234,8 +234,8 @@
 
           <div class="ui-content-card p-3.5 space-y-2">
             <div class="flex items-center justify-between">
-              <span class="text-[11px] uppercase font-bold" style="color: var(--text-muted)">高频通信对端节点 (Top Communication Peers)</span>
-              <span class="text-[11px] ui-num" style="color: var(--text-muted)">共关联 {{ topPeers.length }} 个节点</span>
+              <span class="text-[11px] uppercase font-bold" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Top Communication Peers' : '高频通信对端节点 (Top Communication Peers)' }}</span>
+              <span class="text-[11px] ui-num" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Total' : '共关联' }} {{ topPeers.length }} {{ locale === 'en-US' ? 'peers' : '个节点' }}</span>
             </div>
             <div class="divide-y max-h-40 overflow-auto custom-scrollbar pr-1 ui-num" style="border-color: var(--border-subtle)">
               <div v-for="peer in topPeers" :key="peer.peerIp"
@@ -252,8 +252,8 @@
                 </div>
                 <div class="flex items-center gap-3 text-[11px] shrink-0" style="color: var(--text-muted)">
                   <span class="text-amber-700 dark:text-amber-300 font-semibold">{{ peer.mainProtocol }}</span>
-                  <span class="font-bold" style="color: var(--text-primary)">{{ peer.count }} 次会话</span>
-                  <span class="text-[11px] font-semibold hover:underline" style="color: var(--accent-primary-text)">穿透</span>
+                  <span class="font-bold" style="color: var(--text-primary)">{{ peer.count }} {{ locale === 'en-US' ? 'sessions' : '次会话' }}</span>
+                  <span class="text-[11px] font-semibold hover:underline" style="color: var(--accent-primary-text)">{{ locale === 'en-US' ? 'Drilldown' : '穿透' }}</span>
                 </div>
               </div>
               <div v-if="topPeers.length === 0" class="text-xs py-3 text-center" style="color: var(--text-muted)">
@@ -265,7 +265,7 @@
           <div class="ui-content-card p-3.5 space-y-3">
             <div class="flex items-center justify-between flex-wrap gap-2">
               <span class="text-[11px] uppercase font-bold" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Active Connectivity & Port Compliance Audit' : '合规连通性探活与端口审计' }} (Compliance Probing)</span>
-              <span class="text-[11px]" style="color: var(--text-muted)">基于 RFC 792 ICMP Echo 与 RFC 793 TCP Connect</span>
+              <span class="text-[11px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Based on RFC 792 ICMP Echo & RFC 793 TCP Connect' : '基于 RFC 792 ICMP Echo 与 RFC 793 TCP Connect' }}</span>
             </div>
 
             <div class="flex items-center gap-3 flex-wrap">
@@ -276,20 +276,20 @@
 
               <button @click="doPortProbe" :disabled="isProbingPorts" class="ui-btn-secondary text-xs px-3 py-1.5 rounded-xl">
                 <AppIcon :name="isProbingPorts ? 'refresh' : 'search'" :size="13" :class="isProbingPorts ? 'animate-spin' : ''" />
-                <span>网络服务与端口探测</span>
+                <span>{{ locale === 'en-US' ? 'Network Services & Port Probe' : '网络服务与端口探测' }}</span>
               </button>
             </div>
 
             <div v-if="pingResult" class="p-2.5 rounded-xl border text-xs ui-num"
               :class="pingResult.status === 'ONLINE' ? 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' : 'bg-rose-500/12 text-rose-700 dark:text-rose-300 border-rose-500/30'">
               <div class="flex items-center justify-between">
-                <span>状态: <strong>{{ pingResult.status === 'ONLINE' ? '在线可达 (Host Reachable)' : '不可达/超时 (Offline/Timeout)' }}</strong></span>
-                <span>RTT 时延: <strong>{{ pingResult.latency_ms.toFixed(1) }} ms</strong></span>
+                <span>{{ locale === 'en-US' ? 'Status:' : '状态:' }} <strong>{{ pingResult.status === 'ONLINE' ? (locale === 'en-US' ? 'Host Reachable' : '在线可达 (Host Reachable)') : (locale === 'en-US' ? 'Offline / Timeout' : '不可达/超时 (Offline/Timeout)') }}</strong></span>
+                <span>{{ locale === 'en-US' ? 'RTT Latency:' : 'RTT 时延:' }} <strong>{{ pingResult.latency_ms.toFixed(1) }} ms</strong></span>
               </div>
             </div>
 
             <div v-if="openPorts.length > 0" class="space-y-1">
-              <span class="text-[11px] font-bold block" style="color: var(--text-secondary)">发现开放端口与服务画像:</span>
+              <span class="text-[11px] font-bold block" style="color: var(--text-secondary)">{{ locale === 'en-US' ? 'Discovered Open Ports & Service Profiles:' : '发现开放端口与服务画像:' }}</span>
               <div class="flex items-center gap-1.5 flex-wrap">
                 <span v-for="port in openPorts" :key="port"
                   class="px-2 py-0.5 rounded-lg bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[11px] font-bold ui-num">
@@ -307,14 +307,14 @@
               <div class="flex items-center gap-2 flex-1 min-w-[240px]">
                 <input
                   v-model="streamSearch"
-                  placeholder="过滤对端 IP / 端口 / 协议 / 载荷文本"
+                  :placeholder="locale === 'en-US' ? 'Filter Peer IP / Port / Protocol / Payload text' : '过滤对端 IP / 端口 / 协议 / 载荷文本'"
                   class="w-full ui-input ui-num text-xs py-1.5 px-3"
                 />
               </div>
 
               <button @click="exportPcapForTargetIp" class="ui-btn-primary text-xs px-3 py-1.5 rounded-xl">
                 <AppIcon name="download" :size="13" />
-                <span>导出该 IP 抓包 (.pcap)</span>
+                <span>{{ locale === 'en-US' ? 'Export IP PCAP (.pcap)' : '导出该 IP 抓包 (.pcap)' }}</span>
               </button>
             </div>
 
@@ -323,12 +323,12 @@
                 <table class="w-full text-left text-xs border-collapse table-fixed">
                   <thead class="ui-table-head text-[11px] font-bold uppercase sticky top-0 z-10 select-none">
                     <tr>
-                      <th class="p-2 w-[16%]">时间戳</th>
-                      <th class="p-2 w-[12%] text-center">出入流向</th>
-                      <th class="p-2 w-[30%]">通信端点 (对端)</th>
-                      <th class="p-2 w-[12%]">规约协议</th>
-                      <th class="p-2 w-[10%] text-right">载荷长度</th>
-                      <th class="p-2 w-[20%]">载荷摘要 / 交互特征</th>
+                      <th class="p-2 w-[16%]">{{ locale === 'en-US' ? 'Timestamp' : '时间戳' }}</th>
+                      <th class="p-2 w-[12%] text-center">{{ locale === 'en-US' ? 'Direction' : '出入流向' }}</th>
+                      <th class="p-2 w-[30%]">{{ locale === 'en-US' ? 'Endpoint (Peer)' : '通信端点 (对端)' }}</th>
+                      <th class="p-2 w-[12%]">{{ locale === 'en-US' ? 'Protocol' : '规约协议' }}</th>
+                      <th class="p-2 w-[10%] text-right">{{ locale === 'en-US' ? 'Payload Len' : '载荷长度' }}</th>
+                      <th class="p-2 w-[20%]">{{ locale === 'en-US' ? 'Payload Summary / Features' : '载荷摘要 / 交互特征' }}</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y ui-num" style="border-color: var(--border-subtle); color: var(--text-secondary)">
@@ -345,7 +345,7 @@
                           :class="['px-1.5 py-0.5 rounded text-[11px] font-bold uppercase border',
                             pkt.src_ip === targetIp ? 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' : 'bg-sky-500/12 text-sky-700 dark:text-sky-300 border-sky-500/30']"
                         >
-                          {{ pkt.src_ip === targetIp ? 'TX 出向' : 'RX 入向' }}
+                          {{ pkt.src_ip === targetIp ? (locale === 'en-US' ? 'TX Out' : 'TX 出向') : (locale === 'en-US' ? 'RX In' : 'RX 入向') }}
                         </span>
                       </td>
                       <td class="p-2 truncate font-bold" style="color: var(--text-primary)">
@@ -359,12 +359,12 @@
                       </td>
                       <td class="p-2 text-right font-bold truncate" style="color: var(--text-primary)">{{ pkt.length }} B</td>
                       <td class="p-2 text-[11px] truncate" style="color: var(--text-muted)" :title="pkt.raw_text || pkt.payload_hex">
-                        {{ pkt.raw_text || (pkt.payload_hex ? `HEX[${pkt.payload_hex.slice(0, 20)}...]` : '[空载荷]') }}
+                        {{ pkt.raw_text || (pkt.payload_hex ? `HEX[${pkt.payload_hex.slice(0, 20)}...]` : (locale === 'en-US' ? '[Empty Payload]' : '[空载荷]')) }}
                       </td>
                     </tr>
                     <tr v-if="filteredTargetPackets.length === 0">
                       <td colspan="6" class="p-8">
-                        <EmptyState icon="activity" title="暂无符合条件的实时出入数据帧" description="请在主监控界面启动抓取嗅探以持续收集关联会话。" />
+                        <EmptyState icon="activity" :title="locale === 'en-US' ? 'No matching real-time frames' : '暂无符合条件的实时出入数据帧'" :description="locale === 'en-US' ? 'Start capture sniffing on monitoring dashboard to gather sessions.' : '请在主监控界面启动抓取嗅探以持续收集关联会话。'" />
                       </td>
                     </tr>
                   </tbody>
@@ -376,14 +376,14 @@
             <div v-if="selectedStreamPacket" class="ui-sub-card p-4 space-y-2 text-xs ui-num animate-in fade-in duration-100">
               <div class="flex items-center justify-between border-b pb-2" style="border-color: var(--border-subtle)">
                 <span class="font-bold text-emerald-700 dark:text-emerald-400">
-                  报文 #{{ selectedStreamPacket.id }} 深度剖析 ({{ selectedStreamPacket.protocol }})
+                  {{ locale === 'en-US' ? 'Packet #' : '报文 #' }}{{ selectedStreamPacket.id }} {{ locale === 'en-US' ? 'Deep Dissection' : '深度剖析' }} ({{ selectedStreamPacket.protocol }})
                 </span>
                 <span class="text-[11px]" style="color: var(--text-muted)">
-                  物理长度: {{ selectedStreamPacket.length }} 字节 | 熵值: {{ selectedStreamPacket.entropy?.toFixed(2) }}
+                  {{ locale === 'en-US' ? 'Wire Length:' : '物理长度:' }} {{ selectedStreamPacket.length }} {{ locale === 'en-US' ? 'Bytes' : '字节' }} | {{ locale === 'en-US' ? 'Entropy:' : '熵值:' }} {{ selectedStreamPacket.entropy?.toFixed(2) }}
                 </span>
               </div>
               <div class="text-[11px]" style="color: var(--text-secondary)">
-                <span>通信方向: </span>
+                <span>{{ locale === 'en-US' ? 'Direction:' : '通信方向: ' }}</span>
                 <strong :class="selectedStreamPacket.src_ip === targetIp ? 'text-emerald-700 dark:text-emerald-400' : 'text-sky-700 dark:text-sky-400'">
                   {{ selectedStreamPacket.src_ip }}:{{ selectedStreamPacket.src_port }} → {{ selectedStreamPacket.dst_ip }}:{{ selectedStreamPacket.dst_port }}
                 </strong>
@@ -403,16 +403,16 @@
           <div class="ui-content-card p-5 space-y-4">
             <div class="flex items-center justify-between flex-wrap gap-3">
               <div>
-                <h4 class="text-sm font-bold" style="color: var(--text-primary)">等保 2.0 行为异常与合规风险研判模型</h4>
-                <p class="text-[11px] mt-0.5" style="color: var(--text-muted)">
-                  依据 GB/T 22239-2019 标准，针对目标 IP 的通信流量、端口探测、高熵通道与会话对称性进行全自动审计
+                <h4 class="text-sm font-bold" style="color: var(--text-primary)">{{ locale === 'en-US' ? 'Behavioral Anomaly & Compliance Risk Model' : '等保 2.0 行为异常与合规风险研判模型' }}</h4>
+                <p class="text-[11px] mt-0.5" style="color: var(--text-muted);">
+                  {{ locale === 'en-US' ? 'Automatic audit of traffic volume, port probes, high-entropy channels & session symmetry against GB/T 22239-2019 standard' : '依据 GB/T 22239-2019 标准，针对目标 IP 的通信流量、端口探测、高熵通道与会话对称性进行全自动审计' }}
                 </p>
               </div>
               <div class="text-right">
                 <span :class="['px-3 py-1 rounded-xl text-xs font-bold border inline-block ui-num', riskAssessment.badgeClass]">
-                  健康指数: {{ riskAssessment.score }} / 100
+                  {{ locale === 'en-US' ? 'Health Index:' : '健康指数:' }} {{ riskAssessment.score }} / 100
                 </span>
-                <span class="block text-[11px] mt-1" style="color: var(--text-muted)">综合定级: {{ riskAssessment.levelText }}</span>
+                <span class="block text-[11px] mt-1" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Overall Level:' : '综合定级:' }} {{ riskAssessment.levelText }}</span>
               </div>
             </div>
 
@@ -436,12 +436,12 @@
             <div class="ui-sub-card p-4 space-y-2 text-xs">
               <span class="font-bold flex items-center gap-1.5" style="color: var(--text-primary)">
                 <AppIcon name="shield" :size="14" />
-                <span>等保审计与运维处置建议</span>
+                <span>{{ locale === 'en-US' ? 'Compliance Audit & Remediation Advice' : '等保审计与运维处置建议' }}</span>
               </span>
               <ul class="list-disc list-inside space-y-1 text-[11px]" style="color: var(--text-secondary)">
-                <li>如检测到高频多端口探测，建议核实该节点是否为合法网络扫描器；若非授权，需在核心交换机/网关上阻断其横向通信；</li>
-                <li>如存在非标准端口高熵载荷，需结合深度包检测（DPI）研判是否存在外部 C2 通道或未加密敏感资产外发；</li>
-                <li>对于明文传输（HTTP/Telnet/FTP），建议整改升级为 TLS 1.3 / SSH 等机密性传输规约。</li>
+                <li>{{ locale === 'en-US' ? 'If frequent multi-port probing is detected, verify if it is an authorized scanner; otherwise block lateral communication at switch/gateway.' : '如检测到高频多端口探测，建议核实该节点是否为合法网络扫描器；若非授权，需在核心交换机/网关上阻断其横向通信；' }}</li>
+                <li>{{ locale === 'en-US' ? 'If high-entropy payloads on non-standard ports exist, combine DPI to investigate potential external C2 tunnels or plaintext sensitive leaks.' : '如存在非标准端口高熵载荷，需结合深度包检测（DPI）研判是否存在外部 C2 通道或未加密敏感资产外发；' }}</li>
+                <li>{{ locale === 'en-US' ? 'For cleartext protocols (HTTP/Telnet/FTP), upgrade to encrypted confidentiality protocols like TLS 1.3 / SSH.' : '对于明文传输（HTTP/Telnet/FTP），建议整改升级为 TLS 1.3 / SSH 等机密性传输规约。' }}</li>
               </ul>
             </div>
           </div>
@@ -451,9 +451,9 @@
 
       <!-- 3. 底层控制按钮 -->
       <footer class="px-6 py-3 border-t flex items-center justify-between shrink-0 text-xs" style="background: var(--surface-content-alt); border-color: var(--border-subtle)">
-        <span class="text-[11px]" style="color: var(--text-muted)">Omni-Probe 全维 IP 画像与深度追踪引擎</span>
+        <span class="text-[11px]" style="color: var(--text-muted)">{{ locale === 'en-US' ? 'Omni-Probe IP Intelligence & Deep Tracking Engine' : 'Omni-Probe 全维 IP 画像与深度追踪引擎' }}</span>
         <button @click="$emit('close')" class="ui-btn-secondary text-xs px-4 py-1.5 rounded-xl font-semibold">
-          关闭
+          {{ locale === 'en-US' ? 'Close' : '关闭' }}
         </button>
       </footer>
     </div>
@@ -573,18 +573,19 @@ const matchedAsset = computed(() => {
 // IP 作用域与徽章色彩
 const ipScopeText = computed(() => {
   const ip = props.targetIp;
-  if (ip === '127.0.0.1' || ip === '::1' || ip.toLowerCase() === 'localhost') return '本地回环';
-  if (ip.startsWith('192.168.') || ip.startsWith('10.') || (ip.startsWith('172.') && !ip.startsWith('172.0.'))) return '局域网私网 (LAN)';
-  if (ip.startsWith('169.254.')) return '链路本地 (APIPA)';
-  if (ip.startsWith('224.') || ip.startsWith('239.')) return '组播地址';
-  return '公网/外部节点 (WAN)';
+  const isEn = locale.value === 'en-US';
+  if (ip === '127.0.0.1' || ip === '::1' || ip.toLowerCase() === 'localhost') return isEn ? 'Localhost (Loopback)' : '本地回环';
+  if (ip.startsWith('192.168.') || ip.startsWith('10.') || (ip.startsWith('172.') && !ip.startsWith('172.0.'))) return isEn ? 'Private Subnet (LAN)' : '局域网私网 (LAN)';
+  if (ip.startsWith('169.254.')) return isEn ? 'Link Local (APIPA)' : '链路本地 (APIPA)';
+  if (ip.startsWith('224.') || ip.startsWith('239.')) return isEn ? 'Multicast' : '组播地址';
+  return isEn ? 'Public / External (WAN)' : '公网/外部节点 (WAN)';
 });
 
 const ipScopeClass = computed(() => {
   const text = ipScopeText.value;
   if (text.includes('LAN')) return { dot: 'bg-sky-500', badge: 'bg-sky-500/12 text-sky-700 dark:text-sky-300 border-sky-500/30' };
   if (text.includes('WAN')) return { dot: 'bg-emerald-500', badge: 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' };
-  if (text.includes('回环')) return { dot: 'bg-amber-500', badge: 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/30' };
+  if (text.includes('回环') || text.includes('Loopback')) return { dot: 'bg-amber-500', badge: 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/30' };
   return { dot: 'bg-slate-400', badge: 'ui-pill' };
 });
 
@@ -643,17 +644,19 @@ const trafficRoleText = computed(() => {
   const rx = stats.value.rxBytes;
   const tx = stats.value.txBytes;
   const total = rx + tx;
-  if (total === 0) return '待观测';
-  if (tx / total > 0.75) return '数据服务提供端 (Server/Producer)';
-  if (rx / total > 0.75) return '数据消费者/客户端 (Client/Consumer)';
-  return '双向交互对等端 (Balanced Peer)';
+  const isEn = locale.value === 'en-US';
+  if (total === 0) return isEn ? 'Observing' : '待观测';
+  if (tx / total > 0.75) return isEn ? 'Server / Service Producer' : '数据服务提供端 (Server/Producer)';
+  if (rx / total > 0.75) return isEn ? 'Client / Service Consumer' : '数据消费者/客户端 (Client/Consumer)';
+  return isEn ? 'Balanced Peer' : '双向交互对等端 (Balanced Peer)';
 });
 
 // 被动操作系统指纹识别与路由跳数推导 (Passive OS Fingerprinting via TTL)
 const osFingerprint = computed(() => {
+  const isEn = locale.value === 'en-US';
   const ip = props.targetIp;
   if (!ip || !props.packets) {
-    return { osName: '未知系统', hopCount: null, observedTtl: null, details: '暂无出向数据帧' };
+    return { osName: isEn ? 'Unknown OS' : '未知系统', hopCount: null, observedTtl: null, details: isEn ? 'No outbound frames observed' : '暂无出向数据帧' };
   }
 
   let observedTtl: number | null = null;
@@ -674,7 +677,7 @@ const osFingerprint = computed(() => {
       osName: locale.value === 'en-US' ? 'Linux / Unix / macOS / Embedded RTOS' : 'Linux / Unix / macOS / 嵌入式RTOS',
       hopCount: hop,
       observedTtl,
-      details: `推导初始 TTL=64, 观测 TTL=${observedTtl}, 经历约 ${hop} 跳路由`
+      details: isEn ? `Derived initial TTL=64, observed TTL=${observedTtl}, ~${hop} router hops` : `推导初始 TTL=64, 观测 TTL=${observedTtl}, 经历约 ${hop} 跳路由`
     };
   } else if (observedTtl <= 128) {
     const hop = 128 - observedTtl;
@@ -682,7 +685,7 @@ const osFingerprint = computed(() => {
       osName: 'Microsoft Windows (Desktop/Server)',
       hopCount: hop,
       observedTtl,
-      details: `推导初始 TTL=128, 观测 TTL=${observedTtl}, 经历约 ${hop} 跳路由`
+      details: isEn ? `Derived initial TTL=128, observed TTL=${observedTtl}, ~${hop} router hops` : `推导初始 TTL=128, 观测 TTL=${observedTtl}, 经历约 ${hop} 跳路由`
     };
   } else {
     const hop = 255 - observedTtl;
@@ -690,19 +693,20 @@ const osFingerprint = computed(() => {
       osName: locale.value === 'en-US' ? 'Network Device / Cisco IOS / Industrial Switch' : '网络设备 / Cisco IOS / 工业交换机',
       hopCount: hop,
       observedTtl,
-      details: `推导初始 TTL=255, 观测 TTL=${observedTtl}, 经历约 ${hop} 跳路由`
+      details: isEn ? `Derived initial TTL=255, observed TTL=${observedTtl}, ~${hop} router hops` : `推导初始 TTL=255, 观测 TTL=${observedTtl}, 经历约 ${hop} 跳路由`
     };
   }
 });
 
 // 等保 2.0 异常行为与合规风险研判模型
 const riskAssessment = computed(() => {
+  const isEn = locale.value === 'en-US';
   const ip = props.targetIp;
   let score = 100;
   const items: Array<{ title: string; desc: string; severity: 'low' | 'medium' | 'high'; scoreText: string }> = [];
 
   if (!ip || !props.packets) {
-    return { score: 100, levelText: '基线正常', badgeClass: 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/30', items };
+    return { score: 100, levelText: isEn ? 'Baseline Normal' : '基线正常', badgeClass: 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/30', items };
   }
 
   const targetPorts = new Set<number>();
@@ -727,9 +731,9 @@ const riskAssessment = computed(() => {
     score -= 25;
     items.push({
       title: locale.value === 'en-US' ? 'Port Probing Suspected' : '高频多端口探测嫌疑 (Port Probing)',
-      desc: `该节点在监测周期内向 ${targetPorts.size} 个不同端口发起连接请求，疑似正在执行资产遍历或服务发现`,
+      desc: isEn ? `Node initiated connections to ${targetPorts.size} ports during window, suspecting scanning or enumeration.` : `该节点在监测周期内向 ${targetPorts.size} 个不同端口发起连接请求，疑似正在执行资产遍历或服务发现`,
       severity: 'high',
-      scoreText: '-25 分'
+      scoreText: isEn ? '-25 Pts' : '-25 分'
     });
   }
 
@@ -737,9 +741,9 @@ const riskAssessment = computed(() => {
     score -= 20;
     items.push({
       title: locale.value === 'en-US' ? 'High-Entropy Egress on Non-Standard Port' : '非标准端口高熵载荷 (High-Entropy Egress)',
-      desc: '观测到在非 443 端口上载荷信息熵 ≥ 7.2，疑似存在隐蔽加密通道、勒索数据外发或打包压缩流量',
+      desc: isEn ? 'Observed payload entropy >= 7.2 on non-443 port, suspecting covert channel or compressed exfiltration.' : '观测到在非 443 端口上载荷信息熵 ≥ 7.2，疑似存在隐蔽加密通道、勒索数据外发或打包压缩流量',
       severity: 'high',
-      scoreText: '-20 分'
+      scoreText: isEn ? '-20 Pts' : '-20 分'
     });
   }
 
@@ -747,9 +751,9 @@ const riskAssessment = computed(() => {
     score -= 15;
     items.push({
       title: locale.value === 'en-US' ? 'Insecure Cleartext Transmission' : '非安全明文规约通信 (Cleartext Transmission)',
-      desc: '检测到 HTTP / Telnet / FTP 明文规约通信，不符合等保 2.0 通信传输机密性与完整性审计要求',
+      desc: isEn ? 'Detected plaintext HTTP/Telnet/FTP protocols, failing baseline confidentiality & integrity audit.' : '检测到 HTTP / Telnet / FTP 明文规约通信，不符合等保 2.0 通信传输机密性与完整性审计要求',
       severity: 'medium',
-      scoreText: '-15 分'
+      scoreText: isEn ? '-15 Pts' : '-15 分'
     });
   }
 
@@ -757,18 +761,18 @@ const riskAssessment = computed(() => {
     score -= 15;
     items.push({
       title: locale.value === 'en-US' ? 'Traffic Asymmetry (Unidirectional Flood)' : '单向报文无应答倾斜 (Traffic Asymmetry)',
-      desc: '发包数量较多但未收到任何对端回包，疑似存在单向泛洪或未建立连接的半开探测',
+      desc: isEn ? 'High outbound packet count with zero inbound replies, suspecting unidirectional flood or half-open probing.' : '发包数量较多但未收到任何对端回包，疑似存在单向泛洪或未建立连接的半开探测',
       severity: 'medium',
-      scoreText: '-15 分'
+      scoreText: isEn ? '-15 Pts' : '-15 分'
     });
   }
 
   if (items.length === 0) {
     items.push({
       title: locale.value === 'en-US' ? 'Clean & Compliant' : '未发现异常威胁与违规行为 (Clean & Compliant)',
-      desc: '网络行为特征平稳，未检测到端口扫描、隐蔽高熵通道或异常明文泄露',
+      desc: isEn ? 'Network behavior baseline stable; no port scan, covert channels or plaintext leaks detected.' : '网络行为特征平稳，未检测到端口扫描、隐蔽高熵通道或异常明文泄露',
       severity: 'low',
-      scoreText: '合规基线达标'
+      scoreText: locale.value === 'en-US' ? 'Compliant' : '合规基线达标'
     });
   }
 
@@ -788,6 +792,7 @@ const riskAssessment = computed(() => {
 
 // 计算高频通信对端 (Top Peers)
 const topPeers = computed(() => {
+  const isEn = locale.value === 'en-US';
   const ip = props.targetIp;
   if (!ip || !props.packets) return [];
 
@@ -812,7 +817,7 @@ const topPeers = computed(() => {
       count: data.count,
       direction: data.direction,
       mainProtocol: data.mainProtocol,
-      zoneOrGeo: asset?.zone_name || asset?.geo_summary || (peerIp.startsWith('192.168.') ? '局域网' : ''),
+      zoneOrGeo: asset?.zone_name || asset?.geo_summary || (peerIp.startsWith('192.168.') ? (isEn ? 'LAN' : '局域网') : ''),
     };
   });
 
@@ -888,14 +893,16 @@ function formatBytes(bytes: number): string {
 }
 
 function inferRoleFallback(ip: string): string {
-  if (ip.endsWith('.1') || ip.endsWith('.254')) return '核心网关 / 路由器';
-  if (ip.startsWith('192.168.') || ip.startsWith('10.')) return '局域网活跃终端';
-  return '外部网络节点';
+  const isEn = locale.value === 'en-US';
+  if (ip.endsWith('.1') || ip.endsWith('.254')) return isEn ? 'Core Gateway / Router' : '核心网关 / 路由器';
+  if (ip.startsWith('192.168.') || ip.startsWith('10.')) return isEn ? 'Active LAN Endpoint' : '局域网活跃终端';
+  return isEn ? 'External Network Host' : '外部网络节点';
 }
 
 function inferProtocolByPort(port: number): string {
+  const isEn = locale.value === 'en-US';
   const map: Record<number, string> = {
-    80: 'HTTP', 443: 'HTTPS', 502: 'Modbus', 5003: 'SL651水利',
+    80: 'HTTP', 443: 'HTTPS', 502: 'Modbus', 5003: isEn ? 'SL651 Water Resources' : 'SL651水利',
     1883: 'MQTT', 22: 'SSH', 445: 'SMB', 53: 'DNS', 21: 'FTP',
     23: 'Telnet', 3389: 'RDP', 8080: 'Web'
   };
@@ -984,12 +991,65 @@ async function exportReport(format: 'markdown' | 'json') {
     await saveTextViaNativeDesktop(
       `OmniProbe_Dossier_${ip}_${dateStr}.json`,
       JSON.stringify(reportData, null, 2),
-      'JSON 档案 (*.json)',
+      locale.value === 'en-US' ? 'JSON Dossier (*.json)' : 'JSON 档案 (*.json)',
       '*.json',
-      '导出 IP 全息数字档案 JSON'
+      locale.value === 'en-US' ? 'Export IP Digital Dossier JSON' : '导出 IP 全息数字档案 JSON'
     );
   } else {
-    const md = `# Omni-Probe 工业级 IP 全息画像与审计溯源报告
+    const isEn = locale.value === 'en-US';
+    const md = isEn ? `# Omni-Probe Industrial IP Holographic Dossier & Audit Trace Report
+
+- **Target IP Address**: \`${ip}\`
+- **Generated At**: ${new Date().toLocaleString()}
+- **Baseline Health Index**: **${riskAssessment.value.score} / 100** (${riskAssessment.value.levelText})
+- **Network Scope**: ${ipScopeText.value}
+- **Security Zone**: ${intel.value?.zone_name || 'Unassigned'}
+- **ISP / Geography**: ${intel.value?.geo_summary || 'Local Private Subnet'}
+
+---
+
+## 1. Network Identity & Hardware Fingerprint
+| Attribute | Observed Value |
+| :--- | :--- |
+| **Physical MAC** | \`${matchedAsset.value?.mac || 'Unknown across L3 route'}\` |
+| **Hardware Vendor (OUI)** | ${matchedAsset.value?.vendor || 'Generic Network Node'} |
+| **Network Role** | ${matchedAsset.value?.role || inferRoleFallback(ip)} |
+| **OS Fingerprint** | **${osFingerprint.value.osName}** (${osFingerprint.value.details}) |
+| **Hostname (NetBIOS/DNS)** | ${hostnameInfo.value?.hostname || 'No Response'} |
+| **Reverse PTR Record** | ${hostnameInfo.value?.reverse_ptr || 'No PTR Record'} |
+
+---
+
+## 2. Traffic Flow & Throughput Characteristics
+- **Inbound RX**: ${stats.value.rxPackets} pkts (${formatBytes(stats.value.rxBytes)}) [Ratio: ${rxRatioText.value}%]
+- **Outbound TX**: ${stats.value.txPackets} pkts (${formatBytes(stats.value.txBytes)}) [Ratio: ${txRatioText.value}%]
+- **Communication Pattern**: **${trafficRoleText.value}**
+- **First Seen**: ${stats.value.firstSeen || 'N/A'}
+- **Last Active**: ${stats.value.lastSeen || 'N/A'}
+
+### Protocol Distribution
+${Object.entries(stats.value.protocolCounts).map(([pr, cnt]) => `- **${pr}**: ${cnt} pkts`).join('\n') || '- None'}
+
+---
+
+## 3. Compliance & Threat Intelligence Assessment
+${riskAssessment.value.items.map(item => `### [${item.severity.toUpperCase()}] ${item.title} (${item.scoreText})\n> ${item.desc}`).join('\n\n')}
+
+---
+
+## 4. Top Peer Topology Matrix
+| Direction | Peer IP | Zone / Geo | Primary Protocol | Frame Count |
+| :---: | :--- | :--- | :---: | :---: |
+${topPeers.value.map(p => `| ${p.direction === 'out' ? (isEn ? '➔ Outbound' : '➔ 出向') : (isEn ? '⬅ Inbound' : '⬅ 入向')} | \`${p.peerIp}\` | ${p.zoneOrGeo || 'N/A'} | ${p.mainProtocol} | ${p.count} |`).join('\n') || '| - | No Peer Traffic | - | - | - |'}
+
+---
+
+## 5. Discovered Ports & Active Services
+${openPorts.value.map(p => `- Port \`:${p}\`: **${inferProtocolByPort(p)}**`).join('\n') || '- No active ports discovered'}
+
+---
+*Report automatically generated by Omni-Probe Industrial Engine with forensic audit fidelity.*
+` : `# Omni-Probe 工业级 IP 全息画像与审计溯源报告
 
 - **目标 IP 地址**: \`${ip}\`
 - **生成时间**: ${new Date().toLocaleString()}
@@ -1046,9 +1106,9 @@ ${openPorts.value.map(p => `- 端口 \`:${p}\`: **${inferProtocolByPort(p)}**`).
     await saveTextViaNativeDesktop(
       `OmniProbe_Dossier_${ip}_${dateStr}.md`,
       md,
-      'Markdown 档案 (*.md)',
+      locale.value === 'en-US' ? 'Markdown Dossier (*.md)' : 'Markdown 档案 (*.md)',
       '*.md',
-      '导出 IP 全息数字档案 Markdown'
+      locale.value === 'en-US' ? 'Export IP Digital Dossier Markdown' : '导出 IP 全息数字档案 Markdown'
     );
   }
 }

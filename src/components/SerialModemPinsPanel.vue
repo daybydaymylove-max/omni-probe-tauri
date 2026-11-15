@@ -5,7 +5,7 @@
       <div class="flex items-center gap-2">
         <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
         <span class="text-xs font-bold text-(--text-primary)">{{ t('serialPins.title') }}</span>
-        <span class="text-[11px] text-(--text-muted) font-mono-code">实时采集 CTS/DSR/RI/CD 与主动反控 RTS/DTR</span>
+        <span class="text-[11px] text-(--text-muted) font-mono-code">{{ locale === 'en-US' ? 'Real-time CTS/DSR/RI/CD sampling & RTS/DTR pin control' : '实时采集 CTS/DSR/RI/CD 与主动反控 RTS/DTR' }}</span>
       </div>
 
       <!-- 操作与选择串口 -->
@@ -77,7 +77,7 @@
           <div class="ui-content-card p-2.5 rounded-lg flex items-center justify-between">
             <div>
               <div class="font-bold text-(--text-primary)">RI (Ring Indicator)</div>
-              <div class="text-[11px] text-(--text-muted) font-sans">振铃指示信号</div>
+              <div class="text-[11px] text-(--text-muted) font-sans">{{ locale === 'en-US' ? 'Ring Indicator Signal' : '振铃指示信号' }}</div>
             </div>
             <div class="flex items-center gap-1.5">
               <span class="w-2.5 h-2.5 rounded-full transition-colors"
@@ -92,7 +92,7 @@
           <div class="ui-content-card p-2.5 rounded-lg flex items-center justify-between">
             <div>
               <div class="font-bold text-(--text-primary)">CD (Carrier Detect)</div>
-              <div class="text-[11px] text-(--text-muted) font-sans">载波检测信号</div>
+              <div class="text-[11px] text-(--text-muted) font-sans">{{ locale === 'en-US' ? 'Carrier Detect Signal' : '载波检测信号' }}</div>
             </div>
             <div class="flex items-center gap-1.5">
               <span class="w-2.5 h-2.5 rounded-full transition-colors"
@@ -108,8 +108,8 @@
       <!-- 2. 输出引脚电平反控 (Outputs to Device / Local Control) -->
       <div class="ui-sub-card rounded-xl p-3 flex flex-col gap-2">
         <div class="text-xs font-bold text-(--text-primary) uppercase flex items-center justify-between gap-2">
-          <span>本地输出引脚电平控制 (Outputs)</span>
-          <span class="text-[11px] text-indigo-600 dark:text-indigo-400 font-normal">点击切换物理引脚电平</span>
+          <span>{{ locale === 'en-US' ? 'Local Output Pin Control (Outputs)' : '本地输出引脚电平控制 (Outputs)' }}</span>
+          <span class="text-[11px] text-indigo-600 dark:text-indigo-400 font-normal">{{ locale === 'en-US' ? 'Click to toggle physical pin level' : '点击切换物理引脚电平' }}</span>
         </div>
 
         <div class="grid grid-cols-2 gap-2 text-xs font-mono-code">
@@ -117,16 +117,16 @@
           <div class="ui-content-card p-2.5 rounded-lg flex flex-col justify-between gap-2">
             <div>
               <div class="font-bold text-(--text-primary)">RTS (Request To Send)</div>
-              <div class="text-[11px] text-(--text-muted) font-sans">请求发送控制电平</div>
+              <div class="text-[11px] text-(--text-muted) font-sans">{{ locale === 'en-US' ? 'Request to Send (RTS) Level' : '请求发送控制电平' }}</div>
             </div>
             <div class="flex items-center justify-between gap-2">
               <span class="text-[11px] font-bold ui-num" :class="rtsState ? 'text-indigo-600 dark:text-indigo-400' : 'text-(--text-muted)'">
-                {{ rtsState ? 'HIGH (高)' : 'LOW (低)' }}
+                {{ rtsState ? (locale === 'en-US' ? 'HIGH' : 'HIGH (高)') : (locale === 'en-US' ? 'LOW' : 'LOW (低)') }}
               </span>
               <button @click="toggleRts" :disabled="!selectedPort"
                 :class="['px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all cursor-pointer disabled:opacity-40',
                   rtsState ? 'ui-btn-primary' : 'ui-btn-secondary']">
-                {{ rtsState ? '置为 LOW' : '置为 HIGH' }}
+                {{ rtsState ? (locale === 'en-US' ? 'Set LOW' : '置为 LOW') : (locale === 'en-US' ? 'Set HIGH' : '置为 HIGH') }}
               </button>
             </div>
           </div>
@@ -135,16 +135,16 @@
           <div class="ui-content-card p-2.5 rounded-lg flex flex-col justify-between gap-2">
             <div>
               <div class="font-bold text-(--text-primary)">DTR (Data Terminal Ready)</div>
-              <div class="text-[11px] text-(--text-muted) font-sans">数据终端就绪电平</div>
+              <div class="text-[11px] text-(--text-muted) font-sans">{{ locale === 'en-US' ? 'Data Terminal Ready (DTR) Level' : '数据终端就绪电平' }}</div>
             </div>
             <div class="flex items-center justify-between gap-2">
               <span class="text-[11px] font-bold ui-num" :class="dtrState ? 'text-indigo-600 dark:text-indigo-400' : 'text-(--text-muted)'">
-                {{ dtrState ? 'HIGH (高)' : 'LOW (低)' }}
+                {{ dtrState ? (locale === 'en-US' ? 'HIGH' : 'HIGH (高)') : (locale === 'en-US' ? 'LOW' : 'LOW (低)') }}
               </span>
               <button @click="toggleDtr" :disabled="!selectedPort"
                 :class="['px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all cursor-pointer disabled:opacity-40',
                   dtrState ? 'ui-btn-primary' : 'ui-btn-secondary']">
-                {{ dtrState ? '置为 LOW' : '置为 HIGH' }}
+                {{ dtrState ? (locale === 'en-US' ? 'Set LOW' : '置为 LOW') : (locale === 'en-US' ? 'Set HIGH' : '置为 HIGH') }}
               </button>
             </div>
           </div>
@@ -215,7 +215,7 @@ async function fetchStatus() {
     rtsState.value = res.rts;
     dtrState.value = res.dtr;
   } catch (err: any) {
-    errorMsg.value = `获取引脚电平失败: ${err?.message || String(err)}`;
+    errorMsg.value = locale.value === 'en-US' ? `Failed to query pin levels: ${err?.message || String(err)}` : `获取引脚电平失败: ${err?.message || String(err)}`;
   } finally {
     isLoading.value = false;
   }
@@ -233,7 +233,7 @@ async function toggleRts() {
     rtsState.value = next;
     if (modemStatus.value) modemStatus.value.rts = next;
   } catch (err: any) {
-    errorMsg.value = `设置 RTS 电平失败: ${err?.message || String(err)}`;
+    errorMsg.value = locale.value === 'en-US' ? `Failed to set RTS level: ${err?.message || String(err)}` : `设置 RTS 电平失败: ${err?.message || String(err)}`;
   }
 }
 
@@ -249,7 +249,7 @@ async function toggleDtr() {
     dtrState.value = next;
     if (modemStatus.value) modemStatus.value.dtr = next;
   } catch (err: any) {
-    errorMsg.value = `设置 DTR 电平失败: ${err?.message || String(err)}`;
+    errorMsg.value = locale.value === 'en-US' ? `Failed to set DTR level: ${err?.message || String(err)}` : `设置 DTR 电平失败: ${err?.message || String(err)}`;
   }
 }
 
