@@ -9,11 +9,11 @@
             <AppIcon name="usb" class="w-4 h-4" />
           </div>
           <div>
-            <h3 class="text-sm font-bold text-(--text-primary)">USB 标准描述符树深度展开分析器</h3>
-            <p class="text-xs text-(--text-muted) font-mono-code">递归解析 Device -> Configuration -> Interface -> Endpoint 四级标准结构</p>
+            <h3 class="text-sm font-bold text-(--text-primary)">{{ t('usbTree.title') }}</h3>
+            <p class="text-xs text-(--text-muted) font-mono-code">{{ t('usbTree.subtitle') }}</p>
           </div>
         </div>
-        <button @click="$emit('close')" class="ui-btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center cursor-pointer" aria-label="关闭弹窗">
+        <button @click="$emit('close')" class="ui-btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center cursor-pointer" :aria-label="t('common.close')">
           <AppIcon name="close" class="w-4 h-4" />
         </button>
       </div>
@@ -23,16 +23,16 @@
         <!-- 载荷输入与预设 -->
         <div class="ui-sub-card border-purple-500/30 rounded-2xl p-3.5 flex flex-col gap-2.5">
           <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
-            <span class="font-bold text-(--text-primary)">标准描述符原始 HEX 字节流:</span>
+            <span class="font-bold text-(--text-primary)">{{ t('usbTree.rawHexView') }}:</span>
             <div class="flex flex-wrap gap-1.5 text-[11px]">
               <button @click="loadSample('hid_mouse')" class="ui-btn-secondary px-2.5 py-0.5 text-[11px] cursor-pointer">
-                HID 鼠标描述符
+                HID Mouse
               </button>
               <button @click="loadSample('mass_storage')" class="ui-btn-secondary px-2.5 py-0.5 text-[11px] cursor-pointer">
-                U 盘存储描述符
+                Mass Storage
               </button>
               <button @click="loadSample('cdc_serial')" class="ui-btn-secondary px-2.5 py-0.5 text-[11px] cursor-pointer">
-                CDC 虚拟串口描述符
+                CDC Serial
               </button>
             </div>
           </div>
@@ -156,6 +156,7 @@
 import { ref, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import AppIcon from './AppIcon.vue';
+import { useI18n } from '../i18n';
 import { useUniversalDiff } from '../composables/useUniversalDiff';
 
 const diffBus = useUniversalDiff();
@@ -229,6 +230,8 @@ const props = defineProps<{
 
 defineEmits(['close']);
 
+const { t } = useI18n();
+
 const rawHex = ref(props.initialHex || '12 01 00 02 00 00 00 40 86 80 20 08 00 01 01 02 00 01 09 02 22 00 01 01 00 A0 32 09 04 00 00 01 03 01 02 00 07 05 81 03 08 00 0A');
 const isParsing = ref(false);
 const errorMsg = ref<string | null>(null);
@@ -256,7 +259,7 @@ async function doParseTree() {
     });
     descriptorTree.value = res;
   } catch (err: any) {
-    errorMsg.value = `解析描述符树失败: ${err?.message || String(err)}`;
+    errorMsg.value = `{{ t('usbTree.descHierarchy') }}失败: ${err?.message || String(err)}`;
   } finally {
     isParsing.value = false;
   }

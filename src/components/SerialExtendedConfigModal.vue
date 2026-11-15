@@ -8,11 +8,11 @@
             <AppIcon name="serial" class="w-4 h-4" />
           </div>
           <div>
-            <h3 class="text-sm font-bold text-(--text-primary)">串口工业通信参数与动态分帧配置</h3>
-            <p class="text-xs text-(--text-muted) font-mono-code">符合 Modbus RTU / DL/T 645 / NMEA 0183 规约与 3.5T 超时推导</p>
+            <h3 class="text-sm font-bold text-(--text-primary)">{{ t('serialConfig.title') }}</h3>
+            <p class="text-xs text-(--text-muted) font-mono-code">{{ t('serialConfig.subtitle') }}</p>
           </div>
         </div>
-        <button @click="$emit('close')" class="ui-btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center cursor-pointer" aria-label="关闭弹窗">
+        <button @click="$emit('close')" class="ui-btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center cursor-pointer" :aria-label="t('common.close')">
           <AppIcon name="close" class="w-4 h-4" />
         </button>
       </div>
@@ -87,7 +87,7 @@
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">数据位 (Data Bits)</label>
+              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">{{ t('serialConfig.dataBits') }}</label>
               <select v-model.number="config.data_bits"
                 class="ui-input w-full px-2.5 py-1.5 font-mono-code ui-num text-xs">
                 <option :value="5">5 Bits</option>
@@ -108,7 +108,7 @@
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">停止位 (Stop Bits)</label>
+              <label class="block text-[11px] font-bold text-(--text-secondary) mb-1">{{ t('serialConfig.stopBits') }}</label>
               <select v-model.number="config.stop_bits"
                 class="ui-input w-full px-2.5 py-1.5 font-mono-code ui-num text-xs">
                 <option :value="1">1 停止位</option>
@@ -205,6 +205,8 @@
 import { ref, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import AppIcon from './AppIcon.vue';
+import { useI18n } from '../i18n';
+const { t } = useI18n();
 
 const props = defineProps<{
   isOpen: boolean;

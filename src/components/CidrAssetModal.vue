@@ -9,11 +9,11 @@
             <AppIcon name="shield" class="w-4 h-4" />
           </div>
           <div>
-            <h3 class="text-sm font-bold text-(--text-primary)">内网私网 CIDR 资产定义与安全域管理</h3>
-            <p class="text-xs text-(--text-muted) font-mono-code">离线匹配进出流量，自动标注业务域与安全等级</p>
+            <h3 class="text-sm font-bold text-(--text-primary)">{{ t('cidrAsset.title') }}</h3>
+            <p class="text-xs text-(--text-muted) font-mono-code">{{ t('cidrAsset.subtitle') }}</p>
           </div>
         </div>
-        <button @click="$emit('close')" class="ui-btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center cursor-pointer" aria-label="关闭弹窗">
+        <button @click="$emit('close')" class="ui-btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center cursor-pointer" :aria-label="t('cidrAsset.close')">
           <AppIcon name="close" class="w-4 h-4" />
         </button>
       </div>
@@ -24,39 +24,39 @@
         <div class="ui-sub-card p-4 rounded-2xl space-y-3">
           <div class="font-bold text-(--text-primary) flex items-center gap-1.5">
             <AppIcon name="plus" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-            <span>添加自定义网段资产规则</span>
+            <span>{{ t('cidrAsset.addRuleTitle') }}</span>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-4 gap-2.5">
             <div>
-              <label class="block text-[11px] text-(--text-muted) font-semibold mb-1">CIDR 网段</label>
-              <input v-model="newRule.cidr" placeholder="如: 192.168.1.0/24"
+              <label class="block text-[11px] text-(--text-muted) font-semibold mb-1">{{ t('cidrAsset.cidrSegment') }}</label>
+              <input v-model="newRule.cidr" :placeholder="t('cidrAsset.cidrPlaceholder')"
                 class="ui-input w-full px-2.5 py-1.5 text-xs font-mono-code">
             </div>
             <div>
-              <label class="block text-[11px] text-(--text-muted) font-semibold mb-1">安全域/分区名称</label>
-              <input v-model="newRule.zone_name" placeholder="如: 生产控制PLC区"
+              <label class="block text-[11px] text-(--text-muted) font-semibold mb-1">{{ t('cidrAsset.zoneName') }}</label>
+              <input v-model="newRule.zone_name" :placeholder="t('cidrAsset.zonePlaceholder')"
                 class="ui-input w-full px-2.5 py-1.5 text-xs">
             </div>
             <div>
-              <label class="block text-[11px] text-(--text-muted) font-semibold mb-1">安全等级</label>
+              <label class="block text-[11px] text-(--text-muted) font-semibold mb-1">{{ t('cidrAsset.securityLevel') }}</label>
               <select v-model="newRule.security_level"
                 class="ui-input w-full px-2 py-1.5 text-xs">
-                <option value="核心">核心 (Core)</option>
-                <option value="重要">重要 (Important)</option>
-                <option value="普通">普通 (Normal)</option>
-                <option value="外部">外部隔离区 (DMZ)</option>
+                <option value="核心">{{ t('cidrAsset.levelCore') }}</option>
+                <option value="重要">{{ t('cidrAsset.levelImportant') }}</option>
+                <option value="普通">{{ t('cidrAsset.levelNormal') }}</option>
+                <option value="外部">{{ t('cidrAsset.levelDmz') }}</option>
               </select>
             </div>
             <div>
-              <label class="block text-[11px] text-(--text-muted) font-semibold mb-1">描述与责任人</label>
-              <input v-model="newRule.description" placeholder="如: 车间生产线"
+              <label class="block text-[11px] text-(--text-muted) font-semibold mb-1">{{ t('cidrAsset.descOwner') }}</label>
+              <input v-model="newRule.description" :placeholder="t('cidrAsset.descPlaceholder')"
                 class="ui-input w-full px-2.5 py-1.5 text-xs">
             </div>
           </div>
           <div class="flex justify-end">
             <button @click="addRule" :disabled="!newRule.cidr.trim() || !newRule.zone_name.trim()"
               class="ui-btn-primary px-4 py-1.5 text-xs font-bold cursor-pointer disabled:opacity-40">
-              添加规则
+              {{ t('cidrAsset.addRule') }}
             </button>
           </div>
         </div>
@@ -64,8 +64,8 @@
         <!-- 当前规则列表 -->
         <div>
           <div class="font-bold text-(--text-primary) mb-2 flex items-center justify-between">
-            <span>当前已加载的网段资产规则 (<span class="ui-num">{{ rules.length }}</span> 条)</span>
-            <span class="text-[11px] text-(--text-muted) font-normal">匹配遵循最长前缀优先原则</span>
+            <span>{{ t('cidrAsset.loadedRules', { n: rules.length }) }}</span>
+            <span class="text-[11px] text-(--text-muted) font-normal">{{ t('cidrAsset.lpmPrinciple') }}</span>
           </div>
 
           <div class="space-y-2">
@@ -85,19 +85,19 @@
                     {{ rule.security_level }}
                   </span>
                 </div>
-                <div class="text-[11px] text-(--text-muted) select-text">{{ rule.description || '无补充描述' }}</div>
+                <div class="text-[11px] text-(--text-muted) select-text">{{ rule.description || t('cidrAsset.noDesc') }}</div>
               </div>
 
               <button @click="removeRule(idx)" class="ui-btn-danger px-2.5 py-1 text-xs font-semibold cursor-pointer shrink-0">
-                删除
+                {{ t('cidrAsset.delete') }}
               </button>
             </div>
 
             <EmptyState
               v-if="rules.length === 0"
               icon="shield"
-              title="暂无自定义 CIDR 规则"
-              description="请在上方填入内网网段与安全域信息，保存后将注入流分类引擎。"
+              :title="t('cidrAsset.emptyTitle')"
+              :description="t('cidrAsset.emptyDesc')"
             />
           </div>
         </div>
@@ -105,15 +105,15 @@
 
       <!-- 3. 底栏 -->
       <div class="px-6 py-3 border-t border-(--border-subtle) bg-(--surface-content-alt) flex items-center justify-between shrink-0">
-        <span class="text-xs text-(--text-muted) font-mono-code">修改后将实时注入流分析引擎</span>
+        <span class="text-xs text-(--text-muted) font-mono-code">{{ t('cidrAsset.realtimeInjectNote') }}</span>
         <div class="flex items-center gap-2">
           <button @click="$emit('close')" class="ui-btn-secondary px-4 py-1.5 text-xs font-semibold cursor-pointer">
-            关闭
+            {{ t('cidrAsset.close') }}
           </button>
           <button @click="saveRules" :disabled="isSaving"
             class="ui-btn-primary text-xs px-5 py-1.5 font-bold cursor-pointer disabled:opacity-40">
-            <span v-if="isSaving">保存中...</span>
-            <span v-else>保存并生效</span>
+            <span v-if="isSaving">{{ t('cidrAsset.saving') }}</span>
+            <span v-else>{{ t('cidrAsset.saveAndApply') }}</span>
           </button>
         </div>
       </div>
@@ -125,8 +125,11 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import { useI18n } from '../i18n';
 import AppIcon from './AppIcon.vue';
 import EmptyState from './EmptyState.vue';
+
+const { t } = useI18n();
 
 interface CidrRule {
   cidr: string;

@@ -5,7 +5,7 @@
       <div class="flex items-center gap-2 flex-wrap">
         <span class="w-2 h-2 rounded-full" :class="filteredPackets.length > 0 ? 'bg-sky-500' : 'bg-slate-400'"></span>
         <h3 class="text-xs font-bold" style="color: var(--text-primary);">
-          物理总线实时 / 历史波形统计与示波工作台
+          {{ t('oscilloscope.title') }}
         </h3>
 
         <div class="p-0.5 rounded-xl ui-pill flex items-center gap-0.5 text-[11px] font-semibold">
@@ -30,9 +30,9 @@
           class="ui-input w-auto px-2 py-0.5 text-[11px] font-medium cursor-pointer"
           title="筛选分析的物理总线范围"
         >
-          <option value="ALL">全部物理总线 (COM + USB)</option>
-          <option value="SERIAL">仅 COM 串口 / 单片机</option>
-          <option value="USB">仅 USB 总线</option>
+          <option value="ALL">All Buses (COM + USB)</option>
+          <option value="SERIAL">Serial / MCU Only</option>
+          <option value="USB">USB Bus Only</option>
         </select>
 
         <label
@@ -46,7 +46,7 @@
         </label>
 
         <span class="ui-num px-2 py-0.5 rounded-md border bg-[var(--surface-glass-pill)]" style="border-color: var(--border-subtle); color: var(--text-muted);">
-          实时样本: <strong style="color: var(--text-primary);">{{ filteredPackets.length }}</strong> 帧
+          Samples: <strong style="color: var(--text-primary);">{{ filteredPackets.length }}</strong> 帧
         </span>
 
         <button
@@ -55,7 +55,7 @@
           :class="['px-2 py-0.5 rounded-lg border font-semibold cursor-pointer',
             isPaused ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/35' : 'ui-pill']"
         >
-          {{ isPaused ? '已暂停采样' : '实时采集' }}
+          {{ isPaused ? 'PAUSED' : 'LIVE' }}
         </button>
 
         <button
@@ -65,7 +65,7 @@
           class="ui-btn-secondary px-2.5 py-0.5 text-[11px]"
         >
           <AppIcon name="refresh" :size="11" :class="historyLoading ? 'animate-spin' : ''" />
-          <span>读取 JSONL 历史归档</span>
+          <span>Read JSONL History</span>
         </button>
       </div>
     </div>
@@ -577,6 +577,8 @@ import { LineChart, BarChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, LegendComponent, DataZoomComponent } from 'echarts/components';
 import VChart from 'vue-echarts';
 import AppIcon from './AppIcon.vue';
+import { useI18n } from '../i18n';
+const { t } = useI18n();
 
 use([CanvasRenderer, LineChart, BarChart, GridComponent, TooltipComponent, LegendComponent, DataZoomComponent]);
 

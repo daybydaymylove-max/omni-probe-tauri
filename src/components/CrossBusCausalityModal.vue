@@ -8,11 +8,11 @@
             <AppIcon name="zap" class="w-4 h-4" />
           </div>
           <div>
-            <h3 class="text-sm font-bold text-(--text-primary)">跨总线网关协议转换因果关联追踪看板</h3>
-            <p class="text-xs text-(--text-muted) font-mono-code">纳秒级因果时序追踪：以太网 (Modbus-TCP) ⇄ 串口 (Modbus-RTU) 现场网关转换时延度量</p>
+            <h3 class="text-sm font-bold text-(--text-primary)">{{ t('crossBus.title') }}</h3>
+            <p class="text-xs text-(--text-muted) font-mono-code">{{ t('crossBus.subtitle') }}</p>
           </div>
         </div>
-        <button @click="$emit('close')" class="ui-btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center cursor-pointer" aria-label="关闭弹窗">
+        <button @click="$emit('close')" class="ui-btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center cursor-pointer" :aria-label="t('common.close')">
           <AppIcon name="close" class="w-4 h-4" />
         </button>
       </div>
@@ -22,9 +22,9 @@
         <!-- 统计看板 -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
           <div class="ui-content-card p-3.5 rounded-2xl">
-            <div class="text-[11px] text-teal-600 dark:text-teal-400 font-bold uppercase">网关转换因果对数</div>
+            <div class="text-[11px] text-teal-600 dark:text-teal-400 font-bold uppercase">{{ t('crossBus.causalPairs') }}</div>
             <div class="text-base font-bold text-(--text-primary) ui-num font-mono-code mt-0.5 select-text">
-              {{ correlations.length }} 组对
+              {{ correlations.length }} pairs
             </div>
           </div>
           <div class="ui-content-card p-3.5 rounded-2xl">
@@ -157,6 +157,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import AppIcon from './AppIcon.vue';
+import { useI18n } from '../i18n';
 import EmptyState from './EmptyState.vue';
 
 export interface CrossBusCorrelationRecord {
@@ -176,6 +177,8 @@ defineProps<{
 }>();
 
 defineEmits(['close']);
+
+const { t } = useI18n();
 
 export interface CascadeMetricsSnapshot {
   total_cascades_tracked: number;

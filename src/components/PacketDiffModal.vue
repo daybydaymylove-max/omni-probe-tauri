@@ -13,7 +13,7 @@
             </div>
             <div class="min-w-0">
               <h2 class="text-sm font-bold flex items-center gap-2 truncate" style="color: var(--text-primary)">
-                <span class="truncate">全局通用数据比对与波线波率工作台</span>
+                <span class="truncate">{{ t('diffCenter.title') }}</span>
                 <span class="text-[11px] ui-num px-2 py-0.5 rounded-md bg-indigo-500/12 text-indigo-700 dark:text-indigo-300 border border-indigo-500/25 font-semibold shrink-0">
                   Universal Multi-Bus Diff
                 </span>
@@ -28,15 +28,15 @@
             <!-- 差异突变率 / 多组统计指示卡 -->
             <div v-if="activeMode === 'multi' && multiResult" class="hidden sm:flex items-center gap-2.5 ui-pill px-3 py-1 rounded-xl text-xs ui-num">
               <span class="text-[11px]" style="color: var(--text-secondary)">
-                样本组: <strong class="text-indigo-700 dark:text-indigo-300">{{ multiResult.sample_count }}</strong>
+                {{ t('diffCenter.sampleGroups') }}: <strong class="text-indigo-700 dark:text-indigo-300">{{ multiResult.sample_count }}</strong>
               </span>
               <span class="text-[11px]" style="color: var(--text-secondary)">
-                对齐列宽: <strong class="text-emerald-700 dark:text-emerald-300">{{ multiResult.aligned_column_count }}</strong> B
+                {{ t('diffCenter.alignedWidth') }}: <strong class="text-emerald-700 dark:text-emerald-300">{{ multiResult.aligned_column_count }}</strong> B
               </span>
             </div>
             <div v-else-if="diffResult" class="hidden sm:flex items-center gap-3 ui-pill px-3 py-1 rounded-xl text-xs ui-num">
               <div class="text-[11px]" style="color: var(--text-secondary)">
-                突变字节: <strong class="text-rose-700 dark:text-rose-400">{{ diffResult.mutated_bytes_count }}</strong> / {{ Math.max(diffResult.total_bytes_a, diffResult.total_bytes_b) }}
+                {{ t('diffCenter.mutatedBytes') }}: <strong class="text-rose-700 dark:text-rose-400">{{ diffResult.mutated_bytes_count }}</strong> / {{ Math.max(diffResult.total_bytes_a, diffResult.total_bytes_b) }}
               </div>
               <div class="w-16 h-2 rounded-full overflow-hidden" style="background: var(--surface-elevated)">
                 <div class="h-full transition-all duration-300"
@@ -51,9 +51,9 @@
             <!-- 导出与关闭按钮组 (永远锁定在首行最右侧) -->
             <button v-if="diffResult || (activeMode === 'multi' && multiResult)" @click="exportDiffReport"
               class="ui-btn-secondary text-xs py-1.5 px-3 rounded-xl"
-              title="导出当前双组或多组 Center-Star 分析报告 (Markdown)">
+              :title="t('diffCenter.exportReportTitle')">
               <AppIcon name="download" :size="13" />
-              <span>导出差分报告</span>
+              <span>{{ t('diffCenter.exportDiffReport') }}</span>
             </button>
             <button @click="handleClose"
               class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer shrink-0"
@@ -70,14 +70,14 @@
               activeMode === 'hex' ? 'bg-indigo-600 text-white shadow-xs font-bold' : 'hover:bg-black/5 dark:hover:bg-white/5']"
             :style="activeMode !== 'hex' ? { color: 'var(--text-secondary)' } : undefined">
             <AppIcon name="code" :size="13" />
-            <span>逐字节 Hex 比对</span>
+            <span>{{ t('diffCenter.modeByteHex') }}</span>
           </button>
           <button @click="switchMode('multi')"
             :class="['px-3 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5',
               activeMode === 'multi' ? 'bg-indigo-600 text-white shadow-xs font-bold' : 'hover:bg-black/5 dark:hover:bg-white/5']"
             :style="activeMode !== 'multi' ? { color: 'var(--text-secondary)' } : undefined">
             <AppIcon name="git-branch" :size="13" />
-            <span>多组 Center-Star 矩阵</span>
+            <span>{{ t('diffCenter.modeMultiStar') }}</span>
             <span v-if="diffBus.queueCount.value > 0"
               :class="['px-1.5 py-0.5 rounded-full text-[11px] ui-num font-bold',
                 diffBus.queueCount.value >= 3 ? 'bg-emerald-500 text-white' : 'ui-pill']">
@@ -936,6 +936,9 @@ import { notifySuccess, notifyInfo, notifyError } from '../composables/useNotifi
 import { useUniversalDiff, normalizeToDiffableItem, type UniversalDiffItem, type DiffViewMode } from '../composables/useUniversalDiff';
 import { uiConfirm, uiPrompt } from '../composables/useConfirmDialog';
 import AppIcon from './AppIcon.vue';
+import { useI18n } from '../i18n';
+const { t } = useI18n();
+void t;
 import EmptyState from './EmptyState.vue';
 import { invoke } from '@tauri-apps/api/core';
 import { saveTextViaNativeDesktop } from '../composables/useDesktopSave';

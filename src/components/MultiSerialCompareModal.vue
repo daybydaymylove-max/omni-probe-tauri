@@ -11,13 +11,13 @@
           </div>
           <div>
             <div class="flex items-center gap-2">
-              <h3 class="text-sm font-bold leading-tight" style="color: var(--text-primary)">多串口数据实时交叉比对终端</h3>
+              <h3 class="text-sm font-bold leading-tight" style="color: var(--text-primary)">{{ t('multiSerial.title') }}</h3>
               <span class="text-[11px] font-semibold bg-indigo-500/12 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-500/25">
                 {{ channels.length }} 通道时序 LCS 对齐差分
               </span>
             </div>
             <p class="text-[11px] mt-0.5" style="color: var(--text-muted)">
-              支持 2～4 路 COM 串口全双工同步对照、真实 LCS DP 回溯字节对齐与传输延迟抖动 (Δt) 分析
+              {{ t('multiSerial.subtitle') }}
             </p>
           </div>
         </div>
@@ -263,6 +263,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue';
 import AppIcon from './AppIcon.vue';
+import { useI18n } from '../i18n';
+const { t } = useI18n();
 import EmptyState from './EmptyState.vue';
 import { useUniversalDiff } from '../composables/useUniversalDiff';
 import { saveTextViaNativeDesktop } from '../composables/useDesktopSave';

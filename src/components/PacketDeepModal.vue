@@ -9,7 +9,7 @@
           </div>
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-2">
-              <h2 class="text-sm font-bold text-(--text-primary)">全景报文深度剖析器 (Packet Deep Dissector)</h2>
+              <h2 class="text-sm font-bold text-(--text-primary)">{{ t('packetDeep.title') }}</h2>
               <span class="ui-pill text-[11px] ui-num font-mono-code px-2 py-0.5 font-bold">
                 #{{ packet.id }}
               </span>
@@ -22,17 +22,17 @@
                 packet.entropy >= 6.0 ? 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/30' :
                 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
               ]">
-                {{ packet.entropy >= 7.5 ? '高熵密文' : packet.entropy >= 6.0 ? '混淆数据' : '明文载荷' }} (Shannon: {{ packet.entropy.toFixed(2) }})
+                {{ packet.entropy >= 7.5 ? t('packetDeep.highEntropy') : packet.entropy >= 6.0 ? t('packetDeep.obfuscated') : t('packetDeep.plaintext') }} (Shannon: {{ packet.entropy.toFixed(2) }})
               </span>
             </div>
             <p class="text-xs text-(--text-muted) ui-num mt-0.5">
-              时间: {{ packet.timestamp }} | 流向: {{ packet.direction }} | 长度: {{ packet.length }} 字节
+              {{ t('packetDeep.time') }}: {{ packet.timestamp }} | {{ t('packetDeep.direction') }}: {{ packet.direction }} | {{ t('packetDeep.length') }}: {{ packet.length }} {{ t('packetDeep.bytes') }}
             </p>
           </div>
         </div>
 
         <div class="flex items-center gap-2 shrink-0">
-          <button @click="$emit('close')" class="ui-btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center cursor-pointer" aria-label="关闭窗口">
+          <button @click="$emit('close')" class="ui-btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center cursor-pointer" :aria-label="t('packetDeep.closeWindow')">
             <AppIcon name="close" class="w-4 h-4" />
           </button>
         </div>
@@ -43,7 +43,7 @@
         <!-- 核心通信元组卡片 -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <div class="ui-content-card p-3 rounded-xl">
-            <div class="text-[11px] text-(--text-muted) font-bold uppercase mb-1">源端 Source</div>
+            <div class="text-[11px] text-(--text-muted) font-bold uppercase mb-1">{{ t('packetDeep.source') }}</div>
             <div class="text-xs font-mono-code ui-num font-bold text-(--text-primary) truncate select-text" :title="packet.src_ip + ':' + packet.src_port">
               {{ packet.src_ip }}<span class="text-sky-600 dark:text-sky-400">:{{ packet.src_port }}</span>
             </div>
@@ -52,7 +52,7 @@
             </div>
           </div>
           <div class="ui-content-card p-3 rounded-xl">
-            <div class="text-[11px] text-(--text-muted) font-bold uppercase mb-1">目标端 Target</div>
+            <div class="text-[11px] text-(--text-muted) font-bold uppercase mb-1">{{ t('packetDeep.target') }}</div>
             <div class="text-xs font-mono-code ui-num font-bold text-(--text-primary) truncate select-text" :title="packet.dst_ip + ':' + packet.dst_port">
               {{ packet.dst_ip }}<span class="text-indigo-600 dark:text-indigo-400">:{{ packet.dst_port }}</span>
             </div>
@@ -61,22 +61,22 @@
             </div>
           </div>
           <div class="ui-content-card p-3 rounded-xl">
-            <div class="text-[11px] text-(--text-muted) font-bold uppercase mb-1">传输与规约</div>
+            <div class="text-[11px] text-(--text-muted) font-bold uppercase mb-1">{{ t('packetDeep.transAndProto') }}</div>
             <div class="text-xs font-mono-code font-bold text-(--text-primary) flex items-center gap-1.5">
               <span class="ui-pill px-1.5 py-0.2 text-[11px]">{{ packet.transport }}</span>
               <span class="text-sky-600 dark:text-sky-400 font-semibold">{{ packet.protocol }}</span>
             </div>
             <div class="text-[11px] text-(--text-muted) font-mono-code ui-num mt-0.5">
-              总载荷: {{ packet.length }} Bytes
+              {{ t('packetDeep.totalPayload') }}: {{ packet.length }} Bytes
             </div>
           </div>
           <div class="ui-content-card p-3 rounded-xl">
-            <div class="text-[11px] text-(--text-muted) font-bold uppercase mb-1">区块链司法存证</div>
+            <div class="text-[11px] text-(--text-muted) font-bold uppercase mb-1">{{ t('packetDeep.judicialProof') }}</div>
             <div class="text-[11px] font-mono-code ui-num text-emerald-600 dark:text-emerald-400 font-bold truncate select-text" :title="packet.chain_hash">
               SHA-256: {{ packet.chain_hash?.slice(0, 14) }}...
             </div>
             <button @click="copyText(packet.chain_hash)" class="text-[11px] text-sky-600 dark:text-sky-400 hover:underline mt-0.5 cursor-pointer">
-              复制存证完整哈希
+              {{ t('packetDeep.copyFullHash') }}
             </button>
           </div>
         </div>
@@ -86,10 +86,10 @@
           <div class="bg-(--surface-content-alt) px-4 py-2 border-b border-(--border-subtle) flex items-center justify-between">
             <span class="text-xs font-bold text-(--text-primary) flex items-center gap-1.5">
               <AppIcon name="layers" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-              <span>{{ packet.protocol }} 规约结构化解析字段 (Protocol Dissected Fields)</span>
+              <span>{{ packet.protocol }} {{ t('packetDeep.dissectedFields') }}</span>
             </span>
             <span class="text-[11px] text-(--text-muted) font-mono-code ui-num">
-              共 {{ Object.keys(packet.business_data).length }} 个解析项
+              {{ t('packetDeep.parsedCount', { n: Object.keys(packet.business_data).length }) }}
             </span>
           </div>
           <div class="p-4 grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -108,13 +108,13 @@
           <div class="px-4 py-2 bg-(--surface-content-alt) border-b border-(--border-subtle) flex items-center justify-between">
             <span class="text-xs font-bold text-(--text-primary) flex items-center gap-1.5">
               <AppIcon name="document" class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-              <span>客观真实原始明文内容 (Raw Original Plaintext)</span>
+              <span>{{ t('packetDeep.rawPlaintext') }}</span>
             </span>
             <div class="flex items-center gap-2">
               <button @click="copyText(packet.raw_text || '')"
                 class="ui-btn-secondary inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium cursor-pointer">
                 <AppIcon name="code" class="w-3 h-3" />
-                <span>复制文本</span>
+                <span>{{ t('packetDeep.copyText') }}</span>
               </button>
             </div>
           </div>
@@ -128,12 +128,12 @@
           <div class="px-4 py-2 bg-(--surface-content-alt) border-b border-(--border-subtle) flex items-center justify-between text-(--text-primary)">
             <span class="text-xs font-bold font-mono-code flex items-center gap-1.5">
               <AppIcon name="terminal" class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>16 字节对齐十六进制与 ASCII 转储 (Aligned Hex & ASCII Dump)</span>
+              <span>{{ t('packetDeep.alignedHexAscii') }}</span>
             </span>
             <div class="flex items-center gap-3 text-[11px] font-mono-code">
-              <button @click="copyText(packet.payload_hex)" class="text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer">复制纯 HEX</button>
-              <button @click="copyText(formatDumpText(packet.payload_hex))" class="text-sky-600 dark:text-sky-400 hover:underline cursor-pointer">复制完整转储</button>
-              <span class="text-(--text-muted) ui-num">共 {{ packet.length }} 字节</span>
+              <button @click="copyText(packet.payload_hex)" class="text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer">{{ t('packetDeep.copyPureHex') }}</button>
+              <button @click="copyText(formatDumpText(packet.payload_hex))" class="text-sky-600 dark:text-sky-400 hover:underline cursor-pointer">{{ t('packetDeep.copyFullDump') }}</button>
+              <span class="text-(--text-muted) ui-num">{{ t('packetDeep.totalBytes', { n: packet.length }) }}</span>
             </div>
           </div>
           <div class="p-3.5 text-xs font-mono-code ui-num leading-relaxed bg-(--surface-window) text-(--text-primary) select-text max-h-64 overflow-auto custom-scrollbar whitespace-pre">
@@ -152,24 +152,24 @@
         <div class="flex flex-wrap items-center gap-2">
           <button @click="$emit('replay', packet)" class="ui-btn-secondary border-amber-500/35 text-amber-700 dark:text-amber-300 text-xs px-3 py-1.5 font-medium inline-flex items-center gap-1.5 cursor-pointer">
             <AppIcon name="play" class="w-3.5 h-3.5" />
-            <span>物理重放报文</span>
+            <span>{{ t('packetDeep.replayPacket') }}</span>
           </button>
           <button @click="$emit('saveBaseline', packet)" class="ui-btn-secondary border-cyan-500/35 text-cyan-700 dark:text-cyan-300 text-xs px-3 py-1.5 font-medium inline-flex items-center gap-1.5 cursor-pointer">
             <AppIcon name="database" class="w-3.5 h-3.5" />
-            <span>固化为历史基线</span>
+            <span>{{ t('packetDeep.saveBaseline') }}</span>
           </button>
           <button @click="$emit('openWave', packet)" class="ui-btn-secondary border-indigo-500/35 text-indigo-700 dark:text-indigo-300 text-xs px-3 py-1.5 font-medium inline-flex items-center gap-1.5 cursor-pointer">
             <AppIcon name="activity" class="w-3.5 h-3.5" />
-            <span>提取波形追踪</span>
+            <span>{{ t('packetDeep.extractWave') }}</span>
           </button>
           <button @click="$emit('openProbe', packet)" class="ui-btn-secondary border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-xs px-3 py-1.5 font-medium inline-flex items-center gap-1.5 cursor-pointer">
             <AppIcon name="radar" class="w-3.5 h-3.5" />
-            <span>目标主动探测</span>
+            <span>{{ t('packetDeep.targetProbe') }}</span>
           </button>
         </div>
 
         <button @click="$emit('close')" class="ui-btn-secondary text-xs px-4 py-1.5 font-semibold cursor-pointer">
-          关闭窗口
+          {{ t('packetDeep.closeWindow') }}
         </button>
       </div>
     </div>
@@ -177,7 +177,10 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from '../i18n';
 import AppIcon from './AppIcon.vue';
+
+const { t } = useI18n();
 
 defineProps<{
   packet: any | null;

@@ -9,10 +9,10 @@
           </div>
           <div>
             <h3 class="text-xs font-bold leading-none" style="color: var(--text-primary)">
-              端口与物理总线数据双向出入执行器
+              {{ t('portTransceiver.title') }}
             </h3>
             <p class="text-[11px] ui-num mt-1" style="color: var(--text-muted)">
-              支持网络传输层 (TCP/UDP) 与物理串口 (COM) 真实写出与回包捕获 (TX → RX)
+              {{ t('portTransceiver.subtitle') }}
             </p>
           </div>
         </div>
@@ -23,17 +23,17 @@
               :class="['px-3 py-1 rounded-lg transition-colors cursor-pointer',
                 channel === 'network' ? 'bg-sky-500 text-white shadow-xs font-bold' : 'hover:bg-black/5 dark:hover:bg-white/5']"
               :style="channel !== 'network' ? { color: 'var(--text-secondary)' } : undefined">
-              网络端口 (TCP/UDP)
+              {{ t('portTransceiver.channelNetwork') }}
             </button>
             <button @click="channel = 'serial'"
               :class="['px-3 py-1 rounded-lg transition-colors cursor-pointer',
                 channel === 'serial' ? 'bg-indigo-600 text-white shadow-xs font-bold' : 'hover:bg-black/5 dark:hover:bg-white/5']"
               :style="channel !== 'serial' ? { color: 'var(--text-secondary)' } : undefined">
-              物理串口 (COM)
+              {{ t('portTransceiver.channelSerial') }}
             </button>
           </div>
 
-          <button @click="$emit('close')" class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer" title="关闭">
+          <button @click="$emit('close')" class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer" :title="t('common.close')">
             <AppIcon name="close" :size="15" />
           </button>
         </div>
@@ -45,36 +45,36 @@
           <template v-if="channel === 'network'">
             <div class="grid grid-cols-1 sm:grid-cols-[1fr_85px_80px_90px] gap-2.5 items-center">
               <div>
-                <label class="text-[11px] font-bold uppercase block mb-0.5" style="color: var(--text-muted)">目标 IP</label>
+                <label class="text-[11px] font-bold uppercase block mb-0.5" style="color: var(--text-muted)">{{ t('portTransceiver.targetIp') }}</label>
                 <input v-model="netIp" placeholder="192.168.1.100" class="ui-input ui-num px-2.5 py-1.5 text-xs">
               </div>
               <div>
-                <label class="text-[11px] font-bold uppercase block mb-0.5" style="color: var(--text-muted)">端口</label>
+                <label class="text-[11px] font-bold uppercase block mb-0.5" style="color: var(--text-muted)">{{ t('portTransceiver.port') }}</label>
                 <input v-model.number="netPort" type="number" min="1" max="65535" class="ui-input ui-num px-2.5 py-1.5 text-xs">
               </div>
               <div>
-                <label class="text-[11px] font-bold uppercase block mb-0.5" style="color: var(--text-muted)">协议</label>
+                <label class="text-[11px] font-bold uppercase block mb-0.5" style="color: var(--text-muted)">{{ t('portTransceiver.protocol') }}</label>
                 <select v-model="netTransport" class="ui-input ui-num px-2 py-1.5 text-xs font-bold cursor-pointer">
                   <option value="TCP">TCP</option>
                   <option value="UDP">UDP</option>
                 </select>
               </div>
               <div>
-                <label class="text-[11px] font-bold uppercase block mb-0.5" style="color: var(--text-muted)">超时 (ms)</label>
+                <label class="text-[11px] font-bold uppercase block mb-0.5" style="color: var(--text-muted)">{{ t('portTransceiver.timeoutMs') }}</label>
                 <input v-model.number="netTimeout" type="number" min="200" max="10000" class="ui-input ui-num px-2.5 py-1.5 text-xs">
               </div>
             </div>
 
             <div class="space-y-1.5">
               <div class="flex items-center justify-between text-[11px]">
-                <span class="font-bold uppercase" style="color: var(--text-muted)">出向载荷 (Hex)</span>
+                <span class="font-bold uppercase" style="color: var(--text-muted)">{{ t('portTransceiver.outboundHex') }}</span>
                 <select @change="applyNetPreset(($event.target as HTMLSelectElement).value)"
                   class="ui-input w-auto px-2 py-0.5 text-[11px] cursor-pointer">
-                  <option value="">-- 选择标准规约载荷模板 --</option>
-                  <option value="modbus_read">Modbus-TCP: 读保持寄存器 0-1 (Func 03)</option>
-                  <option value="http_get">HTTP/1.1: 基础探测请求 (GET /)</option>
-                  <option value="mqtt_ping">MQTT: 探活心跳 (PINGREQ)</option>
-                  <option value="iec104_test">IEC 60870-5-104: U 格式测试激活帧</option>
+                  <option value="">{{ t('portTransceiver.presetSelect') }}</option>
+                  <option value="modbus_read">{{ t('portTransceiver.presetModbus') }}</option>
+                  <option value="http_get">{{ t('portTransceiver.presetHttp') }}</option>
+                  <option value="mqtt_ping">{{ t('portTransceiver.presetMqtt') }}</option>
+                  <option value="iec104_test">{{ t('portTransceiver.presetIec') }}</option>
                 </select>
               </div>
               <textarea v-model="netPayload" rows="2" placeholder="输入待发送的 Hex 字节流，如: 00 01 00 00 00 06 01 03 00 00 00 02"
@@ -84,21 +84,21 @@
             <button @click="executeTransceive" :disabled="isExecuting || !netPayload.trim()"
               class="w-full ui-btn-primary justify-center py-2 rounded-xl text-xs font-bold">
               <AppIcon :name="isExecuting ? 'refresh' : 'play'" :size="13" :class="isExecuting ? 'animate-spin' : ''" />
-              <span>{{ isExecuting ? '正在执行通信并捕获对端回包...' : '执行物理写出与回包捕获 (TX → RX)' }}</span>
+              <span>{{ isExecuting ? t('portTransceiver.executing') : t('portTransceiver.execTransceive') }}</span>
             </button>
           </template>
 
           <template v-else-if="channel === 'serial'">
             <div class="grid grid-cols-1 sm:grid-cols-[1fr_115px_100px] gap-2.5 items-center">
               <div>
-                <label class="text-[11px] font-bold uppercase block mb-0.5" style="color: var(--text-muted)">目标 COM 串口</label>
+                <label class="text-[11px] font-bold uppercase block mb-0.5" style="color: var(--text-muted)">{{ t('portTransceiver.targetCom') }}</label>
                 <select v-model="selectedSerialPort" class="ui-input ui-num px-2.5 py-1.5 text-xs cursor-pointer">
                   <option v-for="p in serialPorts" :key="p" :value="p">{{ p }}</option>
-                  <option v-if="serialPorts.length === 0" value="">未发现可用物理串口</option>
+                  <option v-if="serialPorts.length === 0" value="">{{ t('portTransceiver.noComFound') }}</option>
                 </select>
               </div>
               <div>
-                <label class="text-[11px] font-bold uppercase block mb-0.5" style="color: var(--text-muted)">波特率</label>
+                <label class="text-[11px] font-bold uppercase block mb-0.5" style="color: var(--text-muted)">{{ t('portTransceiver.baudRate') }}</label>
                 <select v-model.number="serialBaud" class="ui-input ui-num px-2.5 py-1.5 text-xs cursor-pointer">
                   <option :value="9600">9600 bps</option>
                   <option :value="19200">19200 bps</option>
@@ -108,22 +108,22 @@
                 </select>
               </div>
               <div>
-                <label class="text-[11px] font-bold uppercase block mb-0.5" style="color: var(--text-muted)">发送格式</label>
+                <label class="text-[11px] font-bold uppercase block mb-0.5" style="color: var(--text-muted)">{{ t('portTransceiver.sendFormat') }}</label>
                 <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-indigo-700 dark:text-indigo-300 h-[32px]">
                   <input type="checkbox" v-model="serialIsHex" class="accent-indigo-600">
-                  <span class="ui-num text-[11px]">HEX 模式</span>
+                  <span class="ui-num text-[11px]">{{ t('portTransceiver.hexMode') }}</span>
                 </label>
               </div>
             </div>
 
             <div class="space-y-1.5">
               <div class="flex items-center justify-between text-[11px]">
-                <span class="font-bold uppercase" style="color: var(--text-muted)">串口写出指令</span>
+                <span class="font-bold uppercase" style="color: var(--text-muted)">{{ t('portTransceiver.serialCmd') }}</span>
                 <select @change="applySerialPreset(($event.target as HTMLSelectElement).value)"
                   class="ui-input w-auto px-2 py-0.5 text-[11px] cursor-pointer">
-                  <option value="">-- 选择串口指令模板 --</option>
-                  <option value="modbus_rtu_read">Modbus-RTU: 读从站 01 寄存器 (01 03 00 00 00 02 C4 0B)</option>
-                  <option value="at_cmd">AT 握手测试 (AT\r\n)</option>
+                  <option value="">{{ t('portTransceiver.serialPresetSelect') }}</option>
+                  <option value="modbus_rtu_read">{{ t('portTransceiver.presetModbusRtu') }}</option>
+                  <option value="at_cmd">{{ t('portTransceiver.presetAtCmd') }}</option>
                 </select>
               </div>
               <textarea v-model="serialPayload" rows="2" placeholder="输入待写出到串口的数据 (HEX 如: 01 03 00 00 00 02 C4 0B)"
@@ -133,7 +133,7 @@
             <button @click="executeTransceive" :disabled="isExecuting || !serialPayload.trim() || !selectedSerialPort"
               class="w-full ui-btn-primary justify-center py-2 rounded-xl text-xs font-bold">
               <AppIcon :name="isExecuting ? 'refresh' : 'play'" :size="13" :class="isExecuting ? 'animate-spin' : ''" />
-              <span>{{ isExecuting ? '正在向串口写出指令...' : '执行串口写出与双向侦测' }}</span>
+              <span>{{ isExecuting ? t('portTransceiver.executingSerial') : t('portTransceiver.execSerial') }}</span>
             </button>
           </template>
         </div>
@@ -141,9 +141,9 @@
         <!-- 下部：双向出入留痕历史流水 -->
         <div class="flex-1 flex flex-col overflow-hidden min-h-0">
           <div class="px-4 py-2 border-b flex items-center justify-between text-xs font-bold shrink-0" style="background: var(--surface-content-alt); border-color: var(--border-subtle); color: var(--text-primary)">
-            <span>双向操作留痕流水 ({{ history.length }} 笔)</span>
+            <span>{{ t('portTransceiver.historyTitle', { n: history.length }) }}</span>
             <button v-if="history.length > 0" @click="history = []" class="text-[11px] ui-pill px-2 py-0.5 rounded font-normal cursor-pointer">
-              清空
+              {{ t('portTransceiver.clearHistory') }}
             </button>
           </div>
 
@@ -161,18 +161,18 @@
               </div>
 
               <div class="text-[11px] text-blue-700 dark:text-sky-300 break-all bg-blue-500/10 p-2 rounded-lg border border-blue-500/25">
-                <strong class="font-bold mr-1.5">[TX 发送 {{ item.bytesSent }}B]:</strong>
+                <strong class="font-bold mr-1.5">{{ t('portTransceiver.txSent', { n: item.bytesSent }) }}:</strong>
                 <span>{{ item.txPayload }}</span>
               </div>
 
               <div v-if="item.bytesReceived > 0" class="text-[11px] text-emerald-700 dark:text-emerald-300 break-all bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/25">
-                <div class="font-bold mb-0.5">[RX 接收 {{ item.bytesReceived }}B] 协议: {{ item.detectedProto }}</div>
+                <div class="font-bold mb-0.5">{{ t('portTransceiver.rxRecv', { n: item.bytesReceived }) }} {{ t('portTransceiver.protoLabel') }}: {{ item.detectedProto }}</div>
                 <div><strong>HEX:</strong> {{ item.rxPayload }}</div>
-                <div v-if="item.rxText" class="mt-0.5" style="color: var(--text-primary)"><strong>明文:</strong> {{ item.rxText }}</div>
+                <div v-if="item.rxText" class="mt-0.5" style="color: var(--text-primary)"><strong>{{ t('portTransceiver.plaintext') }}:</strong> {{ item.rxText }}</div>
               </div>
 
               <div v-else-if="item.error" class="bg-rose-500/10 border border-rose-500/25 rounded-lg p-2 text-[11px] text-rose-700 dark:text-rose-300">
-                <strong class="font-bold">错误/超时:</strong> {{ item.error }}
+                <strong class="font-bold">{{ t('portTransceiver.errorTimeout') }}:</strong> {{ item.error }}
               </div>
             </div>
 
@@ -180,8 +180,8 @@
               v-if="history.length === 0"
               class="py-8"
               icon="serial"
-              title="暂无双向出入操作记录"
-              description="配置目标与载荷后点击【执行物理写出与回包捕获】进行实时侦测。"
+              :title="t('portTransceiver.emptyHistoryTitle')"
+              :description="t('portTransceiver.emptyHistoryDesc')"
             />
           </div>
         </div>
@@ -192,6 +192,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useI18n } from '../i18n';
 import AppIcon from './AppIcon.vue';
 import EmptyState from './EmptyState.vue';
 import { invoke } from '@tauri-apps/api/core';
@@ -202,6 +203,8 @@ defineProps<{
 }>();
 
 defineEmits(['close']);
+
+const { t } = useI18n();
 
 interface TransceiveHistoryItem {
   id: number;

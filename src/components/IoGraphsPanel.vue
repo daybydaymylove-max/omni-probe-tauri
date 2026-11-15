@@ -98,7 +98,7 @@
               ]"
               :style="activeMetric !== 'pps' ? { color: 'var(--text-secondary)' } : undefined"
             >
-              包率 (PPS)
+              {{ t('ioGraphs.packetsPerSec') }}
             </button>
             <button
               @click="activeMetric = 'bandwidth'"
@@ -445,6 +445,8 @@ import {
 import VChart from 'vue-echarts';
 import type { EChartsOption } from 'echarts';
 import AppIcon from './AppIcon.vue';
+import { useI18n } from '../i18n';
+const { t } = useI18n();
 import EmptyState from './EmptyState.vue';
 
 use([

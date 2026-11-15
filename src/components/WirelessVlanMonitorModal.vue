@@ -1334,6 +1334,9 @@ import { ScatterChart, LineChart, BarChart, PieChart } from 'echarts/charts';
 import { PolarComponent, GridComponent, TooltipComponent, LegendComponent } from 'echarts/components';
 import VChart from 'vue-echarts';
 import AppIcon from './AppIcon.vue';
+import { useI18n } from '../i18n';
+const { t } = useI18n();
+void t;
 import EmptyState from './EmptyState.vue';
 import { useUniversalDiff } from '../composables/useUniversalDiff';
 

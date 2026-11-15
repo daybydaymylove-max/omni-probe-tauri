@@ -9,35 +9,35 @@
             <AppIcon name="sliders" class="w-4 h-4" />
           </div>
           <div>
-            <h3 class="text-sm font-bold text-(--text-primary) tracking-wide">侦听列表字段显示长度与列宽调节</h3>
-            <p class="text-xs text-(--text-muted)">自由设定各字段显示宽度、显示/隐藏开关，或选用场景预设</p>
+            <h3 class="text-sm font-bold text-(--text-primary) tracking-wide">{{ t('columnSettings.title') }}</h3>
+            <p class="text-xs text-(--text-muted)">{{ t('columnSettings.subtitle') }}</p>
           </div>
         </div>
         <button @click="$emit('close')"
           class="ui-btn-secondary w-8 h-8 rounded-xl p-0 flex items-center justify-center cursor-pointer"
-          aria-label="关闭弹窗">
+          :aria-label="t('columnSettings.cancel')">
           <AppIcon name="close" class="w-4 h-4" />
         </button>
       </div>
 
       <!-- 2. 快捷预设分段选择 -->
       <div class="px-6 py-3 bg-(--surface-content-alt) border-b border-(--border-subtle) flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <span class="text-xs font-bold text-(--text-secondary) shrink-0">快捷场景预设:</span>
+        <span class="text-xs font-bold text-(--text-secondary) shrink-0">{{ t('columnSettings.presets') }}:</span>
         <div class="flex items-center gap-2">
           <button @click="applyPreset('compact')"
             class="ui-btn-secondary px-3 py-1.5 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer">
             <AppIcon name="minimize" class="w-3.5 h-3.5" />
-            <span>紧凑小屏视图</span>
+            <span>{{ t('columnSettings.compactView') }}</span>
           </button>
           <button @click="applyPreset('standard')"
             class="ui-btn-secondary px-3 py-1.5 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer">
             <AppIcon name="layers" class="w-3.5 h-3.5" />
-            <span>标准平衡视图</span>
+            <span>{{ t('columnSettings.standardView') }}</span>
           </button>
           <button @click="applyPreset('wide')"
             class="ui-btn-secondary px-3 py-1.5 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer">
             <AppIcon name="maximize" class="w-3.5 h-3.5" />
-            <span>宽屏/全景视图</span>
+            <span>{{ t('columnSettings.wideView') }}</span>
           </button>
         </div>
       </div>
@@ -82,9 +82,9 @@
               <span class="text-[11px] font-mono-code text-(--text-muted) ml-1">px</span>
             </div>
 
-            <button @click="resetSingleCol(idx)" title="恢复该字段默认宽度"
+            <button @click="resetSingleCol(idx)" :title="t('columnSettings.resetColWidth')"
               class="ui-btn-secondary p-1.5 rounded-lg flex items-center justify-center cursor-pointer"
-              aria-label="恢复默认宽度">
+              :aria-label="t('columnSettings.resetColWidth')">
               <AppIcon name="refresh" class="w-3.5 h-3.5" />
             </button>
           </div>
@@ -96,17 +96,17 @@
         <button @click="resetAllToDefault"
           class="ui-btn-secondary px-3 py-1.5 text-xs font-semibold cursor-pointer inline-flex items-center gap-1.5">
           <AppIcon name="refresh" class="w-3.5 h-3.5" />
-          <span>恢复全部默认</span>
+          <span>{{ t('columnSettings.resetAllDefault') }}</span>
         </button>
 
         <div class="flex items-center gap-2.5">
           <button @click="$emit('close')"
             class="ui-btn-secondary px-4 py-1.5 text-xs font-semibold cursor-pointer">
-            取消
+            {{ t('columnSettings.cancel') }}
           </button>
           <button @click="applyAndSave"
             class="ui-btn-primary text-xs px-5 py-1.5 font-bold cursor-pointer">
-            应用并保存设置
+            {{ t('columnSettings.applyAndSave') }}
           </button>
         </div>
       </div>
@@ -116,7 +116,10 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import { useI18n } from '../i18n';
 import AppIcon from './AppIcon.vue';
+
+const { t } = useI18n();
 
 export interface ColumnDef {
   key: string;

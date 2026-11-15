@@ -10,11 +10,11 @@
             <AppIcon name="link" class="w-4 h-4" />
           </div>
           <div>
-            <h3 class="text-sm font-bold text-(--text-primary)">跨平台串口透明拦截内核与全双工中继器</h3>
-            <p class="text-xs text-(--text-muted) ui-num">内置 Win32 NamedPipe / POSIX PTY / RFC 2217 网桥 / WDM 内核过滤联动与双向硬件引脚透传</p>
+            <h3 class="text-sm font-bold text-(--text-primary)">{{ t('serialBridge.title') }}</h3>
+            <p class="text-xs text-(--text-muted) ui-num">{{ t('serialBridge.subtitle') }}</p>
           </div>
         </div>
-        <button @click="$emit('close')" class="ui-btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center cursor-pointer" aria-label="关闭弹窗">
+        <button @click="$emit('close')" class="ui-btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center cursor-pointer" :aria-label="t('common.close')">
           <AppIcon name="close" class="w-4 h-4" />
         </button>
       </div>
@@ -200,7 +200,7 @@
               </div>
               <div class="grid grid-cols-2 gap-2">
                 <div>
-                  <label class="block text-[11px] font-bold text-(--text-muted) uppercase mb-1">波特率</label>
+                  <label class="block text-[11px] font-bold text-(--text-muted) uppercase mb-1">{{ t('serialBridge.baudRate') }}</label>
                   <select v-model.number="baudA" class="ui-input w-full px-2 py-1.5 text-xs ui-num">
                     <option :value="9600">9600</option>
                     <option :value="19200">19200</option>
@@ -234,7 +234,7 @@
               </div>
               <div class="grid grid-cols-2 gap-2">
                 <div>
-                  <label class="block text-[11px] font-bold text-(--text-muted) uppercase mb-1">波特率</label>
+                  <label class="block text-[11px] font-bold text-(--text-muted) uppercase mb-1">{{ t('serialBridge.baudRate') }}</label>
                   <select v-model.number="baudB" class="ui-input w-full px-2 py-1.5 text-xs ui-num">
                     <option :value="9600">9600</option>
                     <option :value="19200">19200</option>
@@ -331,6 +331,8 @@ import { notifySuccess, notifyInfo, notifyError } from '../composables/useNotifi
 import { ref, onMounted, onUnmounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import AppIcon from './AppIcon.vue';
+import { useI18n } from '../i18n';
+const { t } = useI18n();
 import EmptyState from './EmptyState.vue';
 
 export interface ActiveSerialBridgeInfo {

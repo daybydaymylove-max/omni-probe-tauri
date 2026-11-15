@@ -262,6 +262,9 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import AppIcon from './AppIcon.vue';
+import { useI18n } from '../i18n';
+const { t } = useI18n();
+void t;
 import {
   WORLD_LAND_POLYGONS,
   projectEquirectangular,

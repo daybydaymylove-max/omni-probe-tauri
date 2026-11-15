@@ -77,6 +77,9 @@
 import { watch, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import { useConfirmDialogState } from '../composables/useConfirmDialog';
 import AppIcon from './AppIcon.vue';
+import { useI18n } from '../i18n';
+const { t } = useI18n();
+void t;
 
 const { currentDialog, submitActiveDialog, cancelActiveDialog } = useConfirmDialogState();
 const promptInputRef = ref<HTMLInputElement | null>(null);

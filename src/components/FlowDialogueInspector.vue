@@ -278,6 +278,9 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue';
 import AppIcon from './AppIcon.vue';
+import { useI18n } from '../i18n';
+const { t } = useI18n();
+void t;
 import EmptyState from './EmptyState.vue';
 
 interface PacketRecord {

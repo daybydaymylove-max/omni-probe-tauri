@@ -4,7 +4,7 @@
     <div class="flex items-center justify-between border-b border-(--border-subtle) pb-2.5 flex-wrap gap-2">
       <div class="flex items-center gap-2">
         <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
-        <span class="text-xs font-bold text-(--text-primary)">RS-232 / Modem 硬件握手引脚状态与电平控制</span>
+        <span class="text-xs font-bold text-(--text-primary)">{{ t('serialPins.title') }}</span>
         <span class="text-[11px] text-(--text-muted) font-mono-code">实时采集 CTS/DSR/RI/CD 与主动反控 RTS/DTR</span>
       </div>
 
@@ -13,7 +13,7 @@
         <select v-model="selectedPort" @change="fetchStatus"
           class="ui-input px-2.5 py-1 text-xs font-mono-code">
           <option v-for="p in serialPorts" :key="p" :value="p">{{ p }}</option>
-          <option v-if="serialPorts.length === 0" value="">未发现串口</option>
+          <option v-if="serialPorts.length === 0" value="">{{ t('serialBridge.noSerial') }}</option>
         </select>
 
         <!-- 自动轮询 Toggle -->
@@ -21,14 +21,14 @@
           :class="['px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer inline-flex items-center gap-1.5',
             isPolling ? 'bg-indigo-500/12 text-indigo-700 dark:text-indigo-300 border-indigo-500/35' : 'ui-btn-secondary']">
           <span class="w-1.5 h-1.5 rounded-full" :class="isPolling ? 'bg-indigo-500' : 'bg-slate-400'"></span>
-          <span>{{ isPolling ? '轮询中 (1s)' : '自动轮询: 关' }}</span>
+          <span>{{ isPolling ? '1s' : t('serialPins.autoRefresh') }}</span>
         </button>
 
         <!-- 手动刷新 -->
         <button @click="fetchStatus" :disabled="isLoading || !selectedPort"
           class="ui-btn-secondary inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold cursor-pointer disabled:opacity-40">
           <AppIcon name="refresh" class="w-3.5 h-3.5" :class="{ 'animate-spin': isLoading }" />
-          <span>刷新电平</span>
+          <span>{{ t('hardwareView.refreshPorts') }}</span>
         </button>
       </div>
     </div>
@@ -164,6 +164,8 @@ import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import AppIcon from './AppIcon.vue';
+import { useI18n } from '../i18n';
+const { t } = useI18n();
 
 export interface SerialModemStatus {
   port_name: string;

@@ -5,7 +5,7 @@
       <div class="flex items-center gap-2 flex-wrap">
         <span class="w-2 h-2 rounded-full bg-sky-500"></span>
         <h3 class="text-xs font-bold" style="color: var(--text-primary);">
-          COM &amp; USB 深度协议开发辅助、ECharts 科研统计与巡检报告工作台
+          {{ t('busAnalytics.title') }}
         </h3>
         <div class="p-0.5 rounded-xl ui-pill flex items-center gap-0.5 text-[11px] font-semibold">
           <button
@@ -30,10 +30,10 @@
         </span>
         <button @click="refreshSnapshot" class="ui-btn-secondary px-2.5 py-1 text-[11px]">
           <AppIcon name="refresh" :size="11" />
-          <span>刷新指标</span>
+          <span>{{ t('hardwareView.refreshPorts') }}</span>
         </button>
         <button @click="$emit('close')" class="ui-pill px-2.5 py-1 text-[11px] rounded-lg cursor-pointer" style="color: var(--text-muted);">
-          收起工作台
+          {{ t('common.close') }}
         </button>
       </div>
     </div>
@@ -48,29 +48,29 @@
           <div class="flex items-center justify-between">
             <span class="font-bold flex items-center gap-1.5" style="color: var(--text-primary);">
               <AppIcon name="zap" :size="13" />
-              <span>协议校验码生成器 &amp; 周期定时测试发射器</span>
+              <span>Checksum Generator &amp; Periodic Transmitter</span>
             </span>
             <span
               v-if="snapshot?.periodic_tx.running"
               class="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold ui-num"
             >
-              循环发射中: {{ snapshot.periodic_tx.sent_count }} 帧 ({{ snapshot.periodic_tx.port_name }})
+              Transmitting: {{ snapshot.periodic_tx.sent_count }} 帧 ({{ snapshot.periodic_tx.port_name }})
             </span>
           </div>
 
           <div class="grid grid-cols-3 gap-2 text-[11px]">
             <div>
-              <label class="text-[10px] block mb-0.5" style="color: var(--text-muted);">校验算法</label>
+              <label class="text-[10px] block mb-0.5" style="color: var(--text-muted);">Algorithm</label>
               <select v-model="chkAlgo" class="ui-input w-full px-2 py-1 text-[11px]">
                 <option value="MODBUS_CRC16">Modbus CRC-16 (LE)</option>
                 <option value="CCITT_CRC16">CCITT CRC-16 (BE)</option>
                 <option value="MODBUS_LRC">Modbus ASCII LRC</option>
-                <option value="SUM8">累加和 SUM-8</option>
-                <option value="XOR8">异或校验 XOR-8 (NMEA)</option>
+                <option value="SUM8">Sum SUM-8</option>
+                <option value="XOR8">XOR-8 (NMEA)</option>
               </select>
             </div>
             <div>
-              <label class="text-[10px] block mb-0.5" style="color: var(--text-muted);">周期发送间隔 (ms)</label>
+              <label class="text-[10px] block mb-0.5" style="color: var(--text-muted);">Interval (ms)</label>
               <input type="number" v-model.number="periodicIntervalMs" min="25" max="60000" class="ui-input w-full px-2 py-1 text-[11px] ui-num" />
             </div>
             <div>
@@ -569,6 +569,8 @@ import { BarChart, PieChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components';
 import VChart from 'vue-echarts';
 import AppIcon from './AppIcon.vue';
+import { useI18n } from '../i18n';
+const { t } = useI18n();
 import type { SmartWaveformComparisonResult, OscilloscopePacketItem } from './PhysicalBusOscilloscope.vue';
 
 use([CanvasRenderer, BarChart, PieChart, GridComponent, TooltipComponent, LegendComponent]);

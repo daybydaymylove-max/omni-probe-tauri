@@ -554,6 +554,9 @@
 import { ref, computed, watch } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import AppIcon from './AppIcon.vue';
+import { useI18n } from '../i18n';
+const { t } = useI18n();
+void t;
 import EmptyState from './EmptyState.vue';
 import { notifySuccess, notifyError, notifyWarning } from '../composables/useNotification';
 import { pickNativeFilePath, pickNativeFolderPath, revealInDesktopExplorer } from '../composables/useDesktopSave';

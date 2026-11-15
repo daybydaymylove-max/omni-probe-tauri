@@ -7,13 +7,13 @@
         <div class="flex items-center gap-2.5">
           <span class="w-3 h-3 rounded-full bg-amber-500 shrink-0"></span>
           <div>
-            <h3 class="text-sm font-bold" style="color: var(--text-primary)">主动探测与网段 Banner 扫描引擎 (Active Probing Engine)</h3>
+            <h3 class="text-sm font-bold" style="color: var(--text-primary)">{{ t('targetProbe.title') }}</h3>
             <p class="text-[11px] ui-num mt-0.5" style="color: var(--text-muted)">
-              ICMP 探测 · CIDR/区间高并发端口与 Banner 识别 · 连续心跳探针 · 主动拉流引擎
+              {{ t('targetProbe.subtitle') }}
             </p>
           </div>
         </div>
-        <button @click="$emit('close')" class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer" title="关闭">
+        <button @click="$emit('close')" class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer" :title="t('common.close')">
           <AppIcon name="close" :size="15" />
         </button>
       </header>
@@ -23,44 +23,44 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           <div>
             <label class="block text-xs font-bold mb-1" style="color: var(--text-secondary)">
-              目标 IP / CIDR 网段 / IP 范围 (上限 512 主机):
+              {{ t('targetProbe.targetIpLabel') }}
             </label>
             <input
               v-model="targetIp"
-              placeholder="如: 192.168.1.50 或 192.168.1.0/24 或 192.168.1.1-50"
+              :placeholder="t('targetProbe.targetIpPlaceholder')"
               class="w-full ui-input ui-num px-3 py-2 text-xs"
             />
           </div>
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="text-xs font-bold" style="color: var(--text-secondary)">端口表达式 / 区间 / 预设:</label>
+              <label class="text-xs font-bold" style="color: var(--text-secondary)">{{ t('targetProbe.portExprLabel') }}</label>
               <div class="flex items-center gap-1 text-[10px]">
                 <button
                   @click="targetPort = 'top25'"
                   class="px-1.5 py-0.5 rounded ui-pill hover:bg-sky-500/15 cursor-pointer font-semibold"
-                  title="填充常用 Top 25 端口模板"
+                  :title="t('targetProbe.presetTop25Title')"
                 >
                   Top25
                 </button>
                 <button
                   @click="targetPort = 'ics'"
                   class="px-1.5 py-0.5 rounded ui-pill hover:bg-sky-500/15 cursor-pointer font-semibold"
-                  title="填充工控物联网常见端口 (Modbus/S7/OPC-UA/MQTT/BACnet)"
+                  :title="t('targetProbe.presetIcsTitle')"
                 >
-                  工控协议
+                  {{ t('targetProbe.presetIcs') }}
                 </button>
                 <button
                   @click="targetPort = 'db_admin'"
                   class="px-1.5 py-0.5 rounded ui-pill hover:bg-sky-500/15 cursor-pointer font-semibold"
-                  title="填充数据库与高危管理端口 (SSH/Telnet/RDP/Redis/MySQL/Docker)"
+                  :title="t('targetProbe.presetDbAdminTitle')"
                 >
-                  数据库/高危
+                  {{ t('targetProbe.presetDbAdmin') }}
                 </button>
               </div>
             </div>
             <input
               v-model="targetPort"
-              placeholder="如: 80,443,502,6379,8000-8020 或 top25 / ics / db_admin"
+              :placeholder="t('targetProbe.portExprPlaceholder')"
               class="w-full ui-input ui-num px-3 py-2 text-xs"
             />
           </div>
@@ -73,11 +73,11 @@
             class="flex-1 ui-btn-primary justify-center text-xs px-3.5 py-2.5 rounded-xl min-w-[190px]"
           >
             <AppIcon name="radar" :size="13" />
-            <span>{{ isProbing ? '并发探测中...' : '并发网段与 Banner 扫描' }}</span>
+            <span>{{ isProbing ? t('targetProbe.scanning') : t('targetProbe.startScan') }}</span>
           </button>
-          <label class="flex items-center gap-1.5 text-[11px] ui-pill px-2.5 py-2 rounded-xl cursor-pointer select-none" style="color: var(--text-secondary)" title="对 53(DNS) / 123(NTP) / 161(SNMP) / 47808(BACnet) 发射合规查询载荷并验证应答">
+          <label class="flex items-center gap-1.5 text-[11px] ui-pill px-2.5 py-2 rounded-xl cursor-pointer select-none" style="color: var(--text-secondary)" :title="t('targetProbe.includeUdpTitle')">
             <input type="checkbox" v-model="includeUdp" class="rounded" />
-            <span>含 UDP 协议载荷探针</span>
+            <span>{{ t('targetProbe.includeUdp') }}</span>
           </label>
           <button
             @click="doPing"
@@ -85,7 +85,7 @@
             class="ui-btn-secondary justify-center text-xs px-3.5 py-2.5 rounded-xl font-semibold"
           >
             <AppIcon name="activity" :size="13" />
-            <span>ICMP Ping (单目标)</span>
+            <span>{{ t('targetProbe.pingSingle') }}</span>
           </button>
           <button
             @click="doTcpProbe"
@@ -93,10 +93,10 @@
             class="ui-btn-secondary justify-center text-xs px-3.5 py-2.5 rounded-xl font-semibold"
           >
             <AppIcon name="link" :size="13" />
-            <span>TCP 事件握手 (单目标)</span>
+            <span>{{ t('targetProbe.tcpSingle') }}</span>
           </button>
           <button @click="clearOutputs" class="ui-btn-secondary px-3 py-2.5 rounded-xl text-xs font-semibold">
-            清屏
+            {{ t('targetProbe.clearScreen') }}
           </button>
         </div>
 
@@ -106,28 +106,28 @@
             <div class="flex items-center gap-2">
               <span class="w-2 h-2 rounded-full bg-sky-500"></span>
               <span class="text-xs font-bold" style="color: var(--text-primary)">
-                扫描统计台账 ({{ scanSummary.target_spec }} · {{ scanSummary.port_spec }})
+                {{ t('targetProbe.statsLedger', { target: scanSummary.target_spec, port: scanSummary.port_spec }) }}
               </span>
             </div>
             <div class="flex items-center gap-3 text-[11px] ui-num" style="color: var(--text-secondary)">
-              <span>总探测: <strong>{{ scanSummary.total_probes }}</strong></span>
-              <span class="text-emerald-700 dark:text-emerald-300 font-bold">开放: {{ scanSummary.open_count }}</span>
+              <span>{{ t('targetProbe.totalProbes') }}: <strong>{{ scanSummary.total_probes }}</strong></span>
+              <span class="text-emerald-700 dark:text-emerald-300 font-bold">{{ t('targetProbe.openCount') }}: {{ scanSummary.open_count }}</span>
               <span :class="scanSummary.high_risk_count > 0 ? 'text-rose-700 dark:text-rose-300 font-bold' : ''">
-                高危: {{ scanSummary.high_risk_count }}
+                {{ t('targetProbe.highRiskCount') }}: {{ scanSummary.high_risk_count }}
               </span>
-              <span>均延: {{ scanSummary.avg_open_rtt_ms.toFixed(2) }}ms</span>
-              <span>耗时: {{ scanSummary.duration_ms }}ms</span>
+              <span>{{ t('targetProbe.avgRtt') }}: {{ scanSummary.avg_open_rtt_ms.toFixed(2) }}ms</span>
+              <span>{{ t('targetProbe.duration') }}: {{ scanSummary.duration_ms }}ms</span>
             </div>
           </div>
 
           <p class="text-[10px]" style="color: var(--text-muted)">
-            探测口径: {{ scanSummary.probe_method_note }}
+            {{ t('targetProbe.probeMethodNote') }}: {{ scanSummary.probe_method_note }}
           </p>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <!-- RTT 分布 ECharts 柱状图 -->
             <div class="ui-content-card p-2.5 flex flex-col h-[195px]">
-              <div class="text-[11px] font-bold mb-1" style="color: var(--text-primary)">开放端口响应 RTT 分布</div>
+              <div class="text-[11px] font-bold mb-1" style="color: var(--text-primary)">{{ t('targetProbe.rttDistTitle') }}</div>
               <v-chart :option="rttChartOption" autoresize class="flex-1 w-full min-h-[145px]" />
             </div>
 
@@ -137,12 +137,12 @@
                 <table class="w-full text-left text-[11px] ui-num border-collapse">
                   <thead class="ui-table-head sticky top-0">
                     <tr>
-                      <th class="p-1.5">主机 IP</th>
-                      <th class="p-1.5 text-right">端口</th>
-                      <th class="p-1.5">协议</th>
-                      <th class="p-1.5 text-right">RTT</th>
-                      <th class="p-1.5">风险标记</th>
-                      <th class="p-1.5">应用层 Banner 摘要</th>
+                      <th class="p-1.5">{{ t('targetProbe.colHostIp') }}</th>
+                      <th class="p-1.5 text-right">{{ t('targetProbe.colPort') }}</th>
+                      <th class="p-1.5">{{ t('targetProbe.colProtocol') }}</th>
+                      <th class="p-1.5 text-right">{{ t('targetProbe.colRtt') }}</th>
+                      <th class="p-1.5">{{ t('targetProbe.colRisk') }}</th>
+                      <th class="p-1.5">{{ t('targetProbe.colBanner') }}</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y" style="border-color: var(--border-subtle); color: var(--text-secondary)">
@@ -158,7 +158,7 @@
                         >
                           {{ item.risk_flag }}
                         </span>
-                        <span v-else class="text-[10px]" style="color: var(--text-muted)">常规</span>
+                        <span v-else class="text-[10px]" style="color: var(--text-muted)">{{ t('targetProbe.normalRisk') }}</span>
                       </td>
                       <td class="p-1.5 font-mono truncate max-w-[220px]" :title="item.banner">
                         {{ item.banner || '-' }}
@@ -166,7 +166,7 @@
                     </tr>
                     <tr v-if="scanSummary.open_items.length === 0">
                       <td colspan="6" class="p-6 text-center text-xs" style="color: var(--text-muted)">
-                        在目标范围内未探测到开放端口
+                        {{ t('targetProbe.emptyOpenTitle') }}
                       </td>
                     </tr>
                   </tbody>
@@ -182,21 +182,21 @@
             <div class="flex items-center justify-between flex-wrap gap-2">
               <div class="flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full shrink-0" :class="continuousRunning ? 'bg-emerald-500' : 'bg-slate-400'"></span>
-                <span class="text-xs font-bold" style="color: var(--text-primary)">连续心跳探针</span>
+                <span class="text-xs font-bold" style="color: var(--text-primary)">{{ t('targetProbe.continuousProbe') }}</span>
               </div>
-              <span v-if="continuousRunning" class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-500/12 px-2 py-0.5 rounded-lg border border-emerald-500/25">运行中</span>
+              <span v-if="continuousRunning" class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-500/12 px-2 py-0.5 rounded-lg border border-emerald-500/25">{{ t('targetProbe.running') }}</span>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
               <input v-model.number="continuousInterval" type="number" min="1" max="3600" title="探测周期（秒）"
                 class="w-16 ui-input ui-num px-2 py-1 text-xs" />
-              <span class="text-[11px]" style="color: var(--text-muted)">秒/次 (首 IP 与首端口)</span>
+              <span class="text-[11px]" style="color: var(--text-muted)">{{ t('targetProbe.secPerTime') }}</span>
               <div class="flex-1"></div>
               <button v-if="!continuousRunning" @click="startContinuous" :disabled="isProbing || !targetIp.trim()"
                 class="ui-btn-primary text-xs px-3 py-1 rounded-xl">
-                启动心跳
+                {{ t('targetProbe.startHeartbeat') }}
               </button>
               <button v-else @click="stopAllEngines" class="ui-btn-danger text-xs px-3 py-1 rounded-xl">
-                停止
+                {{ t('targetProbe.stop') }}
               </button>
             </div>
           </div>
@@ -205,21 +205,21 @@
             <div class="flex items-center justify-between flex-wrap gap-2">
               <div class="flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full shrink-0" :class="pullRunning ? 'bg-indigo-500' : 'bg-slate-400'"></span>
-                <span class="text-xs font-bold" style="color: var(--text-primary)">主动拉流引擎</span>
+                <span class="text-xs font-bold" style="color: var(--text-primary)">{{ t('targetProbe.activePull') }}</span>
               </div>
-              <span v-if="pullRunning" class="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-500/12 px-2 py-0.5 rounded-lg border border-indigo-500/25">拉取中</span>
+              <span v-if="pullRunning" class="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-500/12 px-2 py-0.5 rounded-lg border border-indigo-500/25">{{ t('targetProbe.pulling') }}</span>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
               <input v-model.number="pullReconnect" type="number" min="1" max="600" title="断线重连间隔（秒）"
                 class="w-16 ui-input ui-num px-2 py-1 text-xs" />
-              <span class="text-[11px]" style="color: var(--text-muted)">秒重连 (首 IP 与首端口)</span>
+              <span class="text-[11px]" style="color: var(--text-muted)">{{ t('targetProbe.secReconnect') }}</span>
               <div class="flex-1"></div>
               <button v-if="!pullRunning" @click="startPull" :disabled="isProbing || !targetIp.trim()"
                 class="ui-btn-primary text-xs px-3 py-1 rounded-xl">
-                启动拉流
+                {{ t('targetProbe.startPull') }}
               </button>
               <button v-else @click="stopAllEngines" class="ui-btn-danger text-xs px-3 py-1 rounded-xl">
-                停止
+                {{ t('targetProbe.stop') }}
               </button>
             </div>
           </div>
@@ -228,8 +228,8 @@
         <!-- 实时控制台日志输出 -->
         <div class="flex flex-col gap-1.5 select-text">
           <div class="flex items-center justify-between text-[11px] ui-num" style="color: var(--text-muted)">
-            <span>探针实时输出 (Console Logs)</span>
-            <span>共 {{ logs.length }} 条记录</span>
+            <span>{{ t('targetProbe.consoleLogs') }}</span>
+            <span>{{ t('targetProbe.logRecordsCount', { n: logs.length }) }}</span>
           </div>
           <div ref="logBoxRef" class="ui-input font-mono-code p-3 text-xs h-40 overflow-auto space-y-1">
             <div v-for="(log, idx) in logs" :key="idx" :class="log.color || 'text-emerald-700 dark:text-emerald-400'" class="leading-relaxed">
@@ -239,8 +239,8 @@
               v-if="logs.length === 0"
               class="py-5"
               icon="terminal"
-              title="等待主动探测输出"
-              description="支持单 IP、CIDR (如 192.168.1.0/24) 或端口区间扫描，开放端口将自动回写到资产雷达。"
+              :title="t('targetProbe.emptyLogsTitle')"
+              :description="t('targetProbe.emptyLogsDesc')"
             />
           </div>
         </div>
@@ -248,7 +248,7 @@
 
       <!-- 底栏 -->
       <footer class="px-6 py-3 border-t flex items-center justify-between shrink-0 text-xs ui-num" style="background: var(--surface-content-alt); border-color: var(--border-subtle); color: var(--text-muted)">
-        <span>ICMP / TCP Connect / Banner 提取 / 心跳 / 拉流 实时度量</span>
+        <span>{{ t('targetProbe.footerSummary') }}</span>
         <button @click="$emit('close')" class="ui-btn-secondary px-4 py-1.5 rounded-xl font-semibold">
           关闭
         </button>
@@ -268,9 +268,12 @@ import { GridComponent, TooltipComponent } from 'echarts/components';
 import VChart from 'vue-echarts';
 import type { EChartsOption } from 'echarts';
 import AppIcon from './AppIcon.vue';
+import { useI18n } from '../i18n';
 import EmptyState from './EmptyState.vue';
 
 use([CanvasRenderer, BarChart, GridComponent, TooltipComponent]);
+
+const { t } = useI18n();
 
 interface ProbeResult {
   id: number;

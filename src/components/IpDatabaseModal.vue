@@ -8,20 +8,20 @@
           <span class="w-3 h-3 rounded-full bg-sky-500 shrink-0"></span>
           <div>
             <h3 class="text-sm font-bold flex items-center gap-2 flex-wrap" style="color: var(--text-primary)">
-              <span>离线 IP 归属地与地理情报库 (IP2Region xdb)</span>
+              <span>{{ t('ipDbModal.title') }}</span>
               <span v-if="dbStatus.loaded" class="text-[11px] ui-num px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-semibold">
-                已就绪 (微秒级)
+                {{ t('ipDbModal.readyBadge') }}
               </span>
               <span v-else class="text-[11px] ui-num px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-semibold">
-                未就绪 (基础字典)
+                {{ t('ipDbModal.notReadyBadge') }}
               </span>
             </h3>
             <p class="text-[11px] ui-num mt-0.5" style="color: var(--text-muted)">
-              物理隔离内存索引，单次查询小于 5 微秒，解析全球国家、省份、城市与 ISP
+              {{ t('ipDbModal.subtitle') }}
             </p>
           </div>
         </div>
-        <button @click="$emit('close')" class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer" title="关闭">
+        <button @click="$emit('close')" class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer" :title="t('common.close')">
           <AppIcon name="close" :size="15" />
         </button>
       </header>
@@ -31,28 +31,28 @@
         
         <div class="p-4 ui-sub-card grid grid-cols-2 md:grid-cols-4 gap-3 ui-num">
           <div>
-            <div class="text-[11px] font-sans" style="color: var(--text-muted)">运行状态</div>
+            <div class="text-[11px] font-sans" style="color: var(--text-muted)">{{ t('ipDbModal.statusLabel') }}</div>
             <div class="font-bold mt-0.5 flex items-center gap-1" :class="dbStatus.loaded ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'">
               <AppIcon :name="dbStatus.loaded ? 'check' : 'alert'" :size="13" />
-              <span>{{ dbStatus.loaded ? '内存已加载' : '未加载 (需下载/导入)' }}</span>
+              <span>{{ dbStatus.loaded ? t('ipDbModal.statusLoaded') : t('ipDbModal.statusNotLoaded') }}</span>
             </div>
           </div>
           <div>
-            <div class="text-[11px] font-sans" style="color: var(--text-muted)">数据库体积</div>
+            <div class="text-[11px] font-sans" style="color: var(--text-muted)">{{ t('ipDbModal.fileSizeLabel') }}</div>
             <div class="font-bold mt-0.5" style="color: var(--text-primary)">
               {{ dbStatus.file_size > 0 ? (dbStatus.file_size / (1024 * 1024)).toFixed(2) + ' MB' : '0 MB' }}
             </div>
           </div>
           <div>
-            <div class="text-[11px] font-sans" style="color: var(--text-muted)">生成时间戳</div>
+            <div class="text-[11px] font-sans" style="color: var(--text-muted)">{{ t('ipDbModal.timestampLabel') }}</div>
             <div class="font-bold mt-0.5" style="color: var(--text-primary)">
               {{ dbStatus.created_at > 0 ? formatDate(dbStatus.created_at) : 'N/A' }}
             </div>
           </div>
           <div>
-            <div class="text-[11px] font-sans" style="color: var(--text-muted)">存储路径</div>
+            <div class="text-[11px] font-sans" style="color: var(--text-muted)">{{ t('ipDbModal.pathLabel') }}</div>
             <div class="font-bold truncate mt-0.5" style="color: var(--text-primary)" :title="dbStatus.file_path">
-              {{ dbStatus.file_path || '未指定' }}
+              {{ dbStatus.file_path || t('ipDbModal.notSpecified') }}
             </div>
           </div>
         </div>
@@ -62,25 +62,25 @@
             <div>
               <div class="font-bold flex items-center gap-1.5 mb-1" style="color: var(--text-primary)">
                 <AppIcon name="zap" :size="14" class="text-sky-600 dark:text-sky-400" />
-                <span>模式 A: 在线一键下载 / 更新</span>
+                <span>{{ t('ipDbModal.modeATitle') }}</span>
               </div>
               <p class="text-[11px] leading-relaxed" style="color: var(--text-secondary)">
-                从官方源或镜像拉取最新编译的 ip2region.xdb 库 (约 11MB)，下载完成自动热加载。
+                {{ t('ipDbModal.modeADesc') }}
               </p>
             </div>
 
             <div>
-              <label class="block text-[11px] mb-1 font-medium" style="color: var(--text-muted)">下载通道:</label>
+              <label class="block text-[11px] mb-1 font-medium" style="color: var(--text-muted)">{{ t('ipDbModal.channelLabel') }}</label>
               <select v-model="downloadUrl" class="ui-input ui-num px-2.5 py-1.5 text-xs cursor-pointer">
-                <option value="auto">智能多源自动容灾轮询 (CDN + 官方直连)</option>
+                <option value="auto">{{ t('ipDbModal.channelAuto') }}</option>
                 <option value="https://cdn.jsdelivr.net/gh/lionsoul2014/ip2region@master/data/ip2region_v4.xdb">
-                  JsDelivr 全球高速 CDN
+                  {{ t('ipDbModal.channelJsdelivr') }}
                 </option>
                 <option value="https://ghfast.top/https://raw.githubusercontent.com/lionsoul2014/ip2region/master/data/ip2region_v4.xdb">
-                  GHFast 国内加速代理
+                  {{ t('ipDbModal.channelGhfast') }}
                 </option>
                 <option value="https://raw.githubusercontent.com/lionsoul2014/ip2region/master/data/ip2region_v4.xdb">
-                  GitHub 官方原始仓库直链
+                  {{ t('ipDbModal.channelGithub') }}
                 </option>
               </select>
             </div>
@@ -94,14 +94,14 @@
                 <div class="bg-sky-500 h-2 transition-all duration-200" :style="{ width: `${downloadProgress.percent}%` }"></div>
               </div>
               <div class="text-[11px] flex justify-between" style="color: var(--text-muted)">
-                <span>已接收: {{ (downloadProgress.downloaded_bytes / (1024 * 1024)).toFixed(2) }} MB</span>
-                <span>总大小: {{ (downloadProgress.total_bytes / (1024 * 1024)).toFixed(2) }} MB</span>
+                <span>{{ t('ipDbModal.received') }}: {{ (downloadProgress.downloaded_bytes / (1024 * 1024)).toFixed(2) }} MB</span>
+                <span>{{ t('ipDbModal.total') }}: {{ (downloadProgress.total_bytes / (1024 * 1024)).toFixed(2) }} MB</span>
               </div>
             </div>
 
             <button @click="startDownload" :disabled="isDownloading" class="w-full ui-btn-primary justify-center py-2 rounded-xl font-bold">
               <AppIcon :name="isDownloading ? 'refresh' : 'download'" :size="13" :class="isDownloading ? 'animate-spin' : ''" />
-              <span>{{ isDownloading ? '正在安全下载并校验...' : '一键下载最新 IP 归属地库' }}</span>
+              <span>{{ isDownloading ? t('ipDbModal.btnDownloading') : t('ipDbModal.btnDownload') }}</span>
             </button>
           </div>
 
@@ -109,15 +109,15 @@
             <div>
               <div class="font-bold flex items-center gap-1.5 mb-1" style="color: var(--text-primary)">
                 <AppIcon name="shield" :size="14" class="text-emerald-600 dark:text-emerald-400" />
-                <span>模式 B: 离线手动导入 / 加载</span>
+                <span>{{ t('ipDbModal.modeBTitle') }}</span>
               </div>
               <p class="text-[11px] leading-relaxed" style="color: var(--text-secondary)">
-                适用于严禁联网的隔离内网，手动指定本地已准备的 ip2region.xdb 文件路径。
+                {{ t('ipDbModal.modeBDesc') }}
               </p>
             </div>
 
             <div>
-              <label class="block text-[11px] mb-1 font-medium" style="color: var(--text-muted)">本地 xdb 文件路径:</label>
+              <label class="block text-[11px] mb-1 font-medium" style="color: var(--text-muted)">{{ t('ipDbModal.pathInputLabel') }}</label>
               <input v-model="localFilePath" placeholder="如: E:\tools\data\ip2region.xdb" class="ui-input ui-num px-2.5 py-1.5 text-xs">
             </div>
 
@@ -127,7 +127,7 @@
 
             <button @click="loadLocalFile" :disabled="!localFilePath.trim() || isLoadingLocal" class="w-full ui-btn-secondary justify-center py-2 rounded-xl font-bold">
               <AppIcon :name="isLoadingLocal ? 'refresh' : 'folder'" :size="13" :class="isLoadingLocal ? 'animate-spin' : ''" />
-              <span>{{ isLoadingLocal ? '正在验证并加载内存...' : '导入并热加载本地库' }}</span>
+              <span>{{ isLoadingLocal ? t('ipDbModal.btnLoadingLocal') : t('ipDbModal.btnLoadLocal') }}</span>
             </button>
           </div>
         </div>
@@ -137,15 +137,15 @@
           <div class="font-bold flex items-center justify-between flex-wrap gap-2" style="color: var(--text-primary)">
             <span class="flex items-center gap-1.5">
               <AppIcon name="search" :size="14" />
-              <span>实时 IP 归属地与安全域探测测试</span>
+              <span>{{ t('ipDbModal.testTitle') }}</span>
             </span>
-            <span class="text-[11px] font-normal ui-num" style="color: var(--text-muted)">单次耗时 &lt; 5 微秒</span>
+            <span class="text-[11px] font-normal ui-num" style="color: var(--text-muted)">{{ t('ipDbModal.testLatency') }}</span>
           </div>
 
           <div class="flex gap-2">
-            <input v-model="testIp" placeholder="输入任意 IPv4 地址 (如: 114.114.114.114)" class="flex-1 ui-input ui-num px-3 py-1.5 text-xs">
+            <input v-model="testIp" :placeholder="t('ipDbModal.testPlaceholder')" class="flex-1 ui-input ui-num px-3 py-1.5 text-xs">
             <button @click="runTestLookup" :disabled="!testIp.trim()" class="ui-btn-primary px-4 py-1.5 rounded-xl font-bold shrink-0">
-              测试解析
+              {{ t('ipDbModal.btnTest') }}
             </button>
           </div>
 
@@ -161,19 +161,19 @@
                 </span>
               </div>
               <span class="text-[11px] text-emerald-700 dark:text-emerald-300 font-bold bg-emerald-500/12 px-2 py-0.5 rounded border border-emerald-500/25">
-                离线命中
+                {{ t('ipDbModal.hitOffline') }}
               </span>
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px] pt-1" style="color: var(--text-secondary)">
-              <div>国家: <strong style="color: var(--text-primary)">{{ testResult.country || 'N/A' }}</strong></div>
-              <div>省份: <strong style="color: var(--text-primary)">{{ testResult.province || 'N/A' }}</strong></div>
-              <div>城市: <strong style="color: var(--text-primary)">{{ testResult.city || 'N/A' }}</strong></div>
-              <div>运营商: <strong class="text-indigo-700 dark:text-indigo-300 font-bold">{{ testResult.isp || 'N/A' }}</strong></div>
+              <div>{{ t('ipDbModal.country') }}: <strong style="color: var(--text-primary)">{{ testResult.country || 'N/A' }}</strong></div>
+              <div>{{ t('ipDbModal.province') }}: <strong style="color: var(--text-primary)">{{ testResult.province || 'N/A' }}</strong></div>
+              <div>{{ t('ipDbModal.city') }}: <strong style="color: var(--text-primary)">{{ testResult.city || 'N/A' }}</strong></div>
+              <div>{{ t('ipDbModal.isp') }}: <strong class="text-indigo-700 dark:text-indigo-300 font-bold">{{ testResult.isp || 'N/A' }}</strong></div>
             </div>
 
             <div class="text-[11px] pt-1" style="color: var(--text-muted)">
-              归属摘要: <strong style="color: var(--text-primary)">{{ testResult.geo_summary }}</strong>
+              {{ t('ipDbModal.geoSummary') }}: <strong style="color: var(--text-primary)">{{ testResult.geo_summary }}</strong>
             </div>
           </div>
         </div>
@@ -182,9 +182,9 @@
 
       <!-- 3. 底栏 -->
       <footer class="px-6 py-3 border-t flex items-center justify-between shrink-0" style="background: var(--surface-content-alt); border-color: var(--border-subtle)">
-        <span class="text-[11px] ui-num" style="color: var(--text-muted)">数据来源: Lionsoul IP2Region (Apache 2.0)</span>
+        <span class="text-[11px] ui-num" style="color: var(--text-muted)">{{ t('ipDbModal.footerSource') }}</span>
         <button @click="$emit('close')" class="ui-btn-secondary px-4 py-1.5 rounded-xl text-xs font-semibold">
-          完成并关闭
+          {{ t('ipDbModal.finishClose') }}
         </button>
       </footer>
 
@@ -195,6 +195,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted } from 'vue';
 import AppIcon from './AppIcon.vue';
+import { useI18n } from '../i18n';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 
@@ -203,6 +204,8 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(['close', 'log']);
+
+const { t } = useI18n();
 
 interface DbStatus {
   loaded: boolean;

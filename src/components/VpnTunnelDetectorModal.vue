@@ -9,10 +9,10 @@
           </div>
           <div>
             <h3 class="text-sm font-bold" style="color: var(--text-primary)">
-              全环境 VPN 与加密代理隧道四维交叉侦测引擎
+              {{ t('vpnModal.title') }}
             </h3>
             <p class="text-[11px] ui-num mt-0.5" style="color: var(--text-muted)">
-              终端网卡/路由/端口/进程/CA · 链路 DPI 协议指纹 · DFI 熵/χ²/MSS缩水 · 机房归属与主动代理探测
+              {{ t('vpnModal.subtitle') }}
             </p>
           </div>
         </div>
@@ -24,42 +24,42 @@
             class="ui-btn-primary px-3.5 py-1.5 rounded-xl text-xs font-semibold"
           >
             <AppIcon name="radar" :size="13" :class="isScanning ? 'animate-spin' : ''" />
-            <span>{{ isScanning ? '多维侦测扫描中...' : '执行四维交叉侦测' }}</span>
+            <span>{{ isScanning ? t('vpnModal.scanning') : t('vpnModal.runAudit') }}</span>
           </button>
           <button
             @click="auditOfflinePcap"
             :disabled="isScanning"
             class="ui-btn-secondary px-3 py-1.5 rounded-xl text-xs font-semibold"
-            title="导入离线 .pcap/.cap 抓包文件执行纯链路四维 VPN/代理隧道审计"
+            :title="t('vpnModal.importPcapTitle')"
           >
-            导入 .pcap 离线侦测
+            {{ t('vpnModal.importPcap') }}
           </button>
           <button
             @click="resetLinkStats"
             :disabled="isScanning"
             class="ui-btn-secondary px-2.5 py-1.5 rounded-xl text-xs font-semibold"
-            title="重置链路层 DPI/DFI/MSS 累计证据"
+            :title="t('vpnModal.clearLinkStatsTitle')"
           >
-            清空链路累计
+            {{ t('vpnModal.clearLinkStats') }}
           </button>
           <button
             @click="exportReport('markdown')"
             :disabled="!report"
             class="ui-btn-secondary px-2.5 py-1.5 rounded-xl text-xs font-semibold disabled:opacity-45"
           >
-            导出 MD
+            {{ t('vpnModal.exportMd') }}
           </button>
           <button
             @click="exportReport('html')"
             :disabled="!report"
             class="ui-btn-secondary px-2.5 py-1.5 rounded-xl text-xs font-semibold disabled:opacity-45"
           >
-            导出 HTML
+            {{ t('vpnModal.exportHtml') }}
           </button>
           <button
             @click="$emit('close')"
             class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer"
-            title="关闭"
+            :title="t('common.close')"
           >
             <AppIcon name="close" :size="15" />
           </button>
@@ -81,38 +81,38 @@
                   {{ verdictLabel(report.verdict) }}
                 </span>
                 <div class="text-xs ui-num" style="color: var(--text-primary)">
-                  综合置信度: <strong class="text-base">{{ report.overall_confidence }}%</strong>
+                  {{ t('vpnModal.overallConfidence') }}: <strong class="text-base">{{ report.overall_confidence }}%</strong>
                 </div>
                 <div class="text-[11px] ui-num" style="color: var(--text-muted)">
-                  链路已审计 {{ report.link_telemetry.inspected_packets.toLocaleString() }} 帧 · 检出证据 {{ report.evidences.length }} 项
+                  {{ t('vpnModal.linkInspected', { n: report.link_telemetry.inspected_packets.toLocaleString(), m: report.evidences.length }) }}
                 </div>
               </div>
               <div class="text-[11px] ui-num" style="color: var(--text-muted)">
-                扫描时刻: {{ new Date(report.scanned_at_ms).toLocaleTimeString('zh-CN', { hour12: false }) }}
+                {{ t('vpnModal.scanTime') }}: {{ new Date(report.scanned_at_ms).toLocaleTimeString('zh-CN', { hour12: false }) }}
               </div>
             </div>
 
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
               <div class="ui-sub-card p-2.5">
-                <div class="text-[10px]" style="color: var(--text-muted)">1. 终端本地扫描分</div>
+                <div class="text-[10px]" style="color: var(--text-muted)">{{ t('vpnModal.scoreHost') }}</div>
                 <div class="text-sm font-bold ui-num mt-0.5 text-sky-700 dark:text-sky-300">
                   {{ report.dimension_scores.host_local_score }} / 100
                 </div>
               </div>
               <div class="ui-sub-card p-2.5">
-                <div class="text-[10px]" style="color: var(--text-muted)">2. 链路 DPI 协议指纹分</div>
+                <div class="text-[10px]" style="color: var(--text-muted)">{{ t('vpnModal.scoreDpi') }}</div>
                 <div class="text-sm font-bold ui-num mt-0.5 text-rose-700 dark:text-rose-300">
                   {{ report.dimension_scores.dpi_fingerprint_score }} / 100
                 </div>
               </div>
               <div class="ui-sub-card p-2.5">
-                <div class="text-[10px]" style="color: var(--text-muted)">3. DFI 随机度 & MSS 缩水分</div>
+                <div class="text-[10px]" style="color: var(--text-muted)">{{ t('vpnModal.scoreDfi') }}</div>
                 <div class="text-sm font-bold ui-num mt-0.5 text-amber-700 dark:text-amber-300">
                   {{ report.dimension_scores.dfi_entropy_mss_score }} / 100
                 </div>
               </div>
               <div class="ui-sub-card p-2.5">
-                <div class="text-[10px]" style="color: var(--text-muted)">4. 机房 ASN / DoH 错位分</div>
+                <div class="text-[10px]" style="color: var(--text-muted)">{{ t('vpnModal.scoreGeo') }}</div>
                 <div class="text-sm font-bold ui-num mt-0.5 text-indigo-700 dark:text-indigo-300">
                   {{ report.dimension_scores.geo_dns_mismatch_score }} / 100
                 </div>
@@ -127,12 +127,12 @@
           <!-- 2. 四维交叉雷达图 + 归因方式置信度柱图 + 检出翻墙/VPN方式归因清单 -->
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
             <div class="lg:col-span-4 ui-content-card p-3.5 flex flex-col h-[270px]">
-              <div class="text-xs font-bold mb-1" style="color: var(--text-primary)">四维交叉侦测可信度雷达图</div>
+              <div class="text-xs font-bold mb-1" style="color: var(--text-primary)">{{ t('vpnModal.radarTitle') }}</div>
               <VChart :option="radarOption" autoresize class="flex-1 w-full min-h-[215px]" />
             </div>
 
             <div class="lg:col-span-4 ui-content-card p-3.5 flex flex-col h-[270px]">
-              <div class="text-xs font-bold mb-1" style="color: var(--text-primary)">归因方式置信度与证据贡献柱图</div>
+              <div class="text-xs font-bold mb-1" style="color: var(--text-primary)">{{ t('vpnModal.methodBarTitle') }}</div>
               <VChart v-if="report.detected_methods.length > 0" :option="methodBarOption" autoresize class="flex-1 w-full min-h-[215px]" />
               <EmptyState
                 v-else
@@ -146,9 +146,9 @@
             <div class="lg:col-span-4 ui-content-card p-3.5 flex flex-col h-[270px]">
               <div class="flex items-center justify-between mb-2">
                 <span class="text-xs font-bold" style="color: var(--text-primary)">
-                  识别到的 VPN / 翻墙技术方式 ({{ report.detected_methods.length }})
+                  {{ t('vpnModal.identifiedMethods', { n: report.detected_methods.length }) }}
                 </span>
-                <span class="text-[10px] ui-num" style="color: var(--text-muted)">按置信度降序</span>
+                <span class="text-[10px] ui-num" style="color: var(--text-muted)">{{ t('vpnModal.sortDesc') }}</span>
               </div>
 
               <div class="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1">
@@ -176,8 +176,8 @@
                   v-if="report.detected_methods.length === 0"
                   class="py-8"
                   icon="check"
-                  title="未检出明确的 VPN 或代理隧道方式"
-                  description="本机虚拟网卡、路由分流、系统代理、DPI 指纹及 DFI/MSS 均处于正常态。"
+                  :title="t('vpnModal.noMethodTitle')"
+                  :description="t('vpnModal.noMethodDesc')"
                 />
               </div>
             </div>
@@ -187,17 +187,17 @@
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
             <div class="ui-content-card p-3.5 space-y-2.5 text-xs">
               <div class="font-bold flex items-center justify-between" style="color: var(--text-primary)">
-                <span>终端本地底层环境扫描实况</span>
+                <span>{{ t('vpnModal.localEnvTitle') }}</span>
                 <span class="text-[10px] ui-num" style="color: var(--text-muted)">
-                  虚拟网卡 {{ report.local_env.virtual_adapters.length }} · 监听端口 {{ report.local_env.open_proxy_ports.length }} · 进程 {{ report.local_env.matched_processes.length }}
+                  {{ t('vpnModal.localEnvSummary', { adapters: report.local_env.virtual_adapters.length, ports: report.local_env.open_proxy_ports.length, procs: report.local_env.matched_processes.length }) }}
                 </span>
               </div>
 
               <div class="space-y-1.5 text-[11px] ui-num" style="color: var(--text-secondary)">
                 <div>
-                  <strong>系统全局代理: </strong>
+                  <strong>{{ t('vpnModal.systemProxy') }} </strong>
                   <span v-if="report.local_env.system_proxy_enabled" class="text-amber-700 dark:text-amber-300 font-bold">
-                    已开启 ({{ report.local_env.system_proxy_server || report.local_env.system_pac_url }})
+                    {{ t('vpnModal.enabled') }} ({{ report.local_env.system_proxy_server || report.local_env.system_pac_url }})
                   </span>
                   <span v-else class="text-emerald-700 dark:text-emerald-300">未开启</span>
                 </div>
@@ -350,6 +350,7 @@ import { TooltipComponent, GridComponent } from 'echarts/components';
 import VChart from 'vue-echarts';
 import type { EChartsOption } from 'echarts';
 import AppIcon from './AppIcon.vue';
+import { useI18n } from '../i18n';
 import EmptyState from './EmptyState.vue';
 
 use([CanvasRenderer, RadarChart, BarChart, TooltipComponent, GridComponent]);
@@ -445,6 +446,8 @@ const props = defineProps<{
 }>();
 
 defineEmits(['close']);
+
+const { t } = useI18n();
 
 const isDarkTheme = ref(!document.documentElement.classList.contains('theme-apple-light'));
 let themeObserver: MutationObserver | null = null;

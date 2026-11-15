@@ -8,20 +8,20 @@
           <span class="w-3 h-3 rounded-full bg-sky-500 shrink-0"></span>
           <div>
             <h3 class="text-sm font-bold flex items-center gap-2 flex-wrap" style="color: var(--text-primary)">
-              <span>工业全景深度解剖器</span>
+              <span>{{ t('packetDetail.deepDissector') }}</span>
               <span class="text-xs ui-num font-normal" style="color: var(--text-muted)">#{{ packet.id }}</span>
               <span class="text-[11px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                纯自主内生解析
+                {{ t('packetDetail.nativeEngine') }}
               </span>
             </h3>
             <div class="text-[11px] ui-num flex items-center gap-2 mt-0.5 flex-wrap" style="color: var(--text-muted)">
-              <span>捕获时间: <strong style="color: var(--text-secondary)">{{ packet.timestamp }}</strong></span>
+              <span>{{ t('packetDetail.captureTime') }}: <strong style="color: var(--text-secondary)">{{ packet.timestamp }}</strong></span>
               <span>·</span>
-              <span>长度: <strong style="color: var(--text-secondary)">{{ packet.length }}</strong> 字节</span>
+              <span>{{ t('packetDetail.length') }}: <strong style="color: var(--text-secondary)">{{ packet.length }}</strong> {{ t('packetDetail.bytes') }}</span>
               <span>·</span>
-              <span>总线: <strong style="color: var(--text-secondary)">{{ packet.transport }}</strong></span>
+              <span>{{ t('packetDetail.bus') }}: <strong style="color: var(--text-secondary)">{{ packet.transport }}</strong></span>
               <span>·</span>
-              <span>规约: <strong class="text-blue-700 dark:text-sky-300">{{ packet.protocol }}</strong></span>
+              <span>{{ t('packetDetail.protocol') }}: <strong class="text-blue-700 dark:text-sky-300">{{ packet.protocol }}</strong></span>
             </div>
           </div>
         </div>
@@ -29,21 +29,21 @@
         <div class="flex items-center gap-2 flex-wrap">
           <button @click="copyHex" class="ui-btn-secondary text-xs px-3 py-1.5 rounded-xl">
             <AppIcon :name="isHexCopied ? 'check' : 'code'" :size="12" />
-            <span>{{ isHexCopied ? '已复制 HEX' : '复制 HEX' }}</span>
+            <span>{{ isHexCopied ? t('packetDetail.copiedHex') : t('packetDetail.copyHex') }}</span>
           </button>
           <button @click="copyAscii" class="ui-btn-secondary text-xs px-3 py-1.5 rounded-xl">
             <AppIcon :name="isAsciiCopied ? 'check' : 'document'" :size="12" />
-            <span>{{ isAsciiCopied ? '已复制 ASCII' : '复制 ASCII' }}</span>
+            <span>{{ isAsciiCopied ? t('packetDetail.copiedAscii') : t('packetDetail.copyAscii') }}</span>
           </button>
           <button @click="$emit('replayPacket', packet)" class="ui-btn-primary text-xs px-3 py-1.5 rounded-xl">
             <AppIcon name="play" :size="12" />
-            <span>L4 重放</span>
+            <span>{{ t('packetDetail.l4Replay') }}</span>
           </button>
           <button @click="$emit('saveBaseline', packet)" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-teal-500/15 hover:bg-teal-500/25 text-teal-700 dark:text-teal-300 border border-teal-500/30 transition-colors cursor-pointer flex items-center gap-1">
             <AppIcon name="archive" :size="12" />
-            <span>存为基线</span>
+            <span>{{ t('packetDetail.saveBaseline') }}</span>
           </button>
-          <button @click="$emit('close')" class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer ml-1" title="关闭">
+          <button @click="$emit('close')" class="w-8 h-8 rounded-full ui-pill flex items-center justify-center cursor-pointer ml-1" :title="t('packetDetail.close')">
             <AppIcon name="close" :size="15" />
           </button>
         </div>
@@ -77,13 +77,13 @@
           <div class="px-4 py-2.5 rounded-2xl border bg-emerald-500/10 border-emerald-500/25 flex items-center justify-between text-xs flex-wrap gap-2">
             <div class="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
               <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span class="font-bold">自主内生全协议状态机解构中</span>
-              <span class="font-normal opacity-80">· 无需第三方工具 · 纯 Rust 深度解析</span>
+              <span class="font-bold">{{ t('packetDetail.nativeDeconstructing') }}</span>
+              <span class="font-normal opacity-80">· {{ t('packetDetail.nativeDeconstructingSub') }}</span>
             </div>
             <div class="text-[11px] ui-num text-emerald-700 dark:text-emerald-300">
-              <span>协议层级: <strong>{{ nativeProtocolLayers.length }}</strong> 层</span>
+              <span>{{ t('packetDetail.protoLayers') }}: <strong>{{ t('packetDetail.layersCount', { n: nativeProtocolLayers.length }) }}</strong></span>
               <span class="mx-2">·</span>
-              <span>解析字段: <strong>{{ totalNativeFieldsCount }}</strong> 项</span>
+              <span>{{ t('packetDetail.parsedFields') }}: <strong>{{ t('packetDetail.fieldsCount', { n: totalNativeFieldsCount }) }}</strong></span>
             </div>
           </div>
 
@@ -105,7 +105,7 @@
                     {{ layer.warning }}
                   </span>
                   <span class="text-[11px] ui-num" style="color: var(--text-muted)">
-                    {{ layer.fields.length }} 个参数
+                    {{ t('packetDetail.paramsCount', { n: layer.fields.length }) }}
                   </span>
                 </div>
               </div>
@@ -139,13 +139,13 @@
         <!-- 选项卡 2：16 字节对齐 HexDump + ASCII -->
         <div v-else-if="activeTab === 'hexdump'" class="h-full flex flex-col gap-2">
           <div class="flex items-center justify-between text-xs ui-num" style="color: var(--text-muted)">
-            <span>标准 16 字节边界对齐物理转储 (Offset | 00..07 08..0F | ASCII)</span>
-            <span>载荷长度: {{ cleanHex.length / 2 }} Bytes</span>
+            <span>{{ t('packetDetail.hexdumpHeader') }}</span>
+            <span>{{ t('packetDetail.payloadLen') }}: {{ cleanHex.length / 2 }} Bytes</span>
           </div>
 
           <div class="flex-1 ui-sub-card p-4 font-mono-code text-xs overflow-auto select-text">
             <div class="font-bold border-b pb-1.5 mb-2 select-none" style="color: var(--text-muted); border-color: var(--border-subtle)">
-              偏移量 | 00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F | ASCII 文本解析
+              {{ t('packetDetail.offsetHeader') }}
             </div>
             <div v-for="(line, idx) in formattedHexLines" :key="idx" class="leading-relaxed hover:bg-black/5 dark:hover:bg-white/5 px-1 rounded transition-colors">
               <span style="color: var(--text-muted)">{{ line.offset }} | </span>
@@ -158,8 +158,8 @@
               v-if="formattedHexLines.length === 0"
               class="py-10"
               icon="code"
-              title="无应用层载荷"
-              description="该数据包仅包含物理层与链路层握手控制元数据。"
+              :title="t('packetDetail.noPayloadTitle')"
+              :description="t('packetDetail.noPayloadDesc')"
             />
           </div>
         </div>
@@ -256,35 +256,35 @@
               </div>
               <div>
                 <div class="text-xs font-bold flex items-center gap-2 flex-wrap" style="color: var(--text-primary)">
-                  <span>Wireshark / TShark 官方全量解剖引擎</span>
+                  <span>{{ t('packetDetail.tsharkTitle') }}</span>
                   <span v-if="tsharkStatus?.is_available" class="text-[11px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full ui-num font-bold border border-emerald-500/30">
-                    引擎在线 (3,200+ 规约库)
+                    {{ t('packetDetail.tsharkOnline') }}
                   </span>
                   <span v-else class="text-[11px] bg-amber-500/15 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full ui-num font-bold border border-amber-500/30">
-                    未检测到引擎 (纯离线自研引擎接管)
+                    {{ t('packetDetail.tsharkOffline') }}
                   </span>
                 </div>
                 <div class="text-[11px] ui-num mt-0.5" style="color: var(--text-muted)">
-                  {{ tsharkStatus?.version || 'TShark 检测中...' }} · 跨进程纯内存管道
+                  {{ tsharkStatus?.version || t('packetDetail.tsharkChecking') }} · {{ t('packetDetail.tsharkPipe') }}
                 </div>
               </div>
             </div>
 
             <button @click="runTsharkDissection" :disabled="tsharkLoading || !tsharkStatus?.is_available" class="ui-btn-primary text-xs px-3.5 py-1.5 rounded-xl">
               <AppIcon name="refresh" :size="12" :class="tsharkLoading ? 'animate-spin' : ''" />
-              <span>{{ tsharkLoading ? '正在解剖...' : '重新全量解剖' }}</span>
+              <span>{{ tsharkLoading ? t('packetDetail.tsharkDissecting') : t('packetDetail.tsharkReDissect') }}</span>
             </button>
           </div>
 
           <div v-if="tsharkLoading" class="flex flex-col items-center justify-center py-16 gap-3" style="color: var(--text-muted)">
             <div class="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
-            <span class="text-xs ui-num">正在通过内存管道调用 Wireshark 解剖器...</span>
+            <span class="text-xs ui-num">{{ t('packetDetail.tsharkCalling') }}</span>
           </div>
 
           <div v-else-if="tsharkResult && tsharkResult.success" class="space-y-3">
             <div class="ui-sub-card px-4 py-2.5 flex items-center justify-between text-xs ui-num">
               <span class="font-semibold" style="color: var(--text-primary)">{{ tsharkResult.summary_text }}</span>
-              <span class="text-[11px]" style="color: var(--text-muted)">执行耗时: <strong>{{ tsharkResult.execution_time_ms }}</strong> ms</span>
+              <span class="text-[11px]" style="color: var(--text-muted)">{{ t('packetDetail.execTime') }}: <strong>{{ tsharkResult.execution_time_ms }}</strong> ms</span>
             </div>
 
             <div class="space-y-2.5">
@@ -295,10 +295,10 @@
                   <div class="flex items-center gap-2 text-xs font-bold ui-num" style="color: var(--text-primary)">
                     <AppIcon :name="expandedLayers[String(layerName)] ? 'chevron-down' : 'chevron-right'" :size="13" style="color: var(--text-muted)" />
                     <span class="text-blue-700 dark:text-sky-300 uppercase">{{ layerName }}</span>
-                    <span class="text-[11px] font-normal font-sans" style="color: var(--text-muted)">协议层</span>
+                    <span class="text-[11px] font-normal font-sans" style="color: var(--text-muted)">{{ t('packetDetail.protoLayer') }}</span>
                   </div>
                   <span class="text-[11px] ui-num" style="color: var(--text-muted)">
-                    {{ isObject(layerData) ? Object.keys(layerData).length + ' 项属性' : '基础标量' }}
+                    {{ isObject(layerData) ? t('packetDetail.itemsCount', { n: Object.keys(layerData).length }) : t('packetDetail.scalarVal') }}
                   </span>
                 </div>
 
@@ -323,12 +323,12 @@
             v-else
             class="py-10"
             icon="cpu"
-            title="当前处于纯自主内生解析模式"
-            description="宿主机未安装 Wireshark 或处于隔离环境，所有采集、解析与时序基线均由自研纯 Rust 原生引擎独立完成。"
+            :title="t('packetDetail.nativeModeTitle')"
+            :description="t('packetDetail.nativeModeDesc')"
           >
             <template #actions>
               <button @click="selectTab('native_tree')" class="ui-btn-primary text-xs">
-                <span>查看自研原生逐层解剖树</span>
+                <span>{{ t('packetDetail.viewNativeTree') }}</span>
                 <AppIcon name="arrow-right" :size="12" />
               </button>
             </template>
@@ -340,12 +340,12 @@
       <!-- 底栏状态汇总 -->
       <footer class="px-6 py-3 border-t flex items-center justify-between text-[11px] ui-num shrink-0 flex-wrap gap-2" style="background: var(--surface-content-alt); border-color: var(--border-subtle); color: var(--text-muted)">
         <div class="flex items-center gap-2">
-          <span>防篡改哈希: <strong class="font-normal truncate max-w-[280px] inline-block align-bottom" style="color: var(--text-primary)" :title="packet.chain_hash">{{ packet.chain_hash }}</strong></span>
+          <span>{{ t('packetDetail.antiTamperHash') }}: <strong class="font-normal truncate max-w-[280px] inline-block align-bottom" style="color: var(--text-primary)" :title="packet.chain_hash">{{ packet.chain_hash }}</strong></span>
         </div>
         <div class="flex items-center gap-3">
-          <span>信息熵: <strong style="color: var(--text-primary)">{{ packet.entropy ? packet.entropy.toFixed(3) : '0.000' }}</strong> ({{ packet.entropy_level }})</span>
+          <span>{{ t('packetDetail.entropy') }}: <strong style="color: var(--text-primary)">{{ packet.entropy ? packet.entropy.toFixed(3) : '0.000' }}</strong> ({{ packet.entropy_level }})</span>
           <span>·</span>
-          <span class="text-emerald-700 dark:text-emerald-400 font-semibold">自研纯 Rust 内核运行正常</span>
+          <span class="text-emerald-700 dark:text-emerald-400 font-semibold">{{ t('packetDetail.rustKernelOk') }}</span>
         </div>
       </footer>
 
@@ -355,6 +355,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
+import { useI18n } from '../i18n';
 import { invoke } from '@tauri-apps/api/core';
 import AppIcon from './AppIcon.vue';
 import EmptyState from './EmptyState.vue';
@@ -388,11 +389,13 @@ const props = defineProps<{
 
 defineEmits(['close', 'replayPacket', 'saveBaseline']);
 
-const tabs = [
-  { id: 'native_tree', label: '自研原生逐层解剖 (OSI 7层)', badge: '纯自主内生' },
-  { id: 'hexdump', label: '十六进制与 ASCII 转储', badge: '16字节对齐' },
-  { id: 'tshark', label: 'Wireshark 官方 3200+ 辅助对照', badge: '可选管道' },
-];
+const { t } = useI18n();
+
+const tabs = computed(() => [
+  { id: 'native_tree', label: t('packetDetail.tabs.nativeTree'), badge: t('packetDetail.tabs.nativeBadge') },
+  { id: 'hexdump', label: t('packetDetail.tabs.hexdump'), badge: t('packetDetail.tabs.hexdumpBadge') },
+  { id: 'tshark', label: t('packetDetail.tabs.tshark'), badge: t('packetDetail.tabs.tsharkBadge') },
+]);
 const activeTab = ref('native_tree');
 
 const isHexCopied = ref(false);
