@@ -11,6 +11,11 @@ pub mod bus_intelligence;
 pub mod dpi;
 pub mod cloud;
 pub mod config;
+// 四大硬核短板突破与工业级算法引擎
+pub mod dynamic_dissector_vm;
+pub mod pcap_sparse_indexer;
+pub mod virtual_logic_generator;
+pub mod secrecy_unix_audit;
 // Sprint 1 新增模块
 pub mod throttle;
 pub mod honeypot;
@@ -1211,6 +1216,111 @@ async fn reload_dpi_signatures_cmd(path: Option<String>) -> Result<String, Strin
         Ok(n) => Ok(format!("[DPI] 动态字典重载成功: {} 条规则 <- {}", n, sig_path)),
         Err(e) => Err(format!("[DPI] 重载失败: {}", e)),
     }
+}
+
+// ============================================================
+// Tauri Commands: 四大短板攻坚与硬核算法引擎指令
+// ============================================================
+
+#[tauri::command]
+async fn list_dynamic_protocol_schemas_cmd() -> Result<Vec<serde_json::Value>, String> {
+    let reg = dynamic_dissector_vm::GLOBAL_DYNAMIC_REGISTRY
+        .read()
+        .map_err(|e| format!("Dynamic registry lock error: {}", e))?;
+    Ok(reg.list_schemas())
+}
+
+#[tauri::command]
+async fn build_pcap_sparse_index_cmd(
+    file_path: String,
+    stride: Option<usize>,
+) -> Result<pcap_sparse_indexer::PcapSparseIndex, String> {
+    tokio::task::spawn_blocking(move || {
+        let s = stride.unwrap_or(500);
+        pcap_sparse_indexer::PcapSparseIndexer::build_index(&file_path, s)
+            .map_err(|e| format!("Build sparse index failed for {:?}: {:?}", file_path, e))
+    })
+    .await
+    .map_err(|e| format!("Task execution failed: {}", e))?
+}
+
+#[tauri::command]
+async fn query_pcap_sparse_window_cmd(
+    index: pcap_sparse_indexer::PcapSparseIndex,
+    page_index: usize,
+    page_size: usize,
+) -> Result<pcap_sparse_indexer::PagedWindowResult, String> {
+    tokio::task::spawn_blocking(move || {
+        pcap_sparse_indexer::PcapSparseIndexer::seek_paged_window(&index, page_index, page_size)
+            .map_err(|e| format!("Query paged window failed: {:?}", e))
+    })
+    .await
+    .map_err(|e| format!("Task execution failed: {}", e))?
+}
+
+#[tauri::command]
+async fn synthesize_virtual_logic_waveform_cmd(
+    bus_type: String,
+    payload_hex: Option<String>,
+    baud_or_freq: Option<u32>,
+) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        let raw_data = if let Some(hex_str) = payload_hex {
+            hex::decode(hex_str.trim()).unwrap_or_else(|_| b"OMNI_TEST".to_vec())
+        } else {
+            b"HELLO_OMNI_BUS".to_vec()
+        };
+
+        match bus_type.to_uppercase().as_str() {
+            "UART" => {
+                let baud = baud_or_freq.unwrap_or(115200);
+                let transitions = virtual_logic_generator::VirtualLogicGenerator::synthesize_uart(
+                    0,
+                    baud,
+                    &raw_data,
+                    virtual_logic_generator::UartParity::None,
+                    1,
+                    50_000,
+                );
+                Ok(virtual_logic_generator::VirtualLogicGenerator::export_to_vcd(
+                    &transitions,
+                    &[(0, "UART_TX")],
+                ))
+            }
+            "I2C" => {
+                let freq = baud_or_freq.unwrap_or(100000);
+                let transitions = virtual_logic_generator::VirtualLogicGenerator::synthesize_i2c(
+                    0, 1, freq, 0x50, false, &raw_data,
+                );
+                Ok(virtual_logic_generator::VirtualLogicGenerator::export_to_vcd(
+                    &transitions,
+                    &[(0, "I2C_SCL"), (1, "I2C_SDA")],
+                ))
+            }
+            "CAN" => {
+                let bitrate = baud_or_freq.unwrap_or(500000);
+                let transitions = virtual_logic_generator::VirtualLogicGenerator::synthesize_can(
+                    0, bitrate, 0x123, &raw_data,
+                );
+                Ok(virtual_logic_generator::VirtualLogicGenerator::export_to_vcd(
+                    &transitions,
+                    &[(0, "CAN_RX")],
+                ))
+            }
+            _ => Err(format!("Unsupported virtual bus type: {}", bus_type)),
+        }
+    })
+    .await
+    .map_err(|e| format!("Synthesis task failed: {}", e))?
+}
+
+#[tauri::command]
+async fn run_unix_secrecy_audit_cmd() -> Result<secrecy_unix_audit::UnixSecrecyAuditReport, String> {
+    tokio::task::spawn_blocking(|| {
+        Ok(secrecy_unix_audit::UnixSecrecyAuditor::audit_system())
+    })
+    .await
+    .map_err(|e| format!("Secrecy audit task failed: {}", e))?
 }
 
 // ============================================================
@@ -2901,7 +3011,13 @@ pub fn run() {
             pick_native_file_dialog_cmd,
             pick_native_folder_dialog_cmd,
             save_text_with_native_dialog_cmd,
-            reveal_in_file_manager_cmd
+            reveal_in_file_manager_cmd,
+            // 四大硬核短板攻坚与核心算法引擎指令
+            list_dynamic_protocol_schemas_cmd,
+            build_pcap_sparse_index_cmd,
+            query_pcap_sparse_window_cmd,
+            synthesize_virtual_logic_waveform_cmd,
+            run_unix_secrecy_audit_cmd
         ])
         .on_window_event(|_window, event| match event {
             tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed => {

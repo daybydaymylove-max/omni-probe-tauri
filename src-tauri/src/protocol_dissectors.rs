@@ -129,7 +129,25 @@ pub fn dissect_universal_protocol(protocol: &str, payload: &[u8]) -> HashMap<Str
         }
     }
 
-    // 14. 长尾未知私有协议通用自省展开 (Universal Introspection)
+    // 14. 动态声明式解剖虚拟机与热插拔引擎匹配 (Dynamic Dissector VM Match)
+    // 优先检查是否有动态注册或工控专网规约匹配 (如 IEC 60870-5-104, DL/T 645-2007, 私有 SCADA 规约)
+    if let Ok(reg) = crate::dynamic_dissector_vm::GLOBAL_DYNAMIC_REGISTRY.read() {
+        if let Some(dyn_res) = reg.probe_and_dissect(0, payload) {
+            let mut map = HashMap::new();
+            map.insert("dynamic_protocol_id".to_string(), json!(dyn_res.protocol_id));
+            map.insert("dynamic_protocol_name".to_string(), json!(dyn_res.protocol_name));
+            map.insert("dynamic_confidence".to_string(), json!(dyn_res.confidence_score));
+            if let Some(cv) = dyn_res.checksum_valid {
+                map.insert("dynamic_checksum_valid".to_string(), json!(cv));
+            }
+            for f in dyn_res.fields {
+                map.insert(format!("dyn_{}", f.id), json!(f.formatted_string));
+            }
+            return map;
+        }
+    }
+
+    // 15. 长尾未知私有协议通用自省展开 (Universal Introspection)
     dissect_longtail_introspection(protocol, payload)
 }
 
