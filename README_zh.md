@@ -1,4 +1,4 @@
-# Omni-Probe 工业级全能网络探针系统 (v0.3.7)
+# Omni-Probe 工业级全能网络探针系统 (v0.3.8)
 
 <div align="center">
 
@@ -7,7 +7,7 @@
 ### 面向现代工业物联网、智能变电站、汽车电子与现场总线的原生桌面多总线协议探针与诊断平台
 **An Ultra-Lightweight Multi-Bus Network & Hardware Protocol Analyzer built with Rust + Tauri 2.0**
 
-[![Release](https://img.shields.io/badge/Release-v0.3.7-blue.svg)](https://github.com/daybydaymylove-max/omni-probe-tauri/releases)
+[![Release](https://img.shields.io/badge/Release-v0.3.8-blue.svg)](https://github.com/daybydaymylove-max/omni-probe-tauri/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Rust](https://img.shields.io/badge/Rust-Edition_2024-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-24C8DB.svg)](https://tauri.app/)
@@ -17,13 +17,13 @@
 
 <br>
 
-**[ 📥 立即下载 Windows 最新免安装便携版 / 安装向导 (v0.3.7)](https://github.com/daybydaymylove-max/omni-probe-tauri/releases/latest)**
+**[ 📥 立即下载 Windows 最新免安装便携版 / 安装向导 (v0.3.8)](https://github.com/daybydaymylove-max/omni-probe-tauri/releases/latest)**
 
 <br>
 
 **[English](README.md)** • **[简体中文 (Chinese)](README_zh.md)** • **[📖 完整图文操作手册 (USER_MANUAL)](docs/USER_MANUAL.md)** •
 [系统架构](#-系统架构与核心组件) •
-[v0.3.7 核心演进](#-v037-核心架构演进亮点) •
+[v0.3.8 核心演进](#-v038-核心架构演进亮点) •
 [四大短板攻坚](#-四大核心短板攻坚与算法落地) •
 [核心技术特性](#-核心技术特性) •
 [国际开源对标](#-国际顶级开源项目脱水对标) •
@@ -51,6 +51,29 @@
 5. **无监督日历感知自适应基线自学习**：纯无监督日态贝叶斯似然比检验，自主识别法定调休补班与节假日低负荷入侵；
 6. **万级主机超大规模分级聚合拓扑**：对标 ntopng 分级架构，递归组织安全域、网段与主机，受限视口投影控制，节点压缩比达 99.36%；
 7. **全场景底层多轨并行与自愈保障**：彻底破除对外部驱动的单点依赖，驱动缺失时自愈降级至内核原生接口，保障探针永不闪退、业务永不中断。
+
+---
+
+## 🌟 v0.3.8 核心架构演进亮点 (专业抓包体系与硬核存取对账)
+
+### 1. 专业抓包配置模态控制台与 BPF 纳秒级校验 (`NetworkCaptureModal.vue` / `sniffer.rs`)
+- **网卡硬件画像萃取**：自动遍历系统物理与虚拟网卡硬件参数，区分 Wi-Fi 与以太网物理形态，并基于默认网关路由跃点智能标识最佳外网出口网卡；
+- **工业级抓包参数定制**：支持混杂模式（Promiscuous Mode）、截断长度（Snaplen 65535B 全帧 vs 96B 头部截断防爆）与 16MB~128MB 锁页环形缓冲区；
+- **BPF 离线纳秒级语法编译校验**：基于 `pcap::Capture::dead` 离线编译器构建校验管线，耗时 $<0.1\text{ms}$，输入即时变色校验并精确定位语法错误所在字符偏移；内置 8 大工控（Modbus/SL651/MQTT）与网络安全 BPF 规则库。
+
+### 2. 真实物理抓包结果四重硬核「存」机制 (`forensics.rs` / `export_engine.rs`)
+- **底层流式落盘与强制物理同步**：抓包时每帧原始以太网帧流式追加写入 `forensic_capture.pcap`（标准 24B 全局头 + 16B 帧头），强制调用 `flush()` 物理落盘，保证断电与崩溃时现场物证零丢失；
+- **区块链哈希单调存证链**：每帧数据包推进全局 SHA-256 存证哈希并记录 `received_data.jsonl`（按天轮转归档）；
+- **特征报文样本库与网络黄金基线模型**：支持将典型报文一键存入持久化样本库（`save_packet_sample_cmd`），将全网协议占比与 RFC 2544 长度区间固化为基线模型（`save_network_baseline_cmd`）。
+
+### 3. 超巨型 PCAP 流式稀疏索引与高保真时序重放 (`pcap_sparse_indexer.rs` / `pcap_replay.rs`)
+- **超巨型 PCAP 常数内存视窗检索**：采用两级稀疏流式索引机制，单遍快速扫描以 500 包为 Stride 采样 32 字节稀疏节点，千万级报文常驻索引仅占约 640 KB，实现 $\mathcal{O}(1)$ 常数级内存视窗分页取数，彻底消除 OOM；
+- **纳秒级时钟调度脱机重放**：对标 `tcpreplay`，支持以 0.01x~1000x 真实时序倍速、TopSpeed 极限线速压测或单步步进将离线 `.pcap` 重新灌入虚拟管道，进行断网自测与规则告警压测。
+
+### 4. 全息多维比对分析体系 (Universal Diff Center)
+- **逐字节 LCS 严格十六进制差分 (Hex Diff)**：双栏高亮匹配、突变、插入与删除区，量化突变百分比；
+- **Center-Star N 组多重序列对齐 (MSA)**：对标生物信息学算法，2~8 组报文同时对齐求取保守保守区与突变熵谱；
+- **RFC 2544 标准 7 档报文长度漂移对账**：通过 `pick_and_compare_network_pcap_cmd` 实现当前实时流量与历史 `.pcap` 的全自动对比打分。
 
 ---
 

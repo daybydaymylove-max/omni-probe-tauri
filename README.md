@@ -1,4 +1,4 @@
-# Omni-Probe: Multi-Bus Network & Hardware Protocol Analyzer (v0.3.7)
+# Omni-Probe: Multi-Bus Network & Hardware Protocol Analyzer (v0.3.8)
 
 <div align="center">
 
@@ -7,7 +7,7 @@
 ### Industrial-Grade Native Desktop Multi-Bus Network & Fieldbus Deep Analysis Platform
 **Built with Rust (Edition 2024) + Tauri 2.0 + Vue 3.5 + TypeScript**
 
-[![Release](https://img.shields.io/badge/Release-v0.3.7-blue.svg)](https://github.com/daybydaymylove-max/omni-probe-tauri/releases)
+[![Release](https://img.shields.io/badge/Release-v0.3.8-blue.svg)](https://github.com/daybydaymylove-max/omni-probe-tauri/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Rust](https://img.shields.io/badge/Rust-Edition_2024-orange.svg)](https://www.rust-lang.org/)
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-24C8DB.svg)](https://tauri.app/)
@@ -21,7 +21,7 @@
 
 <br>
 
-**[ 📥 Download Latest Windows Portable & Setup (v0.3.7) ](https://github.com/daybydaymylove-max/omni-probe-tauri/releases/latest)**
+**[ 📥 Download Latest Windows Portable & Setup (v0.3.8) ](https://github.com/daybydaymylove-max/omni-probe-tauri/releases/latest)**
 
 <br>
 
@@ -124,8 +124,8 @@ npx tauri build
 ```
 Production output files will be located in:
 - Portable executable: `src-tauri/target/release/omni-probe-tauri.exe`
-- NSIS Setup: `src-tauri/target/release/bundle/nsis/omni-probe-tauri_0.3.7_x64-setup.exe`
-- WiX MSI: `src-tauri/target/release/bundle/msi/omni-probe-tauri_0.3.7_x64_en-US.msi`
+- NSIS Setup: `src-tauri/target/release/bundle/nsis/omni-probe-tauri_0.3.8_x64-setup.exe`
+- WiX MSI: `src-tauri/target/release/bundle/msi/omni-probe-tauri_0.3.8_x64_en-US.msi`
 
 ---
 
