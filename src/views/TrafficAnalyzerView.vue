@@ -1139,6 +1139,33 @@
               />
             </div>
 
+            <!-- 💡 专家智能分析与规约参考微缩速览 (Expert Guidance Snippet) -->
+            <div v-if="sidebarExpertGuidance" class="apple-group-card space-y-2 border-l-2 border-sky-500 bg-sky-500/5">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-bold flex items-center gap-1.5" style="color: var(--text-primary);">
+                  <AppIcon name="zap" :size="13" class="text-sky-500" />
+                  <span>{{ locale === 'en-US' ? 'Expert Intelligence Guidance' : '专家智能辅导与规范参考' }}</span>
+                </span>
+                <span class="text-[10px] px-1.5 py-0.2 rounded font-mono-code font-semibold bg-sky-500/15 text-sky-700 dark:text-sky-300">
+                  {{ sidebarExpertGuidance.protocol_standard }}
+                </span>
+              </div>
+              <div class="text-[11px] leading-relaxed space-y-1">
+                <div class="font-bold text-sky-700 dark:text-sky-300 flex items-start gap-1">
+                  <span>🎯</span>
+                  <span>{{ sidebarExpertGuidance.behavioral_intent }}</span>
+                </div>
+                <div class="text-[10px] text-(--text-muted) flex items-center gap-2">
+                  <span>{{ locale === 'en-US' ? 'Clause:' : '条款依据:' }} {{ sidebarExpertGuidance.standard_clause_ref }}</span>
+                  <span>·</span>
+                  <span>{{ locale === 'en-US' ? 'Role:' : '通信角色:' }} {{ sidebarExpertGuidance.role_analysis }}</span>
+                </div>
+                <div v-if="sidebarExpertGuidance.actionable_guidance && sidebarExpertGuidance.actionable_guidance.length > 0" class="pt-1 border-t border-(--border-subtle) text-[10px] text-amber-700 dark:text-amber-300">
+                  {{ sidebarExpertGuidance.actionable_guidance[0] }}
+                </div>
+              </div>
+            </div>
+
             <div class="apple-group-card space-y-2">
               <div class="group-card-title">
                 <span style="color: var(--text-primary);">{{ l7DecodedTree.protocolTitle }}</span>
@@ -2595,6 +2622,43 @@ function openIoGraphsTab() {
 
 const selectedPacket = ref<PacketRecord | null>(null);
 const selectedPackets = ref<Set<number>>(new Set());
+
+interface SidebarExpertGuidanceReport {
+  packet_id: number;
+  protocol_name: string;
+  protocol_standard: string;
+  standard_clause_ref: string;
+  behavioral_intent: string;
+  role_analysis: string;
+  feature_fingerprints: Array<{
+    name: string;
+    value: string;
+    detection_basis: string;
+    significance: string;
+  }>;
+  risk_level: string;
+  risk_assessment: string;
+  actionable_guidance: string[];
+  decoding_confidence: number;
+}
+
+const sidebarExpertGuidance = ref<SidebarExpertGuidanceReport | null>(null);
+
+watch(() => selectedPacket.value?.id, async (newId) => {
+  if (!newId || !selectedPacket.value) {
+    sidebarExpertGuidance.value = null;
+    return;
+  }
+  try {
+    const res = await invoke<SidebarExpertGuidanceReport>('get_packet_expert_guidance_cmd', {
+      packet: selectedPacket.value
+    });
+    sidebarExpertGuidance.value = res;
+  } catch (err) {
+    console.warn('[TrafficAnalyzer] Failed to query sidebar expert guidance:', err);
+    sidebarExpertGuidance.value = null;
+  }
+}, { immediate: true });
 
 // 默认联动：自动选中首个规约报文，避免右侧抽屉处于空选状态
 watch(() => props.packets, (newPackets) => {

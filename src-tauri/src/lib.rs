@@ -26,6 +26,7 @@ pub mod discovery;
 // Sprint 3: 专业流量分析与持久化模块
 pub mod pcap_engine;
 pub mod stream_reassembly;
+pub mod packet_expert_advisor;
 pub mod ip_intelligence;
 pub mod export_engine;
 pub mod ip_downloader;
@@ -2629,6 +2630,7 @@ pub fn run() {
             sniffer::validate_bpf_filter_cmd,
             sniffer::get_detailed_network_interfaces_cmd,
             sniffer::get_capture_telemetry_cmd,
+            packet_expert_advisor::get_packet_expert_guidance_cmd,
             // 物理串口与 USB 嗅探及端口操作数据收发
             list_serial_ports_detail,
             list_active_serial_probes,

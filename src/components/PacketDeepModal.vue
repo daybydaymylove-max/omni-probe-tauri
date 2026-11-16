@@ -81,6 +81,121 @@
           </div>
         </div>
 
+        <!-- 💡 专家智能分析与技术标准辅导参考全景卡片 (Expert Guidance & Protocol Standard) -->
+        <div class="ui-content-card rounded-2xl overflow-hidden border border-sky-500/30 dark:border-sky-500/20 shadow-sm">
+          <div class="bg-gradient-to-r from-sky-500/10 via-indigo-500/10 to-transparent px-4 py-2.5 border-b border-(--border-subtle) flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg bg-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                <AppIcon name="zap" class="w-3.5 h-3.5" />
+              </span>
+              <div>
+                <span class="text-xs font-bold text-(--text-primary)">
+                  {{ t('packetDeep.expertTitle') }}
+                </span>
+                <span v-if="expertReport" class="ml-2 text-[10px] font-mono-code px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-700 dark:text-sky-300 font-semibold">
+                  {{ (expertReport.decoding_confidence * 100).toFixed(0) }}% 置信度
+                </span>
+              </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+              <span v-if="expertReport" :class="[
+                'text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider',
+                expertReport.risk_level === 'CRITICAL' ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30' :
+                expertReport.risk_level === 'HIGH' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30' :
+                expertReport.risk_level === 'MEDIUM' ? 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-300 border border-yellow-500/30' :
+                'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+              ]">
+                {{ expertReport.risk_level }} 评级
+              </span>
+              <button v-if="expertReport" @click="copyExpertReportText"
+                class="ui-btn-secondary inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium cursor-pointer">
+                <AppIcon name="document" class="w-3 h-3" />
+                <span>{{ t('packetDeep.copyReport') }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div v-if="isAnalyzingExpert" class="p-6 text-center text-xs text-(--text-muted) italic flex items-center justify-center gap-2">
+            <AppIcon name="refresh" class="w-4 h-4 animate-spin text-sky-500" />
+            <span>{{ t('packetDeep.analyzing') }}</span>
+          </div>
+
+          <div v-else-if="expertReport" class="p-4 space-y-3.5 text-xs">
+            <!-- 行为意图与角色 -->
+            <div class="rounded-xl p-3 bg-sky-500/8 border border-sky-500/20 flex flex-col md:flex-row md:items-center justify-between gap-2">
+              <div class="flex items-start gap-2">
+                <span class="mt-0.5 text-sky-600 dark:text-sky-400 font-bold shrink-0">🎯 {{ t('packetDeep.behaviorIntent') }}:</span>
+                <span class="font-bold text-(--text-primary) leading-relaxed">{{ expertReport.behavioral_intent }}</span>
+              </div>
+              <div class="shrink-0 flex items-center gap-1.5 text-[11px]">
+                <span class="text-(--text-muted)">{{ t('packetDeep.role') }}:</span>
+                <span class="ui-pill font-mono-code px-2 py-0.5 rounded font-semibold text-(--text-primary)">{{ expertReport.role_analysis }}</span>
+              </div>
+            </div>
+
+            <!-- 技术标准依据与条款参考 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div class="ui-sub-card rounded-xl p-2.5 flex flex-col gap-1">
+                <span class="text-[11px] font-bold text-(--text-muted) uppercase tracking-wider flex items-center gap-1">
+                  <AppIcon name="globe" class="w-3 h-3 text-indigo-500" />
+                  <span>{{ t('packetDeep.protocolStandard') }}</span>
+                </span>
+                <span class="text-xs font-mono-code font-bold text-(--text-primary)">
+                  {{ expertReport.protocol_standard }}
+                </span>
+              </div>
+              <div class="ui-sub-card rounded-xl p-2.5 flex flex-col gap-1">
+                <span class="text-[11px] font-bold text-(--text-muted) uppercase tracking-wider flex items-center gap-1">
+                  <AppIcon name="code" class="w-3 h-3 text-purple-500" />
+                  <span>{{ t('packetDeep.standardClause') }}</span>
+                </span>
+                <span class="text-xs font-mono-code font-bold text-(--text-primary)">
+                  {{ expertReport.standard_clause_ref }}
+                </span>
+              </div>
+            </div>
+
+            <!-- 物理与规约关键特征指纹 (Feature Fingerprints) -->
+            <div class="space-y-1.5">
+              <div class="text-[11px] font-bold text-(--text-muted) uppercase tracking-wider flex items-center gap-1">
+                <AppIcon name="activity" class="w-3 h-3 text-emerald-500" />
+                <span>{{ t('packetDeep.featureFingerprints') }}</span>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div v-for="(fp, idx) in expertReport.feature_fingerprints" :key="idx"
+                  class="ui-sub-card rounded-lg p-2 flex flex-col gap-0.5">
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span class="font-bold text-(--text-primary)">{{ fp.name }}</span>
+                    <span class="text-(--text-muted) font-mono-code text-[10px]">{{ fp.detection_basis }}</span>
+                  </div>
+                  <div class="text-xs font-mono-code text-sky-600 dark:text-sky-400 font-bold truncate" :title="fp.value">
+                    {{ fp.value }}
+                  </div>
+                  <div class="text-[10px] text-(--text-secondary) leading-tight mt-0.5">
+                    {{ fp.significance }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 现场工程师排查与辅导行动指南 (Actionable Guidance) -->
+            <div class="rounded-xl p-3 bg-amber-500/8 border border-amber-500/20 space-y-1.5">
+              <div class="text-[11px] font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider flex items-center gap-1">
+                <AppIcon name="terminal" class="w-3.5 h-3.5 text-amber-500" />
+                <span>{{ t('packetDeep.actionableGuidance') }}</span>
+              </div>
+              <ul class="space-y-1 pl-1">
+                <li v-for="(g, idx) in expertReport.actionable_guidance" :key="idx"
+                  class="text-xs leading-relaxed text-(--text-primary) flex items-start gap-1.5">
+                  <span class="text-amber-600 dark:text-amber-400 font-bold shrink-0">{{ idx + 1 }}.</span>
+                  <span>{{ g }}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
         <!-- 规约结构化深度解析 (业务字典/规约细化) -->
         <div v-if="packet.business_data && Object.keys(packet.business_data).length > 0" class="ui-content-card rounded-xl overflow-hidden">
           <div class="bg-(--surface-content-alt) px-4 py-2 border-b border-(--border-subtle) flex items-center justify-between">
@@ -177,17 +292,87 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from 'vue';
+import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '../i18n';
 import AppIcon from './AppIcon.vue';
 
+interface FeatureFingerprintItem {
+  name: string;
+  value: string;
+  detection_basis: string;
+  significance: string;
+}
+
+interface PacketExpertGuidanceReport {
+  packet_id: number;
+  protocol_name: string;
+  protocol_standard: string;
+  standard_clause_ref: string;
+  behavioral_intent: string;
+  role_analysis: string;
+  feature_fingerprints: FeatureFingerprintItem[];
+  risk_level: string;
+  risk_assessment: string;
+  actionable_guidance: string[];
+  decoding_confidence: number;
+}
+
 const { t, locale } = useI18n();
 
-defineProps<{
+const props = defineProps<{
   packet: any | null;
   isOpen: boolean;
 }>();
 
 defineEmits(['close', 'replay', 'saveBaseline', 'openWave', 'openProbe']);
+
+const expertReport = ref<PacketExpertGuidanceReport | null>(null);
+const isAnalyzingExpert = ref(false);
+
+async function loadExpertGuidance() {
+  if (!props.packet) {
+    expertReport.value = null;
+    return;
+  }
+  isAnalyzingExpert.value = true;
+  try {
+    const res = await invoke<PacketExpertGuidanceReport>('get_packet_expert_guidance_cmd', {
+      packet: props.packet
+    });
+    expertReport.value = res;
+  } catch (err) {
+    console.error('Failed to load packet expert guidance:', err);
+    expertReport.value = null;
+  } finally {
+    isAnalyzingExpert.value = false;
+  }
+}
+
+watch(() => [props.packet?.id, props.isOpen], () => {
+  if (props.isOpen && props.packet) {
+    loadExpertGuidance();
+  }
+}, { immediate: true });
+
+function copyExpertReportText() {
+  if (!expertReport.value) return;
+  const r = expertReport.value;
+  const lines = [
+    `【Omni-Probe 专家智能分析与规约技术参考报告】`,
+    `报文序号: #${r.packet_id} | 协议定性: ${r.protocol_name} (置信度: ${(r.decoding_confidence * 100).toFixed(0)}%)`,
+    `行为意图: ${r.behavioral_intent}`,
+    `通信角色: ${r.role_analysis}`,
+    `技术标准: ${r.protocol_standard}`,
+    `标准条款: ${r.standard_clause_ref}`,
+    `风险评估: [${r.risk_level}] ${r.risk_assessment}`,
+    `关键物理与规约特征指纹:`,
+    ...r.feature_fingerprints.map(f => `  • ${f.name}: ${f.value} [${f.detection_basis}] -> ${f.significance}`),
+    `现场工程师排查与辅导行动指南:`,
+    ...r.actionable_guidance.map((g, idx) => `  ${idx + 1}. ${g}`)
+  ];
+  copyText(lines.join('\n'));
+}
 
 function protocolBadgeColor(proto: string): string {
   if (!proto) return 'bg-slate-500/12 text-(--text-secondary) border-(--border-subtle)';

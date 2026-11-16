@@ -609,6 +609,17 @@ packetDetail: {
     extractWave: '提取波形追踪',
     targetProbe: '目标主动探测',
     closeWindow: '关闭窗口',
+    expertTitle: '💡 专家智能分析与技术标准辅导参考 (Expert Guidance & Protocol Standard)',
+    copyReport: '复制诊断报告',
+    reportCopied: '专家诊断报告已复制到剪贴板',
+    behaviorIntent: '物理行为意图',
+    protocolStandard: '技术标准与规约依据',
+    standardClause: '标准条款',
+    role: '通信交互角色',
+    riskAssessment: '安全合规评估',
+    featureFingerprints: '物理与规约关键特征指纹',
+    actionableGuidance: '现场工程师排查与辅导行动指南',
+    analyzing: '正在进行多维物理特征萃取与意图推导...',
   },
 
   columnSettings: {

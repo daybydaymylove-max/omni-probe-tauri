@@ -609,6 +609,17 @@ packetDetail: {
     extractWave: 'Extract Waveform',
     targetProbe: 'Active Target Probe',
     closeWindow: 'Close Window',
+    expertTitle: '💡 Expert Intelligence Analysis & Technical Standard Reference',
+    copyReport: 'Copy Diagnostic Report',
+    reportCopied: 'Diagnostic report copied to clipboard',
+    behaviorIntent: 'Physical Behavioral Intent',
+    protocolStandard: 'Technical Standard & Specification',
+    standardClause: 'Standard Clause Ref',
+    role: 'Communication Role',
+    riskAssessment: 'Security & Compliance Risk Profiling',
+    featureFingerprints: 'Physical & Protocol Key Feature Fingerprints',
+    actionableGuidance: 'Field Troubleshooting & Actionable Guidance',
+    analyzing: 'Extracting physical features and inferring behavioral intent...',
   },
 
   columnSettings: {
