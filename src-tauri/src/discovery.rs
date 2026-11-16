@@ -648,7 +648,7 @@ pub fn scan_lan_subnet_active(app: tauri::AppHandle) {
 /// 智能探测全部物理/局域网接口真实 (IPv4, Netmask) 列表（支持多网卡、非 /24 子网及离线内网）
 fn detect_physical_subnet_cidrs() -> Vec<(std::net::Ipv4Addr, std::net::Ipv4Addr)> {
     let mut subnets: Vec<(std::net::Ipv4Addr, std::net::Ipv4Addr)> = Vec::new();
-    let mut seen_nets = std::collections::BTreeSet::new();
+    let mut seen_nets: std::collections::BTreeSet<(u32, u32)> = std::collections::BTreeSet::new();
 
     #[cfg(windows)]
     {
@@ -669,6 +669,26 @@ fn detect_physical_subnet_cidrs() -> Vec<(std::net::Ipv4Addr, std::net::Ipv4Addr
                 let net = u32::from(iface.ip) & u32::from(iface.netmask);
                 if seen_nets.insert((net, u32::from(iface.netmask))) {
                     subnets.push((iface.ip, iface.netmask));
+                }
+            }
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        for iface in pnet::datalink::interfaces() {
+            if !iface.is_loopback() && iface.is_up() {
+                for ip_net in iface.ips {
+                    if let std::net::IpAddr::V4(ipv4) = ip_net.ip() {
+                        if !ipv4.is_loopback() && !ipv4.is_link_local() && !ipv4.is_unspecified() {
+                            if let std::net::IpAddr::V4(mask) = ip_net.mask() {
+                                let net = u32::from(ipv4) & u32::from(mask);
+                                if seen_nets.insert((net, u32::from(mask))) {
+                                    subnets.push((ipv4, mask));
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

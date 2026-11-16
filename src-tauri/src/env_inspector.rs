@@ -702,7 +702,7 @@ impl EnvironmentInspector {
         #[cfg(target_os = "linux")]
         {
             let (priv_st, distro) = crate::platform_net::inspect_linux_privilege_and_distro();
-            let distro_id = distro.id.to_lowercase();
+            let distro_id = distro.to_lowercase();
             let is_chinagov = distro_id.contains("uos")
                 || distro_id.contains("kylin")
                 || distro_id.contains("deepin")
@@ -736,9 +736,9 @@ impl EnvironmentInspector {
 
             ChinaGovOsTelemetry {
                 is_chinagov_linux: is_chinagov,
-                distro_id: distro.id,
-                distro_name: distro.pretty_name,
-                distro_version: distro.version_id,
+                distro_id: distro_id.clone(),
+                distro_name: distro.clone(),
+                distro_version: String::new(),
                 cpu_arch,
                 has_cap_net_raw: priv_st.has_cap_net_raw,
                 has_cap_net_admin: priv_st.has_cap_net_admin,

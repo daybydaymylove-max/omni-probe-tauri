@@ -5012,9 +5012,13 @@ pub fn get_capture_telemetry_cmd() -> Result<CaptureTelemetryReport, String> {
             // 通过尝试打开 \\.\PhysicalDrive0 或通过权限探测
             true
         }
-        #[cfg(not(windows))]
+        #[cfg(unix)]
         {
-            nix::unistd::geteuid().is_root()
+            unsafe { libc::geteuid() == 0 }
+        }
+        #[cfg(not(any(windows, unix)))]
+        {
+            false
         }
     };
 
