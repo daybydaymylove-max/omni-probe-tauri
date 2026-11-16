@@ -17,7 +17,8 @@
 
 <br>
 
-**[ 📥 立即下载 Windows 最新免安装便携版 / 安装向导 (v0.3.8)](https://github.com/daybydaymylove-max/omni-probe-tauri/releases/latest)**
+**[ 📥 立即前往下载 v0.3.8 全平台发布包 (Windows / Linux / macOS)](https://github.com/daybydaymylove-max/omni-probe-tauri/releases/latest)**  
+*🪟 Windows (EXE 便携版 / 安装向导 / MSI) • 🐧 Linux (DEB / AppImage / RPM) • 🍏 macOS (Apple Silicon DMG)*
 
 <br>
 
@@ -380,9 +381,9 @@ npm run desktop
 npm run tauri build
 ```
 编译产物将生成在 `src-tauri/target/release/bundle/` 目录下：
-- **Windows**：`msi/omni-probe-tauri_0.3.6_x64_en-US.msi` 与 `nsis/omni-probe-tauri_0.3.6_x64-setup.exe`；
-- **macOS**：`dmg/omni-probe-tauri_0.3.6_universal.dmg`；
-- **Linux**：`appimage/omni-probe-tauri_0.3.6_amd64.AppImage` 与 `deb/omni-probe-tauri_0.3.6_amd64.deb`。
+- **Windows**：`msi/omni-probe-tauri_0.3.8_x64_en-US.msi` 与 `nsis/omni-probe-tauri_0.3.8_x64-setup.exe`；
+- **macOS**：`dmg/omni-probe-tauri_0.3.8_aarch64.dmg`；
+- **Linux**：`appimage/omni-probe-tauri_0.3.8_amd64.AppImage`、`deb/omni-probe-tauri_0.3.8_amd64.deb` 与 `rpm/omni-probe-tauri-0.3.8-1.x86_64.rpm`。
 
 ---
 

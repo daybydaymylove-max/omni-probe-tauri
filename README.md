@@ -21,7 +21,8 @@
 
 <br>
 
-**[ 📥 Download Latest Windows Portable & Setup (v0.3.8) ](https://github.com/daybydaymylove-max/omni-probe-tauri/releases/latest)**
+**[ 📥 Download Latest Multi-Platform Packages (v0.3.8) ](https://github.com/daybydaymylove-max/omni-probe-tauri/releases/latest)**  
+*🪟 Windows (Portable / Setup / MSI) • 🐧 Linux (DEB / AppImage / RPM) • 🍏 macOS (Apple Silicon DMG)*
 
 <br>
 
