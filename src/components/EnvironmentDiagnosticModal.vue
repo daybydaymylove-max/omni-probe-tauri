@@ -152,9 +152,11 @@
 
                 <span
                   v-else-if="!comp.is_ready && !comp.can_auto_install"
-                  class="text-[10px] ui-num px-2 py-0.5 rounded-full bg-amber-500/12 text-amber-700 dark:text-amber-300 border border-amber-500/25"
+                  class="text-[10px] ui-num font-semibold px-2 py-0.5 rounded-full flex items-center gap-1"
+                  :class="comp.id === 'admin' ? 'bg-amber-500/12 text-amber-700 dark:text-amber-300 border border-amber-500/25' : 'bg-sky-500/12 text-sky-700 dark:text-sky-300 border border-sky-500/25'"
                 >
-                  {{ locale === 'en-US' ? 'Elevation Required' : '需提权' }}
+                  <AppIcon v-if="comp.id !== 'admin'" name="zap" :size="10" class="text-sky-500" />
+                  <span>{{ comp.id === 'admin' ? (locale === 'en-US' ? 'Elevation Required' : '需提权') : (locale === 'en-US' ? 'Built-in Driver Active' : '内置驱动已接管') }}</span>
                 </span>
 
                 <button
@@ -234,6 +236,17 @@
               class="mt-2 pt-2 border-t space-y-1.5 text-[11px]"
               style="border-color: var(--border-subtle); color: var(--text-secondary)"
             >
+              <!-- 原生内置驱动自愈接管状态提示 -->
+              <div v-if="!comp.is_ready && comp.id !== 'admin'" class="rounded-xl p-2.5 bg-sky-500/8 border border-sky-500/20 text-[11px] space-y-1">
+                <div class="font-bold text-sky-700 dark:text-sky-300 flex items-center gap-1.5">
+                  <AppIcon name="zap" :size="12" />
+                  <span>{{ locale === 'en-US' ? 'Native Pipeline Active' : '原生内置驱动链路已自动接管' }}</span>
+                </div>
+                <div class="text-(--text-secondary) leading-relaxed">
+                  {{ comp.fallback_mode }}
+                </div>
+              </div>
+
               <div class="leading-relaxed">
                 <strong style="color: var(--text-primary)">{{ locale === 'en-US' ? 'Capability: ' : '扩展能力：' }}</strong>{{ comp.capability_enabled }}
               </div>

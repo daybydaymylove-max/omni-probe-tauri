@@ -86,13 +86,31 @@ impl TsharkBridge {
         }
 
         // Windows 常见官方安装路径
+        #[cfg(windows)]
         let common_windows_paths = [
             r"C:\Program Files\Wireshark\tshark.exe",
             r"C:\Program Files (x86)\Wireshark\tshark.exe",
             r"D:\Program Files\Wireshark\tshark.exe",
         ];
 
+        #[cfg(windows)]
         for path_str in &common_windows_paths {
+            let p = PathBuf::from(path_str);
+            if p.exists() {
+                return Some(p);
+            }
+        }
+
+        // macOS 常见官方与 Homebrew 安装路径
+        #[cfg(target_os = "macos")]
+        let common_macos_paths = [
+            "/Applications/Wireshark.app/Contents/MacOS/tshark",
+            "/opt/homebrew/bin/tshark",
+            "/usr/local/bin/tshark",
+        ];
+
+        #[cfg(target_os = "macos")]
+        for path_str in &common_macos_paths {
             let p = PathBuf::from(path_str);
             if p.exists() {
                 return Some(p);

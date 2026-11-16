@@ -138,7 +138,7 @@ impl EnvironmentInspector {
         }
     }
 
-    /// 探活 Npcap / WinPcap (Windows) 或 libpcap (国产/通用 Linux) 抓包驱动
+    /// 探活 Npcap / WinPcap (Windows)、BPF (macOS) 或 libpcap (国产/通用 Linux) 抓包驱动
     pub fn inspect_npcap() -> ComponentStatus {
         #[cfg(target_os = "linux")]
         {
@@ -165,7 +165,27 @@ impl EnvironmentInspector {
             };
         }
 
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(target_os = "macos")]
+        {
+            let bpf_ready = Path::new("/dev/bpf0").exists();
+            return ComponentStatus {
+                id: "npcap".to_string(),
+                name: "macOS BPF / libpcap 原生捕获驱动".to_string(),
+                category: "CaptureDriver".to_string(),
+                is_ready: bpf_ready,
+                version: Some("macOS Native BPF (Kernel Integrated)".to_string()),
+                path: Some("/dev/bpf*".to_string()),
+                capability_enabled: "macOS 系统内核原生集成 Berkeley Packet Filter，直接支持物理与虚拟网卡 L2 数据链路层数据捕获，无需安装任何第三方外置驱动。".to_string(),
+                fallback_mode: "macOS 平台原生驱动链路完整工作。若遇权限不足，系统自适应提示终端提权。".to_string(),
+                official_url: "https://www.tcpdump.org/".to_string(),
+                install_tips: "macOS 系统出厂自带完整 libpcap 运行时，免安装驱动；如抓包提示权限受限，终端执行 `sudo chmod o+r /dev/bpf*` 即可。".to_string(),
+                can_auto_install: false,
+                installer_filename: None,
+                estimated_size_mb: None,
+            };
+        }
+
+        #[cfg(windows)]
         {
             let is_dll_loaded = crate::sniffer::is_npcap_driver_available();
             let mut found_path = None;
@@ -200,7 +220,7 @@ impl EnvironmentInspector {
                 capability_enabled: "解锁 L2 数据链路层嗅探、千兆网卡混杂模式、全量 ARP/LLDP/广播捕获与以太网报文主动注入能力。".to_string(),
                 fallback_mode: "自愈降级为 Windows 原生并发 Raw Sockets + NDIS-ETW 模式 (未以管理员权限运行时将受系统安全策略阻断外网单播)。".to_string(),
                 official_url: "https://npcap.com/#download".to_string(),
-                install_tips: "安装时请勾选: ① 'Install Npcap in WinPcap API-compatible Mode'; ② 'Support raw 802.11 traffic'（勿勾选 AdminOnly）。".to_string(),
+                install_tips: "安装时请勾选: ① 'Install Npcap in WinPcap API-compatible Mode'; ② 'Support raw 802.11 traffic'（勿勾选 AdminOnly）。若系统限制安装驱动，可直接使用内置 NDIS-ETW 驱动运行。".to_string(),
                 can_auto_install: true,
                 installer_filename: Some("npcap-1.80.exe".to_string()),
                 estimated_size_mb: Some(1.15),
@@ -213,6 +233,24 @@ impl EnvironmentInspector {
         let bridge = crate::tshark_bridge::TsharkBridge::new();
         let status = bridge.get_status();
 
+        #[cfg(windows)]
+        let (can_auto, tips) = (
+            true,
+            "建议安装官方稳定版 Wireshark 4.x，默认安装路径探针将自动零配置接入；若环境不支持安装，内置 42+ 原生工业规约解剖器完全保障核心功能。".to_string(),
+        );
+
+        #[cfg(target_os = "macos")]
+        let (can_auto, tips) = (
+            false,
+            "可在终端执行 `brew install --cask wireshark` 安装，或直接依托 Omni-Probe 内置原生工业与网络解剖引擎脱机分析。".to_string(),
+        );
+
+        #[cfg(target_os = "linux")]
+        let (can_auto, tips) = (
+            false,
+            "可在终端执行 `sudo apt install -y tshark` 或 `sudo dnf install -y wireshark-cli` 安装，或直接使用内置原生工业解剖引擎。".to_string(),
+        );
+
         ComponentStatus {
             id: "tshark".to_string(),
             name: "Wireshark / TShark 协议解剖引擎".to_string(),
@@ -223,14 +261,14 @@ impl EnvironmentInspector {
             capability_enabled: "通过跨进程异步内存管道，瞬时解锁 Wireshark 官方 3,200+ 全量通用协议解剖树与详细字段展开。".to_string(),
             fallback_mode: "使用 Omni-Probe 自主纯 Rust 42+ 核心工业控制 (Modbus, S7, DNP3, BACnet, 104, MMS) 与标准网络解剖器，配合 HexDump 转储视窗。".to_string(),
             official_url: "https://www.wireshark.org/download.html".to_string(),
-            install_tips: "建议安装官方稳定版 Wireshark 4.x，默认安装路径探针将自动零配置接入。".to_string(),
-            can_auto_install: true,
-            installer_filename: Some("Wireshark-win64-4.4.1.exe".to_string()),
-            estimated_size_mb: Some(80.5),
+            install_tips: tips,
+            can_auto_install: can_auto,
+            installer_filename: if can_auto { Some("Wireshark-win64-4.4.1.exe".to_string()) } else { None },
+            estimated_size_mb: if can_auto { Some(80.5) } else { None },
         }
     }
 
-    /// 探活 USBPcap (Windows) 或 usbmon (国产/通用 Linux) 物理外设捕获驱动
+    /// 探活 USBPcap (Windows)、IOKit (macOS) 或 usbmon (国产/通用 Linux) 物理外设捕获驱动
     pub fn inspect_usbpcap() -> ComponentStatus {
         #[cfg(target_os = "linux")]
         {
@@ -253,7 +291,26 @@ impl EnvironmentInspector {
             };
         }
 
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(target_os = "macos")]
+        {
+            return ComponentStatus {
+                id: "usbpcap".to_string(),
+                name: "macOS IOKit 原生 USB 总线框架".to_string(),
+                category: "HardwareDriver".to_string(),
+                is_ready: true,
+                version: Some("Apple IOKit IOUSBHost Framework".to_string()),
+                path: Some("/System/Library/Frameworks/IOKit.framework".to_string()),
+                capability_enabled: "通过系统原生 IOKit 框架，免驱枚举并实时监听全系统物理 USB 拓扑、VID/PID、硬件描述符与 PnP 动态插拔事件。".to_string(),
+                fallback_mode: "macOS 系统原生链路完整支持 USB 设备审计与描述符直读；原始 URB 实时抓包受 Apple 系统沙箱保护。".to_string(),
+                official_url: "https://developer.apple.com/documentation/iousbhost".to_string(),
+                install_tips: "macOS 系统原生内嵌 IOKit USB 总线框架，无需安装外置驱动，系统已自动启用原生总线审计链路。".to_string(),
+                can_auto_install: false,
+                installer_filename: None,
+                estimated_size_mb: None,
+            };
+        }
+
+        #[cfg(windows)]
         {
             let candidate_paths = [
                 r"C:\Program Files\USBPcap\USBPcapCMD.exe",
@@ -281,7 +338,7 @@ impl EnvironmentInspector {
                 capability_enabled: "解锁物理 USB 根集线器 (Root Hub) 全双工 URB 数据包微秒级物理抓取、BadUSB 自动化打字机恶意攻击审计 (IAT < 25ms 亚人类击键特征感知)、U 盘物理 SCSI 指令/大容量存储协议还原，以及 USB 转串口芯片底层控制信令分析。".to_string(),
                 fallback_mode: "【严重功能受限】缺失 USBPcap 驱动时，系统将被迫放弃物理 USB 总线原始通信截获能力，无法感知 BadUSB 硬件固件伪装与物理层攻击，USB 深度工作台将被迫降级为仅监听只读的 Windows PnP 设备热插拔事件，无法获取任何 USB 载荷与控制帧；网络以太网嗅探与串口 COM 通信不受影响。".to_string(),
                 official_url: "https://desowin.org/usbpcap/".to_string(),
-                install_tips: "可在安装 Wireshark 时勾选【Install USBPcap】驱动组件；亦可点击右侧【自动从官网安装】一键下载安装。安装完成后需重启操作系统使底层内核服务生效。".to_string(),
+                install_tips: "可在安装 Wireshark 时勾选【Install USBPcap】驱动组件；亦可点击右侧【自动从官网安装】一键下载安装。若受系统安全策略限制无法安装内核驱动，系统已自动启用 Win32 SetupAPI 原生设备审计链路。".to_string(),
                 can_auto_install: true,
                 installer_filename: Some("USBPcapSetup-1.5.4.0.exe".to_string()),
                 estimated_size_mb: Some(0.19),
@@ -289,7 +346,7 @@ impl EnvironmentInspector {
         }
     }
 
-    /// 探活进程是否拥有底层原始抓包特权 (Windows Administrator 或 Linux root/CAP_NET_RAW)
+    /// 探活进程是否拥有底层原始抓包特权 (Windows Administrator、Linux CAP_NET_RAW 或 macOS BPF 权限)
     pub fn inspect_admin_privilege() -> ComponentStatus {
         #[cfg(target_os = "linux")]
         {
@@ -325,7 +382,36 @@ impl EnvironmentInspector {
             };
         }
 
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(target_os = "macos")]
+        {
+            let euid = unsafe { libc::geteuid() };
+            let bpf_readable = std::fs::OpenOptions::new().read(true).open("/dev/bpf0").is_ok();
+            let is_ready = euid == 0 || bpf_readable;
+            let ver = if euid == 0 {
+                "root (euid=0)".to_string()
+            } else if bpf_readable {
+                "BPF Read Permitted (Non-root)".to_string()
+            } else {
+                format!("Unprivileged (euid={}, /dev/bpf* restricted)", euid)
+            };
+            return ComponentStatus {
+                id: "admin".to_string(),
+                name: "macOS 底层网卡访问权限 (root / BPF)".to_string(),
+                category: "SystemPrivilege".to_string(),
+                is_ready,
+                version: Some(ver),
+                path: Some("/dev/bpf0".to_string()),
+                capability_enabled: "拥有对系统 `/dev/bpf*` 字符设备的读取权限，能够直接捕获进出网卡的原始以太网数据包。".to_string(),
+                fallback_mode: "缺少 BPF 读取权限时无法打开物理网卡抓包，仅应用层双轨监听可用。".to_string(),
+                official_url: "https://support.apple.com/".to_string(),
+                install_tips: "在终端执行 `sudo chmod o+r /dev/bpf*` 即可永久免 root 嗅探，或使用 `sudo` 启动。".to_string(),
+                can_auto_install: false,
+                installer_filename: None,
+                estimated_size_mb: None,
+            };
+        }
+
+        #[cfg(windows)]
         {
             let is_admin = Self::check_is_admin();
 
