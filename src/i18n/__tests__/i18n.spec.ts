@@ -50,4 +50,18 @@ describe('Omni-Probe i18n 响应式国际化引擎', () => {
     // 包含额外无用参数时不影响正常渲染
     expect(t('topbar.threatCutting', { count: 12, dummy: 'test' })).toBe('12 告警 · 切断');
   });
+
+  it('极限边界用例 4: fallback 默认文本机制验证', () => {
+    expect(t('missing.unknown.key', undefined, '自定义后备文本')).toBe('自定义后备文本');
+    expect(t('', undefined, '空Key后备文本')).toBe('空Key后备文本');
+    // 当 key 命中时，应当使用词典翻译而非 fallback
+    expect(t('common.confirm', undefined, '忽略的后备文本')).toBe('确认');
+  });
+
+  it('环境检查器就绪通知多语言覆盖验证', () => {
+    setLocale('zh-CN');
+    expect(t('envInspector.missingComponentsNotice', { missing: 'Npcap' })).toContain('可选外置组件未完全就绪');
+    setLocale('en-US');
+    expect(t('envInspector.missingComponentsNotice', { missing: 'Npcap' })).toContain('Optional external components are not fully ready');
+  });
 });

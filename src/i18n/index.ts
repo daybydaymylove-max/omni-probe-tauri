@@ -102,12 +102,13 @@ function interpolate(template: string, params?: Record<string, string | number>)
  *
  * @param key 键路径，如 'nav.traffic' 或 'preferences.appearance.title'
  * @param params 可选动态参数字典，如 { count: 5, version: '0.3.7' }
- * @returns 本地化字符串；若未命中则回退默认语言，最后回退 key 本身
+ * @param fallback 可选未命中时的后备默认文本；若不传且未命中，则回退默认语言直至 key 本身
+ * @returns 本地化字符串
  */
-export function t(key: string, params?: Record<string, string | number>): string {
+export function t(key: string, params?: Record<string, string | number>, fallback?: string): string {
   // 极限边界防御 1: 空 Key 直接返回
   if (!key || typeof key !== 'string') {
-    return '';
+    return fallback !== undefined ? fallback : '';
   }
 
   const activeDict = dictionaries[currentLocale.value] || dictionaries['zh-CN'];
@@ -118,9 +119,9 @@ export function t(key: string, params?: Record<string, string | number>): string
     rawText = resolvePath(dictionaries['zh-CN'], key);
   }
 
-  // 极限边界防御 3: 全局未命中时返回 Key 原文
+  // 极限边界防御 3: 全局未命中时返回 fallback 默认文本或 Key 原文
   if (rawText === undefined) {
-    return key;
+    return fallback !== undefined ? fallback : key;
   }
 
   return interpolate(rawText, params);

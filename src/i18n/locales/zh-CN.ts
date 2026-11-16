@@ -23,6 +23,7 @@ export default {
     selectLocalFolder: '选择本地目录',
     openFolderFailed: '无法打开系统文件管理器',
     confirm: '确认',
+    ok: '确定',
     cancel: '取消',
     save: '保存',
     saved: '已保存',
@@ -322,6 +323,23 @@ export default {
     overallScore: '底层环境完备率',
     refreshCheck: '重新执行自检',
     installGuide: '安装指引',
+    readinessScore: '运行环境就绪度 {score}%',
+    missingComponentsNotice: '可选外置组件未完全就绪（{missing}），系统已启用原生兜底链路。',
+    openInspector: '打开检查器',
+    prefSaved: '环境提醒偏好已保存',
+    prefSavedHintNonBlock: '启动检测到可选驱动缺失时，将在角落给出非阻塞建议提醒',
+    prefSavedHintSilent: '已开启静默启动模式，仅在顶栏状态胶囊实时展现环境指标',
+    installComplete: '外部组件装配已完成',
+    downloadFailed: '官方安装包下载异常',
+    installLaunched: '装配引导已就绪',
+    installFailed: '驱动安装引导受阻',
+    ebpfDeployed: 'eBPF 字节码策略已部署',
+    ebpfDeployFailed: 'eBPF 策略部署受阻',
+    browserLaunchFailed: '无法唤起系统关联浏览器打开链接',
+  },
+
+  audit: {
+    pending: '待测评',
   },
 
   trafficView: {

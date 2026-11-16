@@ -23,6 +23,7 @@ export default {
     selectLocalFolder: 'Select Local Folder',
     openFolderFailed: 'Failed to open file manager',
     confirm: 'Confirm',
+    ok: 'OK',
     cancel: 'Cancel',
     save: 'Save',
     saved: 'Saved',
@@ -322,6 +323,23 @@ export default {
     overallScore: 'Environment Readiness Rate',
     refreshCheck: 'Rerun Self-Check',
     installGuide: 'Installation Guide',
+    readinessScore: 'Environment Readiness: {score}%',
+    missingComponentsNotice: 'Optional external components are not fully ready ({missing}). Native fallback pipeline activated.',
+    openInspector: 'Open Inspector',
+    prefSaved: 'Environment reminder preference saved',
+    prefSavedHintNonBlock: 'Non-blocking advisory notification will appear when optional drivers are missing upon startup',
+    prefSavedHintSilent: 'Silent startup mode enabled. Environment metrics only displayed in top status capsule',
+    installComplete: 'External component installation completed',
+    downloadFailed: 'Official installation package download failed',
+    installLaunched: 'Installation wizard launched',
+    installFailed: 'Driver installation wizard blocked',
+    ebpfDeployed: 'eBPF bytecode policy deployed',
+    ebpfDeployFailed: 'Failed to deploy eBPF policy',
+    browserLaunchFailed: 'Failed to launch default browser to open link',
+  },
+
+  audit: {
+    pending: 'Pending',
   },
 
   trafficView: {
